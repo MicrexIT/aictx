@@ -1,0 +1,53 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output
+dist/
+*.tsbuildinfo
+
+# Test and coverage output
+coverage/
+.vitest/
+.nyc_output/
+
+# Tool caches
+.cache/
+.turbo/
+.vite/
+.eslintcache
+
+# Logs and diagnostics
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+report.*.json
+*.heapsnapshot
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+!.env.template
+
+# Package artifacts
+*.tgz
+
+# Aictx generated local state
+.aictx/index/
+.aictx/context/
+.aictx/.lock
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor folders
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json

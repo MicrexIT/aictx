@@ -1,0 +1,45 @@
+{
+  "name": "aictx",
+  "version": "0.1.0",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "bin": {
+    "aictx": "./dist/cli/main.js",
+    "aictx-mcp": "./dist/mcp/server.js"
+  },
+  "files": [
+    "dist",
+    "docs",
+    "integrations",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "pnpm build:guidance && pnpm build:code && pnpm build:schemas",
+    "build:code": "tsup",
+    "build:schemas": "node scripts/copy-schemas.mjs",
+    "build:guidance": "node scripts/generate-agent-guidance.mjs",
+    "dev": "tsx src/cli/main.ts",
+    "dev:mcp": "tsx src/mcp/server.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "ajv": "^8.20.0",
+    "better-sqlite3": "^12.9.0",
+    "commander": "^14.0.3",
+    "fast-glob": "^3.3.3"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^25.6.0",
+    "tsup": "^8.5.1",
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.5"
+  }
+}
