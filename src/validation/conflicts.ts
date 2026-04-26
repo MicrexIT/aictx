@@ -1,1 +1,99 @@
-export {};
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
+
+import fg from "fast-glob";
+
+import { aictxError, type AictxError, type JsonValue } from "../core/errors.js";
+import type { ValidationIssue } from "../core/types.js";
+
+export const CONFLICT_MARKER_PATTERNS = [
+  /^<<<<<<< .+$/,
+  /^=======$/,
+  /^>>>>>>> .+$/,
+  /^\|\|\|\|\|\|\| .+$/
+] as const;
+
+export interface ConflictMarkerValidationResult {
+  valid: boolean;
+  errors: ValidationIssue[];
+  warnings: [];
+}
+
+export function detectConflictMarkersInText(
+  contents: string,
+  path: string
+): ConflictMarkerValidationResult {
+  const errors: ValidationIssue[] = [];
+  const lines = contents.split(/\r\n|\n|\r/);
+
+  for (const [index, line] of lines.entries()) {
+    if (isConflictMarker(line)) {
+      errors.push(conflictMarkerIssue(path, index + 1));
+    }
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors,
+    warnings: []
+  };
+}
+
+export async function scanProjectConflictMarkers(
+  projectRoot: string
+): Promise<ConflictMarkerValidationResult> {
+  const paths = (
+    await fg(".aictx/**/*.{json,jsonl,md}", {
+      cwd: projectRoot,
+      dot: true,
+      ignore: [".aictx/index/**", ".aictx/context/**"],
+      onlyFiles: true,
+      unique: true
+    })
+  ).sort();
+
+  const errors: ValidationIssue[] = [];
+
+  for (const path of paths) {
+    const contents = await readFile(join(projectRoot, path), "utf8");
+    errors.push(...detectConflictMarkersInText(contents, path).errors);
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors,
+    warnings: []
+  };
+}
+
+export function conflictMarkerError(issues: readonly ValidationIssue[]): AictxError {
+  return aictxError(
+    "AICtxConflictDetected",
+    "Conflict markers detected.",
+    validationIssuesDetails(issues)
+  );
+}
+
+function isConflictMarker(line: string): boolean {
+  return CONFLICT_MARKER_PATTERNS.some((pattern) => pattern.test(line));
+}
+
+function conflictMarkerIssue(path: string, line: number): ValidationIssue {
+  return {
+    code: "AICtxConflictDetected",
+    message: "Unresolved conflict marker detected.",
+    path: `${path}:${line}`,
+    field: null
+  };
+}
+
+function validationIssuesDetails(issues: readonly ValidationIssue[]): JsonValue {
+  return {
+    issues: issues.map((issue) => ({
+      code: issue.code,
+      message: issue.message,
+      path: issue.path,
+      field: issue.field
+    }))
+  };
+}
