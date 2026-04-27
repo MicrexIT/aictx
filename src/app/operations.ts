@@ -1,17 +1,25 @@
 import { systemClock, type Clock } from "../core/clock.js";
-import type { AictxError } from "../core/errors.js";
+import { aictxError, type AictxError, type JsonValue } from "../core/errors.js";
 import { getGitState, type GitWrapperOptions } from "../core/git.js";
 import { withProjectLock } from "../core/lock.js";
 import { resolveProjectPaths, type ProjectPaths } from "../core/paths.js";
+import { err, ok, type Result } from "../core/result.js";
 import type { AictxMeta } from "../core/types.js";
 import {
   rebuildIndex as rebuildGeneratedIndex,
   type RebuildIndexData
 } from "../index/rebuild.js";
 import {
+  searchIndex,
+  type SearchIndexOptions,
+  type SearchMemoryData,
+  type SearchMemoryInput
+} from "../index/search.js";
+import {
   initializeStorage,
   type InitStorageData
 } from "../storage/init.js";
+import { readCanonicalStorage } from "../storage/read.js";
 
 const INITIAL_INDEX_UNAVAILABLE_WARNING =
   "Initial index was not built because the index module is not available yet.";
@@ -22,6 +30,11 @@ export interface InitProjectOptions extends GitWrapperOptions {
 }
 
 export interface RebuildIndexOptions extends GitWrapperOptions {
+  cwd: string;
+  clock?: Clock;
+}
+
+export interface SearchMemoryOptions extends GitWrapperOptions, SearchMemoryInput {
   cwd: string;
   clock?: Clock;
 }
@@ -151,9 +164,114 @@ export async function rebuildIndex(
   };
 }
 
+export async function searchMemory(
+  options: SearchMemoryOptions
+): Promise<AppResult<SearchMemoryData>> {
+  const clock = options.clock ?? systemClock;
+  const paths = await resolveProjectPaths({
+    cwd: options.cwd,
+    mode: "require-initialized",
+    runner: options.runner
+  });
+
+  if (!paths.ok) {
+    return {
+      ok: false,
+      error: paths.error,
+      warnings: paths.warnings,
+      meta: await buildBestEffortMeta(options)
+    };
+  }
+
+  const meta = await buildMeta(paths.data, options);
+
+  if (!meta.ok) {
+    return meta;
+  }
+
+  const searched = await searchIndex(searchIndexOptions(paths.data.aictxRoot, options));
+
+  if (searched.ok) {
+    return {
+      ok: true,
+      data: searched.data,
+      warnings: searched.warnings,
+      meta: meta.meta
+    };
+  }
+
+  if (searched.error.code !== "AICtxIndexUnavailable") {
+    return {
+      ok: false,
+      error: searched.error,
+      warnings: searched.warnings,
+      meta: meta.meta
+    };
+  }
+
+  const autoIndex = await readAutoIndexSetting(paths.data);
+
+  if (!autoIndex.ok) {
+    return {
+      ok: false,
+      error: autoIndex.error,
+      warnings: [...searched.warnings, ...autoIndex.warnings],
+      meta: meta.meta
+    };
+  }
+
+  if (!autoIndex.data) {
+    return {
+      ok: false,
+      error: searched.error,
+      warnings: [...searched.warnings, ...autoIndex.warnings],
+      meta: meta.meta
+    };
+  }
+
+  const rebuilt = await rebuildIndexForResolvedProject({
+    paths: paths.data,
+    meta: meta.meta,
+    clock
+  });
+
+  if (!rebuilt.ok) {
+    return {
+      ok: false,
+      error: rebuilt.error,
+      warnings: [...searched.warnings, ...autoIndex.warnings, ...rebuilt.warnings],
+      meta: meta.meta
+    };
+  }
+
+  const retried = await searchIndex(searchIndexOptions(paths.data.aictxRoot, options));
+
+  if (!retried.ok) {
+    return {
+      ok: false,
+      error: retried.error,
+      warnings: [
+        ...searched.warnings,
+        ...autoIndex.warnings,
+        ...rebuilt.warnings,
+        ...retried.warnings
+      ],
+      meta: meta.meta
+    };
+  }
+
+  return {
+    ok: true,
+    data: retried.data,
+    warnings: [...autoIndex.warnings, ...rebuilt.warnings, ...retried.warnings],
+    meta: meta.meta
+  };
+}
+
 export const applicationOperations = {
   initProject,
-  rebuildIndex
+  rebuildIndex,
+  searchMemory
 };
 
 type MetaBuildResult =
@@ -239,6 +357,33 @@ async function rebuildIndexForResolvedProject(options: {
   );
 }
 
+function searchIndexOptions(aictxRoot: string, input: SearchMemoryInput): SearchIndexOptions {
+  return {
+    aictxRoot,
+    query: input.query,
+    ...(input.limit === undefined ? {} : { limit: input.limit })
+  };
+}
+
+async function readAutoIndexSetting(paths: ProjectPaths): Promise<Result<boolean>> {
+  const storage = await readCanonicalStorage(paths.projectRoot);
+
+  if (!storage.ok) {
+    return err(
+      aictxError(
+        "AICtxIndexUnavailable",
+        "SQLite index is unavailable and canonical config could not be read for auto-indexing.",
+        {
+          cause: errorToJson(storage.error)
+        }
+      ),
+      storage.warnings
+    );
+  }
+
+  return ok(storage.data.config.memory.autoIndex, storage.warnings);
+}
+
 function fallbackMeta(paths: ProjectPaths): AictxMeta {
   return {
     project_root: paths.projectRoot,
@@ -250,4 +395,17 @@ function fallbackMeta(paths: ProjectPaths): AictxMeta {
       dirty: paths.git.available ? false : null
     }
   };
+}
+
+function errorToJson(error: { code: string; message: string; details?: JsonValue }): JsonValue {
+  return error.details === undefined
+    ? {
+        code: error.code,
+        message: error.message
+      }
+    : {
+        code: error.code,
+        message: error.message,
+        details: error.details
+      };
 }
