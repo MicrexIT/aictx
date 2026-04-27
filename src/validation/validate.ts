@@ -1,14 +1,70 @@
+import { lstat, readFile } from "node:fs/promises";
+import { basename, isAbsolute, join, relative, resolve } from "node:path";
+
 import type { ErrorObject } from "ajv/dist/2020.js";
+import fg from "fast-glob";
 
 import { aictxError, type AictxError, type JsonValue } from "../core/errors.js";
-import type { ValidationIssue } from "../core/types.js";
-import type { CompiledSchemaValidators, SchemaKind } from "./schemas.js";
+import type { GitState, ValidationIssue } from "../core/types.js";
+import {
+  computeObjectContentHash,
+  computeRelationContentHash
+} from "../storage/hashes.js";
+import {
+  extractFirstH1,
+  validateMarkdownBody
+} from "../storage/markdown.js";
+import { scanProjectConflictMarkers } from "./conflicts.js";
+import { scanProjectSecrets } from "./secrets.js";
+import {
+  compileProjectSchemas,
+  type CompiledSchemaValidators,
+  type SchemaKind
+} from "./schemas.js";
 
 export interface SchemaValidationResult {
   valid: boolean;
   errors: ValidationIssue[];
   warnings: ValidationIssue[];
 }
+
+export type ProjectValidationResult = SchemaValidationResult;
+
+export interface ValidateProjectOptions {
+  git?: Pick<GitState, "available" | "branch">;
+}
+
+interface ParsedJsonFile {
+  path: string;
+  value: Record<string, unknown>;
+}
+
+interface MemoryObjectFile extends ParsedJsonFile {
+  markdownPath: string | null;
+  markdownBody: string | null;
+}
+
+interface RelationFile extends ParsedJsonFile {}
+
+interface ProjectValidationState {
+  projectRoot: string;
+  validators: CompiledSchemaValidators | null;
+  config: ParsedJsonFile | null;
+  projectId: string | null;
+  objects: MemoryObjectFile[];
+  relations: RelationFile[];
+  objectIds: Set<string>;
+  supersedesFromIds: Set<string>;
+  errors: ValidationIssue[];
+  warnings: ValidationIssue[];
+}
+
+interface ScopeString {
+  value: string | null;
+}
+
+const SUPPORTED_STORAGE_VERSION = 1;
+const RELATED_TO_WARNING_MINIMUM = 5;
 
 export function validateConfig(
   validators: CompiledSchemaValidators,
@@ -58,6 +114,44 @@ export function schemaValidationError(issues: readonly ValidationIssue[]): Aictx
     "Schema validation failed.",
     validationIssuesDetails(issues)
   );
+}
+
+export async function validateProject(
+  projectRoot: string,
+  options: ValidateProjectOptions = {}
+): Promise<ProjectValidationResult> {
+  const state: ProjectValidationState = {
+    projectRoot,
+    validators: null,
+    config: null,
+    projectId: null,
+    objects: [],
+    relations: [],
+    objectIds: new Set<string>(),
+    supersedesFromIds: new Set<string>(),
+    errors: [],
+    warnings: []
+  };
+
+  await validateRequiredStorage(state);
+  await addConflictMarkers(state);
+  await addSecretFindings(state);
+  await loadSchemas(state);
+  await validateConfigFile(state);
+  await validateObjectFiles(state, options);
+  await validateRelationFiles(state);
+  await validateEventsFile(state);
+  validateDuplicateObjectIds(state);
+  validateDuplicateRelationIds(state);
+  validateRelationEndpointsAndEquivalence(state);
+  validateSupersededObjects(state);
+  validateRelatedToUsage(state);
+
+  return {
+    valid: state.errors.length === 0,
+    errors: state.errors,
+    warnings: state.warnings
+  };
 }
 
 function validateWithSchema(
@@ -199,4 +293,697 @@ function validationIssuesDetails(issues: readonly ValidationIssue[]): JsonValue 
       field: issue.field
     }))
   };
+}
+
+async function validateRequiredStorage(state: ProjectValidationState): Promise<void> {
+  await Promise.all([
+    requireFile(state, ".aictx/config.json"),
+    requireDirectory(state, ".aictx/memory"),
+    requireDirectory(state, ".aictx/relations"),
+    requireFile(state, ".aictx/events.jsonl"),
+    requireDirectory(state, ".aictx/schema")
+  ]);
+}
+
+async function requireFile(state: ProjectValidationState, path: string): Promise<void> {
+  const fileStat = await lstat(join(state.projectRoot, path)).catch(() => null);
+
+  if (fileStat?.isFile() !== true) {
+    state.errors.push({
+      code: "CanonicalFileMissing",
+      message: "Required canonical file is missing.",
+      path,
+      field: null
+    });
+  }
+}
+
+async function requireDirectory(state: ProjectValidationState, path: string): Promise<void> {
+  const directoryStat = await lstat(join(state.projectRoot, path)).catch(() => null);
+
+  if (directoryStat?.isDirectory() !== true) {
+    state.errors.push({
+      code: "CanonicalDirectoryMissing",
+      message: "Required canonical directory is missing.",
+      path,
+      field: null
+    });
+  }
+}
+
+async function addConflictMarkers(state: ProjectValidationState): Promise<void> {
+  const result = await scanProjectConflictMarkers(state.projectRoot);
+  state.errors.push(...result.errors);
+}
+
+async function addSecretFindings(state: ProjectValidationState): Promise<void> {
+  const result = await scanProjectSecrets(state.projectRoot);
+  state.errors.push(...result.errors);
+  state.warnings.push(...result.warnings);
+}
+
+async function loadSchemas(state: ProjectValidationState): Promise<void> {
+  const compiled = await compileProjectSchemas(state.projectRoot);
+
+  if (compiled.ok) {
+    state.validators = compiled.data;
+    return;
+  }
+
+  state.errors.push(...issuesFromErrorDetails(compiled.error.details));
+}
+
+async function validateConfigFile(state: ProjectValidationState): Promise<void> {
+  const parsed = await readJsonObjectFile(state, ".aictx/config.json");
+
+  if (parsed === null) {
+    return;
+  }
+
+  state.config = parsed;
+
+  if (state.validators !== null) {
+    addResult(state, validateConfig(state.validators, parsed.value, parsed.path));
+  }
+
+  const version = parsed.value.version;
+  if (version === undefined) {
+    state.errors.push({
+      code: "StorageVersionMissing",
+      message: "Storage version is missing.",
+      path: parsed.path,
+      field: "/version"
+    });
+  } else if (version !== SUPPORTED_STORAGE_VERSION) {
+    state.errors.push({
+      code: "StorageVersionUnsupported",
+      message: "Storage version is unsupported.",
+      path: parsed.path,
+      field: "/version"
+    });
+  }
+
+  state.projectId = readProjectId(parsed.value);
+}
+
+async function validateObjectFiles(
+  state: ProjectValidationState,
+  options: ValidateProjectOptions
+): Promise<void> {
+  const paths = await globProjectPaths(state.projectRoot, ".aictx/memory/**/*.json");
+
+  for (const path of paths) {
+    const parsed = await readJsonObjectFile(state, path);
+
+    if (parsed === null) {
+      continue;
+    }
+
+    if (state.validators !== null) {
+      addResult(state, validateObject(state.validators, parsed.value, parsed.path));
+    }
+
+    const objectFile: MemoryObjectFile = {
+      ...parsed,
+      markdownPath: null,
+      markdownBody: null
+    };
+    state.objects.push(objectFile);
+    validateObjectIdentity(state, objectFile);
+    await validateObjectBody(state, objectFile);
+    validateObjectHash(state, objectFile);
+    validateObjectScope(state, objectFile, options);
+  }
+}
+
+async function validateRelationFiles(state: ProjectValidationState): Promise<void> {
+  const paths = await globProjectPaths(state.projectRoot, ".aictx/relations/**/*.json");
+
+  for (const path of paths) {
+    const parsed = await readJsonObjectFile(state, path);
+
+    if (parsed === null) {
+      continue;
+    }
+
+    if (state.validators !== null) {
+      addResult(state, validateRelation(state.validators, parsed.value, parsed.path));
+    }
+
+    state.relations.push(parsed);
+    validateRelationHash(state, parsed);
+
+    if (
+      readString(parsed.value, "predicate") === "supersedes" &&
+      readString(parsed.value, "status") === "active"
+    ) {
+      const from = readString(parsed.value, "from");
+      if (from !== null) {
+        state.supersedesFromIds.add(from);
+      }
+    }
+  }
+}
+
+async function validateEventsFile(state: ProjectValidationState): Promise<void> {
+  const path = ".aictx/events.jsonl";
+  const contents = await readRelativeFile(state.projectRoot, path);
+
+  if (contents === null) {
+    return;
+  }
+
+  const lines = contents.split(/\r\n|\n|\r/);
+  const lineCount = lines.length > 0 && lines.at(-1) === "" ? lines.length - 1 : lines.length;
+
+  for (let index = 0; index < lineCount; index += 1) {
+    const line = lines[index] ?? "";
+    const lineNumber = index + 1;
+
+    if (line.trim() === "") {
+      state.errors.push({
+        code: "EventJsonlBlankLine",
+        message: "Events JSONL must not contain blank lines.",
+        path: `${path}:${lineNumber}`,
+        field: null
+      });
+      continue;
+    }
+
+    try {
+      const parsed = JSON.parse(line) as unknown;
+      if (!isRecord(parsed)) {
+        state.errors.push({
+          code: "EventJsonlInvalid",
+          message: "Events JSONL line must contain one JSON object.",
+          path: `${path}:${lineNumber}`,
+          field: null
+        });
+        continue;
+      }
+
+      if (state.validators !== null) {
+        addResult(state, validateEvent(state.validators, parsed, path, lineNumber));
+      }
+    } catch (error) {
+      state.errors.push({
+        code: "EventJsonlInvalid",
+        message: `Events JSONL line contains invalid JSON: ${messageFromUnknown(error)}`,
+        path: `${path}:${lineNumber}`,
+        field: null
+      });
+    }
+  }
+}
+
+function validateObjectIdentity(state: ProjectValidationState, objectFile: MemoryObjectFile): void {
+  const id = readString(objectFile.value, "id");
+  const type = readString(objectFile.value, "type");
+
+  if (id !== null) {
+    state.objectIds.add(id);
+  }
+
+  if (id !== null && type !== null && id.split(".", 1)[0] !== type) {
+    state.errors.push({
+      code: "ObjectIdTypeMismatch",
+      message: "Object id prefix must match object type.",
+      path: objectFile.path,
+      field: "/id"
+    });
+  }
+}
+
+async function validateObjectBody(
+  state: ProjectValidationState,
+  objectFile: MemoryObjectFile
+): Promise<void> {
+  const bodyPath = readString(objectFile.value, "body_path");
+
+  if (bodyPath === null) {
+    return;
+  }
+
+  const resolved = resolveBodyPath(state.projectRoot, bodyPath);
+
+  if (resolved === null) {
+    state.errors.push({
+      code: "ObjectBodyPathEscapesAictx",
+      message: "Object body path must stay inside .aictx.",
+      path: objectFile.path,
+      field: "/body_path"
+    });
+    return;
+  }
+
+  const markdownPath = `.aictx/${bodyPath}`;
+  objectFile.markdownPath = markdownPath;
+
+  if (basename(objectFile.path, ".json") !== basename(markdownPath, ".md")) {
+    state.errors.push({
+      code: "ObjectBodyPathMismatch",
+      message: "Object JSON sidecar and Markdown body must share a basename.",
+      path: objectFile.path,
+      field: "/body_path"
+    });
+  }
+
+  const markdown = await readRelativeFile(state.projectRoot, markdownPath);
+
+  if (markdown === null) {
+    state.errors.push({
+      code: "ObjectBodyMissing",
+      message: "Object body file is missing.",
+      path: objectFile.path,
+      field: "/body_path"
+    });
+    return;
+  }
+
+  objectFile.markdownBody = markdown;
+  addResult(state, validateMarkdownBody(markdown, markdownPath));
+  validateTitleMatchesH1(state, objectFile, markdown);
+}
+
+function validateObjectHash(state: ProjectValidationState, objectFile: MemoryObjectFile): void {
+  const contentHash = readString(objectFile.value, "content_hash");
+
+  if (contentHash === null) {
+    state.errors.push({
+      code: "ObjectContentHashMissing",
+      message: "Memory object content_hash is missing.",
+      path: objectFile.path,
+      field: "/content_hash"
+    });
+    return;
+  }
+
+  if (objectFile.markdownBody === null) {
+    return;
+  }
+
+  const actualHash = computeObjectContentHash(objectFile.value, objectFile.markdownBody);
+  if (actualHash !== contentHash) {
+    state.warnings.push({
+      code: "ObjectContentHashMismatch",
+      message: "Memory object content_hash does not match current body and metadata.",
+      path: objectFile.path,
+      field: "/content_hash"
+    });
+  }
+}
+
+function validateObjectScope(
+  state: ProjectValidationState,
+  objectFile: MemoryObjectFile,
+  options: ValidateProjectOptions
+): void {
+  const scope = objectFile.value.scope;
+
+  if (!isRecord(scope)) {
+    return;
+  }
+
+  const kind = readString(scope, "kind");
+  const project = readString(scope, "project");
+  const branch = readScopeString(scope, "branch");
+  const task = readScopeString(scope, "task");
+
+  if (state.projectId !== null && project !== null && project !== state.projectId) {
+    state.errors.push({
+      code: "ObjectScopeProjectMismatch",
+      message: "Object scope project must match local project id.",
+      path: objectFile.path,
+      field: "/scope/project"
+    });
+  }
+
+  if (kind === "project" && (branch.value !== null || task.value !== null)) {
+    state.errors.push({
+      code: "ObjectScopeInvalid",
+      message: "Project-scoped memory must not set branch or task.",
+      path: objectFile.path,
+      field: "/scope"
+    });
+  } else if (kind === "branch") {
+    validateBranchScope(state, objectFile, branch, task, options);
+  } else if (kind === "task" && (task.value === null || task.value.length === 0)) {
+    state.errors.push({
+      code: "ObjectScopeInvalid",
+      message: "Task-scoped memory must set task.",
+      path: objectFile.path,
+      field: "/scope/task"
+    });
+  }
+}
+
+function validateBranchScope(
+  state: ProjectValidationState,
+  objectFile: MemoryObjectFile,
+  branch: ScopeString,
+  task: ScopeString,
+  options: ValidateProjectOptions
+): void {
+  if (branch.value === null || branch.value.length === 0 || task.value !== null) {
+    state.errors.push({
+      code: "ObjectScopeInvalid",
+      message: "Branch-scoped memory must set branch and must not set task.",
+      path: objectFile.path,
+      field: "/scope"
+    });
+  }
+
+  if (
+    options.git?.available !== true ||
+    options.git.branch === null ||
+    options.git.branch === undefined
+  ) {
+    state.errors.push({
+      code: "ObjectBranchScopeUnavailable",
+      message: "Branch-scoped memory requires an available current Git branch.",
+      path: objectFile.path,
+      field: "/scope/branch"
+    });
+  } else if (branch.value !== null && branch.value !== options.git.branch) {
+    state.errors.push({
+      code: "ObjectScopeBranchMismatch",
+      message: "Branch-scoped memory must match the current Git branch.",
+      path: objectFile.path,
+      field: "/scope/branch"
+    });
+  }
+}
+
+function validateTitleMatchesH1(
+  state: ProjectValidationState,
+  objectFile: MemoryObjectFile,
+  markdown: string
+): void {
+  const title = readString(objectFile.value, "title");
+  const h1 = extractFirstH1(markdown);
+
+  if (title !== null && h1 !== null && h1 !== title) {
+    state.warnings.push({
+      code: "ObjectTitleH1Mismatch",
+      message: "Markdown H1 differs from JSON title.",
+      path: objectFile.path,
+      field: "/title"
+    });
+  }
+}
+
+function validateRelationHash(state: ProjectValidationState, relation: RelationFile): void {
+  const contentHash = readString(relation.value, "content_hash");
+
+  if (contentHash === null) {
+    return;
+  }
+
+  const actualHash = computeRelationContentHash(relation.value);
+  if (actualHash !== contentHash) {
+    state.warnings.push({
+      code: "RelationContentHashMismatch",
+      message: "Relation content_hash does not match current metadata.",
+      path: relation.path,
+      field: "/content_hash"
+    });
+  }
+}
+
+function validateDuplicateObjectIds(state: ProjectValidationState): void {
+  const pathsById = new Map<string, string[]>();
+
+  for (const objectFile of state.objects) {
+    const id = readString(objectFile.value, "id");
+    if (id === null) {
+      continue;
+    }
+
+    const paths = pathsById.get(id) ?? [];
+    paths.push(objectFile.path);
+    pathsById.set(id, paths);
+  }
+
+  for (const [id, paths] of pathsById) {
+    if (paths.length > 1) {
+      for (const path of paths) {
+        state.errors.push({
+          code: "ObjectIdDuplicate",
+          message: `Duplicate object id: ${id}.`,
+          path,
+          field: "/id"
+        });
+      }
+    }
+  }
+}
+
+function validateDuplicateRelationIds(state: ProjectValidationState): void {
+  const pathsById = new Map<string, string[]>();
+
+  for (const relation of state.relations) {
+    const id = readString(relation.value, "id");
+    if (id === null) {
+      continue;
+    }
+
+    const paths = pathsById.get(id) ?? [];
+    paths.push(relation.path);
+    pathsById.set(id, paths);
+  }
+
+  for (const [id, paths] of pathsById) {
+    if (paths.length > 1) {
+      for (const path of paths) {
+        state.errors.push({
+          code: "RelationIdDuplicate",
+          message: `Duplicate relation id: ${id}.`,
+          path,
+          field: "/id"
+        });
+      }
+    }
+  }
+}
+
+function validateRelationEndpointsAndEquivalence(state: ProjectValidationState): void {
+  const pathsByEquivalentRelation = new Map<string, string[]>();
+
+  for (const relation of state.relations) {
+    const from = readString(relation.value, "from");
+    const predicate = readString(relation.value, "predicate");
+    const to = readString(relation.value, "to");
+
+    if (from !== null && !state.objectIds.has(from)) {
+      state.errors.push({
+        code: "RelationEndpointMissing",
+        message: "Relation from endpoint does not reference an existing object.",
+        path: relation.path,
+        field: "/from"
+      });
+    }
+
+    if (to !== null && !state.objectIds.has(to)) {
+      state.errors.push({
+        code: "RelationEndpointMissing",
+        message: "Relation to endpoint does not reference an existing object.",
+        path: relation.path,
+        field: "/to"
+      });
+    }
+
+    if (from !== null && predicate !== null && to !== null) {
+      const equivalenceKey = `${from}\u0000${predicate}\u0000${to}`;
+      const paths = pathsByEquivalentRelation.get(equivalenceKey) ?? [];
+      paths.push(relation.path);
+      pathsByEquivalentRelation.set(equivalenceKey, paths);
+    }
+  }
+
+  for (const paths of pathsByEquivalentRelation.values()) {
+    if (paths.length > 1) {
+      for (const path of paths) {
+        state.errors.push({
+          code: "RelationEquivalentDuplicate",
+          message: "Duplicate equivalent relation.",
+          path,
+          field: null
+        });
+      }
+    }
+  }
+}
+
+function validateSupersededObjects(state: ProjectValidationState): void {
+  for (const objectFile of state.objects) {
+    const id = readString(objectFile.value, "id");
+    if (
+      id !== null &&
+      readString(objectFile.value, "status") === "superseded" &&
+      readNullableString(objectFile.value, "superseded_by") === null &&
+      !state.supersedesFromIds.has(id)
+    ) {
+      state.warnings.push({
+        code: "ObjectSupersededReplacementMissing",
+        message: "Superseded object should identify its replacement.",
+        path: objectFile.path,
+        field: "/superseded_by"
+      });
+    }
+  }
+}
+
+function validateRelatedToUsage(state: ProjectValidationState): void {
+  const relatedToRelations = state.relations.filter(
+    (relation) => readString(relation.value, "predicate") === "related_to"
+  );
+
+  if (
+    relatedToRelations.length >= RELATED_TO_WARNING_MINIMUM &&
+    relatedToRelations.length / state.relations.length > 0.5
+  ) {
+    state.warnings.push({
+      code: "RelationRelatedToExcessive",
+      message: "related_to appears excessively and should not be overused.",
+      path: ".aictx/relations",
+      field: "/predicate"
+    });
+  }
+}
+
+async function readJsonObjectFile(
+  state: ProjectValidationState,
+  path: string
+): Promise<ParsedJsonFile | null> {
+  const contents = await readRelativeFile(state.projectRoot, path);
+
+  if (contents === null) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(contents) as unknown;
+
+    if (!isRecord(parsed)) {
+      state.errors.push({
+        code: "JsonInvalid",
+        message: "JSON file must contain one object.",
+        path,
+        field: null
+      });
+      return null;
+    }
+
+    return { path, value: parsed };
+  } catch (error) {
+    state.errors.push({
+      code: "JsonInvalid",
+      message: `JSON file contains invalid JSON: ${messageFromUnknown(error)}`,
+      path,
+      field: null
+    });
+    return null;
+  }
+}
+
+async function readRelativeFile(projectRoot: string, path: string): Promise<string | null> {
+  return await readFile(join(projectRoot, path), "utf8").catch(() => null);
+}
+
+async function globProjectPaths(projectRoot: string, pattern: string): Promise<string[]> {
+  return (
+    await fg(pattern, {
+      cwd: projectRoot,
+      dot: true,
+      ignore: [".aictx/index/**", ".aictx/context/**"],
+      onlyFiles: true,
+      unique: true
+    })
+  ).sort();
+}
+
+function resolveBodyPath(projectRoot: string, bodyPath: string): string | null {
+  if (isAbsolute(bodyPath)) {
+    return null;
+  }
+
+  const aictxRoot = resolve(projectRoot, ".aictx");
+  const resolvedBodyPath = resolve(aictxRoot, bodyPath);
+  const relativePath = relative(aictxRoot, resolvedBodyPath);
+
+  if (relativePath === "" || relativePath.startsWith("..") || isAbsolute(relativePath)) {
+    return null;
+  }
+
+  return resolvedBodyPath;
+}
+
+function addResult(state: ProjectValidationState, result: SchemaValidationResult): void {
+  state.errors.push(...result.errors);
+  state.warnings.push(...result.warnings);
+}
+
+function issuesFromErrorDetails(details: JsonValue | undefined): ValidationIssue[] {
+  if (!isRecord(details) || !Array.isArray(details.issues)) {
+    return [
+      {
+        code: "SchemaValidationFailed",
+        message: "Schema validation failed.",
+        path: ".aictx/schema",
+        field: null
+      }
+    ];
+  }
+
+  const issues: ValidationIssue[] = [];
+
+  for (const issue of details.issues) {
+    if (isValidationIssue(issue)) {
+      issues.push(issue);
+    }
+  }
+
+  return issues;
+}
+
+function isValidationIssue(value: unknown): value is ValidationIssue {
+  return (
+    isRecord(value) &&
+    typeof value.code === "string" &&
+    typeof value.message === "string" &&
+    typeof value.path === "string" &&
+    (typeof value.field === "string" || value.field === null)
+  );
+}
+
+function readProjectId(config: Record<string, unknown>): string | null {
+  const project = config.project;
+
+  return isRecord(project) ? readString(project, "id") : null;
+}
+
+function readString(record: Record<string, unknown>, key: string): string | null {
+  const value = record[key];
+
+  return typeof value === "string" ? value : null;
+}
+
+function readNullableString(record: Record<string, unknown>, key: string): string | null {
+  const value = record[key];
+
+  return typeof value === "string" && value.length > 0 ? value : null;
+}
+
+function readScopeString(record: Record<string, unknown>, key: string): ScopeString {
+  const value = record[key];
+
+  return { value: typeof value === "string" ? value : null };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function messageFromUnknown(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
