@@ -1,0 +1,521 @@
+import { access, copyFile, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
+
+import fg from "fast-glob";
+import { afterEach, describe, expect, it } from "vitest";
+
+import type {
+  GitState,
+  ObjectId,
+  ObjectStatus,
+  ObjectType,
+  Predicate,
+  RelationConfidence,
+  RelationId
+} from "../../../src/core/types.js";
+import {
+  computeObjectContentHash,
+  computeRelationContentHash
+} from "../../../src/storage/hashes.js";
+import type { MemoryObjectSidecar } from "../../../src/storage/objects.js";
+import type { MemoryRelation } from "../../../src/storage/relations.js";
+import { applyMemoryPatch } from "../../../src/storage/write.js";
+import { SCHEMA_FILES } from "../../../src/validation/schemas.js";
+import { createFixedTestClock, FIXED_TIMESTAMP } from "../../fixtures/time.js";
+
+const repoRoot = process.cwd();
+const tempRoots: string[] = [];
+const projectId = "project.billing-api";
+const originalTimestamp = "2026-04-25T13:00:00+02:00";
+const noGit: GitState = {
+  available: false,
+  branch: null,
+  commit: null,
+  dirty: null
+};
+const validConfig = {
+  version: 1,
+  project: {
+    id: projectId,
+    name: "Billing API"
+  },
+  memory: {
+    defaultTokenBudget: 6000,
+    autoIndex: true,
+    saveContextPacks: false
+  },
+  git: {
+    trackContextPacks: false
+  }
+};
+
+afterEach(async () => {
+  await Promise.all(
+    tempRoots.splice(0).map((path) => rm(path, { recursive: true, force: true }))
+  );
+});
+
+describe("applyMemoryPatch relation operations", () => {
+  it("creates, updates, deletes, hashes, and appends relation events", async () => {
+    const projectRoot = await createRelationPatchProject();
+
+    const result = await applyMemoryPatch({
+      projectRoot,
+      patch: {
+        source: {
+          kind: "agent",
+          task: "Record relation changes"
+        },
+        changes: [
+          {
+            op: "create_relation",
+            from: "constraint.webhook-idempotency",
+            predicate: "affects",
+            to: "decision.billing-retries",
+            confidence: "high",
+            evidence: [
+              {
+                kind: "memory",
+                id: "constraint.webhook-idempotency"
+              }
+            ]
+          },
+          {
+            op: "update_relation",
+            id: "rel.billing-retries-requires-idempotency",
+            status: "stale",
+            confidence: "low",
+            evidence: [
+              {
+                kind: "commit",
+                id: "abc123"
+              }
+            ]
+          },
+          {
+            op: "delete_relation",
+            id: "rel.billing-retries-mentions-idempotency"
+          }
+        ]
+      },
+      git: noGit,
+      clock: createFixedTestClock(FIXED_TIMESTAMP)
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+
+    expect(result.data.relations_created).toEqual([
+      "rel.constraint-webhook-idempotency-affects-decision-billing-retries"
+    ]);
+    expect(result.data.relations_updated).toEqual(["rel.billing-retries-requires-idempotency"]);
+    expect(result.data.relations_deleted).toEqual(["rel.billing-retries-mentions-idempotency"]);
+    expect(result.data.events_appended).toBe(3);
+    expect(result.data.files_changed).toEqual([
+      ".aictx/events.jsonl",
+      ".aictx/relations/billing-retries-mentions-idempotency.json",
+      ".aictx/relations/billing-retries-requires-idempotency.json",
+      ".aictx/relations/constraint-webhook-idempotency-affects-decision-billing-retries.json"
+    ]);
+
+    const created = await readJsonProjectFile(
+      projectRoot,
+      ".aictx/relations/constraint-webhook-idempotency-affects-decision-billing-retries.json"
+    );
+    expect(created).toEqual(
+      expect.objectContaining({
+        id: "rel.constraint-webhook-idempotency-affects-decision-billing-retries",
+        from: "constraint.webhook-idempotency",
+        predicate: "affects",
+        to: "decision.billing-retries",
+        status: "active",
+        confidence: "high",
+        evidence: [
+          {
+            kind: "memory",
+            id: "constraint.webhook-idempotency"
+          }
+        ],
+        created_at: FIXED_TIMESTAMP,
+        updated_at: FIXED_TIMESTAMP
+      })
+    );
+    expectRelationHash(created);
+
+    const updated = await readJsonProjectFile(
+      projectRoot,
+      ".aictx/relations/billing-retries-requires-idempotency.json"
+    );
+    expect(updated).toEqual(
+      expect.objectContaining({
+        id: "rel.billing-retries-requires-idempotency",
+        from: "decision.billing-retries",
+        predicate: "requires",
+        to: "constraint.webhook-idempotency",
+        status: "stale",
+        confidence: "low",
+        evidence: [
+          {
+            kind: "commit",
+            id: "abc123"
+          }
+        ],
+        created_at: originalTimestamp,
+        updated_at: FIXED_TIMESTAMP
+      })
+    );
+    expectRelationHash(updated);
+    await expectPathMissing(
+      projectRoot,
+      ".aictx/relations/billing-retries-mentions-idempotency.json"
+    );
+
+    const events = await readEvents(projectRoot);
+    expect(events).toEqual([
+      expect.objectContaining({
+        event: "relation.created",
+        relation_id: "rel.constraint-webhook-idempotency-affects-decision-billing-retries",
+        actor: "agent",
+        timestamp: FIXED_TIMESTAMP
+      }),
+      expect.objectContaining({
+        event: "relation.updated",
+        relation_id: "rel.billing-retries-requires-idempotency",
+        actor: "agent",
+        timestamp: FIXED_TIMESTAMP
+      }),
+      expect.objectContaining({
+        event: "relation.deleted",
+        relation_id: "rel.billing-retries-mentions-idempotency",
+        actor: "agent",
+        timestamp: FIXED_TIMESTAMP
+      })
+    ]);
+  });
+
+  it.each([
+    {
+      name: "from",
+      change: {
+        op: "create_relation",
+        from: "decision.missing",
+        predicate: "requires",
+        to: "constraint.webhook-idempotency"
+      },
+      field: "/changes/0/from"
+    },
+    {
+      name: "to",
+      change: {
+        op: "create_relation",
+        from: "decision.billing-retries",
+        predicate: "requires",
+        to: "constraint.missing"
+      },
+      field: "/changes/0/to"
+    }
+  ])("rejects missing $name endpoints before disk mutation", async ({ change, field }) => {
+    const projectRoot = await createRelationPatchProject();
+    const before = await readAictxSnapshot(projectRoot);
+
+    const result = await applyMemoryPatch({
+      projectRoot,
+      patch: {
+        source: {
+          kind: "agent"
+        },
+        changes: [change]
+      },
+      git: noGit,
+      clock: createFixedTestClock(FIXED_TIMESTAMP)
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.code).toBe("AICtxObjectNotFound");
+      expect(JSON.stringify(result.error.details)).toContain(field);
+    }
+    await expect(readAictxSnapshot(projectRoot)).resolves.toEqual(before);
+  });
+
+  it("rejects duplicate equivalent relations before disk mutation", async () => {
+    const projectRoot = await createRelationPatchProject();
+    const before = await readAictxSnapshot(projectRoot);
+
+    const result = await applyMemoryPatch({
+      projectRoot,
+      patch: {
+        source: {
+          kind: "agent"
+        },
+        changes: [
+          {
+            op: "create_relation",
+            id: "rel.duplicate-requires",
+            from: "decision.billing-retries",
+            predicate: "requires",
+            to: "constraint.webhook-idempotency"
+          }
+        ]
+      },
+      git: noGit,
+      clock: createFixedTestClock(FIXED_TIMESTAMP)
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.code).toBe("AICtxInvalidRelation");
+    }
+    await expect(readAictxSnapshot(projectRoot)).resolves.toEqual(before);
+  });
+
+  it("rejects immutable relation endpoint updates before disk mutation", async () => {
+    const projectRoot = await createRelationPatchProject();
+    const before = await readAictxSnapshot(projectRoot);
+
+    const result = await applyMemoryPatch({
+      projectRoot,
+      patch: {
+        source: {
+          kind: "agent"
+        },
+        changes: [
+          {
+            op: "update_relation",
+            id: "rel.billing-retries-requires-idempotency",
+            from: "constraint.webhook-idempotency"
+          }
+        ]
+      },
+      git: noGit,
+      clock: createFixedTestClock(FIXED_TIMESTAMP)
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.code).toBe("AICtxSchemaValidationFailed");
+    }
+    await expect(readAictxSnapshot(projectRoot)).resolves.toEqual(before);
+  });
+
+  it("treats relation updates without mutable fields as no-ops", async () => {
+    const projectRoot = await createRelationPatchProject();
+    const before = await readAictxSnapshot(projectRoot);
+
+    const result = await applyMemoryPatch({
+      projectRoot,
+      patch: {
+        source: {
+          kind: "agent"
+        },
+        changes: [
+          {
+            op: "update_relation",
+            id: "rel.billing-retries-requires-idempotency"
+          }
+        ]
+      },
+      git: noGit,
+      clock: createFixedTestClock(FIXED_TIMESTAMP)
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+
+    expect(result.data.relations_updated).toEqual([]);
+    expect(result.data.events_appended).toBe(0);
+    expect(result.data.files_changed).toEqual([]);
+    await expect(readAictxSnapshot(projectRoot)).resolves.toEqual(before);
+  });
+});
+
+async function createRelationPatchProject(): Promise<string> {
+  const projectRoot = await mkdtemp(join(tmpdir(), "aictx-relation-patch-"));
+  tempRoots.push(projectRoot);
+  await mkdir(join(projectRoot, ".aictx", "schema"), { recursive: true });
+
+  for (const schemaFile of Object.values(SCHEMA_FILES)) {
+    await copyFile(
+      join(repoRoot, "src", "schemas", schemaFile),
+      join(projectRoot, ".aictx", "schema", schemaFile)
+    );
+  }
+
+  await writeJsonProjectFile(projectRoot, ".aictx/config.json", validConfig);
+  await writeMemoryObject(projectRoot, {
+    id: "decision.billing-retries",
+    type: "decision",
+    status: "active",
+    title: "Billing retries moved to queue worker",
+    bodyPath: "memory/decisions/billing-retries.md",
+    body: "# Billing retries moved to queue worker\n\nRetries run in the queue worker.\n"
+  });
+  await writeMemoryObject(projectRoot, {
+    id: "constraint.webhook-idempotency",
+    type: "constraint",
+    status: "active",
+    title: "Webhook processing must be idempotent",
+    bodyPath: "memory/constraints/webhook-idempotency.md",
+    body: "# Webhook processing must be idempotent\n\nDuplicate webhooks are expected.\n"
+  });
+  await writeRelation(projectRoot, {
+    id: "rel.billing-retries-requires-idempotency",
+    from: "decision.billing-retries",
+    predicate: "requires",
+    to: "constraint.webhook-idempotency",
+    status: "active",
+    confidence: "medium"
+  });
+  await writeRelation(projectRoot, {
+    id: "rel.billing-retries-mentions-idempotency",
+    from: "decision.billing-retries",
+    predicate: "mentions",
+    to: "constraint.webhook-idempotency",
+    status: "active"
+  });
+  await writeProjectFile(projectRoot, ".aictx/events.jsonl", "");
+
+  return projectRoot;
+}
+
+async function writeMemoryObject(
+  projectRoot: string,
+  fixture: {
+    id: ObjectId;
+    type: ObjectType;
+    status: ObjectStatus;
+    title: string;
+    bodyPath: string;
+    body: string;
+  }
+): Promise<void> {
+  const sidecarWithoutHash = {
+    id: fixture.id,
+    type: fixture.type,
+    status: fixture.status,
+    title: fixture.title,
+    body_path: fixture.bodyPath,
+    scope: {
+      kind: "project",
+      project: projectId,
+      branch: null,
+      task: null
+    },
+    tags: [],
+    created_at: originalTimestamp,
+    updated_at: originalTimestamp
+  } satisfies Omit<MemoryObjectSidecar, "content_hash">;
+  const sidecar = {
+    ...sidecarWithoutHash,
+    content_hash: computeObjectContentHash(sidecarWithoutHash, fixture.body)
+  } satisfies MemoryObjectSidecar;
+
+  await writeJsonProjectFile(
+    projectRoot,
+    `.aictx/${fixture.bodyPath.replace(/\.md$/, ".json")}`,
+    sidecar
+  );
+  await writeProjectFile(projectRoot, `.aictx/${fixture.bodyPath}`, fixture.body);
+}
+
+async function writeRelation(
+  projectRoot: string,
+  fixture: {
+    id: RelationId;
+    from: ObjectId;
+    predicate: Predicate;
+    to: ObjectId;
+    status: "active" | "stale" | "rejected";
+    confidence?: RelationConfidence;
+  }
+): Promise<void> {
+  const relationWithoutHash = {
+    id: fixture.id,
+    from: fixture.from,
+    predicate: fixture.predicate,
+    to: fixture.to,
+    status: fixture.status,
+    ...(fixture.confidence === undefined ? {} : { confidence: fixture.confidence }),
+    created_at: originalTimestamp,
+    updated_at: originalTimestamp
+  } satisfies Omit<MemoryRelation, "content_hash">;
+  const relation = {
+    ...relationWithoutHash,
+    content_hash: computeRelationContentHash(relationWithoutHash)
+  } satisfies MemoryRelation;
+
+  await writeJsonProjectFile(
+    projectRoot,
+    `.aictx/relations/${fixture.id.slice("rel.".length)}.json`,
+    relation
+  );
+}
+
+async function readJsonProjectFile(
+  projectRoot: string,
+  path: string
+): Promise<Record<string, unknown>> {
+  return JSON.parse(await readFile(join(projectRoot, path), "utf8")) as Record<string, unknown>;
+}
+
+async function readEvents(projectRoot: string): Promise<Record<string, unknown>[]> {
+  const contents = await readFile(join(projectRoot, ".aictx/events.jsonl"), "utf8");
+
+  return contents
+    .split("\n")
+    .filter((line) => line.length > 0)
+    .map((line) => JSON.parse(line) as Record<string, unknown>);
+}
+
+async function readAictxSnapshot(projectRoot: string): Promise<Record<string, string>> {
+  const paths = (
+    await fg(".aictx/**", {
+      cwd: projectRoot,
+      dot: true,
+      onlyFiles: true,
+      unique: true
+    })
+  ).sort();
+  const snapshot: Record<string, string> = {};
+
+  for (const path of paths) {
+    snapshot[path] = await readFile(join(projectRoot, path), "utf8");
+  }
+
+  return snapshot;
+}
+
+async function expectPathMissing(projectRoot: string, path: string): Promise<void> {
+  await expect(access(join(projectRoot, path))).rejects.toMatchObject({
+    code: "ENOENT"
+  });
+}
+
+function expectRelationHash(relation: Record<string, unknown>): void {
+  const { content_hash: contentHash, ...withoutHash } = relation;
+
+  expect(contentHash).toBe(computeRelationContentHash(withoutHash));
+}
+
+async function writeJsonProjectFile(
+  projectRoot: string,
+  path: string,
+  value: Record<string, unknown>
+): Promise<void> {
+  await writeProjectFile(projectRoot, path, `${JSON.stringify(value, null, 2)}\n`);
+}
+
+async function writeProjectFile(
+  projectRoot: string,
+  path: string,
+  contents: string
+): Promise<void> {
+  const absolutePath = join(projectRoot, path);
+  await mkdir(dirname(absolutePath), { recursive: true });
+  await writeFile(absolutePath, contents, "utf8");
+}
