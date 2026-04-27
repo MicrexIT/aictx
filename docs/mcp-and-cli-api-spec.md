@@ -271,7 +271,7 @@ Success data:
   "memory_created": ["decision.billing-retries"],
   "memory_updated": [],
   "memory_deleted": [],
-  "relations_created": ["rel.billing-retries-requires-idempotency"],
+  "relations_created": ["rel.decision-billing-retries-requires-constraint-webhook-idempotency"],
   "relations_updated": [],
   "relations_deleted": [],
   "events_appended": 2,
@@ -875,7 +875,7 @@ Example:
 ```json
 {
   "op": "create_relation",
-  "id": "rel.billing-retries-requires-idempotency",
+  "id": "rel.decision-billing-retries-requires-constraint-webhook-idempotency",
   "from": "decision.billing-retries",
   "predicate": "requires",
   "to": "constraint.webhook-idempotency",

@@ -73,7 +73,7 @@ V1 uses this layout:
       stripe-webhook-behavior.json
     concepts/
   relations/
-    billing-retries-requires-idempotency.json
+    decision-billing-retries-requires-constraint-webhook-idempotency.json
   events.jsonl
   schema/
     config.schema.json
@@ -389,7 +389,7 @@ Example:
 
 ```json
 {
-  "id": "rel.billing-retries-requires-idempotency",
+  "id": "rel.decision-billing-retries-requires-constraint-webhook-idempotency",
   "from": "decision.billing-retries",
   "predicate": "requires",
   "to": "constraint.webhook-idempotency",
@@ -466,7 +466,7 @@ Example:
 
 ```jsonl
 {"event":"memory.created","id":"decision.billing-retries","actor":"agent","timestamp":"2026-04-25T14:00:00+02:00","payload":{"title":"Billing retries moved to queue worker"}}
-{"event":"relation.created","relation_id":"rel.billing-retries-requires-idempotency","actor":"agent","timestamp":"2026-04-25T14:01:00+02:00","payload":{"from":"decision.billing-retries","predicate":"requires","to":"constraint.webhook-idempotency"}}
+{"event":"relation.created","relation_id":"rel.decision-billing-retries-requires-constraint-webhook-idempotency","actor":"agent","timestamp":"2026-04-25T14:01:00+02:00","payload":{"from":"decision.billing-retries","predicate":"requires","to":"constraint.webhook-idempotency"}}
 {"event":"memory.marked_stale","id":"decision.old-webhook-retries","actor":"agent","reason":"Retries moved to worker","timestamp":"2026-04-25T14:02:00+02:00"}
 ```
 

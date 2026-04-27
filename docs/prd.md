@@ -702,7 +702,7 @@ Recommended v1 structure:
       stripe-webhook-behavior.md
       stripe-webhook-behavior.json
   relations/
-    billing-retries-requires-idempotency.json
+    decision-billing-retries-requires-constraint-webhook-idempotency.json
     billing-retries-affects-billing.json
   events.jsonl
   schema/
@@ -1033,12 +1033,12 @@ Generic fallback relation. Should be allowed but not overused.
 
 Example file:
 
-.aictx/relations/billing-retries-requires-idempotency.json
+.aictx/relations/decision-billing-retries-requires-constraint-webhook-idempotency.json
 
 Example content:
 
 {
-  "id": "rel.billing-retries-requires-idempotency",
+  "id": "rel.decision-billing-retries-requires-constraint-webhook-idempotency",
   "from": "decision.billing-retries",
   "predicate": "requires",
   "to": "constraint.webhook-idempotency",
@@ -1080,7 +1080,7 @@ Git already provides file history, but events provide structured history useful 
 11.2 Event examples
 
 {"event":"memory.created","id":"decision.billing-retries","actor":"agent","timestamp":"2026-04-25T14:00:00+02:00"}
-{"event":"relation.created","relation_id":"rel.billing-retries-requires-idempotency","actor":"agent","timestamp":"2026-04-25T14:01:00+02:00"}
+{"event":"relation.created","relation_id":"rel.decision-billing-retries-requires-constraint-webhook-idempotency","actor":"agent","timestamp":"2026-04-25T14:01:00+02:00"}
 {"event":"memory.marked_stale","id":"decision.sync-webhook-retries","actor":"agent","reason":"Superseded by queue-worker retry decision","timestamp":"2026-04-25T14:02:00+02:00"}
 
 11.3 Event types
@@ -1198,7 +1198,7 @@ decision.billing-retries
 constraint.webhook-idempotency
 question.retry-backoff
 note.stripe-webhook-behavior
-rel.billing-retries-requires-idempotency
+rel.decision-billing-retries-requires-constraint-webhook-idempotency
 
 13.2 ID generation
 
@@ -1221,7 +1221,7 @@ billing-retries.json
 
 Relation files:
 
-billing-retries-requires-idempotency.json
+decision-billing-retries-requires-constraint-webhook-idempotency.json
 
 Filenames are not canonical. IDs are canonical.
 
