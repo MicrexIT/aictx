@@ -190,6 +190,7 @@ export interface NormalizedCreateRelationChange {
   to: ObjectId;
   status: RelationStatus;
   path: string;
+  createdAt: IsoDateTime;
   confidence?: RelationConfidence;
   evidence?: Evidence[];
 }
@@ -745,11 +746,11 @@ function planMarkStale(
   return ok(undefined);
 }
 
-function planSupersedeObject(
+async function planSupersedeObject(
   state: PlanningState,
   change: RawSupersedeObjectChange,
   index: number
-): Result<void> {
+): Promise<Result<void>> {
   const object = state.objectsById.get(change.id);
 
   if (object === undefined) {
@@ -792,6 +793,64 @@ function planSupersedeObject(
     reason: change.reason
   });
   pushUnique(state.memoryUpdated, change.id);
+
+  const relation = await planSupersedesRelation(state, change.superseded_by, change.id);
+
+  if (!relation.ok) {
+    return relation;
+  }
+
+  return ok(undefined);
+}
+
+async function planSupersedesRelation(
+  state: PlanningState,
+  replacementId: ObjectId,
+  supersededId: ObjectId
+): Promise<Result<void>> {
+  if (findEquivalentRelation(state, replacementId, "supersedes", supersededId) !== null) {
+    return ok(undefined);
+  }
+
+  const id = generateRelationId({
+    from: replacementId,
+    predicate: "supersedes",
+    to: supersededId,
+    existingIds: state.reservedRelationIds
+  });
+  const path = relationPath(id);
+  const pathValidation = await ensureCreatePathsAvailable(state, [path]);
+
+  if (!pathValidation.ok) {
+    return pathValidation;
+  }
+
+  state.normalizedChanges.push({
+    op: "create_relation",
+    id,
+    from: replacementId,
+    predicate: "supersedes",
+    to: supersededId,
+    status: "active",
+    path,
+    createdAt: state.timestamp
+  });
+  state.relationsById.set(id, {
+    id,
+    from: replacementId,
+    predicate: "supersedes",
+    to: supersededId,
+    status: "active",
+    path
+  });
+  state.reservedRelationIds.add(id);
+  recordWrite(state, {
+    path,
+    kind: "relation",
+    operation: "create_relation",
+    relationId: id
+  });
+  pushUnique(state.relationsCreated, id);
 
   return ok(undefined);
 }
@@ -901,6 +960,7 @@ async function planCreateRelation(
     to: change.to,
     status,
     path,
+    createdAt: state.timestamp,
     ...(change.confidence === undefined ? {} : { confidence: change.confidence }),
     ...(change.evidence === undefined ? {} : { evidence: change.evidence })
   };
