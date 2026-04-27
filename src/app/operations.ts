@@ -6,6 +6,11 @@ import { resolveProjectPaths, type ProjectPaths } from "../core/paths.js";
 import { err, ok, type Result } from "../core/result.js";
 import type { AictxMeta } from "../core/types.js";
 import {
+  compileContextPack,
+  type LoadMemoryData,
+  type LoadMemoryInput
+} from "../context/compile.js";
+import {
   rebuildIndex as rebuildGeneratedIndex,
   type RebuildIndexData
 } from "../index/rebuild.js";
@@ -30,6 +35,11 @@ export interface InitProjectOptions extends GitWrapperOptions {
 }
 
 export interface RebuildIndexOptions extends GitWrapperOptions {
+  cwd: string;
+  clock?: Clock;
+}
+
+export interface LoadMemoryOptions extends GitWrapperOptions, LoadMemoryInput {
   cwd: string;
   clock?: Clock;
 }
@@ -164,6 +174,124 @@ export async function rebuildIndex(
   };
 }
 
+export async function loadMemory(
+  options: LoadMemoryOptions
+): Promise<AppResult<LoadMemoryData>> {
+  const clock = options.clock ?? systemClock;
+  const paths = await resolveProjectPaths({
+    cwd: options.cwd,
+    mode: "require-initialized",
+    runner: options.runner
+  });
+
+  if (!paths.ok) {
+    return {
+      ok: false,
+      error: paths.error,
+      warnings: paths.warnings,
+      meta: await buildBestEffortMeta(options)
+    };
+  }
+
+  const meta = await buildMeta(paths.data, options);
+
+  if (!meta.ok) {
+    return meta;
+  }
+
+  const compiled = await compileContextPack({
+    paths: paths.data,
+    git: meta.meta.git,
+    task: options.task,
+    ...(options.token_budget === undefined ? {} : { token_budget: options.token_budget }),
+    ...(options.mode === undefined ? {} : { mode: options.mode }),
+    clock
+  });
+
+  if (compiled.ok) {
+    return {
+      ok: true,
+      data: compiled.data,
+      warnings: compiled.warnings,
+      meta: meta.meta
+    };
+  }
+
+  if (compiled.error.code !== "AICtxIndexUnavailable") {
+    return {
+      ok: false,
+      error: compiled.error,
+      warnings: compiled.warnings,
+      meta: meta.meta
+    };
+  }
+
+  const autoIndex = await readAutoIndexSetting(paths.data);
+
+  if (!autoIndex.ok) {
+    return {
+      ok: false,
+      error: autoIndex.error,
+      warnings: [...compiled.warnings, ...autoIndex.warnings],
+      meta: meta.meta
+    };
+  }
+
+  if (!autoIndex.data) {
+    return {
+      ok: false,
+      error: compiled.error,
+      warnings: [...compiled.warnings, ...autoIndex.warnings],
+      meta: meta.meta
+    };
+  }
+
+  const rebuilt = await rebuildIndexForResolvedProject({
+    paths: paths.data,
+    meta: meta.meta,
+    clock
+  });
+
+  if (!rebuilt.ok) {
+    return {
+      ok: false,
+      error: rebuilt.error,
+      warnings: [...compiled.warnings, ...autoIndex.warnings, ...rebuilt.warnings],
+      meta: meta.meta
+    };
+  }
+
+  const retried = await compileContextPack({
+    paths: paths.data,
+    git: meta.meta.git,
+    task: options.task,
+    ...(options.token_budget === undefined ? {} : { token_budget: options.token_budget }),
+    ...(options.mode === undefined ? {} : { mode: options.mode }),
+    clock
+  });
+
+  if (!retried.ok) {
+    return {
+      ok: false,
+      error: retried.error,
+      warnings: [
+        ...compiled.warnings,
+        ...autoIndex.warnings,
+        ...rebuilt.warnings,
+        ...retried.warnings
+      ],
+      meta: meta.meta
+    };
+  }
+
+  return {
+    ok: true,
+    data: retried.data,
+    warnings: [...autoIndex.warnings, ...rebuilt.warnings, ...retried.warnings],
+    meta: meta.meta
+  };
+}
+
 export async function searchMemory(
   options: SearchMemoryOptions
 ): Promise<AppResult<SearchMemoryData>> {
@@ -270,6 +398,7 @@ export async function searchMemory(
 
 export const applicationOperations = {
   initProject,
+  loadMemory,
   rebuildIndex,
   searchMemory
 };
