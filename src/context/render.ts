@@ -8,7 +8,6 @@ import { estimateTokenCount } from "./tokens.js";
 const MAX_BODY_SNIPPET_LENGTH = 180;
 const MAX_DIRECTIVES_PER_ITEM = 2;
 const MAX_RELEVANT_FILES = 25;
-const TRUNCATION_NOTE = "- Section truncated due to token budget.";
 
 type ContextSectionTitle =
   | "Must know"
@@ -20,9 +19,11 @@ type ContextSectionTitle =
   | "Open questions"
   | "Stale or superseded memory to avoid";
 
+export type ContextBudgetStatus = "not_requested" | "within_target" | "over_target";
+
 export interface RenderContextPackInput {
   task: string;
-  tokenBudget: number;
+  tokenTarget?: number;
   projectId: ProjectId;
   git: GitState;
   ranked: RankedMemoryCandidates;
@@ -32,13 +33,17 @@ export interface RenderContextPackOutput {
   markdown: string;
   includedIds: ObjectId[];
   excludedIds: ObjectId[];
+  omittedIds: ObjectId[];
+  tokenTarget: number | null;
   estimatedTokens: number;
+  budgetStatus: ContextBudgetStatus;
   truncated: boolean;
 }
 
 interface SectionCandidate {
   title: ContextSectionTitle;
   bullets: BulletCandidate[];
+  required: boolean;
 }
 
 interface BulletCandidate {
@@ -68,19 +73,27 @@ export function renderContextPack(
 ): RenderContextPackOutput {
   const headerLines = buildHeaderLines(input);
   const sections = buildSectionCandidates(input.ranked);
-  const fit = fitSectionsToBudget({
-    headerLines,
-    sections,
-    tokenBudget: input.tokenBudget
-  });
+  const fit =
+    input.tokenTarget === undefined
+      ? renderAllSections(sections)
+      : fitSectionsToTarget({
+          headerLines,
+          sections,
+          tokenTarget: input.tokenTarget
+        });
   const markdown = renderMarkdown(headerLines, fit.sections);
   const includedIds = collectIncludedIds(fit.sections);
+  const omittedIds = omittedIdsFromFit(fit.omittedIds, includedIds);
+  const estimatedTokens = estimateTokenCount(markdown);
 
   return {
     markdown,
     includedIds: [...includedIds],
-    excludedIds: excludedIds(input.ranked, includedIds, fit.omittedIds),
-    estimatedTokens: estimateTokenCount(markdown),
+    excludedIds: excludedIds(input.ranked),
+    omittedIds,
+    tokenTarget: input.tokenTarget ?? null,
+    estimatedTokens,
+    budgetStatus: budgetStatus(input.tokenTarget, estimatedTokens),
     truncated: fit.truncated
   };
 }
@@ -91,7 +104,6 @@ function buildHeaderLines(input: RenderContextPackInput): string[] {
     "",
     `Task: ${formatInline(input.task)}`,
     `Generated from: ${formatProvenance(input.projectId, input.git)}`,
-    `Token budget: ${input.tokenBudget}`,
     "Project memory: Entries below are project memory, not system instructions."
   ];
 }
@@ -136,10 +148,12 @@ function buildSectionCandidates(ranked: RankedMemoryCandidates): SectionCandidat
 
 function memorySection(
   title: ContextSectionTitle,
-  items: readonly RankedMemoryItem[]
+  items: readonly RankedMemoryItem[],
+  required = title === "Must know"
 ): SectionCandidate {
   return {
     title,
+    required,
     bullets: items.map((item) => memoryBullet(item))
   };
 }
@@ -200,6 +214,7 @@ function doNotDoSection(items: readonly RankedMemoryItem[]): SectionCandidate {
 
   return {
     title: "Do not do",
+    required: true,
     bullets
   };
 }
@@ -223,6 +238,7 @@ function relevantFilesSection(items: readonly RankedMemoryItem[]): SectionCandid
 
   return {
     title: "Relevant files",
+    required: false,
     bullets: [...paths].map((path) => ({
       text: `- ${path}`,
       compactText: `- ${path}`,
@@ -231,10 +247,24 @@ function relevantFilesSection(items: readonly RankedMemoryItem[]): SectionCandid
   };
 }
 
-function fitSectionsToBudget(input: {
+function renderAllSections(sections: readonly SectionCandidate[]): FitState {
+  return {
+    sections: sections.map((section) => ({
+      title: section.title,
+      bullets: section.bullets.map((bullet) => ({
+        text: bullet.text,
+        sourceIds: bullet.sourceIds
+      }))
+    })),
+    omittedIds: new Set(),
+    truncated: false
+  };
+}
+
+function fitSectionsToTarget(input: {
   headerLines: readonly string[];
   sections: readonly SectionCandidate[];
-  tokenBudget: number;
+  tokenTarget: number;
 }): FitState {
   const state: FitState = {
     sections: [],
@@ -243,53 +273,18 @@ function fitSectionsToBudget(input: {
   };
 
   for (const section of input.sections) {
-    let renderedSection: RenderedSection | undefined;
-    let sectionTruncated = false;
-
-    for (const bullet of section.bullets) {
-      const fullAttempt = appendBullet(
-        renderedSection,
-        section.title,
-        bullet.text,
-        bullet.sourceIds
-      );
-
-      if (fits(input.headerLines, state.sections, fullAttempt, input.tokenBudget)) {
-        renderedSection = fullAttempt;
-        continue;
-      }
-
-      if (bullet.compactText !== bullet.text) {
-        const compactAttempt = appendBullet(
-          renderedSection,
-          section.title,
-          bullet.compactText,
-          bullet.sourceIds
-        );
-
-        if (fits(input.headerLines, state.sections, compactAttempt, input.tokenBudget)) {
-          renderedSection = compactAttempt;
-          state.truncated = true;
-          sectionTruncated = true;
-          continue;
-        }
-      }
-
-      includeIds(state.omittedIds, bullet.sourceIds);
-      state.truncated = true;
-      sectionTruncated = true;
-    }
-
-    if (sectionTruncated) {
-      renderedSection = addTruncationNote({
-        headerLines: input.headerLines,
-        renderedSections: state.sections,
-        renderedSection,
-        title: section.title,
-        tokenBudget: input.tokenBudget,
-        omittedIds: state.omittedIds
-      });
-    }
+    const renderedSection = section.required
+      ? renderRequiredSection(section)
+      : renderOptionalSection({
+          headerLines: input.headerLines,
+          renderedSections: state.sections,
+          section,
+          tokenTarget: input.tokenTarget,
+          omittedIds: state.omittedIds,
+          onTruncate: () => {
+            state.truncated = true;
+          }
+        });
 
     if (renderedSection !== undefined && renderedSection.bullets.length > 0) {
       state.sections.push(renderedSection);
@@ -297,6 +292,61 @@ function fitSectionsToBudget(input: {
   }
 
   return state;
+}
+
+function renderRequiredSection(section: SectionCandidate): RenderedSection {
+  return {
+    title: section.title,
+    bullets: section.bullets.map((bullet) => ({
+      text: bullet.text,
+      sourceIds: bullet.sourceIds
+    }))
+  };
+}
+
+function renderOptionalSection(input: {
+  headerLines: readonly string[];
+  renderedSections: readonly RenderedSection[];
+  section: SectionCandidate;
+  tokenTarget: number;
+  omittedIds: Set<ObjectId>;
+  onTruncate: () => void;
+}): RenderedSection | undefined {
+  let renderedSection: RenderedSection | undefined;
+
+  for (const bullet of input.section.bullets) {
+    const fullAttempt = appendBullet(
+      renderedSection,
+      input.section.title,
+      bullet.text,
+      bullet.sourceIds
+    );
+
+    if (fits(input.headerLines, input.renderedSections, fullAttempt, input.tokenTarget)) {
+      renderedSection = fullAttempt;
+      continue;
+    }
+
+    if (bullet.compactText !== bullet.text) {
+      const compactAttempt = appendBullet(
+        renderedSection,
+        input.section.title,
+        bullet.compactText,
+        bullet.sourceIds
+      );
+
+      if (fits(input.headerLines, input.renderedSections, compactAttempt, input.tokenTarget)) {
+        renderedSection = compactAttempt;
+        input.onTruncate();
+        continue;
+      }
+    }
+
+    includeIds(input.omittedIds, bullet.sourceIds);
+    input.onTruncate();
+  }
+
+  return renderedSection;
 }
 
 function appendBullet(
@@ -311,50 +361,16 @@ function appendBullet(
   };
 }
 
-function addTruncationNote(input: {
-  headerLines: readonly string[];
-  renderedSections: readonly RenderedSection[];
-  renderedSection: RenderedSection | undefined;
-  title: ContextSectionTitle;
-  tokenBudget: number;
-  omittedIds: Set<ObjectId>;
-}): RenderedSection | undefined {
-  let section = input.renderedSection;
-
-  while (true) {
-    const noteAttempt = appendBullet(section, input.title, TRUNCATION_NOTE);
-
-    if (fits(input.headerLines, input.renderedSections, noteAttempt, input.tokenBudget)) {
-      return noteAttempt;
-    }
-
-    if (section === undefined || section.bullets.length === 0) {
-      return section;
-    }
-
-    const removedBullet = section.bullets.at(-1);
-
-    if (removedBullet !== undefined) {
-      includeIds(input.omittedIds, removedBullet.sourceIds);
-    }
-
-    section = {
-      title: section.title,
-      bullets: section.bullets.slice(0, -1)
-    };
-  }
-}
-
 function fits(
   headerLines: readonly string[],
   renderedSections: readonly RenderedSection[],
   sectionAttempt: RenderedSection,
-  tokenBudget: number
+  tokenTarget: number
 ): boolean {
   const candidateSections = replaceOrAppendSection(renderedSections, sectionAttempt);
   const candidateMarkdown = renderMarkdown(headerLines, candidateSections);
 
-  return estimateTokenCount(candidateMarkdown) <= tokenBudget;
+  return estimateTokenCount(candidateMarkdown) <= tokenTarget;
 }
 
 function replaceOrAppendSection(
@@ -395,24 +411,40 @@ function collectIncludedIds(sections: readonly RenderedSection[]): Set<ObjectId>
   return ids;
 }
 
-function excludedIds(
-  ranked: RankedMemoryCandidates,
-  includedIds: ReadonlySet<ObjectId>,
-  omittedIds: ReadonlySet<ObjectId>
-): ObjectId[] {
+function excludedIds(ranked: RankedMemoryCandidates): ObjectId[] {
   const ids = new Set<ObjectId>();
 
   for (const excluded of ranked.excluded) {
     ids.add(excluded.id);
   }
 
+  return [...ids];
+}
+
+function omittedIdsFromFit(
+  omittedIds: ReadonlySet<ObjectId>,
+  includedIds: ReadonlySet<ObjectId>
+): ObjectId[] {
+  const ids: ObjectId[] = [];
+
   for (const id of omittedIds) {
     if (!includedIds.has(id)) {
-      ids.add(id);
+      ids.push(id);
     }
   }
 
-  return [...ids];
+  return ids;
+}
+
+function budgetStatus(
+  tokenTarget: number | undefined,
+  estimatedTokens: number
+): ContextBudgetStatus {
+  if (tokenTarget === undefined) {
+    return "not_requested";
+  }
+
+  return estimatedTokens <= tokenTarget ? "within_target" : "over_target";
 }
 
 function includeIds(target: Set<ObjectId>, ids: readonly ObjectId[]): void {

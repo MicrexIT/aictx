@@ -193,6 +193,8 @@ Behavior:
 * Include Git provenance in the context pack when Git is available.
 * If Git is unavailable, include local project provenance and mark Git provenance as unavailable.
 * Exclude stale, superseded, rejected, and conflicted memory from `Must know` by default.
+* Treat `--token-budget` as an advisory target only when explicitly provided.
+* Keep token target/status metadata out of the Markdown context pack and expose it in JSON output.
 
 JSON success data:
 
@@ -201,6 +203,10 @@ JSON success data:
   "task": "Fix Stripe webhook retries",
   "token_budget": 6000,
   "context_pack": "# AI Context Pack\n...",
+  "token_target": 6000,
+  "estimated_tokens": 842,
+  "budget_status": "within_target",
+  "truncated": false,
   "source": {
     "project": "project.billing-api",
     "git_available": true,
@@ -208,9 +214,12 @@ JSON success data:
     "commit": "abc123"
   },
   "included_ids": ["decision.billing-retries"],
-  "excluded_ids": ["decision.old-webhook-retries"]
+  "excluded_ids": ["decision.old-webhook-retries"],
+  "omitted_ids": []
 }
 ```
+
+When no token budget is requested, `token_target` is `null`, `budget_status` is `not_requested`, and no budget-driven omission or compression is applied. `excluded_ids` are retrieval/status/scope/conflict exclusions; `omitted_ids` are selected memory IDs left out of rendered Markdown due to explicit token-target packaging.
 
 ### 5.3 `aictx save`
 
@@ -513,27 +522,35 @@ Input:
 Input fields:
 
 * `task` is required.
-* `token_budget` is optional and defaults to `config.memory.defaultTokenBudget`.
+* `token_budget` is optional. If omitted, no token target is applied.
 * `mode` is optional and defaults to `coding`.
 
 Behavior:
 
 * Same core behavior as `aictx load`.
 * Must return Markdown context pack plus structured references.
+* Must preserve high-priority task memory even when an explicit token budget target is exceeded.
 
 Output data:
 
 ```json
 {
   "context_pack": "# AI Context Pack\n...",
+  "token_target": 6000,
+  "estimated_tokens": 842,
+  "budget_status": "within_target",
+  "truncated": false,
   "source": {
     "branch": "main",
     "commit": "abc123"
   },
   "included_ids": ["decision.billing-retries"],
-  "excluded_ids": ["decision.old-webhook-retries"]
+  "excluded_ids": ["decision.old-webhook-retries"],
+  "omitted_ids": []
 }
 ```
+
+`budget_status` is one of `not_requested`, `within_target`, or `over_target`.
 
 ### 6.2 `search_memory`
 

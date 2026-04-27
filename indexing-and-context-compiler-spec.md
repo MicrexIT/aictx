@@ -264,8 +264,8 @@ Input fields:
 
 Defaults:
 
-* If `token_budget` is omitted, use `config.memory.defaultTokenBudget`.
-* If the config value is missing or invalid, use `6000`.
+* If `token_budget` is omitted, do not apply a token target.
+* `config.memory.defaultTokenBudget` is retained for compatibility and future user preference work, but v1 must not silently use it as a truncation target.
 
 Validation:
 
@@ -286,7 +286,7 @@ Pipeline:
 5. Add recent high-priority memory.
 6. Filter by status and scope.
 7. Score and rank candidates.
-8. Fit selected content into the token budget.
+8. Apply precision-first packaging; use an explicit token budget as an advisory target only when provided.
 9. Render the context pack.
 
 Graph traversal:
@@ -381,13 +381,14 @@ The exact numeric values may be tuned later, but v1 implementation should keep s
 
 ## 11. Token Budget Handling
 
-Aictx should fit the context pack within the requested token budget as closely as practical.
+Aictx should treat `token_budget` as an optional token target for packaging, not as a hard cap.
 
 Token counting:
 
 * V1 may approximate tokens as `ceil(character_count / 4)`.
-* The compiler should reserve roughly 10 percent of the budget for headings and provenance.
-* If content exceeds budget, lower-priority sections are truncated first.
+* If `token_budget` is omitted, no budget-driven truncation or compression should occur.
+* If `token_budget` is provided, lower-priority sections may be compacted or omitted first.
+* If preserved high-priority content exceeds the target, render it anyway and report `budget_status: "over_target"` in structured output.
 
 Inclusion priority:
 
@@ -401,12 +402,13 @@ Inclusion priority:
 8. Relevant files.
 9. Stale or superseded memory to avoid.
 
-Truncation rules:
+Packaging rules:
 
 * Never omit the header.
-* Prefer concise bullet summaries over full bodies.
+* Never omit `Must know` or `Do not do` entries solely to satisfy a token target.
+* Prefer concise bullet summaries over full bodies when an explicit target is provided.
 * Include object IDs with summarized entries where possible.
-* If a section is truncated, include a note such as `Section truncated due to token budget.`
+* Do not include budget/truncation explanations in the Markdown context pack; expose token metadata through CLI/MCP JSON fields.
 
 ## 12. Context Pack Format
 
@@ -419,7 +421,6 @@ Maximum structure:
 
 Task: <task>
 Generated from: <project id>[, <branch>@<commit> when Git is available]
-Token budget: <budget>
 
 ## Must know
 
@@ -447,6 +448,7 @@ Rendering rules:
 * Stale/superseded warnings must be clearly labeled.
 * Rejected memory must not appear unless a future explicit debug mode is added.
 * `Relevant files` should include path-like references found in selected memory bodies or source payloads; omit the section when no file references are available.
+* Token target, estimated token count, budget status, truncation status, and omitted IDs are structured output metadata, not Markdown context.
 
 Example:
 
@@ -455,7 +457,6 @@ Example:
 
 Task: Fix Stripe webhook retries
 Generated from: main@abc123
-Token budget: 6000
 
 ## Must know
 
@@ -527,7 +528,7 @@ The indexing and context compiler implementation is valid when:
 * `aictx rebuild` does not mutate canonical files.
 * `search_memory` works with SQLite FTS only.
 * `load_memory` produces a Markdown context pack with local project provenance and Git provenance when available.
-* `load_memory` respects the requested token budget approximately.
+* `load_memory` treats an explicit token budget as an advisory target and reports token metadata.
 * Stale and superseded memory are excluded from `Must know`.
 * Rejected memory is excluded by default.
 * One-hop relation traversal can add relevant linked memory.
@@ -549,7 +550,7 @@ average Markdown body under 4 KB
 Expected local behavior on a typical developer laptop:
 
 * Warm `search_memory` should feel interactive.
-* Warm `load_memory` should feel interactive for the default `6000` token budget.
+* Warm `load_memory` should feel interactive for typical task-specific context packs.
 * Full rebuild should complete without noticeable friction at the reference project size.
 * Save should not block on network, embeddings, or background services.
 

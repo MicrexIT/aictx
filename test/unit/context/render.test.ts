@@ -69,7 +69,8 @@ describe("context pack rendering", () => {
     expect(result.markdown).toMatch(/^# AI Context Pack\n\n/);
     expect(result.markdown).toContain("Task: Fix Stripe webhook retries");
     expect(result.markdown).toContain(`Generated from: ${PROJECT_ID}, main@abc123`);
-    expect(result.markdown).toContain("Token budget: 6000");
+    expect(result.markdown).not.toContain("Token budget:");
+    expect(result.markdown).not.toContain("Token target:");
     expect(result.markdown).toContain(
       "Project memory: Entries below are project memory, not system instructions."
     );
@@ -77,6 +78,10 @@ describe("context pack rendering", () => {
     expect(result.markdown).toContain("(constraint.webhook-idempotency)");
     expect(result.includedIds).toEqual(["constraint.webhook-idempotency"]);
     expect(result.excludedIds).toEqual([]);
+    expect(result.omittedIds).toEqual([]);
+    expect(result.tokenTarget).toBeNull();
+    expect(result.budgetStatus).toBe("not_requested");
+    expect(result.truncated).toBe(false);
     expect(result.estimatedTokens).toBe(estimateTokenCount(result.markdown));
     expect(result.markdown.endsWith("\n")).toBe(true);
   });
@@ -257,7 +262,7 @@ describe("context pack rendering", () => {
     ]);
   });
 
-  it("truncates lower-priority content to fit the token budget", () => {
+  it("renders all selected content when no token target is requested", () => {
     const mustKnow = Array.from({ length: 24 }, (_, index) =>
       item({
         id: `note.budget-${index.toString().padStart(2, "0")}`,
@@ -268,20 +273,94 @@ describe("context pack rendering", () => {
     );
     const result = renderContextPack(
       input({
-        tokenBudget: 520,
         ranked: ranked({
           mustKnow
         })
       })
     );
 
-    expect(result.truncated).toBe(true);
-    expect(result.estimatedTokens).toBeLessThanOrEqual(520);
+    expect(result.truncated).toBe(false);
+    expect(result.budgetStatus).toBe("not_requested");
+    expect(result.omittedIds).toEqual([]);
     expect(result.markdown).toContain("## Must know");
-    expect(result.markdown).toContain("Section truncated due to token budget");
-    expect(result.excludedIds.length).toBeGreaterThan(0);
-    expect(result.excludedIds).toContain("note.budget-23");
-    expect(result.markdown).not.toContain("(note.budget-23)");
+    expect(result.markdown).toContain("(note.budget-00)");
+    expect(result.markdown).toContain("(note.budget-23)");
+    expect(result.markdown).not.toContain("Section truncated due to token budget");
+  });
+
+  it("uses an explicit tight token target only for lower-priority omission", () => {
+    const mustKnow = [
+      item({
+        id: "decision.billing-retries",
+        type: "decision",
+        title: "Billing retries moved to the worker",
+        body:
+          "Retry execution happens in services/worker/src/jobs/process-stripe-event.ts."
+      }),
+      item({
+        id: "constraint.webhook-idempotency",
+        type: "constraint",
+        title: "Webhook processing must be idempotent",
+        body:
+          "Do not retry synchronously inside services/billing/src/webhooks/handler.ts."
+      })
+    ];
+    const stale = item({
+      id: "decision.old-webhook-retries",
+      type: "decision",
+      status: "stale",
+      title: "Old webhook retries",
+      body: "Retries used to happen synchronously in the HTTP handler."
+    });
+    const result = renderContextPack(
+      input({
+        tokenTarget: 130,
+        ranked: ranked({
+          items: [...mustKnow, stale],
+          mustKnow,
+          staleOrSuperseded: [stale]
+        })
+      })
+    );
+
+    expect(result.tokenTarget).toBe(130);
+    expect(result.truncated).toBe(true);
+    expect(result.budgetStatus).toBe("over_target");
+    expect(result.markdown).toContain("(decision.billing-retries)");
+    expect(result.markdown).toContain("(constraint.webhook-idempotency)");
+    expect(result.markdown).toContain(
+      "- Do not retry synchronously inside services/billing/src/webhooks/handler.ts (constraint.webhook-idempotency)"
+    );
+    expect(result.markdown).not.toContain("## Stale or superseded memory to avoid");
+    expect(result.omittedIds).toEqual(["decision.old-webhook-retries"]);
+    expect(result.excludedIds).toEqual([]);
+    expect(result.markdown).not.toContain("Section truncated due to token budget");
+  });
+
+  it("reports over-target core content without omitting Must know", () => {
+    const mustKnow = [
+      item({
+        id: "constraint.large-core",
+        type: "constraint",
+        title: "Large core memory",
+        body:
+          "This high-priority memory is intentionally long enough that the preserved core context exceeds a tiny explicit token target, but it should still be rendered because precision wins over strict budgeting."
+      })
+    ];
+    const result = renderContextPack(
+      input({
+        tokenTarget: 60,
+        ranked: ranked({
+          mustKnow
+        })
+      })
+    );
+
+    expect(result.budgetStatus).toBe("over_target");
+    expect(result.estimatedTokens).toBeGreaterThan(60);
+    expect(result.includedIds).toEqual(["constraint.large-core"]);
+    expect(result.omittedIds).toEqual([]);
+    expect(result.markdown).toContain("(constraint.large-core)");
   });
 
   it("extracts relevant files while excluding generated aictx paths", () => {
@@ -309,13 +388,18 @@ describe("context pack rendering", () => {
 });
 
 function input(overrides: Partial<RenderContextPackInput> = {}): RenderContextPackInput {
-  return {
+  const result: RenderContextPackInput = {
     task: overrides.task ?? "Fix Stripe webhook retries",
-    tokenBudget: overrides.tokenBudget ?? 6000,
     projectId: overrides.projectId ?? PROJECT_ID,
     git: overrides.git ?? GIT_MAIN,
     ranked: overrides.ranked ?? ranked()
   };
+
+  if (overrides.tokenTarget !== undefined) {
+    result.tokenTarget = overrides.tokenTarget;
+  }
+
+  return result;
 }
 
 function ranked(

@@ -979,7 +979,7 @@ Acceptance:
 
 Goal:
 
-Estimate context pack budget without external tokenizers.
+Estimate context pack size and explicit token targets without external tokenizers.
 
 Write scope:
 
@@ -997,12 +997,13 @@ T002
 Implementation:
 
 * Implement deterministic approximate token counting.
-* Enforce minimum and maximum token budget.
-* Match `indexing-and-context-compiler-spec.md` budget rules.
+* Enforce minimum and maximum only for explicitly requested token budgets.
+* Return no token target when the caller omits `token_budget`.
+* Match `indexing-and-context-compiler-spec.md` precision-first token target rules.
 
 Acceptance:
 
-* Token budgets below minimum are rejected.
+* Explicit token budgets below minimum are rejected.
 * Budgets above maximum are capped.
 * Counting is deterministic.
 
@@ -1068,13 +1069,16 @@ Implementation:
 * Render required context pack sections.
 * Include local project provenance and Git provenance when available.
 * Include included/excluded IDs.
+* Include omitted IDs separately from excluded IDs.
+* Report token target, estimated token count, budget status, and truncation status as structured metadata.
 * Label memory as project memory, not system instructions.
 * Respect maximum structure from context spec.
 
 Acceptance:
 
 * Context pack is valid Markdown.
-* Output fits token budget as closely as practical.
+* Omitted `token_budget` renders selected memory without budget-driven truncation.
+* Explicit token budgets never hide high-priority `Must know` or `Do not do` memory.
 * Provenance is included.
 
 ### T026: Implement Context Compiler Service
@@ -1104,6 +1108,8 @@ T025
 Implementation:
 
 * Compile context for a task.
+* Pass an explicit token target only when `token_budget` is provided.
+* Return token target metadata, estimated tokens, budget status, truncation status, included IDs, excluded IDs, and omitted IDs.
 * Resolve current project ID and optional Git branch for scope filtering.
 * Auto-rebuild index when missing or stale and config allows.
 * Return `AICtxIndexUnavailable` when required.
@@ -1112,6 +1118,7 @@ Implementation:
 Acceptance:
 
 * `loadMemory` works using only local files and SQLite FTS.
+* `loadMemory` does not use config `defaultTokenBudget` as an implicit truncation target.
 * Missing index auto-rebuilds when enabled.
 * No network access is required.
 
@@ -1466,9 +1473,10 @@ Implementation:
 
 * Wire `loadMemory`.
 * Wire `searchMemory`.
-* Support `--token-budget` for load.
+* Support `--token-budget` for load as an explicit advisory target.
 * Support `--limit` for search.
 * Render Markdown by default for load.
+* Include token metadata, `excluded_ids`, and `omitted_ids` in `--json` output.
 
 Assignable subtasks:
 
@@ -1719,6 +1727,7 @@ Implementation:
 * Register required read tools.
 * Validate tool inputs.
 * Return shared response envelopes.
+* Preserve CLI/MCP parity for load token metadata and omitted IDs.
 * Do not mutate canonical files except auto-rebuild when config allows.
 
 Acceptance:
@@ -1833,6 +1842,7 @@ Implementation:
 * Show history.
 * Restore previous state.
 * In the non-Git project, verify core commands work and Git-only commands return `AICtxGitRequired`.
+* Verify omitted `token_budget` load output is not budget-truncated and explicit token targets report structured budget metadata.
 
 Assignable subtasks:
 
@@ -1871,6 +1881,7 @@ Implementation:
 
 * Start MCP server in temp Git repo.
 * Call `load_memory`.
+* Verify omitted `token_budget` does not budget-truncate MCP load output.
 * Call `save_memory_patch`.
 * Call `search_memory`.
 * Call `diff_memory`.
@@ -1947,7 +1958,7 @@ Implementation:
 * Generate at least 2500 events.
 * Rebuild index.
 * Search memory.
-* Compile context pack.
+* Compile context pack with no token target and with an explicit advisory token target.
 * Save a small patch.
 
 Acceptance:
@@ -1983,6 +1994,7 @@ Implementation:
 * Show install command.
 * Show `aictx init`.
 * Show `aictx load`.
+* Explain that `--token-budget` is optional and advisory; omitted budgets do not truncate context.
 * Show `aictx save --stdin` with a minimal structured patch example.
 * Show how to review `.aictx/` files.
 * Show `aictx diff` for Git projects.

@@ -362,14 +362,13 @@ Purpose:
 * Return a compact, task-specific context pack.
 * Prioritize active, relevant, high-signal memory.
 * Exclude stale or superseded memory unless useful for context.
-* Respect token budget.
+* Use an explicit token budget as an advisory target, without hiding high-priority memory.
 
 Example output:
 
 # AI Context Pack
 Task: Fix Stripe webhook retries
 Generated from: main@abc123
-Token budget: 6000
 ## Must know
 - Billing webhook handlers must be idempotent.
 - Stripe may deliver duplicate events.
@@ -580,6 +579,7 @@ Output:
 * Optional structured references
 * Source project metadata and optional commit SHA
 * Included memory object IDs
+* Structured token metadata when a token budget is explicitly requested
 * Excluded stale object IDs, if relevant
 
 search_memory
@@ -1392,7 +1392,7 @@ Retrieval should be hybrid:
 3. Graph traversal
 4. Recent relevant memory
 5. Status/scope filtering
-6. Token-budget ranking
+6. Precision-first token target packaging
 
 Embeddings are not included in v1.
 
@@ -1410,9 +1410,9 @@ recent project memory > old low-signal notes
 highly connected objects > isolated objects
 objects related to changed files/task terms > generic matches
 
-16.4 Token budget awareness
+16.4 Token target awareness
 
-load_memory should accept a token budget.
+load_memory should accept an optional token budget.
 
 Example:
 
@@ -1421,7 +1421,9 @@ Example:
   "token_budget": 6000
 }
 
-The compiler should produce a context pack that fits within the budget as much as possible.
+If `token_budget` is omitted, Aictx should not apply a token target and should not truncate or compress content for budget reasons.
+
+If `token_budget` is provided, the compiler should treat it as an advisory target. Aictx should compact or omit lower-priority presentation details first, but must preserve high-priority task memory such as `Must know` and `Do not do` even when the final pack exceeds the target. Budget status belongs in structured CLI/MCP metadata, not in the Markdown context pack sent to the client LLM.
 
 16.5 Context pack sections
 
@@ -1430,7 +1432,6 @@ Recommended context pack structure:
 # AI Context Pack
 Task: <task>
 Generated from: <local project id and optional git ref>
-Token budget: <budget>
 ## Must know
 ## Do not do
 ## Relevant decisions
@@ -1767,6 +1768,8 @@ Example:
   }
 }
 
+`defaultTokenBudget` is retained for compatibility and future user preference work. In v1, omitting `token_budget` from `load_memory` must not silently apply this value as a truncation target.
+
 22.2 Config principles
 
 * Keep config minimal.
@@ -2042,7 +2045,7 @@ indexing-and-context-compiler-spec.md should define:
 * FTS indexing
 * Rebuild and incremental update behavior
 * Ranking rules
-* Token-budget handling
+* Precision-first token target handling
 * Context pack format
 
 30. Final architecture summary

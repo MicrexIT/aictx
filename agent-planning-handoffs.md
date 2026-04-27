@@ -726,7 +726,8 @@ Do not modify:
 - Product/spec contracts unless the task explicitly includes documentation or spec updates.
 
 Acceptance:
-- Token budgets below minimum are rejected.
+- Omitted `token_budget` returns no token target.
+- Explicit token budgets below minimum are rejected.
 - Budgets above maximum are capped.
 - Counting is deterministic.
 
@@ -788,7 +789,9 @@ Do not modify:
 
 Acceptance:
 - Context pack is valid Markdown.
-- Output fits token budget as closely as practical.
+- Omitted `token_budget` renders selected memory without budget-driven truncation.
+- Explicit token budgets never hide high-priority `Must know` or `Do not do` memory.
+- Budget metadata is structured output, not Markdown context.
 - Provenance is included.
 
 Run:
@@ -818,6 +821,8 @@ Do not modify:
 
 Acceptance:
 - `loadMemory` works using only local files and SQLite FTS.
+- `loadMemory` does not use config `defaultTokenBudget` as an implicit truncation target.
+- `loadMemory` returns token target metadata, estimated tokens, budget status, truncated status, included IDs, excluded IDs, and omitted IDs.
 - Missing index auto-rebuilds when enabled.
 - No network access is required.
 
@@ -1097,6 +1102,7 @@ Do not modify:
 Acceptance:
 - `aictx load` returns Markdown by default.
 - `aictx load --json` returns envelope.
+- `aictx load --json` includes token metadata and separate `excluded_ids` / `omitted_ids`.
 - Search returns local SQLite FTS results.
 
 Run:
@@ -1302,6 +1308,7 @@ Do not modify:
 
 Acceptance:
 - MCP load matches CLI load data.
+- MCP load preserves CLI token metadata and omitted IDs.
 - MCP search matches CLI search data.
 - MCP diff matches CLI diff data.
 
@@ -1391,6 +1398,8 @@ Do not modify:
 Acceptance:
 - Workflow passes without network.
 - Git diff remains reviewable.
+- Load without `token_budget` is not budget-truncated.
+- Explicit `--token-budget` reports structured budget metadata.
 - Restore only affects `.aictx/`.
 - Non-Git core workflow passes without Git.
 
@@ -1419,6 +1428,7 @@ Do not modify:
 
 Acceptance:
 - MCP tools use the same application services.
+- MCP load without `token_budget` is not budget-truncated.
 - MCP stdout is protocol-safe.
 - No arbitrary shell or filesystem tools are exposed.
 
@@ -1477,6 +1487,7 @@ Do not modify:
 
 Acceptance:
 - Tests are smoke tests, not strict benchmarks.
+- Context-pack smoke coverage includes no token target and explicit advisory token target cases.
 - Operations complete within reasonable local timeouts.
 - No external services are used.
 
@@ -1506,6 +1517,7 @@ Do not modify:
 
 Acceptance:
 - README reflects implemented commands.
+- README explains that `--token-budget` is optional and advisory; omitted budgets do not truncate context.
 - README does not promise deferred features.
 
 Run:

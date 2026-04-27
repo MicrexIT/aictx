@@ -1,12 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  DEFAULT_TOKEN_BUDGET,
   MAX_TOKEN_BUDGET,
-  contentBudgetAfterReserve,
   estimateTokenCount,
-  normalizeTokenBudget,
-  reserveForProvenance
+  normalizeTokenBudget
 } from "../../../src/context/tokens.js";
 
 describe("context token estimation", () => {
@@ -26,6 +23,18 @@ describe("context token estimation", () => {
 });
 
 describe("context token budget normalization", () => {
+  it("returns no token target when no budget is explicitly requested", () => {
+    const result = normalizeTokenBudget();
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.data).toEqual({
+        tokenTarget: null,
+        wasCapped: false
+      });
+    }
+  });
+
   it("rejects explicitly requested budgets that are not valid integers above the minimum", () => {
     for (const requestedBudget of [0, 500, 499, 500.5, Number.NaN, Infinity, -Infinity]) {
       const result = normalizeTokenBudget({ requestedBudget });
@@ -48,7 +57,7 @@ describe("context token budget normalization", () => {
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.data).toEqual({
-        budget: 501,
+        tokenTarget: 501,
         wasCapped: false
       });
     }
@@ -60,67 +69,9 @@ describe("context token budget normalization", () => {
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.data).toEqual({
-        budget: MAX_TOKEN_BUDGET,
+        tokenTarget: MAX_TOKEN_BUDGET,
         wasCapped: true
       });
     }
-  });
-
-  it("uses a valid configured default when no request budget is provided", () => {
-    const result = normalizeTokenBudget({ configuredDefaultBudget: 7000 });
-
-    expect(result.ok).toBe(true);
-    if (result.ok) {
-      expect(result.data).toEqual({
-        budget: 7000,
-        wasCapped: false
-      });
-    }
-  });
-
-  it("falls back to the default when configured default is missing or invalid", () => {
-    const missingResult = normalizeTokenBudget();
-
-    expect(missingResult.ok).toBe(true);
-    if (missingResult.ok) {
-      expect(missingResult.data).toEqual({
-        budget: DEFAULT_TOKEN_BUDGET,
-        wasCapped: false
-      });
-    }
-
-    for (const configuredDefaultBudget of [500, 500.5, Number.NaN, Infinity]) {
-      const result = normalizeTokenBudget({ configuredDefaultBudget });
-
-      expect(result.ok).toBe(true);
-      if (result.ok) {
-        expect(result.data).toEqual({
-          budget: DEFAULT_TOKEN_BUDGET,
-          wasCapped: false
-        });
-      }
-    }
-  });
-
-  it("caps configured defaults above the maximum", () => {
-    const result = normalizeTokenBudget({ configuredDefaultBudget: 50001 });
-
-    expect(result.ok).toBe(true);
-    if (result.ok) {
-      expect(result.data).toEqual({
-        budget: MAX_TOKEN_BUDGET,
-        wasCapped: true
-      });
-    }
-  });
-});
-
-describe("context token reserves", () => {
-  it("reserves ten percent of the budget for provenance", () => {
-    expect(reserveForProvenance(6000)).toBe(600);
-  });
-
-  it("returns the content budget after provenance reserve", () => {
-    expect(contentBudgetAfterReserve(6000)).toBe(5400);
   });
 });

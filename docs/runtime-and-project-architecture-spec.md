@@ -594,7 +594,7 @@ Responsibilities:
 * Normalize task input.
 * Retrieve candidate memory through the index module.
 * Rank candidates according to `indexing-and-context-compiler-spec.md`.
-* Apply token-budget rules.
+* Apply precision-first token target packaging when explicitly requested.
 * Render Markdown context packs.
 * Optionally save generated context packs when config allows.
 
@@ -849,7 +849,7 @@ Unit test targets:
 * Conflict marker detection
 * Patch planning
 * Event generation
-* Ranking and token-budget behavior
+* Ranking and precision-first token target behavior
 
 Integration test targets:
 
