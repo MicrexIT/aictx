@@ -48,6 +48,68 @@ export async function readUtf8File(path: string): Promise<Result<string>> {
   }
 }
 
+export async function readUtf8FileInsideRoot(
+  root: string,
+  target: string
+): Promise<Result<string>> {
+  const resolved = resolveInsideRoot(root, target);
+
+  if (!resolved.ok) {
+    return resolved;
+  }
+
+  const rootPath = resolve(root);
+  const targetPath = resolved.data;
+
+  try {
+    const [realRoot, targetStat] = await Promise.all([realpath(rootPath), lstat(targetPath)]);
+
+    if (targetStat.isSymbolicLink()) {
+      return err(
+        aictxError("AICtxValidationFailed", "Refusing to read through a symbolic link.", {
+          path: target
+        })
+      );
+    }
+
+    if (!targetStat.isFile()) {
+      return err(
+        aictxError("AICtxValidationFailed", "Canonical path is not a file.", {
+          path: target
+        })
+      );
+    }
+
+    const realTarget = await realpath(targetPath);
+
+    if (!isInsideOrEqual(realRoot, realTarget)) {
+      return err(
+        aictxError("AICtxValidationFailed", "Canonical path resolves outside the allowed root.", {
+          root: realRoot,
+          target
+        })
+      );
+    }
+
+    const file = await open(targetPath, constants.O_RDONLY | O_NOFOLLOW);
+
+    try {
+      const buffer = await file.readFile();
+      return ok(UTF8_DECODER.decode(buffer));
+    } finally {
+      await file.close();
+    }
+  } catch (error) {
+    return err(
+      aictxError("AICtxValidationFailed", "File could not be read as valid UTF-8.", {
+        path: target,
+        fsCode: errorCode(error),
+        message: messageFromUnknown(error)
+      })
+    );
+  }
+}
+
 export async function writeTextAtomic(
   root: string,
   target: string,

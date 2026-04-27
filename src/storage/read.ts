@@ -3,7 +3,7 @@ import { join, resolve } from "node:path";
 import fg from "fast-glob";
 
 import { aictxError } from "../core/errors.js";
-import { readUtf8File, resolveInsideRoot } from "../core/fs.js";
+import { readUtf8FileInsideRoot } from "../core/fs.js";
 import { err, ok, type Result } from "../core/result.js";
 import type { ValidationIssue } from "../core/types.js";
 import type { CompiledSchemaValidators } from "../validation/schemas.js";
@@ -15,7 +15,7 @@ import {
   validateObject,
   validateRelation
 } from "../validation/validate.js";
-import { readMarkdownBody } from "./markdown.js";
+import { readMarkdownBodyInsideRoot } from "./markdown.js";
 import {
   isAictxConfig,
   isMemoryObjectSidecar,
@@ -151,13 +151,7 @@ async function readObjects(
       return schemaContractFailure(path, "Memory object does not match the storage reader contract.");
     }
 
-    const resolvedBodyPath = resolveInsideRoot(aictxRoot, parsed.data.body_path);
-
-    if (!resolvedBodyPath.ok) {
-      return resolvedBodyPath;
-    }
-
-    const body = await readMarkdownBody(resolvedBodyPath.data);
+    const body = await readMarkdownBodyInsideRoot(aictxRoot, parsed.data.body_path);
 
     if (!body.ok) {
       return body;
@@ -211,7 +205,7 @@ async function readEvents(
   projectRoot: string,
   validators: CompiledSchemaValidators
 ): Promise<Result<StoredMemoryEvent[]>> {
-  const contents = await readUtf8File(join(projectRoot, EVENTS_PATH));
+  const contents = await readUtf8FileInsideRoot(projectRoot, EVENTS_PATH);
 
   if (!contents.ok) {
     return contents;
@@ -282,7 +276,7 @@ async function discoverCanonicalJson(projectRoot: string, pattern: string): Prom
 }
 
 async function readJsonFile(projectRoot: string, path: string): Promise<Result<unknown>> {
-  const contents = await readUtf8File(join(projectRoot, path));
+  const contents = await readUtf8FileInsideRoot(projectRoot, path);
 
   if (!contents.ok) {
     return contents;

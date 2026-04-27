@@ -5,13 +5,17 @@ import type { Clock } from "../core/clock.js";
 import { systemClock } from "../core/clock.js";
 import { aictxError, type JsonValue } from "../core/errors.js";
 import { writeJsonAtomic, writeMarkdownAtomic, writeTextAtomic } from "../core/fs.js";
-import { type GitWrapperOptions } from "../core/git.js";
+import { getCurrentGitBranch, type GitWrapperOptions } from "../core/git.js";
 import { slugify } from "../core/ids.js";
 import { withProjectLock } from "../core/lock.js";
 import { resolveProjectPaths, type ProjectPaths } from "../core/paths.js";
 import { err, ok, type Result } from "../core/result.js";
-import type { IsoDateTime, Sha256Hash } from "../core/types.js";
-import { validateProject } from "../validation/validate.js";
+import type { GitState, IsoDateTime, Sha256Hash } from "../core/types.js";
+import {
+  validateProject,
+  type ProjectValidationResult,
+  type ValidateProjectOptions
+} from "../validation/validate.js";
 import { SCHEMA_FILES } from "../validation/schemas.js";
 import { computeObjectContentHash } from "./hashes.js";
 import type { AictxConfig, MemoryObjectSidecar } from "./objects.js";
@@ -70,16 +74,17 @@ export async function initializeStorage(
       clock,
       createAictxRoot: true
     },
-    async () => initializeStorageWithLock(paths.data, clock)
+    async () => initializeStorageWithLock(paths.data, clock, options)
   );
 }
 
 async function initializeStorageWithLock(
   paths: ProjectPaths,
-  clock: Clock
+  clock: Clock,
+  options: GitWrapperOptions
 ): Promise<Result<InitStorageSuccess>> {
   if (await isFile(join(paths.aictxRoot, "config.json"))) {
-    return existingStorageResult(paths);
+    return existingStorageResult(paths, options);
   }
 
   const projectSlug = slugify(basename(paths.projectRoot), { fallback: "project" });
@@ -138,12 +143,16 @@ async function initializeStorageWithLock(
     filesCreated.push(".gitignore");
   }
 
-  const validation = await validateProject(paths.projectRoot);
+  const validation = await validateProjectForInit(paths, options);
 
-  if (!validation.valid) {
+  if (!validation.ok) {
+    return validation;
+  }
+
+  if (!validation.data.valid) {
     return err(
       aictxError("AICtxAlreadyInitializedInvalid", "Created Aictx storage is invalid.", {
-        issues: validation.errors.map((issue) => ({
+        issues: validation.data.errors.map((issue) => ({
           code: issue.code,
           message: issue.message,
           path: issue.path,
@@ -169,13 +178,20 @@ async function initializeStorageWithLock(
   );
 }
 
-async function existingStorageResult(paths: ProjectPaths): Promise<Result<InitStorageSuccess>> {
-  const validation = await validateProject(paths.projectRoot);
+async function existingStorageResult(
+  paths: ProjectPaths,
+  options: GitWrapperOptions
+): Promise<Result<InitStorageSuccess>> {
+  const validation = await validateProjectForInit(paths, options);
 
-  if (!validation.valid) {
+  if (!validation.ok) {
+    return validation;
+  }
+
+  if (!validation.data.valid) {
     return err(
       aictxError("AICtxAlreadyInitializedInvalid", "Aictx is already initialized but invalid.", {
-        issues: validation.errors.map((issue) => ({
+        issues: validation.data.errors.map((issue) => ({
           code: issue.code,
           message: issue.message,
           path: issue.path,
@@ -199,6 +215,46 @@ async function existingStorageResult(paths: ProjectPaths): Promise<Result<InitSt
     },
     [ALREADY_INITIALIZED_WARNING, INDEX_UNAVAILABLE_WARNING]
   );
+}
+
+async function validateProjectForInit(
+  paths: ProjectPaths,
+  options: GitWrapperOptions
+): Promise<Result<ProjectValidationResult>> {
+  const validationOptions = await getValidationOptions(paths, options);
+
+  if (!validationOptions.ok) {
+    return validationOptions;
+  }
+
+  return ok(await validateProject(paths.projectRoot, validationOptions.data));
+}
+
+async function getValidationOptions(
+  paths: ProjectPaths,
+  options: GitWrapperOptions
+): Promise<Result<ValidateProjectOptions>> {
+  if (!paths.git.available) {
+    return ok({
+      git: {
+        available: false,
+        branch: null
+      }
+    });
+  }
+
+  const branch = await getCurrentGitBranch(paths.projectRoot, options);
+
+  if (!branch.ok) {
+    return branch;
+  }
+
+  return ok({
+    git: {
+      available: true,
+      branch: branch.data
+    } satisfies Pick<GitState, "available" | "branch">
+  });
 }
 
 async function createStorageDirectories(projectRoot: string): Promise<Result<void>> {

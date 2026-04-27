@@ -1,10 +1,11 @@
-import { lstat, readFile } from "node:fs/promises";
+import { lstat } from "node:fs/promises";
 import { basename, isAbsolute, join, relative, resolve } from "node:path";
 
 import type { ErrorObject } from "ajv/dist/2020.js";
 import fg from "fast-glob";
 
 import { aictxError, type AictxError, type JsonValue } from "../core/errors.js";
+import { readUtf8FileInsideRoot } from "../core/fs.js";
 import type { GitState, ValidationIssue } from "../core/types.js";
 import {
   computeObjectContentHash,
@@ -54,7 +55,7 @@ interface ProjectValidationState {
   objects: MemoryObjectFile[];
   relations: RelationFile[];
   objectIds: Set<string>;
-  supersedesFromIds: Set<string>;
+  supersededTargetIds: Set<string>;
   errors: ValidationIssue[];
   warnings: ValidationIssue[];
 }
@@ -62,6 +63,21 @@ interface ProjectValidationState {
 interface ScopeString {
   value: string | null;
 }
+
+type RelativeFileRead =
+  | {
+      ok: true;
+      contents: string;
+    }
+  | {
+      ok: false;
+      missing: true;
+    }
+  | {
+      ok: false;
+      missing: false;
+      issue: ValidationIssue;
+    };
 
 const SUPPORTED_STORAGE_VERSION = 1;
 const RELATED_TO_WARNING_MINIMUM = 5;
@@ -128,7 +144,7 @@ export async function validateProject(
     objects: [],
     relations: [],
     objectIds: new Set<string>(),
-    supersedesFromIds: new Set<string>(),
+    supersededTargetIds: new Set<string>(),
     errors: [],
     warnings: []
   };
@@ -308,7 +324,16 @@ async function validateRequiredStorage(state: ProjectValidationState): Promise<v
 async function requireFile(state: ProjectValidationState, path: string): Promise<void> {
   const fileStat = await lstat(join(state.projectRoot, path)).catch(() => null);
 
-  if (fileStat?.isFile() !== true) {
+  if (fileStat === null) {
+    state.errors.push({
+      code: "CanonicalFileMissing",
+      message: "Required canonical file is missing.",
+      path,
+      field: null
+    });
+  }
+
+  if (fileStat !== null && !fileStat.isSymbolicLink() && !fileStat.isFile()) {
     state.errors.push({
       code: "CanonicalFileMissing",
       message: "Required canonical file is missing.",
@@ -321,7 +346,16 @@ async function requireFile(state: ProjectValidationState, path: string): Promise
 async function requireDirectory(state: ProjectValidationState, path: string): Promise<void> {
   const directoryStat = await lstat(join(state.projectRoot, path)).catch(() => null);
 
-  if (directoryStat?.isDirectory() !== true) {
+  if (directoryStat === null) {
+    state.errors.push({
+      code: "CanonicalDirectoryMissing",
+      message: "Required canonical directory is missing.",
+      path,
+      field: null
+    });
+  }
+
+  if (directoryStat !== null && !directoryStat.isSymbolicLink() && !directoryStat.isDirectory()) {
     state.errors.push({
       code: "CanonicalDirectoryMissing",
       message: "Required canonical directory is missing.",
@@ -437,9 +471,9 @@ async function validateRelationFiles(state: ProjectValidationState): Promise<voi
       readString(parsed.value, "predicate") === "supersedes" &&
       readString(parsed.value, "status") === "active"
     ) {
-      const from = readString(parsed.value, "from");
-      if (from !== null) {
-        state.supersedesFromIds.add(from);
+      const to = readString(parsed.value, "to");
+      if (to !== null) {
+        state.supersededTargetIds.add(to);
       }
     }
   }
@@ -449,11 +483,15 @@ async function validateEventsFile(state: ProjectValidationState): Promise<void> 
   const path = ".aictx/events.jsonl";
   const contents = await readRelativeFile(state.projectRoot, path);
 
-  if (contents === null) {
+  if (!contents.ok) {
+    if (!contents.missing) {
+      state.errors.push(contents.issue);
+    }
+
     return;
   }
 
-  const lines = contents.split(/\r\n|\n|\r/);
+  const lines = contents.contents.split(/\r\n|\n|\r/);
   const lineCount = lines.length > 0 && lines.at(-1) === "" ? lines.length - 1 : lines.length;
 
   for (let index = 0; index < lineCount; index += 1) {
@@ -548,9 +586,14 @@ async function validateObjectBody(
     });
   }
 
-  const markdown = await readRelativeFile(state.projectRoot, markdownPath);
+  const markdown = await readRelativeFile(state.projectRoot, markdownPath, "ObjectBodyPathUnsafe");
 
-  if (markdown === null) {
+  if (!markdown.ok) {
+    if (!markdown.missing) {
+      state.errors.push(markdown.issue);
+      return;
+    }
+
     state.errors.push({
       code: "ObjectBodyMissing",
       message: "Object body file is missing.",
@@ -560,9 +603,9 @@ async function validateObjectBody(
     return;
   }
 
-  objectFile.markdownBody = markdown;
-  addResult(state, validateMarkdownBody(markdown, markdownPath));
-  validateTitleMatchesH1(state, objectFile, markdown);
+  objectFile.markdownBody = markdown.contents;
+  addResult(state, validateMarkdownBody(markdown.contents, markdownPath));
+  validateTitleMatchesH1(state, objectFile, markdown.contents);
 }
 
 function validateObjectHash(state: ProjectValidationState, objectFile: MemoryObjectFile): void {
@@ -821,7 +864,7 @@ function validateSupersededObjects(state: ProjectValidationState): void {
       id !== null &&
       readString(objectFile.value, "status") === "superseded" &&
       readNullableString(objectFile.value, "superseded_by") === null &&
-      !state.supersedesFromIds.has(id)
+      !state.supersededTargetIds.has(id)
     ) {
       state.warnings.push({
         code: "ObjectSupersededReplacementMissing",
@@ -857,12 +900,16 @@ async function readJsonObjectFile(
 ): Promise<ParsedJsonFile | null> {
   const contents = await readRelativeFile(state.projectRoot, path);
 
-  if (contents === null) {
+  if (!contents.ok) {
+    if (!contents.missing) {
+      state.errors.push(contents.issue);
+    }
+
     return null;
   }
 
   try {
-    const parsed = JSON.parse(contents) as unknown;
+    const parsed = JSON.parse(contents.contents) as unknown;
 
     if (!isRecord(parsed)) {
       state.errors.push({
@@ -886,8 +933,43 @@ async function readJsonObjectFile(
   }
 }
 
-async function readRelativeFile(projectRoot: string, path: string): Promise<string | null> {
-  return await readFile(join(projectRoot, path), "utf8").catch(() => null);
+async function readRelativeFile(
+  projectRoot: string,
+  path: string,
+  unsafeCode = "CanonicalFileUnsafe"
+): Promise<RelativeFileRead> {
+  const result = await readUtf8FileInsideRoot(projectRoot, path);
+
+  if (result.ok) {
+    return {
+      ok: true,
+      contents: result.data
+    };
+  }
+
+  if (isMissingFileReadError(result.error)) {
+    return {
+      ok: false,
+      missing: true
+    };
+  }
+
+  return {
+    ok: false,
+    missing: false,
+    issue: {
+      code: unsafeCode,
+      message: `Canonical file could not be read safely: ${result.error.message}`,
+      path,
+      field: null
+    }
+  };
+}
+
+function isMissingFileReadError(error: AictxError): boolean {
+  const details = error.details;
+
+  return isRecord(details) && details.fsCode === "ENOENT";
 }
 
 async function globProjectPaths(projectRoot: string, pattern: string): Promise<string[]> {

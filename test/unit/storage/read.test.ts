@@ -1,4 +1,4 @@
-import { copyFile, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
@@ -227,6 +227,38 @@ describe("readCanonicalStorage", () => {
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.data.events.map((event) => event.line)).toEqual([1]);
+    }
+  });
+
+  it("rejects symlinked Markdown bodies", async () => {
+    const projectRoot = await createReadableProject();
+    const bodyPath = join(projectRoot, ".aictx/memory/decisions/billing-retries.md");
+    const outsidePath = join(projectRoot, "outside.md");
+    await writeProjectFile(projectRoot, "outside.md", "# Outside\n\nOutside body.\n");
+    await rm(bodyPath);
+    await symlink(outsidePath, bodyPath);
+
+    const result = await readCanonicalStorage(projectRoot);
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.code).toBe("AICtxValidationFailed");
+    }
+  });
+
+  it("rejects symlinked canonical JSON files", async () => {
+    const projectRoot = await createReadableProject();
+    const objectPath = join(projectRoot, ".aictx/memory/decisions/billing-retries.json");
+    const outsidePath = join(projectRoot, "outside-object.json");
+    await writeJsonProjectFile(projectRoot, "outside-object.json", validObject);
+    await rm(objectPath);
+    await symlink(outsidePath, objectPath);
+
+    const result = await readCanonicalStorage(projectRoot);
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.code).toBe("AICtxValidationFailed");
     }
   });
 

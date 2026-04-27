@@ -1,11 +1,12 @@
 import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
 import { initProject } from "../../../src/app/operations.js";
 import { runSubprocess } from "../../../src/core/subprocess.js";
+import { computeObjectContentHash } from "../../../src/storage/hashes.js";
 import { readCanonicalStorage } from "../../../src/storage/read.js";
 import { validateProject } from "../../../src/validation/validate.js";
 import { createFixedTestClock, FIXED_TIMESTAMP } from "../../fixtures/time.js";
@@ -149,6 +150,42 @@ describe("initProject", () => {
     }
   });
 
+  it("returns success when existing storage has branch-scoped memory for the current branch", async () => {
+    const repo = await createRepo("branch-scoped");
+    const first = await initProject({
+      cwd: repo,
+      clock: createFixedTestClock()
+    });
+
+    expect(first.ok).toBe(true);
+    if (!first.ok) {
+      return;
+    }
+
+    const storage = await readCanonicalStorage(repo);
+    expect(storage.ok).toBe(true);
+    if (!storage.ok) {
+      return;
+    }
+
+    await writeBranchScopedMemory(repo, storage.data.config.project.id, "main");
+
+    const second = await initProject({
+      cwd: repo,
+      clock: createFixedTestClock()
+    });
+
+    expect(second.ok).toBe(true);
+    if (second.ok) {
+      expect(second.data.created).toBe(false);
+      expect(second.warnings).toEqual(
+        expect.arrayContaining([
+          "Aictx is already initialized; existing valid storage was left unchanged."
+        ])
+      );
+    }
+  });
+
   it("returns AICtxAlreadyInitializedInvalid for invalid existing storage", async () => {
     const projectRoot = await createTempRoot("aictx-init-invalid-");
     await mkdir(join(projectRoot, ".aictx"), { recursive: true });
@@ -178,6 +215,44 @@ async function createRepo(name: string): Promise<string> {
   return repo;
 }
 
+async function writeBranchScopedMemory(
+  projectRoot: string,
+  projectId: string,
+  branch: string
+): Promise<void> {
+  const body = "# Branch note\n\nOnly applies to the current branch.\n";
+  const sidecarWithoutHash = {
+    id: "note.branch-note",
+    type: "note",
+    status: "active",
+    title: "Branch note",
+    body_path: "memory/notes/branch-note.md",
+    scope: {
+      kind: "branch",
+      project: projectId,
+      branch,
+      task: null
+    },
+    tags: [],
+    source: {
+      kind: "agent"
+    },
+    created_at: FIXED_TIMESTAMP,
+    updated_at: FIXED_TIMESTAMP
+  };
+  const sidecar = {
+    ...sidecarWithoutHash,
+    content_hash: computeObjectContentHash(sidecarWithoutHash, body)
+  };
+
+  await writeProjectFile(projectRoot, ".aictx/memory/notes/branch-note.md", body);
+  await writeProjectFile(
+    projectRoot,
+    ".aictx/memory/notes/branch-note.json",
+    stableJson(sidecar)
+  );
+}
+
 async function createTempRoot(prefix: string): Promise<string> {
   const root = await mkdtemp(join(tmpdir(), prefix));
   const resolvedRoot = await realpath(root);
@@ -202,4 +277,18 @@ async function git(cwd: string, args: readonly string[]): Promise<string> {
   }
 
   return result.data.stdout;
+}
+
+async function writeProjectFile(
+  projectRoot: string,
+  path: string,
+  contents: string
+): Promise<void> {
+  const absolutePath = join(projectRoot, path);
+  await mkdir(dirname(absolutePath), { recursive: true });
+  await writeFile(absolutePath, contents, "utf8");
+}
+
+function stableJson(value: unknown): string {
+  return `${JSON.stringify(value, null, 2)}\n`;
 }

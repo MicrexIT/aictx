@@ -1,4 +1,4 @@
-import { copyFile, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
@@ -242,6 +242,74 @@ describe("project validation", () => {
     );
   });
 
+  it("uses the supersedes relation target as the superseded object replacement", async () => {
+    const validDirectionRoot = await createValidProject();
+    await writeMemoryObject(validDirectionRoot, {
+      path: "memory/notes/old.md",
+      id: "note.old",
+      type: "note",
+      title: "Old note",
+      body: "# Old note\n\nOld body.\n",
+      status: "superseded"
+    });
+    await writeMemoryObject(validDirectionRoot, {
+      path: "memory/notes/new.md",
+      id: "note.new",
+      type: "note",
+      title: "New note",
+      body: "# New note\n\nNew body.\n"
+    });
+    await writeRelation(validDirectionRoot, {
+      file: "new-supersedes-old.json",
+      id: "rel.new-supersedes-old",
+      from: "note.new",
+      predicate: "supersedes",
+      to: "note.old"
+    });
+
+    const validDirection = await validateProject(validDirectionRoot);
+
+    expect(validDirection.warnings).not.toContainEqual(
+      expect.objectContaining({
+        code: "ObjectSupersededReplacementMissing",
+        path: ".aictx/memory/notes/old.json"
+      })
+    );
+
+    const reversedDirectionRoot = await createValidProject();
+    await writeMemoryObject(reversedDirectionRoot, {
+      path: "memory/notes/old.md",
+      id: "note.old",
+      type: "note",
+      title: "Old note",
+      body: "# Old note\n\nOld body.\n",
+      status: "superseded"
+    });
+    await writeMemoryObject(reversedDirectionRoot, {
+      path: "memory/notes/new.md",
+      id: "note.new",
+      type: "note",
+      title: "New note",
+      body: "# New note\n\nNew body.\n"
+    });
+    await writeRelation(reversedDirectionRoot, {
+      file: "old-supersedes-new.json",
+      id: "rel.old-supersedes-new",
+      from: "note.old",
+      predicate: "supersedes",
+      to: "note.new"
+    });
+
+    const reversedDirection = await validateProject(reversedDirectionRoot);
+
+    expect(reversedDirection.warnings).toContainEqual(
+      expect.objectContaining({
+        code: "ObjectSupersededReplacementMissing",
+        path: ".aictx/memory/notes/old.json"
+      })
+    );
+  });
+
   it("validates object scope against project and Git state", async () => {
     const projectRoot = await createValidProject();
     await writeMemoryObject(projectRoot, {
@@ -323,6 +391,31 @@ describe("project validation", () => {
       expect.arrayContaining(["AICtxConflictDetected", "AICtxSecretDetected"])
     );
     expect(issueCodes(result.warnings)).toContain("AICtxSecretWarning");
+  });
+
+  it("rejects symlinked Markdown bodies without reporting them as missing", async () => {
+    const projectRoot = await createValidProject();
+    const sidecarPath = ".aictx/memory/decisions/billing-retries.json";
+    const bodyPath = join(projectRoot, ".aictx/memory/decisions/billing-retries.md");
+    const outsidePath = join(projectRoot, "outside.md");
+    await writeFile(outsidePath, "# Outside\n\nOutside body.\n", "utf8");
+    await rm(bodyPath);
+    await symlink(outsidePath, bodyPath);
+
+    const result = await validateProject(projectRoot);
+
+    expect(result.errors).toContainEqual(
+      expect.objectContaining({
+        code: "ObjectBodyPathUnsafe",
+        path: ".aictx/memory/decisions/billing-retries.md"
+      })
+    );
+    expect(result.errors).not.toContainEqual(
+      expect.objectContaining({
+        code: "ObjectBodyMissing",
+        path: sidecarPath
+      })
+    );
   });
 });
 

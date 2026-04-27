@@ -92,7 +92,7 @@ export async function getGitState(
 
   const projectRoot = root.data.root;
   const [branchResult, commitResult, dirtyResult] = await Promise.all([
-    getCurrentBranch(projectRoot, options),
+    getCurrentGitBranch(projectRoot, options),
     getCurrentCommit(projectRoot, options),
     getAictxDirtyState(projectRoot, options)
   ]);
@@ -266,9 +266,9 @@ export async function restoreAictxFromCommit(
   return ok(undefined);
 }
 
-async function getCurrentBranch(
+export async function getCurrentGitBranch(
   projectRoot: string,
-  options: GitWrapperOptions
+  options: GitWrapperOptions = {}
 ): Promise<Result<string | null>> {
   const result = await runGit(["symbolic-ref", "--short", "-q", "HEAD"], projectRoot, options);
 

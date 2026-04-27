@@ -1,4 +1,8 @@
-import { normalizeLineEndingsToLf, readUtf8File } from "../core/fs.js";
+import {
+  normalizeLineEndingsToLf,
+  readUtf8File,
+  readUtf8FileInsideRoot
+} from "../core/fs.js";
 import { ok, type Result } from "../core/result.js";
 import type { ValidationIssue } from "../core/types.js";
 
@@ -16,6 +20,19 @@ export interface MarkdownValidationResult {
 
 export async function readMarkdownBody(path: string): Promise<Result<string>> {
   const result = await readUtf8File(path);
+
+  if (!result.ok) {
+    return result;
+  }
+
+  return ok(normalizeMarkdownForStorage(result.data));
+}
+
+export async function readMarkdownBodyInsideRoot(
+  root: string,
+  target: string
+): Promise<Result<string>> {
+  const result = await readUtf8FileInsideRoot(root, target);
 
   if (!result.ok) {
     return result;

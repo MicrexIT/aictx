@@ -1,9 +1,7 @@
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
-
 import { Ajv2020, type AnySchema, type ValidateFunction } from "ajv/dist/2020.js";
 
-import { aictxError, type JsonValue } from "../core/errors.js";
+import { aictxError, type AictxError, type JsonValue } from "../core/errors.js";
+import { readUtf8FileInsideRoot } from "../core/fs.js";
 import { err, ok, type Result } from "../core/result.js";
 import type { ValidationIssue } from "../core/types.js";
 
@@ -40,8 +38,15 @@ export async function loadProjectSchemas(projectRoot: string): Promise<Result<Lo
   for (const kind of SCHEMA_KINDS) {
     const path = schemaRelativePath(kind);
 
+    const read = await readUtf8FileInsideRoot(projectRoot, path);
+
+    if (!read.ok) {
+      issues.push(readSchemaIssue(path, read.error));
+      continue;
+    }
+
     try {
-      const contents = await readFile(schemaAbsolutePath(projectRoot, kind), "utf8");
+      const contents = read.data;
       const parsed = JSON.parse(contents) as unknown;
 
       if (isJsonSchema(parsed)) {
@@ -55,7 +60,7 @@ export async function loadProjectSchemas(projectRoot: string): Promise<Result<Lo
         });
       }
     } catch (error) {
-      issues.push(readSchemaIssue(path, error));
+      issues.push(parseSchemaIssue(path, error));
     }
   }
 
@@ -160,10 +165,6 @@ function schemaRelativePath(kind: SchemaKind): string {
   return `.aictx/schema/${SCHEMA_FILES[kind]}`;
 }
 
-function schemaAbsolutePath(projectRoot: string, kind: SchemaKind): string {
-  return join(projectRoot, ".aictx", "schema", SCHEMA_FILES[kind]);
-}
-
 function isJsonSchema(value: unknown): value is JsonSchema {
   return (
     typeof value === "boolean" ||
@@ -171,7 +172,21 @@ function isJsonSchema(value: unknown): value is JsonSchema {
   );
 }
 
-function readSchemaIssue(path: string, error: unknown): ValidationIssue {
+function readSchemaIssue(path: string, error: AictxError): ValidationIssue {
+  const code = errorDetailsFsCode(error);
+
+  return {
+    code: code === "ENOENT" ? "SchemaFileMissing" : "SchemaFileUnreadable",
+    message:
+      code === "ENOENT"
+        ? "Schema file is missing."
+        : `Schema file could not be read safely: ${error.message}`,
+    path,
+    field: null
+  };
+}
+
+function parseSchemaIssue(path: string, error: unknown): ValidationIssue {
   if (error instanceof SyntaxError) {
     return {
       code: "SchemaInvalidJson",
@@ -181,14 +196,9 @@ function readSchemaIssue(path: string, error: unknown): ValidationIssue {
     };
   }
 
-  const code = errorCode(error);
-
   return {
-    code: code === "ENOENT" ? "SchemaFileMissing" : "SchemaFileUnreadable",
-    message:
-      code === "ENOENT"
-        ? "Schema file is missing."
-        : `Schema file could not be read: ${messageFromUnknown(error)}`,
+    code: "SchemaFileUnreadable",
+    message: `Schema file could not be parsed: ${messageFromUnknown(error)}`,
     path,
     field: null
   };
@@ -209,12 +219,14 @@ function validationIssuesDetails(issues: readonly ValidationIssue[]): JsonValue 
   };
 }
 
-function errorCode(error: unknown): string | null {
-  if (typeof error !== "object" || error === null || !("code" in error)) {
+function errorDetailsFsCode(error: AictxError): string | null {
+  const details = error.details;
+
+  if (typeof details !== "object" || details === null || Array.isArray(details)) {
     return null;
   }
 
-  const code = error.code;
+  const code = details.fsCode;
   return typeof code === "string" ? code : null;
 }
 

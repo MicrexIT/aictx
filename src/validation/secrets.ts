@@ -1,9 +1,7 @@
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
-
 import fg from "fast-glob";
 
 import { aictxError, type AictxError, type JsonValue } from "../core/errors.js";
+import { readUtf8FileInsideRoot } from "../core/fs.js";
 import type { ValidationIssue } from "../core/types.js";
 
 export type SecretSeverity = "block" | "warn";
@@ -138,13 +136,26 @@ export async function scanProjectSecrets(
   ).sort();
 
   const findings: SecretFinding[] = [];
+  const readErrors: ValidationIssue[] = [];
 
   for (const path of paths) {
-    const contents = await readFile(join(projectRoot, path), "utf8");
-    findings.push(...scanText(contents, path, null, true));
+    const contents = await readUtf8FileInsideRoot(projectRoot, path);
+
+    if (!contents.ok) {
+      readErrors.push(canonicalReadIssue(path, contents.error));
+      continue;
+    }
+
+    findings.push(...scanText(contents.data, path, null, true));
   }
 
-  return resultFromFindings(findings);
+  const result = resultFromFindings(findings);
+
+  return {
+    ...result,
+    valid: result.valid && readErrors.length === 0,
+    errors: [...readErrors, ...result.errors]
+  };
 }
 
 export function secretDetectionError(issues: readonly ValidationIssue[]): AictxError {
@@ -255,6 +266,15 @@ function findingToIssue(finding: SecretFinding): ValidationIssue {
     message: finding.message,
     path: finding.line === undefined ? finding.path : `${finding.path}:${finding.line}`,
     field: finding.field ?? null
+  };
+}
+
+function canonicalReadIssue(path: string, error: AictxError): ValidationIssue {
+  return {
+    code: "CanonicalFileUnsafe",
+    message: `Canonical file could not be read safely: ${error.message}`,
+    path,
+    field: null
   };
 }
 

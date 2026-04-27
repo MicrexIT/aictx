@@ -1,4 +1,13 @@
-import { copyFile, mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
+import {
+  copyFile,
+  mkdir,
+  mkdtemp,
+  readFile,
+  rm,
+  stat,
+  symlink,
+  writeFile
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -187,6 +196,23 @@ describe("project schema loading", () => {
     if (!loaded.ok) {
       expect(loaded.error.code).toBe("AICtxSchemaValidationFailed");
       expect(JSON.stringify(loaded.error.details)).toContain("SchemaInvalidJson");
+    }
+  });
+
+  it("rejects symlinked project-local schema files", async () => {
+    const projectRoot = await createProjectWithSchemas();
+    const schemaFile = schemaPath(projectRoot, "config.schema.json");
+    const outsideSchema = join(projectRoot, "outside.schema.json");
+    await writeFile(outsideSchema, JSON.stringify(validConfig), "utf8");
+    await rm(schemaFile);
+    await symlink(outsideSchema, schemaFile);
+
+    const loaded = await loadProjectSchemas(projectRoot);
+
+    expect(loaded.ok).toBe(false);
+    if (!loaded.ok) {
+      expect(loaded.error.code).toBe("AICtxSchemaValidationFailed");
+      expect(JSON.stringify(loaded.error.details)).toContain("SchemaFileUnreadable");
     }
   });
 

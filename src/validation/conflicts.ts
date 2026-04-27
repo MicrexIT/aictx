@@ -1,9 +1,7 @@
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
-
 import fg from "fast-glob";
 
 import { aictxError, type AictxError, type JsonValue } from "../core/errors.js";
+import { readUtf8FileInsideRoot } from "../core/fs.js";
 import type { ValidationIssue } from "../core/types.js";
 
 export const CONFLICT_MARKER_PATTERNS = [
@@ -55,8 +53,14 @@ export async function scanProjectConflictMarkers(
   const errors: ValidationIssue[] = [];
 
   for (const path of paths) {
-    const contents = await readFile(join(projectRoot, path), "utf8");
-    errors.push(...detectConflictMarkersInText(contents, path).errors);
+    const contents = await readUtf8FileInsideRoot(projectRoot, path);
+
+    if (!contents.ok) {
+      errors.push(canonicalReadIssue(path, contents.error));
+      continue;
+    }
+
+    errors.push(...detectConflictMarkersInText(contents.data, path).errors);
   }
 
   return {
@@ -83,6 +87,15 @@ function conflictMarkerIssue(path: string, line: number): ValidationIssue {
     code: "AICtxConflictDetected",
     message: "Unresolved conflict marker detected.",
     path: `${path}:${line}`,
+    field: null
+  };
+}
+
+function canonicalReadIssue(path: string, error: AictxError): ValidationIssue {
+  return {
+    code: "CanonicalFileUnsafe",
+    message: `Canonical file could not be read safely: ${error.message}`,
+    path,
     field: null
   };
 }
