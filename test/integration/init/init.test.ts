@@ -45,7 +45,7 @@ describe("initProject", () => {
     expect(result.data.created).toBe(true);
     expect(result.data.git_available).toBe(true);
     expect(result.data.gitignore_updated).toBe(true);
-    expect(result.data.index_built).toBe(false);
+    expect(result.data.index_built).toBe(true);
     expect(result.data.files_created).toEqual(
       expect.arrayContaining([
         ".aictx/config.json",
@@ -100,6 +100,7 @@ describe("initProject", () => {
     expect(result.data.created).toBe(true);
     expect(result.data.git_available).toBe(false);
     expect(result.data.gitignore_updated).toBe(false);
+    expect(result.data.index_built).toBe(true);
     expect(result.data.next_steps.join("\n")).toContain("aictx load");
     expect(result.data.next_steps.join("\n")).toContain("save_memory_patch");
     expect(result.data.next_steps.join("\n")).toContain("aictx diff");
@@ -142,6 +143,7 @@ describe("initProject", () => {
     if (second.ok) {
       expect(second.data.created).toBe(false);
       expect(second.data.files_created).toEqual([]);
+      expect(second.data.index_built).toBe(true);
       expect(second.warnings).toEqual(
         expect.arrayContaining([
           "Aictx is already initialized; existing valid storage was left unchanged."
@@ -178,6 +180,7 @@ describe("initProject", () => {
     expect(second.ok).toBe(true);
     if (second.ok) {
       expect(second.data.created).toBe(false);
+      expect(second.data.index_built).toBe(true);
       expect(second.warnings).toEqual(
         expect.arrayContaining([
           "Aictx is already initialized; existing valid storage was left unchanged."
