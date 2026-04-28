@@ -1,10 +1,15 @@
 #!/usr/bin/env node
 
+import type { Readable } from "node:stream";
 import { Command, CommanderError } from "commander";
 import { version } from "../generated/version.js";
 import { registerCheckCommand } from "./commands/check.js";
+import { registerDiffCommand } from "./commands/diff.js";
 import { registerInitCommand } from "./commands/init.js";
+import { registerLoadCommand } from "./commands/load.js";
 import { registerRebuildCommand } from "./commands/rebuild.js";
+import { registerSaveCommand } from "./commands/save.js";
+import { registerSearchCommand } from "./commands/search.js";
 import {
   CLI_EXIT_SUCCESS,
   CLI_EXIT_USAGE,
@@ -16,6 +21,7 @@ export type CliOutputWriter = (text: string) => void;
 export interface CliMainOptions {
   stdout?: CliOutputWriter;
   stderr?: CliOutputWriter;
+  stdin?: Readable;
   cwd?: string;
 }
 
@@ -52,6 +58,27 @@ export function createCliProgram(options: CliMainOptions = {}): Command {
   });
   registerRebuildCommand(program, {
     cwd: options.cwd ?? process.cwd(),
+    stdout: writeOut,
+    stderr: writeErr
+  });
+  registerLoadCommand(program, {
+    cwd: options.cwd ?? process.cwd(),
+    stdout: writeOut,
+    stderr: writeErr
+  });
+  registerSearchCommand(program, {
+    cwd: options.cwd ?? process.cwd(),
+    stdout: writeOut,
+    stderr: writeErr
+  });
+  registerDiffCommand(program, {
+    cwd: options.cwd ?? process.cwd(),
+    stdout: writeOut,
+    stderr: writeErr
+  });
+  registerSaveCommand(program, {
+    cwd: options.cwd ?? process.cwd(),
+    stdin: options.stdin ?? process.stdin,
     stdout: writeOut,
     stderr: writeErr
   });

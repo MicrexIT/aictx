@@ -1,9 +1,12 @@
 import DatabaseConstructor from "better-sqlite3";
 import { systemClock, type Clock } from "../core/clock.js";
 import { aictxError, type AictxError, type JsonValue } from "../core/errors.js";
+import { readUtf8FileInsideRoot } from "../core/fs.js";
 import {
+  getAictxDiff,
   getAictxDirtyState,
   getGitState,
+  showAictxFileAtCommit,
   type GitWrapperOptions
 } from "../core/git.js";
 import { withProjectLock } from "../core/lock.js";
@@ -78,6 +81,10 @@ export interface SearchMemoryOptions extends GitWrapperOptions, SearchMemoryInpu
   clock?: Clock;
 }
 
+export interface DiffMemoryOptions extends GitWrapperOptions {
+  cwd: string;
+}
+
 export interface SaveMemoryPatchOptions extends GitWrapperOptions {
   cwd: string;
   patch?: unknown;
@@ -94,6 +101,13 @@ export interface SaveMemoryData {
   relations_deleted: RelationId[];
   events_appended: number;
   index_updated: boolean;
+}
+
+export interface DiffMemoryData {
+  diff: string;
+  changed_files: string[];
+  changed_memory_ids: ObjectId[];
+  changed_relation_ids: RelationId[];
 }
 
 export interface CheckProjectData {
@@ -512,6 +526,69 @@ export async function searchMemory(
   };
 }
 
+export async function diffMemory(
+  options: DiffMemoryOptions
+): Promise<AppResult<DiffMemoryData>> {
+  const paths = await resolveProjectPaths({
+    cwd: options.cwd,
+    mode: "require-initialized",
+    runner: options.runner
+  });
+
+  if (!paths.ok) {
+    return {
+      ok: false,
+      error: paths.error,
+      warnings: paths.warnings,
+      meta: await buildBestEffortMeta(options)
+    };
+  }
+
+  const meta = await buildMeta(paths.data, options);
+
+  if (!meta.ok) {
+    return meta;
+  }
+
+  if (!meta.meta.git.available) {
+    return {
+      ok: false,
+      error: aictxError("AICtxGitRequired", "Git is required for this operation."),
+      warnings: [],
+      meta: meta.meta
+    };
+  }
+
+  const diff = await getAictxDiff(paths.data.projectRoot, options);
+
+  if (!diff.ok) {
+    return {
+      ok: false,
+      error: diff.error,
+      warnings: diff.warnings,
+      meta: meta.meta
+    };
+  }
+
+  const changedIds = await detectChangedIds(
+    paths.data.projectRoot,
+    diff.data.changedFiles,
+    options
+  );
+
+  return {
+    ok: true,
+    data: {
+      diff: diff.data.diff,
+      changed_files: diff.data.changedFiles,
+      changed_memory_ids: changedIds.memoryIds,
+      changed_relation_ids: changedIds.relationIds
+    },
+    warnings: diff.warnings,
+    meta: meta.meta
+  };
+}
+
 export async function saveMemoryPatch(
   options: SaveMemoryPatchOptions
 ): Promise<AppResult<SaveMemoryData>> {
@@ -650,6 +727,7 @@ export async function saveMemoryPatch(
 
 export const applicationOperations = {
   checkProject,
+  diffMemory,
   initProject,
   loadMemory,
   rebuildIndex,
@@ -746,6 +824,135 @@ function searchIndexOptions(aictxRoot: string, input: SearchMemoryInput): Search
     query: input.query,
     ...(input.limit === undefined ? {} : { limit: input.limit })
   };
+}
+
+async function detectChangedIds(
+  projectRoot: string,
+  changedFiles: readonly string[],
+  options: GitWrapperOptions
+): Promise<{ memoryIds: ObjectId[]; relationIds: RelationId[] }> {
+  const memoryIds = new Set<ObjectId>();
+  const relationIds = new Set<RelationId>();
+
+  for (const file of changedFiles) {
+    const memorySidecarPath = memorySidecarPathForChangedFile(file);
+
+    if (memorySidecarPath !== null) {
+      const id = await readObjectIdFromCurrentOrHead(projectRoot, memorySidecarPath, options);
+
+      if (id !== null) {
+        memoryIds.add(id);
+      }
+    }
+
+    if (isRelationSidecarPath(file)) {
+      const id = await readRelationIdFromCurrentOrHead(projectRoot, file, options);
+
+      if (id !== null) {
+        relationIds.add(id);
+      }
+    }
+  }
+
+  return {
+    memoryIds: [...memoryIds].sort(),
+    relationIds: [...relationIds].sort()
+  };
+}
+
+function memorySidecarPathForChangedFile(file: string): string | null {
+  if (!file.startsWith(".aictx/memory/")) {
+    return null;
+  }
+
+  if (file.endsWith(".json")) {
+    return file;
+  }
+
+  if (file.endsWith(".md")) {
+    return `${file.slice(0, -".md".length)}.json`;
+  }
+
+  return null;
+}
+
+function isRelationSidecarPath(file: string): boolean {
+  return file.startsWith(".aictx/relations/") && file.endsWith(".json");
+}
+
+async function readObjectIdFromCurrentOrHead(
+  projectRoot: string,
+  file: string,
+  options: GitWrapperOptions
+): Promise<ObjectId | null> {
+  return readIdFromCurrentOrHead(projectRoot, file, options, objectIdFromContents);
+}
+
+async function readRelationIdFromCurrentOrHead(
+  projectRoot: string,
+  file: string,
+  options: GitWrapperOptions
+): Promise<RelationId | null> {
+  return readIdFromCurrentOrHead(projectRoot, file, options, relationIdFromContents);
+}
+
+async function readIdFromCurrentOrHead<T extends ObjectId | RelationId>(
+  projectRoot: string,
+  file: string,
+  options: GitWrapperOptions,
+  parseId: (contents: string) => T | null
+): Promise<T | null> {
+  const current = await readUtf8FileInsideRoot(projectRoot, file);
+
+  if (current.ok) {
+    const id = parseId(current.data);
+
+    if (id !== null) {
+      return id;
+    }
+  }
+
+  const head = await showAictxFileAtCommit(projectRoot, "HEAD", file, options);
+
+  if (!head.ok) {
+    return null;
+  }
+
+  return parseId(head.data.contents);
+}
+
+function objectIdFromContents(contents: string): ObjectId | null {
+  const parsed = parseJsonObject(contents);
+
+  if (parsed === null || typeof parsed.id !== "string") {
+    return null;
+  }
+
+  return parsed.id;
+}
+
+function relationIdFromContents(contents: string): RelationId | null {
+  const parsed = parseJsonObject(contents);
+
+  if (parsed === null || typeof parsed.id !== "string") {
+    return null;
+  }
+
+  return parsed.id;
+}
+
+function parseJsonObject(contents: string): Record<string, unknown> | null {
+  try {
+    const parsed = JSON.parse(contents) as unknown;
+
+    return isRecord(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 async function rejectConflictsBeforeSave(
