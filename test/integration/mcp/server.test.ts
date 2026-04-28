@@ -31,7 +31,7 @@ afterEach(async () => {
 });
 
 describe("aictx MCP server bootstrap", () => {
-  it("creates a project-scoped server context without registering capabilities", async () => {
+  it("creates a project-scoped server context before connecting", async () => {
     const projectRoot = await createTempRoot("aictx-mcp-context-");
     const mcp = createAictxMcpServer({ cwd: projectRoot });
 
@@ -49,7 +49,11 @@ describe("aictx MCP server bootstrap", () => {
         name: "aictx-mcp",
         version
       });
-      expect(started.client.getServerCapabilities()).toEqual({});
+      expect(started.client.getServerCapabilities()).toEqual({
+        tools: {
+          listChanged: true
+        }
+      });
     } finally {
       await started.close();
     }
@@ -58,45 +62,48 @@ describe("aictx MCP server bootstrap", () => {
     await expect(readdir(projectRoot)).resolves.toEqual([]);
   });
 
-  it("does not expose Aictx tools, CLI-only commands, shell, or filesystem tools", async () => {
+  it("exposes only normalized Aictx tools and no CLI-only, shell, or filesystem tools", async () => {
     const projectRoot = await createTempRoot("aictx-mcp-tools-");
     const started = await startMcpClient(projectRoot);
 
     try {
       await expect(started.client.ping()).resolves.toEqual({});
 
-      try {
-        const result = await started.client.listTools();
-        const toolNames = result.tools.map((tool) => tool.name);
+      const result = await started.client.listTools();
+      const toolNames = result.tools.map((tool) => tool.name).sort();
 
-        expect(toolNames).toEqual([]);
-        expect(toolNames).not.toEqual(
-          expect.arrayContaining([
-            "load_memory",
-            "search_memory",
-            "save_memory_patch",
-            "diff_memory",
-            "init",
-            "check",
-            "rebuild",
-            "history",
-            "restore",
-            "rewind",
-            "inspect",
-            "stale",
-            "graph",
-            "export",
-            "shell",
-            "run_shell",
-            "execute_command",
-            "read_file",
-            "write_file",
-            "filesystem"
-          ])
-        );
-      } catch (error: unknown) {
-        expect(String(error)).toMatch(/Method not found|does not support tools/);
-      }
+      expect(toolNames).toEqual([
+        "diff_memory",
+        "load_memory",
+        "save_memory_patch",
+        "search_memory"
+      ]);
+      expect(toolNames).not.toEqual(
+        expect.arrayContaining([
+          "init",
+          "check",
+          "rebuild",
+          "history",
+          "restore",
+          "rewind",
+          "inspect",
+          "stale",
+          "graph",
+          "export",
+          "shell",
+          "run_shell",
+          "execute_command",
+          "read_file",
+          "write_file",
+          "filesystem",
+          "create_object",
+          "update_object",
+          "delete_object",
+          "create_relation",
+          "update_relation",
+          "delete_relation"
+        ])
+      );
     } finally {
       await started.close();
     }

@@ -1,9 +1,5 @@
-import {
-  ErrorCode,
-  McpError,
-  type CallToolResult,
-  type ToolAnnotations
-} from "@modelcontextprotocol/sdk/types.js";
+import type { CallToolResult, ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
+import { z } from "zod";
 
 import {
   loadMemory,
@@ -15,14 +11,6 @@ import type { ObjectId } from "../../core/types.js";
 
 interface AictxMcpContext {
   cwd: string;
-}
-
-interface JsonObjectSchema {
-  [key: string]: unknown;
-  type: "object";
-  properties?: Record<string, object>;
-  required?: string[];
-  additionalProperties?: boolean;
 }
 
 type CliBudgetStatus = "not_requested" | "within_target" | "over_target";
@@ -41,25 +29,21 @@ interface CliLoadMemoryData {
   omitted_ids: ObjectId[];
 }
 
-const LOAD_MEMORY_INPUT_SCHEMA: JsonObjectSchema = {
-  type: "object",
-  properties: {
-    task: {
-      type: "string",
-      description: "Task description to compile context for."
-    },
-    token_budget: {
-      type: "number",
-      description: "Optional advisory token target for context packaging."
-    },
-    mode: {
-      type: "string",
-      description: "Optional context compiler mode. Defaults to coding."
-    }
-  },
-  required: ["task"],
-  additionalProperties: false
-};
+const LOAD_MEMORY_INPUT_SCHEMA = z
+  .object({
+    task: z.string().describe("Task description to compile context for."),
+    token_budget: z
+      .number()
+      .optional()
+      .describe("Optional advisory token target for context packaging."),
+    mode: z
+      .string()
+      .optional()
+      .describe("Optional context compiler mode. Defaults to coding.")
+  })
+  .strict();
+
+type LoadMemoryArgs = z.infer<typeof LOAD_MEMORY_INPUT_SCHEMA>;
 
 const READ_ONLY_TOOL_ANNOTATIONS: ToolAnnotations = {
   readOnlyHint: true,
@@ -79,7 +63,7 @@ export const loadMemoryTool = {
 
 async function callLoadMemoryTool(
   context: AictxMcpContext,
-  args: Record<string, unknown>
+  args: LoadMemoryArgs
 ): Promise<CallToolResult> {
   const parsed = parseLoadMemoryArgs(context, args);
   const result = await loadMemory(parsed.options);
@@ -89,17 +73,11 @@ async function callLoadMemoryTool(
 
 function parseLoadMemoryArgs(
   context: AictxMcpContext,
-  args: Record<string, unknown>
+  args: LoadMemoryArgs
 ): {
   options: LoadMemoryOptions;
   hasExplicitTokenBudget: boolean;
 } {
-  assertKnownArguments(args, ["task", "token_budget", "mode"], "load_memory");
-
-  if (typeof args.task !== "string") {
-    throw invalidParams("load_memory requires a string `task` argument.");
-  }
-
   const options: LoadMemoryOptions = {
     cwd: context.cwd,
     task: args.task
@@ -107,18 +85,10 @@ function parseLoadMemoryArgs(
   const hasExplicitTokenBudget = args.token_budget !== undefined;
 
   if (args.token_budget !== undefined) {
-    if (typeof args.token_budget !== "number") {
-      throw invalidParams("load_memory `token_budget` must be a number when provided.");
-    }
-
     options.token_budget = args.token_budget;
   }
 
   if (args.mode !== undefined) {
-    if (typeof args.mode !== "string") {
-      throw invalidParams("load_memory `mode` must be a string when provided.");
-    }
-
     options.mode = args.mode;
   }
 
@@ -168,23 +138,4 @@ function toToolResult(envelope: object): CallToolResult {
     ],
     structuredContent: envelope as Record<string, unknown>
   };
-}
-
-function assertKnownArguments(
-  args: Record<string, unknown>,
-  allowed: readonly string[],
-  toolName: string
-): void {
-  const allowedSet = new Set(allowed);
-  const unknownArguments = Object.keys(args).filter((key) => !allowedSet.has(key));
-
-  if (unknownArguments.length > 0) {
-    throw invalidParams(
-      `${toolName} received unsupported argument(s): ${unknownArguments.join(", ")}.`
-    );
-  }
-}
-
-function invalidParams(message: string): McpError {
-  return new McpError(ErrorCode.InvalidParams, message);
 }

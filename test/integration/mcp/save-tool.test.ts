@@ -264,21 +264,20 @@ describe("aictx MCP save_memory_patch tool", () => {
     const started = await startMcpClient(projectRoot);
 
     try {
-      await expect(
-        started.client.callTool({
-          name: "save_memory_patch",
-          arguments: {}
-        })
-      ).rejects.toThrow(/patch/);
-      await expect(
-        started.client.callTool({
-          name: "save_memory_patch",
-          arguments: {
-            patch: createNotePatch("Ignored", "Should not run."),
-            projectRoot
-          }
-        })
-      ).rejects.toThrow(/projectRoot/);
+      const missingPatch = await started.client.callTool({
+        name: "save_memory_patch",
+        arguments: {}
+      });
+      const unsupportedProjectRoot = await started.client.callTool({
+        name: "save_memory_patch",
+        arguments: {
+          patch: createNotePatch("Ignored", "Should not run."),
+          projectRoot
+        }
+      });
+
+      expectToolError(missingPatch, /patch/);
+      expectToolError(unsupportedProjectRoot, /projectRoot/);
     } finally {
       await started.close();
     }
@@ -533,6 +532,29 @@ function parseCliEnvelope<T>(output: CliRunResult): T {
   expect(output.exitCode).toBe(0);
   expect(output.stderr).toBe("");
   return JSON.parse(output.stdout) as T;
+}
+
+function expectToolError(result: unknown, message: RegExp): void {
+  expect(isRecord(result)).toBe(true);
+  if (!isRecord(result)) {
+    throw new Error("Expected MCP tool error result to be an object.");
+  }
+
+  expect(result.isError).toBe(true);
+  expect(Array.isArray(result.content)).toBe(true);
+
+  if (!Array.isArray(result.content)) {
+    throw new Error("Expected MCP tool error result content to be an array.");
+  }
+
+  const text = result.content.find(isTextContent);
+
+  expect(text).toBeDefined();
+  if (text === undefined) {
+    throw new Error("Expected MCP tool error result to include text content.");
+  }
+
+  expect(text.text).toMatch(message);
 }
 
 function parseToolEnvelope<T>(result: unknown): T {

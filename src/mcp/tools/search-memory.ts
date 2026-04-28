@@ -1,9 +1,5 @@
-import {
-  ErrorCode,
-  McpError,
-  type CallToolResult,
-  type ToolAnnotations
-} from "@modelcontextprotocol/sdk/types.js";
+import type { CallToolResult, ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
+import { z } from "zod";
 
 import {
   searchMemory,
@@ -14,29 +10,17 @@ interface AictxMcpContext {
   cwd: string;
 }
 
-interface JsonObjectSchema {
-  [key: string]: unknown;
-  type: "object";
-  properties?: Record<string, object>;
-  required?: string[];
-  additionalProperties?: boolean;
-}
+const SEARCH_MEMORY_INPUT_SCHEMA = z
+  .object({
+    query: z.string().describe("Search query."),
+    limit: z
+      .number()
+      .optional()
+      .describe("Optional maximum number of matches to return.")
+  })
+  .strict();
 
-const SEARCH_MEMORY_INPUT_SCHEMA: JsonObjectSchema = {
-  type: "object",
-  properties: {
-    query: {
-      type: "string",
-      description: "Search query."
-    },
-    limit: {
-      type: "number",
-      description: "Optional maximum number of matches to return."
-    }
-  },
-  required: ["query"],
-  additionalProperties: false
-};
+type SearchMemoryArgs = z.infer<typeof SEARCH_MEMORY_INPUT_SCHEMA>;
 
 const READ_ONLY_TOOL_ANNOTATIONS: ToolAnnotations = {
   readOnlyHint: true,
@@ -56,7 +40,7 @@ export const searchMemoryTool = {
 
 async function callSearchMemoryTool(
   context: AictxMcpContext,
-  args: Record<string, unknown>
+  args: SearchMemoryArgs
 ): Promise<CallToolResult> {
   const result = await searchMemory(parseSearchMemoryArgs(context, args));
 
@@ -65,24 +49,14 @@ async function callSearchMemoryTool(
 
 function parseSearchMemoryArgs(
   context: AictxMcpContext,
-  args: Record<string, unknown>
+  args: SearchMemoryArgs
 ): SearchMemoryOptions {
-  assertKnownArguments(args, ["query", "limit"], "search_memory");
-
-  if (typeof args.query !== "string") {
-    throw invalidParams("search_memory requires a string `query` argument.");
-  }
-
   const options: SearchMemoryOptions = {
     cwd: context.cwd,
     query: args.query
   };
 
   if (args.limit !== undefined) {
-    if (typeof args.limit !== "number") {
-      throw invalidParams("search_memory `limit` must be a number when provided.");
-    }
-
     options.limit = args.limit;
   }
 
@@ -99,23 +73,4 @@ function toToolResult(envelope: object): CallToolResult {
     ],
     structuredContent: envelope as Record<string, unknown>
   };
-}
-
-function assertKnownArguments(
-  args: Record<string, unknown>,
-  allowed: readonly string[],
-  toolName: string
-): void {
-  const allowedSet = new Set(allowed);
-  const unknownArguments = Object.keys(args).filter((key) => !allowedSet.has(key));
-
-  if (unknownArguments.length > 0) {
-    throw invalidParams(
-      `${toolName} received unsupported argument(s): ${unknownArguments.join(", ")}.`
-    );
-  }
-}
-
-function invalidParams(message: string): McpError {
-  return new McpError(ErrorCode.InvalidParams, message);
 }

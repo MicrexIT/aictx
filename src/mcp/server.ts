@@ -5,14 +5,6 @@ import { resolve } from "node:path";
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import {
-  CallToolRequestSchema,
-  ErrorCode,
-  ListToolsRequestSchema,
-  McpError,
-  type CallToolResult,
-  type Tool
-} from "@modelcontextprotocol/sdk/types.js";
 
 import { version } from "../generated/version.js";
 import { diffMemoryTool } from "./tools/diff-memory.js";
@@ -37,25 +29,6 @@ export interface StartMcpServerOptions extends CreateAictxMcpServerOptions {
   stdin?: Readable;
   stdout?: Writable;
 }
-
-interface AictxMcpTool {
-  name: string;
-  title: string;
-  description: string;
-  inputSchema: Tool["inputSchema"];
-  annotations: Tool["annotations"];
-  call: (
-    context: AictxMcpContext,
-    args: Record<string, unknown>
-  ) => Promise<CallToolResult>;
-}
-
-const TOOLS: AictxMcpTool[] = [
-  loadMemoryTool,
-  searchMemoryTool,
-  saveMemoryPatchTool,
-  diffMemoryTool
-];
 
 export function createAictxMcpServer(
   options: CreateAictxMcpServerOptions = {}
@@ -108,34 +81,44 @@ function formatError(error: unknown): string {
 }
 
 function registerTools(mcp: AictxMcpServer): void {
-  const toolsByName = new Map(TOOLS.map((tool) => [tool.name, tool]));
-
-  mcp.server.server.registerCapabilities({
-    tools: {
-      listChanged: true
-    }
-  });
-
-  mcp.server.server.setRequestHandler(ListToolsRequestSchema, () => ({
-    tools: TOOLS.map((tool) => ({
-      name: tool.name,
-      title: tool.title,
-      description: tool.description,
-      inputSchema: tool.inputSchema,
-      annotations: tool.annotations
-    }))
-  }));
-
-  mcp.server.server.setRequestHandler(CallToolRequestSchema, async (request) => {
-    const tool = toolsByName.get(request.params.name);
-
-    if (tool === undefined) {
-      throw new McpError(
-        ErrorCode.InvalidParams,
-        `Tool ${request.params.name} not found.`
-      );
-    }
-
-    return tool.call(mcp.context, request.params.arguments ?? {});
-  });
+  mcp.server.registerTool(
+    loadMemoryTool.name,
+    {
+      title: loadMemoryTool.title,
+      description: loadMemoryTool.description,
+      inputSchema: loadMemoryTool.inputSchema,
+      annotations: loadMemoryTool.annotations
+    },
+    (args) => loadMemoryTool.call(mcp.context, args)
+  );
+  mcp.server.registerTool(
+    searchMemoryTool.name,
+    {
+      title: searchMemoryTool.title,
+      description: searchMemoryTool.description,
+      inputSchema: searchMemoryTool.inputSchema,
+      annotations: searchMemoryTool.annotations
+    },
+    (args) => searchMemoryTool.call(mcp.context, args)
+  );
+  mcp.server.registerTool(
+    saveMemoryPatchTool.name,
+    {
+      title: saveMemoryPatchTool.title,
+      description: saveMemoryPatchTool.description,
+      inputSchema: saveMemoryPatchTool.inputSchema,
+      annotations: saveMemoryPatchTool.annotations
+    },
+    (args) => saveMemoryPatchTool.call(mcp.context, args)
+  );
+  mcp.server.registerTool(
+    diffMemoryTool.name,
+    {
+      title: diffMemoryTool.title,
+      description: diffMemoryTool.description,
+      inputSchema: diffMemoryTool.inputSchema,
+      annotations: diffMemoryTool.annotations
+    },
+    (args) => diffMemoryTool.call(mcp.context, args)
+  );
 }
