@@ -6,6 +6,7 @@ import { version } from "../generated/version.js";
 import { registerCheckCommand } from "./commands/check.js";
 import { registerDiffCommand } from "./commands/diff.js";
 import { registerGraphCommand } from "./commands/graph.js";
+import { registerHistoryCommand } from "./commands/history.js";
 import { registerInitCommand } from "./commands/init.js";
 import { registerInspectCommand } from "./commands/inspect.js";
 import { registerLoadCommand } from "./commands/load.js";
@@ -90,6 +91,11 @@ export function createCliProgram(options: CliMainOptions = {}): Command {
     stderr: writeErr
   });
   registerDiffCommand(program, {
+    cwd: options.cwd ?? process.cwd(),
+    stdout: writeOut,
+    stderr: writeErr
+  });
+  registerHistoryCommand(program, {
     cwd: options.cwd ?? process.cwd(),
     stdout: writeOut,
     stderr: writeErr

@@ -12,8 +12,13 @@ import {
 import { withProjectLock } from "../core/lock.js";
 import { resolveProjectPaths, type ProjectPaths } from "../core/paths.js";
 import { err, ok, type Result } from "../core/result.js";
+import {
+  runSubprocess,
+  type SubprocessResult
+} from "../core/subprocess.js";
 import type {
   AictxMeta,
+  IsoDateTime,
   ObjectId,
   ObjectStatus,
   ObjectType,
@@ -68,6 +73,8 @@ import { validateProject } from "../validation/validate.js";
 
 const INITIAL_INDEX_UNAVAILABLE_WARNING =
   "Initial index was not built because the index module is not available yet.";
+const AICTX_HISTORY_PATHSPEC = ".aictx";
+const HISTORY_FIELD_SEPARATOR = "\u001f";
 
 export interface InitProjectOptions extends GitWrapperOptions {
   cwd: string;
@@ -111,6 +118,11 @@ export interface DiffMemoryOptions extends GitWrapperOptions {
   cwd: string;
 }
 
+export interface ListMemoryHistoryOptions extends GitWrapperOptions {
+  cwd: string;
+  limit?: number;
+}
+
 export interface SaveMemoryPatchOptions extends GitWrapperOptions {
   cwd: string;
   patch?: unknown;
@@ -134,6 +146,18 @@ export interface DiffMemoryData {
   changed_files: string[];
   changed_memory_ids: ObjectId[];
   changed_relation_ids: RelationId[];
+}
+
+export interface MemoryHistoryCommit {
+  commit: string;
+  short_commit: string;
+  author: string;
+  timestamp: IsoDateTime;
+  subject: string;
+}
+
+export interface MemoryHistoryData {
+  commits: MemoryHistoryCommit[];
 }
 
 export interface CheckProjectData {
@@ -762,6 +786,74 @@ export async function diffMemory(
   };
 }
 
+export async function listMemoryHistory(
+  options: ListMemoryHistoryOptions
+): Promise<AppResult<MemoryHistoryData>> {
+  const paths = await resolveProjectPaths({
+    cwd: options.cwd,
+    mode: "require-initialized",
+    runner: options.runner
+  });
+
+  if (!paths.ok) {
+    return {
+      ok: false,
+      error: paths.error,
+      warnings: paths.warnings,
+      meta: await buildBestEffortMeta(options)
+    };
+  }
+
+  const meta = await buildMeta(paths.data, options);
+
+  if (!meta.ok) {
+    return meta;
+  }
+
+  if (!meta.meta.git.available) {
+    return {
+      ok: false,
+      error: aictxError("AICtxGitRequired", "Git is required for this operation."),
+      warnings: [],
+      meta: meta.meta
+    };
+  }
+
+  if (
+    options.limit !== undefined &&
+    (!Number.isInteger(options.limit) || options.limit < 1)
+  ) {
+    return {
+      ok: false,
+      error: aictxError("AICtxValidationFailed", "History limit must be a positive integer.", {
+        limit: options.limit
+      }),
+      warnings: [],
+      meta: meta.meta
+    };
+  }
+
+  const history = await getAictxHistory(paths.data.projectRoot, options);
+
+  if (!history.ok) {
+    return {
+      ok: false,
+      error: history.error,
+      warnings: history.warnings,
+      meta: meta.meta
+    };
+  }
+
+  return {
+    ok: true,
+    data: {
+      commits: history.data
+    },
+    warnings: history.warnings,
+    meta: meta.meta
+  };
+}
+
 export async function saveMemoryPatch(
   options: SaveMemoryPatchOptions
 ): Promise<AppResult<SaveMemoryData>> {
@@ -904,6 +996,7 @@ export const applicationOperations = {
   graphMemory,
   initProject,
   inspectMemory,
+  listMemoryHistory,
   listStaleMemory,
   loadMemory,
   rebuildIndex,
@@ -1185,6 +1278,72 @@ function searchIndexOptions(aictxRoot: string, input: SearchMemoryInput): Search
     query: input.query,
     ...(input.limit === undefined ? {} : { limit: input.limit })
   };
+}
+
+async function getAictxHistory(
+  projectRoot: string,
+  options: GitWrapperOptions & { limit?: number }
+): Promise<Result<MemoryHistoryCommit[]>> {
+  const format = ["%H", "%h", "%an <%ae>", "%aI", "%s"].join(
+    HISTORY_FIELD_SEPARATOR
+  );
+  const args = [
+    "log",
+    `--format=${format}`,
+    ...(options.limit === undefined ? [] : [`--max-count=${options.limit}`]),
+    "--",
+    AICTX_HISTORY_PATHSPEC
+  ];
+  const subprocessOptions =
+    options.runner === undefined
+      ? { cwd: projectRoot }
+      : { cwd: projectRoot, runner: options.runner };
+  const result = await runSubprocess("git", args, subprocessOptions);
+
+  if (!result.ok) {
+    return err(
+      aictxError("AICtxGitOperationFailed", "Git operation failed.", {
+        message: result.error.message
+      })
+    );
+  }
+
+  if (result.data.exitCode !== 0) {
+    return gitHistoryCommandFailed("Git history failed.", result.data);
+  }
+
+  return ok(parseAictxHistory(result.data.stdout));
+}
+
+function parseAictxHistory(stdout: string): MemoryHistoryCommit[] {
+  return stdout
+    .split("\n")
+    .filter((line) => line.length > 0)
+    .map((line) => {
+      const fields = line.split(HISTORY_FIELD_SEPARATOR);
+
+      return {
+        commit: fields[0] ?? "",
+        short_commit: fields[1] ?? "",
+        author: fields[2] ?? "",
+        timestamp: fields[3] ?? "",
+        subject: fields.slice(4).join(HISTORY_FIELD_SEPARATOR)
+      };
+    });
+}
+
+function gitHistoryCommandFailed<T>(
+  message: string,
+  result: SubprocessResult
+): Result<T> {
+  return err(
+    aictxError("AICtxGitOperationFailed", message, {
+      command: result.command,
+      args: [...result.args],
+      exitCode: result.exitCode,
+      stderr: result.stderr.trim()
+    })
+  );
 }
 
 async function detectChangedIds(
