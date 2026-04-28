@@ -5,8 +5,19 @@ import { resolve } from "node:path";
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import {
+  CallToolRequestSchema,
+  ErrorCode,
+  ListToolsRequestSchema,
+  McpError,
+  type CallToolResult,
+  type Tool
+} from "@modelcontextprotocol/sdk/types.js";
 
 import { version } from "../generated/version.js";
+import { diffMemoryTool } from "./tools/diff-memory.js";
+import { loadMemoryTool } from "./tools/load-memory.js";
+import { searchMemoryTool } from "./tools/search-memory.js";
 
 export interface AictxMcpContext {
   cwd: string;
@@ -26,6 +37,24 @@ export interface StartMcpServerOptions extends CreateAictxMcpServerOptions {
   stdout?: Writable;
 }
 
+interface AictxMcpReadTool {
+  name: string;
+  title: string;
+  description: string;
+  inputSchema: Tool["inputSchema"];
+  annotations: Tool["annotations"];
+  call: (
+    context: AictxMcpContext,
+    args: Record<string, unknown>
+  ) => Promise<CallToolResult>;
+}
+
+const READ_TOOLS: AictxMcpReadTool[] = [
+  loadMemoryTool,
+  searchMemoryTool,
+  diffMemoryTool
+];
+
 export function createAictxMcpServer(
   options: CreateAictxMcpServerOptions = {}
 ): AictxMcpServer {
@@ -36,11 +65,14 @@ export function createAictxMcpServer(
     name: "aictx-mcp",
     version
   });
-
-  return {
+  const mcp = {
     context,
     server
   };
+
+  registerReadTools(mcp);
+
+  return mcp;
 }
 
 export async function startMcpServer(
@@ -71,4 +103,37 @@ function formatError(error: unknown): string {
   }
 
   return String(error);
+}
+
+function registerReadTools(mcp: AictxMcpServer): void {
+  const toolsByName = new Map(READ_TOOLS.map((tool) => [tool.name, tool]));
+
+  mcp.server.server.registerCapabilities({
+    tools: {
+      listChanged: true
+    }
+  });
+
+  mcp.server.server.setRequestHandler(ListToolsRequestSchema, () => ({
+    tools: READ_TOOLS.map((tool) => ({
+      name: tool.name,
+      title: tool.title,
+      description: tool.description,
+      inputSchema: tool.inputSchema,
+      annotations: tool.annotations
+    }))
+  }));
+
+  mcp.server.server.setRequestHandler(CallToolRequestSchema, async (request) => {
+    const tool = toolsByName.get(request.params.name);
+
+    if (tool === undefined) {
+      throw new McpError(
+        ErrorCode.InvalidParams,
+        `Tool ${request.params.name} not found.`
+      );
+    }
+
+    return tool.call(mcp.context, request.params.arguments ?? {});
+  });
 }
