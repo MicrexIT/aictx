@@ -1,0 +1,167 @@
+import { access, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
+import { afterEach, describe, expect, it } from "vitest";
+
+import { main, type CliOutputWriter } from "../../../src/cli/main.js";
+import { runSubprocess } from "../../../src/core/subprocess.js";
+
+const tempRoots: string[] = [];
+
+interface InitSuccessEnvelope {
+  ok: true;
+  data: {
+    created: boolean;
+    index_built: boolean;
+  };
+  warnings: string[];
+  meta: {
+    project_root: string;
+    aictx_root: string;
+    git: {
+      available: boolean;
+      branch: string | null;
+      commit: string | null;
+      dirty: boolean | null;
+    };
+  };
+}
+
+afterEach(async () => {
+  await Promise.all(
+    tempRoots.splice(0).map((path) => rm(path, { recursive: true, force: true }))
+  );
+});
+
+describe("aictx init CLI", () => {
+  it("prints a success envelope for JSON output in a Git repo", async () => {
+    const repo = await createRepo("json-git");
+    const output = createCapturedOutput();
+
+    const exitCode = await main(["node", "aictx", "init", "--json"], {
+      ...output.writers,
+      cwd: repo
+    });
+
+    expect(exitCode).toBe(0);
+    expect(output.stderr()).toBe("");
+    const envelope = parseInitSuccessEnvelope(output.stdout());
+    expect(envelope.ok).toBe(true);
+    expect(envelope.data.created).toBe(true);
+    expect(envelope.data.index_built).toBe(true);
+    expect(envelope.meta.project_root).toBe(repo);
+    expect(envelope.meta.aictx_root).toBe(join(repo, ".aictx"));
+    expect(envelope.meta.git.available).toBe(true);
+  });
+
+  it("prints a success envelope outside Git with unavailable Git metadata", async () => {
+    const projectRoot = await createTempRoot("aictx-cli-init-local-");
+    const output = createCapturedOutput();
+
+    const exitCode = await main(["node", "aictx", "init", "--json"], {
+      ...output.writers,
+      cwd: projectRoot
+    });
+
+    expect(exitCode).toBe(0);
+    expect(output.stderr()).toBe("");
+    const envelope = parseInitSuccessEnvelope(output.stdout());
+    expect(envelope.meta).toEqual({
+      project_root: projectRoot,
+      aictx_root: join(projectRoot, ".aictx"),
+      git: {
+        available: false,
+        branch: null,
+        commit: null,
+        dirty: null
+      }
+    });
+    await expect(access(join(projectRoot, ".aictx", "config.json"))).resolves.toBeUndefined();
+    await expect(access(join(projectRoot, ".aictx", "events.jsonl"))).resolves.toBeUndefined();
+  });
+
+  it("prints concise human output", async () => {
+    const projectRoot = await createTempRoot("aictx-cli-init-human-");
+    const output = createCapturedOutput();
+
+    const exitCode = await main(["node", "aictx", "init"], {
+      ...output.writers,
+      cwd: projectRoot
+    });
+
+    expect(exitCode).toBe(0);
+    expect(output.stderr()).toBe("");
+    expect(() => JSON.parse(output.stdout()) as unknown).toThrow();
+    expect(output.stdout()).toContain("Initialized Aictx.");
+    expect(output.stdout()).toContain("Created files:");
+    expect(output.stdout()).toContain(".aictx/config.json");
+    expect(output.stdout()).toContain(".aictx/events.jsonl");
+    expect(output.stdout()).toContain("Index built.");
+    expect(output.stdout()).toContain("Next steps:");
+    expect(output.stdout()).toContain("aictx load");
+  });
+});
+
+function parseInitSuccessEnvelope(stdout: string): InitSuccessEnvelope {
+  return JSON.parse(stdout) as InitSuccessEnvelope;
+}
+
+function createCapturedOutput(): {
+  writers: { stdout: CliOutputWriter; stderr: CliOutputWriter };
+  stdout: () => string;
+  stderr: () => string;
+} {
+  let stdout = "";
+  let stderr = "";
+
+  return {
+    writers: {
+      stdout: (text) => {
+        stdout += text;
+      },
+      stderr: (text) => {
+        stderr += text;
+      }
+    },
+    stdout: () => stdout,
+    stderr: () => stderr
+  };
+}
+
+async function createRepo(name: string): Promise<string> {
+  const repo = await createTempRoot(`aictx-cli-init-${name}-`);
+  await git(repo, ["init", "--initial-branch=main"]);
+  await git(repo, ["config", "user.email", "test@example.com"]);
+  await git(repo, ["config", "user.name", "Aictx Test"]);
+  await writeFile(join(repo, "README.md"), "# Test\n");
+  await git(repo, ["add", "README.md"]);
+  await git(repo, ["commit", "-m", "Initial commit"]);
+  return repo;
+}
+
+async function createTempRoot(prefix: string): Promise<string> {
+  const root = await mkdtemp(join(tmpdir(), prefix));
+  const resolvedRoot = await realpath(root);
+  tempRoots.push(resolvedRoot);
+  return resolvedRoot;
+}
+
+async function git(cwd: string, args: readonly string[]): Promise<string> {
+  const result = await runSubprocess("git", args, { cwd });
+
+  if (!result.ok) {
+    throw new Error(result.error.message);
+  }
+
+  if (result.data.exitCode !== 0) {
+    throw new Error(
+      [
+        `git ${args.join(" ")} failed with exit code ${result.data.exitCode}`,
+        result.data.stderr
+      ].join("\n")
+    );
+  }
+
+  return result.data.stdout;
+}
