@@ -979,6 +979,7 @@ Generated directories are excluded:
 
 * `.aictx/index/`
 * `.aictx/context/`
+* `.aictx/exports/`
 
 Conflict marker regexes:
 
@@ -1012,6 +1013,7 @@ Do not scan:
 
 * Generated SQLite database
 * Generated context packs unless `config.git.trackContextPacks` is true
+* Generated Obsidian projection exports
 
 ### 12.1 Block Rules
 

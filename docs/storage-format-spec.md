@@ -84,6 +84,8 @@ V1 uses this layout:
   index/
     aictx.sqlite
   context/
+  exports/
+    obsidian/
 ```
 
 Canonical and tracked by Git when Git is available:
@@ -101,6 +103,7 @@ Generated and gitignored when Git is available:
 ```text
 .aictx/index/
 .aictx/context/
+.aictx/exports/
 .aictx/.lock
 ```
 
@@ -109,6 +112,7 @@ Recommended `.gitignore` entries when Git is available:
 ```gitignore
 .aictx/index/
 .aictx/context/
+.aictx/exports/
 .aictx/.lock
 ```
 
@@ -585,6 +589,7 @@ Generated/local locations:
 ```text
 .aictx/index/
 .aictx/context/
+.aictx/exports/obsidian/
 .aictx/.lock
 ```
 
@@ -593,6 +598,9 @@ Rules:
 * Generated and local runtime data should be gitignored when Git is available.
 * Deleting generated data must not lose memory.
 * Generated data must be rebuildable from canonical files.
+* The Obsidian projection export is generated data and must not be read as canonical memory.
+* Generated Obsidian files may contain JSON frontmatter inside `---` delimiters for Obsidian compatibility.
+* Generated Obsidian frontmatter must not affect canonical Markdown validation, content hashes, indexing, events, or patch writes.
 * Embeddings are not part of v1 storage.
 * Future embedding caches must remain generated, optional, and non-canonical.
 
@@ -609,4 +617,5 @@ The storage format is valid when:
 * Manual Markdown edits are detected by hash validation.
 * Relations cannot point to missing memory objects.
 * `events.jsonl` is valid JSONL and tracked when Git is available.
+* The Obsidian projection can be deleted and rebuilt without losing memory.
 * No cloud account, external API, embedding provider, or hosted service is required.

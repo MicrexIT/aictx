@@ -142,7 +142,7 @@ Behavior:
 * Create JSON schemas.
 * Create empty `events.jsonl`.
 * Create generated directories.
-* If Git is available, add or recommend `.gitignore` entries for `.aictx/index/`, `.aictx/context/`, and `.aictx/.lock`.
+* If Git is available, add or recommend `.gitignore` entries for `.aictx/index/`, `.aictx/context/`, `.aictx/exports/`, and `.aictx/.lock`.
 * Build the initial local index if possible.
 * Do not create a Git commit.
 
@@ -478,16 +478,17 @@ Success data:
 
 ### 5.10 Optional Commands
 
-Optional v1 commands may be implemented if they use the same read paths as MCP:
+Optional v1 commands may be implemented as CLI adapters over shared application services:
 
 ```bash
 aictx search "<query>" [--limit <number>] [--json]
 aictx stale [--json]
 aictx inspect <id> [--json]
 aictx graph <id> [--json]
+aictx export obsidian [--out <dir>] [--json]
 ```
 
-These commands must not mutate canonical storage.
+These commands must not mutate canonical storage. `aictx export obsidian` may write generated projection files only.
 
 Minimum behavior:
 
@@ -495,6 +496,47 @@ Minimum behavior:
 * `aictx stale` lists stale, superseded, and rejected memory objects.
 * `aictx inspect <id>` shows one memory object plus direct relations.
 * `aictx graph <id>` shows relation neighborhoods for debugging only.
+* `aictx export obsidian` writes a one-way generated Obsidian projection from canonical memory.
+
+### 5.11 `aictx export obsidian`
+
+Purpose:
+
+Generate an Obsidian-compatible Markdown projection from canonical Aictx memory.
+
+Syntax:
+
+```bash
+aictx export obsidian [--out <dir>] [--json]
+```
+
+Behavior:
+
+* Default output is `.aictx/exports/obsidian/`.
+* `--out <dir>` is resolved inside the project root only.
+* Refuse unsafe targets: project root itself, canonical `.aictx` directories, non-empty directories without an Aictx export manifest, invalid manifests, symlinks, or paths outside the project root.
+* Write one generated Obsidian note per memory object at `memory/<object-id>.md`.
+* Use JSON frontmatter inside `---` delimiters with flat keys only: `aictx_id`, `aictx_title`, `aictx_type`, `aictx_status`, `aictx_scope_kind`, `aictx_scope_project`, optional branch/task keys, `aictx_created_at`, `aictx_updated_at`, `tags`, `aliases`, and active outgoing relation properties named `aictx_rel_<predicate>`.
+* Preserve the canonical Markdown body after frontmatter.
+* Append a generated `Aictx Relations` section for active outgoing relations.
+* Generate a root index note and `.aictx-obsidian-export.json` manifest.
+* On re-export, remove only stale files listed in the previous manifest; never delete unmanifested user files.
+* Do not append events, update hashes, rebuild SQLite, or read generated projection files as source data.
+* Do not require Obsidian, network access, an Obsidian plugin, or an MCP tool.
+
+Success data:
+
+```json
+{
+  "format": "obsidian",
+  "output_dir": ".aictx/exports/obsidian",
+  "manifest_path": ".aictx/exports/obsidian/.aictx-obsidian-export.json",
+  "objects_exported": 8,
+  "relations_linked": 12,
+  "files_written": [],
+  "files_removed": []
+}
+```
 
 ## 6. MCP Tools
 
@@ -979,7 +1021,7 @@ Rules:
 Dirty file detection:
 
 * A file is dirty if Git reports it modified, added, deleted, renamed, or unmerged under `.aictx/`.
-* Generated and local ignored files under `.aictx/index/`, `.aictx/context/`, and `.aictx/.lock` do not count as dirty.
+* Generated and local ignored files under `.aictx/index/`, `.aictx/context/`, `.aictx/exports/`, and `.aictx/.lock` do not count as dirty.
 
 Conflict detection:
 
@@ -1010,6 +1052,7 @@ V1 error codes:
 * `AICtxInvalidRelation`
 * `AICtxSecretDetected`
 * `AICtxIndexUnavailable`
+* `AICtxExportTargetInvalid`
 * `AICtxLockBusy`
 * `AICtxGitOperationFailed`
 * `AICtxInternalError`
@@ -1031,6 +1074,7 @@ The v1 API is valid when:
 * Save operations write canonical files, append events, and update hashes.
 * In Git projects, save operations leave changes uncommitted.
 * In Git projects, `aictx diff` and `diff_memory` show only `.aictx/` changes.
+* `aictx export obsidian` writes generated Obsidian files without mutating canonical memory.
 * `aictx check` reports storage validation errors without mutating canonical files.
 * Outside Git, Git-only commands return `AICtxGitRequired`.
 * In Git projects, `aictx restore <commit>` restores only `.aictx/`.

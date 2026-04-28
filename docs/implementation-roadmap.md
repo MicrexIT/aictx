@@ -2105,6 +2105,69 @@ Acceptance:
 * `aictx-mcp` starts from packed package.
 * Node engine is `>=22`.
 
+### T052: Add Obsidian Projection Export
+
+Goal:
+
+Generate a one-way Obsidian-compatible Markdown projection from canonical Aictx memory.
+
+Write scope:
+
+```text
+src/export/obsidian.ts
+src/app/operations.ts
+src/cli/main.ts
+src/cli/commands/export.ts
+src/core/errors.ts
+src/core/git.ts
+src/core/types.ts
+src/storage/init.ts
+test/unit/export/
+test/integration/cli/export-obsidian.test.ts
+test/integration/init/init.test.ts
+```
+
+Depends on:
+
+```text
+T015
+T016
+T031
+T032
+T047
+T051
+```
+
+Implementation:
+
+* Add `aictx export obsidian [--out <dir>] [--json]`.
+* Default output to `.aictx/exports/obsidian/`; resolve optional `--out <dir>` inside the project root only.
+* Refuse project root, canonical `.aictx` directories, symlinks, paths outside the project root, invalid manifests, and non-empty unmanifested directories with `AICtxExportTargetInvalid`.
+* Generate one note per memory object at `memory/<object-id>.md` with JSON frontmatter inside `---` delimiters.
+* Use flat frontmatter keys: `aictx_id`, `aictx_title`, `aictx_type`, `aictx_status`, scope keys, timestamps, `tags`, `aliases`, and active outgoing `aictx_rel_<predicate>` wikilink lists.
+* Preserve the canonical Markdown body after frontmatter and append a generated `Aictx Relations` section for active outgoing relations.
+* Generate a root index note and `.aictx-obsidian-export.json` manifest.
+* On re-export, remove only stale files listed in the prior manifest; never delete unmanifested user files.
+* Add `.aictx/exports/` to init-created Git ignore entries and dirty-state ignored paths.
+* Do not append events, update hashes, rebuild SQLite, read generated exports as source data, expose an MCP tool, change canonical schemas/storage shape, implement two-way sync, build an Obsidian plugin, add embeddings, add file watching, or import Obsidian edits back into Aictx.
+
+Assignable subtasks:
+
+* `T052A`: Implement export target safety, manifest parsing/writing, stale manifest-owned file cleanup, and `.aictx/exports/` Git ignore behavior.
+* `T052B`: Implement Obsidian note rendering, JSON frontmatter, wikilink relation properties, root index note, and generated relation section.
+* `T052C`: Wire app service and CLI command with human and JSON output, `AICtxExportTargetInvalid`, and integration tests.
+
+Acceptance:
+
+* Default export writes to `.aictx/exports/obsidian/` and is gitignored by init.
+* Custom `--out aictx-obsidian` works when the directory is empty or manifest-owned.
+* Non-empty unmanifested output directory fails with `AICtxExportTargetInvalid`.
+* Generated notes contain valid JSON frontmatter, preserved body content, aliases, tags, and active relation wikilinks.
+* Stale manifest-owned files are removed; unmanifested files are preserved.
+* Export does not mutate `.aictx/memory`, `.aictx/relations`, `.aictx/events.jsonl`, content hashes, or SQLite.
+* `--json` returns `format`, `output_dir`, `manifest_path`, `objects_exported`, `relations_linked`, `files_written`, and `files_removed`.
+* No network access, Obsidian installation, or Obsidian plugin is required.
+
 ## 18. Parallelization Guidance
 
 Safe to parallelize after T001:
@@ -2149,6 +2212,7 @@ PR 9: T038-T040
 PR 10: T041-T043
 PR 11: T044-T048
 PR 12: T049-T051
+PR 13: T052
 ```
 
 Rules:
@@ -2171,6 +2235,7 @@ V1 implementation is complete when:
 * In Git projects, `aictx history`, `restore`, and `rewind` work only on `.aictx/`.
 * Outside Git, Git-only commands return `AICtxGitRequired`.
 * MCP exposes only `load_memory`, `search_memory`, `save_memory_patch`, and `diff_memory`.
+* `aictx export obsidian` creates a generated Obsidian projection without changing canonical memory.
 * No core command requires network access, API keys, embeddings, or hosted services.
 * Write operations are protected by `.aictx/.lock`.
 * Test coverage includes unit, integration, CLI workflow, MCP workflow, and safety regressions.

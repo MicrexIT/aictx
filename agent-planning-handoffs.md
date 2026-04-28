@@ -1595,3 +1595,51 @@ Run:
 - pnpm vitest run test/integration/release/
 - pnpm build
 ```
+
+## T052: Add Obsidian Projection Export
+
+```text
+Plan roadmap task T052: Add Obsidian Projection Export.
+
+Read these files first:
+- implementation-roadmap.md
+- prd.md
+- storage-format-spec.md
+- runtime-and-project-architecture-spec.md
+- mcp-and-cli-api-spec.md
+- schemas-and-validation-spec.md
+
+Write scope:
+- src/export/obsidian.ts
+- src/app/operations.ts
+- src/cli/main.ts
+- src/cli/commands/export.ts
+- src/core/errors.ts
+- src/core/git.ts
+- src/core/types.ts
+- src/storage/init.ts
+- test/unit/export/
+- test/integration/cli/export-obsidian.test.ts
+- test/integration/init/init.test.ts
+
+Do not modify:
+- MCP tools or MCP server registration.
+- Canonical object, relation, event, config, or patch schemas.
+- Canonical storage shape under `.aictx/memory/`, `.aictx/relations/`, or `.aictx/events.jsonl`.
+- Context compiler, SQLite index, embeddings, file watching, Obsidian plugin code, or import/sync-from-Obsidian behavior.
+- Files outside the write scope unless the plan identifies a necessary spec correction.
+
+Acceptance:
+- Default export writes to `.aictx/exports/obsidian/` and is gitignored by init.
+- Custom `--out aictx-obsidian` works when the directory is empty or manifest-owned.
+- Non-empty unmanifested output directory fails with `AICtxExportTargetInvalid`.
+- Generated notes contain valid JSON frontmatter, preserved body content, aliases, tags, and active relation wikilinks.
+- Stale manifest-owned files are removed; unmanifested files are preserved.
+- Export does not mutate `.aictx/memory`, `.aictx/relations`, `.aictx/events.jsonl`, content hashes, or SQLite.
+- `--json` returns `format`, `output_dir`, `manifest_path`, `objects_exported`, `relations_linked`, `files_written`, and `files_removed`.
+- No network access, Obsidian installation, or Obsidian plugin is required.
+
+Run:
+- pnpm typecheck
+- pnpm vitest run test/unit/export/ test/integration/cli/export-obsidian.test.ts test/integration/init/init.test.ts
+```

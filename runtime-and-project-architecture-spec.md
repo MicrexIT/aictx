@@ -123,6 +123,7 @@ Repository layout:
         inspect.ts
         stale.ts
         graph.ts
+        export.ts
     mcp/
       server.ts
       tools/
@@ -168,6 +169,8 @@ Repository layout:
       rank.ts
       render.ts
       tokens.ts
+    export/
+      obsidian.ts
     schemas/
       config.schema.json
       object.schema.json
@@ -221,9 +224,10 @@ Allowed import direction:
 ```text
 cli/*      -> app/*, core/*
 mcp/*      -> app/*, core/*
-app/*      -> core/*, storage/*, validation/*, index/*, context/*
+app/*      -> core/*, storage/*, validation/*, index/*, context/*, export/*
 context/*  -> index/*, storage/*, core/*
 index/*    -> storage/*, validation/*, core/*
+export/*   -> storage/*, validation/*, core/*
 storage/*  -> validation/*, core/*
 validation/* -> core/*
 core/*     -> no Aictx modules outside core
@@ -243,6 +247,9 @@ index/* -> cli/*
 index/* -> mcp/*
 context/* -> cli/*
 context/* -> mcp/*
+export/* -> cli/*
+export/* -> mcp/*
+export/* -> app/*
 cli/* -> mcp/*
 mcp/* -> cli/*
 ```
@@ -512,9 +519,11 @@ Rules:
 * JSON output must be deterministic with two-space indentation for canonical files.
 * Markdown writes must normalize line endings to LF.
 * JSONL appends must append exactly one LF-terminated JSON object per event.
-* Never write outside `.aictx/` except for optional `.gitignore` update during `init` when Git is available.
+* Never write outside `.aictx/` except for optional `.gitignore` update during `init` when Git is available, and explicit projection exports to a user-selected `--out` path inside the project root.
 * Generated index writes are restricted to `.aictx/index/`.
 * Generated context writes are restricted to `.aictx/context/`.
+* Default generated export writes are restricted to `.aictx/exports/`.
+* Custom projection export writes must stay inside the project root and must refuse unsafe or unowned output directories.
 
 ## 12. Storage Module Responsibilities
 
@@ -604,6 +613,25 @@ Rules:
 * Saved context packs are generated files unless config says they are tracked.
 * The context module must not call Git directly except through core metadata passed into it.
 * Ranking logic must be deterministic for the same inputs.
+
+### 15.1 Projection Export Module Responsibilities
+
+`src/export/*` owns generated projections for external viewers.
+
+Responsibilities:
+
+* Generate a one-way Obsidian-compatible Markdown projection from canonical storage.
+* Default output to `.aictx/exports/obsidian/`.
+* Support explicit `--out <dir>` targets resolved inside the project root.
+* Write generated notes, a root index note, and an export manifest.
+* Remove only stale files listed in the previous export manifest.
+
+Rules:
+
+* Projection exports must not mutate canonical files, append events, update hashes, rebuild SQLite, or read generated exports as source data.
+* Obsidian JSON frontmatter is allowed only in generated projection files, never canonical memory bodies.
+* The export module must reject project root, canonical `.aictx` directories, symlinks, paths outside the project root, invalid manifests, and non-empty unmanifested directories.
+* The export module must not import from CLI, MCP, or app adapters.
 
 ## 16. CLI Architecture
 
@@ -941,6 +969,8 @@ Deferred from v1:
 * Cloud MCP endpoint
 * Web UI
 * Visual graph UI
+* Obsidian plugin
+* Two-way Obsidian sync or importing Obsidian edits back into Aictx
 * Embedding provider plugins
 * External vector database
 * GitHub/GitLab app
@@ -967,6 +997,7 @@ Runtime architecture is implementation-ready when:
 * Native Git is used for worktree, diff, history, and restore behavior when Git is available.
 * SQLite is local generated state and is accessed only through the index module.
 * JSON Schema validation uses project-local `.aictx/schema/` files.
+* Obsidian projection exports are generated state and never canonical input.
 * No command requires network access, embeddings, API keys, or a cloud account.
 * Writes are protected by a local project lock.
 * Tests can exercise the main flows in temporary Git and non-Git project directories.

@@ -77,6 +77,7 @@ Required in v1:
 * Patch-first memory writes
 * Git-backed review, diff, history, and restore behavior when Git is available
 * Basic secret detection before saving memory
+* One-way generated Obsidian projection export for viewing memory in Obsidian
 
 Deferred from v1:
 
@@ -108,6 +109,7 @@ Git availability clarification:
 Aictx is not:
 
 * An Obsidian clone
+* An Obsidian-native database or two-way Obsidian sync layer
 * A generic note-taking app
 * A visual graph database
 * A hosted memory API first
@@ -543,6 +545,10 @@ Inspect a memory object and its relations.
 aictx graph <id>
 
 Show graph relationships for debugging/advanced use. Graph visualization should not be the main UX.
+
+aictx export obsidian [--out <dir>]
+
+Generate a disposable Obsidian-compatible Markdown projection from canonical Aictx memory. Aictx remains the source of truth; exported files are generated and may be deleted and rebuilt.
 
 ⸻
 
@@ -1968,6 +1974,7 @@ Do not prioritize:
 
 * Full visual graph UI
 * Obsidian plugin as the core product
+* Two-way Obsidian sync or importing Obsidian edits back into Aictx
 * Custom Markdown editor
 * Hosted cloud-first architecture
 * Complex ontology builder
