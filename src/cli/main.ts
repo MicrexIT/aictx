@@ -2,7 +2,9 @@
 
 import { Command, CommanderError } from "commander";
 import { version } from "../generated/version.js";
+import { registerCheckCommand } from "./commands/check.js";
 import { registerInitCommand } from "./commands/init.js";
+import { registerRebuildCommand } from "./commands/rebuild.js";
 import {
   CLI_EXIT_SUCCESS,
   CLI_EXIT_USAGE,
@@ -39,6 +41,16 @@ export function createCliProgram(options: CliMainOptions = {}): Command {
     });
 
   registerInitCommand(program, {
+    cwd: options.cwd ?? process.cwd(),
+    stdout: writeOut,
+    stderr: writeErr
+  });
+  registerCheckCommand(program, {
+    cwd: options.cwd ?? process.cwd(),
+    stdout: writeOut,
+    stderr: writeErr
+  });
+  registerRebuildCommand(program, {
     cwd: options.cwd ?? process.cwd(),
     stdout: writeOut,
     stderr: writeErr

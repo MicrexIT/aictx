@@ -1,3 +1,4 @@
+import DatabaseConstructor from "better-sqlite3";
 import { systemClock, type Clock } from "../core/clock.js";
 import { aictxError, type AictxError, type JsonValue } from "../core/errors.js";
 import {
@@ -26,12 +27,14 @@ import {
   rebuildIndex as rebuildGeneratedIndex,
   type RebuildIndexData
 } from "../index/rebuild.js";
+import { CURRENT_INDEX_SCHEMA_VERSION } from "../index/migrations.js";
 import {
   searchIndex,
   type SearchIndexOptions,
   type SearchMemoryData,
   type SearchMemoryInput
 } from "../index/search.js";
+import { resolveIndexDatabasePath } from "../index/sqlite.js";
 import {
   initializeStorage,
   type InitStorageData
@@ -46,6 +49,7 @@ import {
   detectSecretsInPatch,
   secretDetectionError
 } from "../validation/secrets.js";
+import { validateProject } from "../validation/validate.js";
 
 const INITIAL_INDEX_UNAVAILABLE_WARNING =
   "Initial index was not built because the index module is not available yet.";
@@ -58,6 +62,10 @@ export interface InitProjectOptions extends GitWrapperOptions {
 export interface RebuildIndexOptions extends GitWrapperOptions {
   cwd: string;
   clock?: Clock;
+}
+
+export interface CheckProjectOptions extends GitWrapperOptions {
+  cwd: string;
 }
 
 export interface LoadMemoryOptions extends GitWrapperOptions, LoadMemoryInput {
@@ -86,6 +94,12 @@ export interface SaveMemoryData {
   relations_deleted: RelationId[];
   events_appended: number;
   index_updated: boolean;
+}
+
+export interface CheckProjectData {
+  valid: boolean;
+  errors: ValidationIssue[];
+  warnings: ValidationIssue[];
 }
 
 export type AppResult<T> =
@@ -209,6 +223,69 @@ export async function rebuildIndex(
     ok: true,
     data: rebuilt.data,
     warnings: rebuilt.warnings,
+    meta: meta.meta
+  };
+}
+
+export async function checkProject(
+  options: CheckProjectOptions
+): Promise<AppResult<CheckProjectData>> {
+  const paths = await resolveProjectPaths({
+    cwd: options.cwd,
+    mode: "require-initialized",
+    runner: options.runner
+  });
+
+  if (!paths.ok) {
+    return {
+      ok: false,
+      error: paths.error,
+      warnings: paths.warnings,
+      meta: await buildBestEffortMeta(options)
+    };
+  }
+
+  const meta = await buildMeta(paths.data, options);
+
+  if (!meta.ok) {
+    return meta;
+  }
+
+  const validation = await validateProject(paths.data.projectRoot, {
+    git: {
+      available: meta.meta.git.available,
+      branch: meta.meta.git.branch
+    }
+  });
+  const gitConflictIssues = await unresolvedGitConflictIssues(
+    paths.data,
+    meta.meta,
+    options
+  );
+
+  if (!gitConflictIssues.ok) {
+    return {
+      ok: false,
+      error: gitConflictIssues.error,
+      warnings: gitConflictIssues.warnings,
+      meta: meta.meta
+    };
+  }
+
+  const errors = [...validation.errors, ...gitConflictIssues.data];
+  const warnings =
+    errors.length === 0
+      ? [...validation.warnings, ...(await generatedIndexWarnings(paths.data))]
+      : validation.warnings;
+
+  return {
+    ok: true,
+    data: {
+      valid: errors.length === 0,
+      errors,
+      warnings
+    },
+    warnings: [],
     meta: meta.meta
   };
 }
@@ -572,6 +649,7 @@ export async function saveMemoryPatch(
 }
 
 export const applicationOperations = {
+  checkProject,
   initProject,
   loadMemory,
   rebuildIndex,
@@ -717,6 +795,84 @@ function validationWarnings(issues: readonly ValidationIssue[]): string[] {
   return issues.map((issue) => `Validation warning in ${issue.path}: ${issue.message}`);
 }
 
+async function unresolvedGitConflictIssues(
+  paths: ProjectPaths,
+  meta: AictxMeta,
+  options: GitWrapperOptions
+): Promise<Result<ValidationIssue[]>> {
+  if (!meta.git.available) {
+    return ok([]);
+  }
+
+  const dirtyState = await getAictxDirtyState(paths.projectRoot, options);
+
+  if (!dirtyState.ok) {
+    return dirtyState;
+  }
+
+  return ok(
+    dirtyState.data.unmergedFiles.map((path) => ({
+      code: "AICtxConflictDetected",
+      message: "Unresolved Git conflict detected in an Aictx file.",
+      path,
+      field: null
+    }))
+  );
+}
+
+async function generatedIndexWarnings(paths: ProjectPaths): Promise<ValidationIssue[]> {
+  const databasePath = await resolveIndexDatabasePath(paths.aictxRoot);
+
+  if (!databasePath.ok) {
+    return [generatedIndexWarning(databasePath.error.message)];
+  }
+
+  let db: DatabaseConstructor.Database | null = null;
+
+  try {
+    db = new DatabaseConstructor(databasePath.data, {
+      readonly: true,
+      fileMustExist: true
+    });
+    const row = db
+      .prepare<[string], { value: string }>("SELECT value FROM meta WHERE key = ?")
+      .get("schema_version");
+
+    if (row === undefined) {
+      return [generatedIndexWarning("SQLite index is missing schema metadata.")];
+    }
+
+    if (row.value !== String(CURRENT_INDEX_SCHEMA_VERSION)) {
+      return [
+        generatedIndexWarning(
+          `SQLite index schema version ${row.value} does not match expected version ${CURRENT_INDEX_SCHEMA_VERSION}.`
+        )
+      ];
+    }
+
+    return [];
+  } catch (error) {
+    return [generatedIndexWarning(`SQLite index could not be opened: ${messageFromUnknown(error)}`)];
+  } finally {
+    if (db?.open === true) {
+      try {
+        db.close();
+      } catch {
+        // Health-check warnings above are more useful than a close failure.
+      }
+    }
+  }
+}
+
+function generatedIndexWarning(message: string): ValidationIssue {
+  return {
+    code: "GeneratedIndexUnavailable",
+    message,
+    path: ".aictx/index/aictx.sqlite",
+    field: null
+  };
+}
+
 async function readAutoIndexSetting(paths: ProjectPaths): Promise<Result<boolean>> {
   const storage = await readCanonicalStorage(paths.projectRoot);
 
@@ -760,4 +916,8 @@ function errorToJson(error: { code: string; message: string; details?: JsonValue
         message: error.message,
         details: error.details
       };
+}
+
+function messageFromUnknown(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
