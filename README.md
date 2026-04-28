@@ -1,18 +1,20 @@
 # Aictx
 
-Aictx is local-first project memory for AI coding agents. It stores durable
-project context under `.aictx/` as reviewable local files, builds a generated
-SQLite index for retrieval, and uses Git for diff, history, and recovery when
-the project is inside a Git worktree.
+Aictx is local-first project memory for AI coding agents.
+
+It gives an agent a durable place to store project facts, decisions, warnings,
+and context that should survive beyond a single chat. Memory is stored under
+`.aictx/` as reviewable local files, indexed into SQLite for fast retrieval, and
+kept compatible with Git workflows when the project is inside a Git worktree.
 
 The normal loop is:
 
 ```text
-load context -> do work -> save memory -> review .aictx changes
+load relevant memory -> do work -> save durable memory -> review .aictx changes
 ```
 
-Aictx does not require a cloud account, embeddings, hosted sync, external model
-API, or network access for core memory commands.
+Aictx does not require a cloud account, embeddings, hosted sync, an external
+model API, or network access for core memory commands.
 
 ## Install
 
@@ -32,13 +34,41 @@ npm install --save-dev aictx
 
 The package provides two binaries:
 
-* `aictx` for the CLI
-* `aictx-mcp` for the MCP stdio server
+* `aictx`: the command-line interface
+* `aictx-mcp`: the MCP stdio server for AI coding clients
 
-If installed locally, run commands through your package manager, for example
-`pnpm exec aictx init`. The examples below use `aictx` directly.
+If the package is installed locally, run commands through your package manager:
 
-## CLI Quickstart
+```bash
+pnpm exec aictx init
+pnpm exec aictx load "fix Stripe webhook retries"
+```
+
+The examples below use `aictx` directly for readability.
+
+## Mental Model
+
+`.aictx/` contains canonical memory and generated support files.
+
+Canonical memory is the durable source of truth. It includes human-readable
+Markdown bodies, JSON sidecars with structured metadata, relation JSON files,
+and `events.jsonl` for semantic memory history. These files are meant to be
+reviewed like source code.
+
+Generated state is rebuildable. The SQLite search index, context packs, and
+exports can be regenerated from canonical memory. Do not hand-edit generated
+state when a supported Aictx command can produce it.
+
+Memory writes use structured patches. An agent or user submits a JSON patch
+that says what memory should be created, updated, deleted, or linked. Aictx
+validates the patch, checks safety rules, writes canonical files, appends
+events, and updates generated indexes.
+
+MCP is the preferred path for routine agent memory work. The CLI is the
+complete path for setup, maintenance, inspection, recovery, and export workflows.
+CLI-only commands are intentional; they are not MCP parity gaps.
+
+## Quickstart
 
 Initialize memory storage inside an existing project:
 
@@ -46,25 +76,11 @@ Initialize memory storage inside an existing project:
 aictx init
 ```
 
-In a Git project, Aictx initializes at the Git worktree root. Outside Git, it
-initializes in the current directory. It creates `.aictx/` and does not create a
-Git commit.
-
-Before a task, load relevant context:
+Before a task, load relevant memory:
 
 ```bash
 aictx load "fix Stripe webhook retries"
 ```
-
-You can pass an explicit token target:
-
-```bash
-aictx load "fix Stripe webhook retries" --token-budget 6000
-```
-
-`--token-budget` is optional and advisory. It gives Aictx a packaging target,
-not a hard limit. If you omit it, Aictx does not truncate context because of a
-missing budget.
 
 After meaningful work, save durable project memory with a structured patch:
 
@@ -80,7 +96,8 @@ aictx save --stdin <<'JSON'
       "op": "create_object",
       "type": "note",
       "title": "Billing retries run in the worker",
-      "body": "Billing retry execution happens in the queue worker, not inside the HTTP webhook handler."
+      "body": "Billing retry execution happens in the queue worker, not inside the HTTP webhook handler.",
+      "tags": ["billing", "stripe", "webhooks"]
     }
   ]
 }
@@ -94,9 +111,237 @@ projects, use:
 aictx diff
 ```
 
-Other implemented CLI commands include `check`, `rebuild`, `search`, `inspect`,
-`stale`, `graph`, `history`, `restore`, and `rewind`. Run `aictx --help` for
-the exact command list in your installed build.
+Aictx never creates Git commits automatically. Commit useful `.aictx/` changes
+alongside the code changes they describe.
+
+## CLI Command Reference
+
+All CLI commands render human-readable output by default. Add `--json` to get
+the structured response envelope for automation:
+
+```bash
+aictx check --json
+```
+
+Use built-in help to see the command list for the installed build:
+
+```bash
+aictx --help
+aictx load --help
+```
+
+Print the installed version:
+
+```bash
+aictx --version
+```
+
+### Setup And Maintenance
+
+#### `aictx init`
+
+Initializes `.aictx/` in the current project.
+
+```bash
+aictx init
+```
+
+This creates the canonical storage layout, copies the JSON schemas Aictx uses
+for validation, builds the generated index when available, and may update
+`.gitignore` for rebuildable state. Run this once per project.
+
+#### `aictx check`
+
+Validates canonical memory and generated index health.
+
+```bash
+aictx check
+aictx check --json
+```
+
+Use this when reviewing memory changes, diagnosing a broken `.aictx/` directory,
+or checking for invalid JSON, schema errors, conflict markers, hash issues, or
+secret-like content.
+
+#### `aictx rebuild`
+
+Rebuilds generated indexes from canonical memory.
+
+```bash
+aictx rebuild
+```
+
+Use this when the generated SQLite index is missing, stale, or suspected to be
+wrong. Rebuild does not change canonical memory.
+
+### Routine Memory Work
+
+#### `aictx load <task>`
+
+Compiles task-specific memory into a context pack.
+
+```bash
+aictx load "fix Stripe webhook retries"
+```
+
+The task text tells Aictx what context to retrieve and rank. The output is a
+Markdown context pack intended to be read by a human or pasted into an agent
+when MCP is unavailable.
+
+You can pass an explicit token target:
+
+```bash
+aictx load "fix Stripe webhook retries" --token-budget 6000
+```
+
+`--token-budget` is optional and advisory. It gives Aictx a packaging target,
+not a hard limit. If you omit it, Aictx does not compress context because of a
+missing budget.
+
+#### `aictx save --stdin`
+
+Reads a structured memory patch from standard input and applies it.
+
+```bash
+aictx save --stdin < memory-patch.json
+```
+
+This is the CLI equivalent of the MCP `save_memory_patch` tool. It validates the
+patch, refuses unsafe writes, updates canonical memory files, appends events,
+and refreshes generated indexes.
+
+#### `aictx save --file <path>`
+
+Reads a structured memory patch from a JSON file and applies it.
+
+```bash
+aictx save --file memory-patch.json
+```
+
+Use this when you want to inspect or generate the patch file before applying it.
+Exactly one of `--stdin` or `--file` is required.
+
+#### `aictx search <query>`
+
+Searches local Aictx memory through the generated SQLite index.
+
+```bash
+aictx search "webhook retries"
+aictx search "webhook retries" --limit 5
+```
+
+Use search when you need matching memory objects but do not need a full task
+context pack. `--limit` caps the number of matches returned.
+
+### Inspection And Debugging
+
+#### `aictx inspect <id>`
+
+Shows one memory object and its direct relations.
+
+```bash
+aictx inspect obj_123
+```
+
+Use this when search or load gives you an object ID and you want the full body,
+metadata paths, tags, and incoming or outgoing relation summaries.
+
+#### `aictx stale`
+
+Lists stale, superseded, and rejected memory.
+
+```bash
+aictx stale
+```
+
+Use this to find memory that should not normally be used as current project
+truth, but may still matter for audit history or cleanup.
+
+#### `aictx graph <id>`
+
+Shows the one-hop relation neighborhood around a memory object.
+
+```bash
+aictx graph obj_123
+```
+
+Use this to debug why related memories appear together or to inspect how facts,
+decisions, constraints, and notes are linked.
+
+### Git Review And Recovery
+
+These commands require Git because they use Git history and diffs scoped to
+`.aictx/`.
+
+#### `aictx diff`
+
+Shows Git diff output for Aictx memory files.
+
+```bash
+aictx diff
+```
+
+Use this before committing to review what an agent or CLI command changed under
+`.aictx/`.
+
+#### `aictx history`
+
+Shows Git history scoped to Aictx memory files.
+
+```bash
+aictx history
+aictx history --limit 10
+```
+
+Use this to find when memory changed and which commit to restore from.
+`--limit` caps the number of commits returned.
+
+#### `aictx restore <commit>`
+
+Restores Aictx memory files from a specific Git commit.
+
+```bash
+aictx restore abc1234
+```
+
+Use this when you know the commit whose `.aictx/` state you want. Restore is
+scoped to Aictx memory files and rebuilds the generated index afterward when
+possible.
+
+#### `aictx rewind`
+
+Restores Aictx memory files to the previous committed state.
+
+```bash
+aictx rewind
+```
+
+Use this as the convenience recovery command when recent memory changes should
+be discarded and the last committed `.aictx/` state is the desired state.
+
+### Export
+
+#### `aictx export`
+
+`export` is a command namespace for generated projections. Run the concrete
+export command below for an actual export.
+
+```bash
+aictx export --help
+```
+
+#### `aictx export obsidian`
+
+Writes a generated Obsidian-compatible projection from canonical memory.
+
+```bash
+aictx export obsidian
+aictx export obsidian --out notes/aictx
+```
+
+By default, the projection is written under `.aictx/exports/obsidian/`. Use
+`--out <dir>` to choose another output directory inside the project root. This
+does not mutate canonical memory.
 
 ## MCP Setup
 
@@ -113,19 +358,62 @@ Example command configuration:
 }
 ```
 
-Use MCP first for routine agent memory work:
+When installed as a local dev dependency, configure the client to run through
+your package manager if the client supports command arguments:
 
-* `load_memory`
-* `search_memory`
-* `save_memory_patch`
-* `diff_memory`
+```json
+{
+  "command": "pnpm",
+  "args": ["exec", "aictx-mcp"],
+  "cwd": "/path/to/your/project"
+}
+```
 
-Use the CLI for setup, maintenance, recovery, inspection, and export-oriented
-workflows. MCP-first does not mean MCP-only, and CLI-only capabilities are not
-MCP parity gaps.
+### MCP Tools
 
-Agents should use supported MCP tools or CLI commands instead of editing
-`.aictx/` files directly unless the user explicitly asks for a direct file edit.
+#### `load_memory`
+
+Compiles task-specific Aictx memory into a context pack.
+
+Inputs:
+
+* `task`: task description to compile context for
+* `token_budget`: optional advisory token target
+* `mode`: optional compiler mode, defaulting to coding behavior
+
+Use this before non-trivial agent work.
+
+#### `search_memory`
+
+Searches local memory through the generated SQLite index.
+
+Inputs:
+
+* `query`: search query
+* `limit`: optional maximum number of matches
+
+Use this when an agent needs targeted memory results without a full context
+pack.
+
+#### `save_memory_patch`
+
+Validates and applies a structured Aictx memory patch.
+
+Inputs:
+
+* `patch`: structured memory patch object
+
+Use this after meaningful work to save durable facts, decisions, constraints,
+or stale-memory updates. This is the preferred routine write path for agents.
+
+#### `diff_memory`
+
+Returns Git diff output scoped to Aictx memory files.
+
+Inputs: none.
+
+Use this when an agent or user needs to review pending `.aictx/` changes through
+MCP.
 
 ## Capability Map
 
@@ -150,6 +438,8 @@ MCP or CLI. It does not mean MCP and CLI expose identical command lists.
 | Export Obsidian projection | none | `aictx export obsidian` | Generated projection remains CLI-only in v1. |
 
 CLI-only capabilities should not be added to MCP solely to mirror CLI commands.
+Agents should use supported MCP tools or CLI commands instead of editing
+`.aictx/` files directly unless the user explicitly asks for a direct file edit.
 
 ## Files And Review
 
@@ -159,7 +449,12 @@ Canonical memory lives in `.aictx/`:
 * JSON sidecars hold structured metadata.
 * Relation JSON files describe links between memory objects.
 * `events.jsonl` records semantic memory history.
-* Generated indexes, context packs, and exports are rebuildable state.
+
+Generated files are rebuildable:
+
+* SQLite indexes support search and context loading.
+* Context packs are compiled views for a specific task.
+* Export directories are projections for tools such as Obsidian.
 
 In Git projects, commit useful `.aictx/` changes alongside the code changes they
 describe. Aictx never creates Git commits automatically.
@@ -174,3 +469,34 @@ Generated guidance files are available for agent setup:
 
 These files are generated from
 [integrations/templates/agent-guidance.md](integrations/templates/agent-guidance.md).
+
+## Development
+
+Install dependencies:
+
+```bash
+pnpm install
+```
+
+Repository commands:
+
+| Command | What it does |
+| --- | --- |
+| `pnpm build` | Runs the full package build: generated agent guidance, TypeScript bundling, and schema copying. |
+| `pnpm build:code` | Bundles the CLI and MCP server with `tsup`. |
+| `pnpm build:schemas` | Copies JSON schema files into the build output. |
+| `pnpm build:guidance` | Regenerates agent guidance files under `integrations/`. |
+| `pnpm dev` | Runs the CLI from TypeScript sources with `tsx`. Pass CLI arguments after `--`, for example `pnpm dev -- load "task"`. |
+| `pnpm dev:mcp` | Runs the MCP stdio server from TypeScript sources with `tsx`. |
+| `pnpm test` | Runs the Vitest test suite once. |
+| `pnpm test:watch` | Runs Vitest in watch mode for local development. |
+| `pnpm typecheck` | Runs TypeScript type checking without emitting files. |
+
+Useful local examples:
+
+```bash
+pnpm dev -- --help
+pnpm dev -- load "document the restore flow"
+pnpm test
+pnpm typecheck
+```
