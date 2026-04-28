@@ -42,6 +42,8 @@ V1 API behavior must follow these rules:
 ### 2.1 Agent Capability Map
 
 V1 parity means agent reachability through MCP or CLI, not identical command lists.
+CLI-only capabilities are intentionally not MCP parity gaps; do not add setup, maintenance, recovery, export, or inspection tools to MCP just to mirror CLI commands.
+When a supported MCP or CLI entrypoint exists, agents must use that entrypoint instead of editing `.aictx/` files directly.
 
 | Capability | MCP | CLI | Notes |
 | --- | --- | --- | --- |

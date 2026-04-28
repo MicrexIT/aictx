@@ -673,9 +673,17 @@ save_memory_patch
 diff_memory
 ```
 
+Agent capability split:
+
+```text
+MCP + CLI: load, search, save, diff
+CLI-only in v1: init, check, rebuild, history, restore, rewind, inspect, stale, graph, export obsidian
+```
+
 Rules:
 
 * MCP must expose only the normalized v1 tool set.
+* CLI-only capabilities are intentionally not MCP parity gaps and must not be added to MCP solely to mirror CLI commands.
 * MCP must not expose arbitrary shell access.
 * MCP must not expose arbitrary filesystem access.
 * MCP must not expose low-level graph mutation tools.
@@ -685,6 +693,7 @@ Rules:
 * Write tools must serialize per project root to avoid concurrent writes to `.aictx/`.
 * Agents may use the CLI for Aictx capabilities that are intentionally not in the MCP tool set.
 * CLI commands used by agents must continue to call application services and support stable `--json` output where structured automation is expected.
+* Agents should use supported MCP or CLI entrypoints instead of editing `.aictx/` files directly when a supported command exists.
 
 Project resolution:
 

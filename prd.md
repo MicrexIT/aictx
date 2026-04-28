@@ -79,6 +79,13 @@ Required in v1:
 * Basic secret detection before saving memory
 * One-way generated Obsidian projection export for viewing memory in Obsidian
 
+Agent capability split:
+
+* MCP + CLI capabilities: load, search, save, diff.
+* CLI-only capabilities in v1: init, check, rebuild, history, restore, rewind, inspect, stale, graph, export obsidian.
+* CLI-only capabilities are intentionally not MCP parity gaps and should not be added to MCP solely for command-list parity.
+* Agents should use supported MCP or CLI entrypoints instead of editing `.aictx/` files directly when a supported command exists.
+
 Deferred from v1:
 
 * Cross-project, workspace, or global memory
@@ -564,8 +571,11 @@ Design principle:
 * Agents should not need to orchestrate file writes, relation writes, index updates, or shell commands.
 * All memory writes should go through structured patch submission.
 * MCP should make Aictx easy to insert into existing coding-agent flows without becoming a spaghetti API.
+* MCP exposes load, search, save, and diff; the CLI also exposes those routine capabilities.
+* Setup, maintenance, recovery, export, and inspection capabilities remain CLI-only in v1: init, check, rebuild, history, restore, rewind, inspect, stale, graph, and export obsidian.
 * MCP-first must not mean MCP-only: AI agents may use the CLI for supported setup, maintenance, recovery, export, and inspection operations that are intentionally outside the MCP contract.
 * Every supported Aictx capability should remain reachable to an AI agent through MCP or CLI without requiring direct `.aictx/` file edits.
+* CLI-only capabilities should not be added to MCP just to create command-list parity.
 
 7.1 Required MCP tools
 

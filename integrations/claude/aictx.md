@@ -4,7 +4,31 @@
 
 Aictx is the project's local, Git-aware memory layer for AI coding agents.
 
-Use it to load durable project context before work and save important project knowledge after work. Do not edit `.aictx/` files directly unless the user explicitly asks you to.
+Use it to load durable project context before work and save important project knowledge after work. Do not edit `.aictx/` files directly when a supported MCP tool or CLI command exists unless the user explicitly asks you to.
+
+## Capability Map
+
+Use MCP first for routine memory work:
+
+* `load_memory` or `aictx load`
+* `search_memory` or `aictx search`
+* `save_memory_patch` or `aictx save`
+* `diff_memory` or `aictx diff`
+
+Use CLI for v1 setup, maintenance, recovery, export, and inspection capabilities that are intentionally not exposed by MCP:
+
+* `aictx init`
+* `aictx check`
+* `aictx rebuild`
+* `aictx history`
+* `aictx restore`
+* `aictx rewind`
+* `aictx inspect`
+* `aictx stale`
+* `aictx graph`
+* `aictx export obsidian`
+
+CLI-only capabilities are not MCP parity gaps. Do not add or ask for MCP tools solely to mirror these CLI commands.
 
 ## Default Workflow
 
