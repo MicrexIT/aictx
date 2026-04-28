@@ -10,14 +10,14 @@ Use it to load durable project context before work and save important project kn
 
 Before non-trivial coding, architecture, debugging, dependency, or configuration work:
 
-```bash
-aictx load "<task summary>"
-```
-
-Prefer the MCP tool when available:
-
 ```text
 load_memory({ task: "<task summary>" })
+```
+
+Use CLI fallback when MCP is unavailable:
+
+```bash
+aictx load "<task summary>"
 ```
 
 After meaningful work, save only durable memory that future agents should know:
@@ -31,6 +31,8 @@ Use CLI fallback only when MCP is unavailable:
 ```bash
 aictx save --stdin
 ```
+
+For setup, maintenance, inspection, export, or recovery operations that are not exposed by MCP, use the `aictx` CLI instead of editing `.aictx/` files directly.
 
 Before finalizing, tell the user if memory changed and suggest reviewing `.aictx/` changes.
 

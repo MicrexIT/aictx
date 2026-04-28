@@ -1665,6 +1665,10 @@ Acceptance:
 
 ## 15. Phase 9: MCP Server
 
+Phase invariant:
+
+MCP is routine-agent-primary, not MCP-only. Keep the MCP contract lean with the normalized v1 tool set, and keep every other supported Aictx capability reachable to agents through the CLI. Do not add setup, maintenance, recovery, export, or inspection tools to MCP just to mirror CLI commands.
+
 ### T041: Implement MCP Server Bootstrap
 
 Goal:
@@ -1693,6 +1697,7 @@ Implementation:
 * Ensure logs go to stderr only.
 * Resolve project from server process `cwd`.
 * Do not expose arbitrary filesystem or shell tools.
+* Do not expose CLI-only setup, maintenance, recovery, export, or inspection commands as MCP tools.
 
 Acceptance:
 
@@ -1729,6 +1734,7 @@ Implementation:
 * Return shared response envelopes.
 * Preserve CLI/MCP parity for load token metadata and omitted IDs.
 * Do not mutate canonical files except auto-rebuild when config allows.
+* Do not add read tools beyond `load_memory`, `search_memory`, and `diff_memory`.
 
 Acceptance:
 
@@ -1764,6 +1770,7 @@ Implementation:
 * Serialize writes per project root.
 * Call shared save application service.
 * Return shared response envelope.
+* Do not add write tools beyond `save_memory_patch`.
 
 Acceptance:
 
@@ -1892,6 +1899,55 @@ Acceptance:
 * MCP tools use the same application services.
 * MCP stdout is protocol-safe.
 * No arbitrary shell or filesystem tools are exposed.
+* MCP exposes exactly the normalized v1 tool set.
+* CLI-only capabilities remain reachable through CLI and are not mirrored as MCP tools.
+
+### T046B: Add Agent Capability Map Guardrail
+
+Goal:
+
+Lock in the MCP-first, CLI-complete capability model after MCP implementation is working.
+
+Write scope:
+
+```text
+docs/mcp-and-cli-api-spec.md
+docs/runtime-and-project-architecture-spec.md
+docs/prd.md
+mcp-and-cli-api-spec.md
+runtime-and-project-architecture-spec.md
+prd.md
+integrations/templates/agent-guidance.md
+integrations/codex/aictx/SKILL.md
+integrations/claude/aictx.md
+integrations/generic/aictx-agent-instructions.md
+test/unit/agent-capability-map.test.ts
+```
+
+Depends on:
+
+```text
+T046
+```
+
+Implementation:
+
+* Add or verify a capability map that states:
+  * `load`, `search`, `save`, and `diff` are available through both MCP and CLI.
+  * `init`, `check`, `rebuild`, `history`, `restore`, `rewind`, `inspect`, `stale`, `graph`, and `export obsidian` are CLI-only in v1.
+* Document that agents should use MCP for routine memory load, search, save, and diff when available.
+* Document that agents may use CLI for setup, maintenance, recovery, export, and inspection workflows.
+* Regenerate generated agent guidance from the shared template.
+* Keep root-level spec mirrors in sync with their `docs/` copies while both exist.
+* Add a unit test that fails if the capability-map docs or generated guidance drift from the MCP-first, CLI-complete model.
+
+Acceptance:
+
+* Docs do not imply CLI-only commands should be added to MCP for parity.
+* Docs do not imply agents should edit `.aictx/` directly when a supported CLI command exists.
+* Root-level spec mirrors match their `docs/` copies for touched specs.
+* Generated guidance leads with MCP for routine memory work and clearly allows CLI fallback/advanced use.
+* Test coverage locks the exact v1 MCP tool set and the CLI-only capability list.
 
 ### T047: Add Security and Safety Regression Tests
 
@@ -1915,6 +1971,7 @@ T011
 T026
 T030
 T041
+T046B
 ```
 
 Implementation:
@@ -1986,6 +2043,7 @@ Depends on:
 ```text
 T045
 T046
+T046B
 ```
 
 Implementation:
@@ -1999,6 +2057,7 @@ Implementation:
 * Show how to review `.aictx/` files.
 * Show `aictx diff` for Git projects.
 * Show MCP setup conceptually.
+* Include or link to the MCP-first, CLI-complete capability map.
 * Link to the optional generated agent guidance and agent integration guide.
 
 Assignable subtasks:
@@ -2009,6 +2068,7 @@ Assignable subtasks:
 Acceptance:
 
 * README reflects implemented commands.
+* README does not imply MCP and CLI expose identical command lists.
 * README does not promise deferred features.
 
 ### T050: Add Agent Integration Guide and Generated Agent Guidance
@@ -2035,6 +2095,7 @@ Depends on:
 ```text
 T042
 T043
+T046B
 T049
 ```
 
@@ -2044,6 +2105,7 @@ Implementation:
 * Explain that the agent creates the semantic patch.
 * Include patch examples.
 * Include MCP tool list.
+* Include the MCP-first, CLI-complete capability map.
 * Include safety warning about reviewing Git diffs.
 * Add one canonical guidance template under `integrations/templates/`.
 * Add a generator script that produces Codex, Claude, and generic guidance files from the template.
@@ -2059,8 +2121,10 @@ Assignable subtasks:
 Acceptance:
 
 * Guide does not imply Aictx derives semantic memory from diffs.
+* Guide does not imply CLI-only commands should be exposed as MCP tools.
 * Guide does not mention embeddings as v1 behavior.
 * Generated guidance tells agents to load memory before non-trivial work and save structured patches after meaningful changes.
+* Generated guidance tells agents they may use the CLI for supported setup, maintenance, recovery, export, and inspection operations.
 * Generated guidance tells agents not to edit `.aictx/` files directly or save secrets.
 * Generated guidance remains optional and copyable.
 * `pnpm build` regenerates guidance from the shared template.
@@ -2187,6 +2251,7 @@ T027, T028, T029, T030
 T019, T020, T021
 T031 through T036 if they edit shared CLI rendering
 T041 through T043 if they edit MCP server registration
+T046B with T049 or T050 if they edit shared documentation or generated guidance
 ```
 
 Reasoning:
@@ -2210,7 +2275,7 @@ PR 7: T027-T030
 PR 8: T031-T037
 PR 9: T038-T040
 PR 10: T041-T043
-PR 11: T044-T048
+PR 11: T044-T048, including T046B after T046
 PR 12: T049-T051
 PR 13: T052
 ```
@@ -2235,6 +2300,8 @@ V1 implementation is complete when:
 * In Git projects, `aictx history`, `restore`, and `rewind` work only on `.aictx/`.
 * Outside Git, Git-only commands return `AICtxGitRequired`.
 * MCP exposes only `load_memory`, `search_memory`, `save_memory_patch`, and `diff_memory`.
+* Every supported Aictx capability is reachable to AI agents through MCP or CLI.
+* Docs and generated guidance describe the MCP-first, CLI-complete model.
 * `aictx export obsidian` creates a generated Obsidian projection without changing canonical memory.
 * No core command requires network access, API keys, embeddings, or hosted services.
 * Write operations are protected by `.aictx/.lock`.

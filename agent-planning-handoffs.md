@@ -1268,6 +1268,11 @@ Read these files first:
 - runtime-and-project-architecture-spec.md
 - mcp-and-cli-api-spec.md
 
+Important invariant:
+- MCP is routine-agent-primary, not MCP-only.
+- Keep MCP lean; do not expose CLI-only setup, maintenance, recovery, export, or inspection commands as MCP tools.
+- Every other supported Aictx capability remains reachable to agents through the CLI.
+
 Write scope:
 - src/mcp/server.ts
 - test/integration/mcp/server.test.ts
@@ -1279,6 +1284,7 @@ Do not modify:
 Acceptance:
 - Server starts without writing to stdout outside MCP protocol.
 - Server exposes no tools before registration task except bootstrap health if needed.
+- Server does not expose arbitrary shell/filesystem tools or CLI-only Aictx commands.
 
 Run:
 - pnpm typecheck
@@ -1296,6 +1302,10 @@ Read these files first:
 - mcp-and-cli-api-spec.md
 - indexing-and-context-compiler-spec.md
 
+Important invariant:
+- MCP read tools are limited to `load_memory`, `search_memory`, and `diff_memory`.
+- Do not add CLI-only inspection, stale, graph, check, rebuild, history, restore, rewind, init, or export commands to MCP.
+
 Write scope:
 - src/mcp/tools/load-memory.ts
 - src/mcp/tools/search-memory.ts
@@ -1311,6 +1321,7 @@ Acceptance:
 - MCP load preserves CLI token metadata and omitted IDs.
 - MCP search matches CLI search data.
 - MCP diff matches CLI diff data.
+- MCP does not expose read/debug/maintenance CLI commands beyond the normalized v1 tool set.
 
 Run:
 - pnpm typecheck
@@ -1329,6 +1340,10 @@ Read these files first:
 - schemas-and-validation-spec.md
 - storage-format-spec.md
 
+Important invariant:
+- `save_memory_patch` is the only v1 MCP write tool.
+- Do not add low-level graph mutation tools or CLI-only recovery/setup tools to MCP.
+
 Write scope:
 - src/mcp/tools/save-memory-patch.ts
 - test/integration/mcp/save-tool.test.ts
@@ -1341,6 +1356,7 @@ Acceptance:
 - MCP save and CLI save produce equivalent canonical files.
 - Concurrent MCP writes are serialized or return lock errors.
 - Tool does not commit.
+- MCP does not expose additional write, shell, filesystem, restore, rewind, or direct mutation tools.
 
 Run:
 - pnpm typecheck
@@ -1419,6 +1435,10 @@ Read these files first:
 - mcp-and-cli-api-spec.md
 - schemas-and-validation-spec.md
 
+Important invariant:
+- This test proves the routine MCP workflow, not complete CLI parity inside MCP.
+- Full agent reachability is MCP plus CLI: do not add CLI-only commands to MCP to satisfy this task.
+
 Write scope:
 - test/integration/e2e/mcp-workflow.test.ts
 
@@ -1431,10 +1451,61 @@ Acceptance:
 - MCP load without `token_budget` is not budget-truncated.
 - MCP stdout is protocol-safe.
 - No arbitrary shell or filesystem tools are exposed.
+- MCP exposes exactly `load_memory`, `search_memory`, `save_memory_patch`, and `diff_memory`.
+- CLI-only capabilities remain CLI-only and reachable through the `aictx` binary.
 
 Run:
 - pnpm typecheck
 - pnpm vitest run test/integration/e2e/mcp-workflow.test.ts
+```
+
+## T046B: Add Agent Capability Map Guardrail
+
+```text
+Plan roadmap task T046B: Add Agent Capability Map Guardrail.
+
+Read these files first:
+- implementation-roadmap.md
+- runtime-and-project-architecture-spec.md
+- prd.md
+- mcp-and-cli-api-spec.md
+- integrations/templates/agent-guidance.md
+
+Write scope:
+- docs/mcp-and-cli-api-spec.md
+- docs/runtime-and-project-architecture-spec.md
+- docs/prd.md
+- mcp-and-cli-api-spec.md
+- runtime-and-project-architecture-spec.md
+- prd.md
+- integrations/templates/agent-guidance.md
+- integrations/codex/aictx/SKILL.md
+- integrations/claude/aictx.md
+- integrations/generic/aictx-agent-instructions.md
+- test/unit/agent-capability-map.test.ts
+
+Do not modify:
+- MCP server registration or MCP tools.
+- CLI command behavior.
+- Product/spec contracts beyond documenting the MCP-first, CLI-complete capability map.
+- Files outside the write scope unless the plan identifies a necessary spec correction.
+
+Capability map to lock:
+- MCP + CLI: load, search, save, diff.
+- CLI-only in v1: init, check, rebuild, history, restore, rewind, inspect, stale, graph, export obsidian.
+
+Acceptance:
+- Docs do not imply CLI-only commands should be added to MCP for parity.
+- Docs do not imply agents should edit `.aictx/` directly when a supported CLI command exists.
+- Root-level spec mirrors match their `docs/` copies for touched specs.
+- Generated guidance leads with MCP for routine memory work and clearly allows CLI fallback/advanced use.
+- Test coverage locks the exact v1 MCP tool set and the CLI-only capability list.
+
+Run:
+- pnpm build:guidance
+- pnpm typecheck
+- pnpm vitest run test/unit/agent-capability-map.test.ts test/unit/scaffold.test.ts
+- for f in mcp-and-cli-api-spec.md prd.md runtime-and-project-architecture-spec.md; do diff -q "$f" "docs/$f"; done
 ```
 
 ## T047: Add Security and Safety Regression Tests
@@ -1460,6 +1531,8 @@ Do not modify:
 
 Acceptance:
 - Safety regressions fail tests.
+- MCP exposes only `load_memory`, `search_memory`, `save_memory_patch`, and `diff_memory`.
+- CLI-only capabilities are not treated as MCP security exceptions.
 - No test snapshot contains secret values.
 
 Run:
@@ -1518,6 +1591,8 @@ Do not modify:
 Acceptance:
 - README reflects implemented commands.
 - README explains that `--token-budget` is optional and advisory; omitted budgets do not truncate context.
+- README explains MCP-first, CLI-complete agent capability: routine memory work through MCP, setup/maintenance/recovery/inspection/export through CLI.
+- README does not imply MCP and CLI expose identical command lists.
 - README does not promise deferred features.
 
 Run:
@@ -1552,8 +1627,10 @@ Do not modify:
 
 Acceptance:
 - Guide does not imply Aictx derives semantic memory from diffs.
+- Guide does not imply CLI-only commands should be exposed as MCP tools.
 - Guide does not mention embeddings as v1 behavior.
 - Generated guidance tells agents to load memory before non-trivial work and save structured patches after meaningful changes.
+- Generated guidance tells agents they may use the CLI for supported setup, maintenance, recovery, export, and inspection operations.
 - Generated guidance tells agents not to edit `.aictx/` files directly or save secrets.
 - Generated guidance remains optional and copyable.
 - `pnpm build` regenerates guidance from the shared template.

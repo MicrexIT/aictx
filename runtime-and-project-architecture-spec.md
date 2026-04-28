@@ -683,6 +683,8 @@ Rules:
 * MCP responses must use the shared response envelope.
 * Tool input validation should happen before service execution.
 * Write tools must serialize per project root to avoid concurrent writes to `.aictx/`.
+* Agents may use the CLI for Aictx capabilities that are intentionally not in the MCP tool set.
+* CLI commands used by agents must continue to call application services and support stable `--json` output where structured automation is expected.
 
 Project resolution:
 

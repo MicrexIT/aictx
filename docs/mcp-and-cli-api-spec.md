@@ -34,7 +34,31 @@ V1 API behavior must follow these rules:
 * Aictx validates patches and writes files deterministically.
 * MCP exposes a small normalized tool set.
 * CLI and MCP must share the same core implementation path.
+* AI agents must be able to reach every supported Aictx capability through either MCP or CLI.
+* MCP is the preferred agent path for routine memory load, search, save, and diff workflows.
+* CLI is the supported fallback and advanced path for setup, maintenance, recovery, export, and inspection workflows.
 * The API must be usable without a cloud account, external API, embeddings, or hosted service.
+
+### 2.1 Agent Capability Map
+
+V1 parity means agent reachability through MCP or CLI, not identical command lists.
+
+| Capability | MCP | CLI | Notes |
+| --- | --- | --- | --- |
+| Load task context | `load_memory` | `aictx load` | Preferred routine agent path is MCP. |
+| Search memory | `search_memory` | `aictx search` | Preferred routine agent path is MCP. |
+| Save memory patch | `save_memory_patch` | `aictx save` | All writes use structured patches. |
+| Show memory diff | `diff_memory` | `aictx diff` | Git-backed; CLI fallback is supported. |
+| Initialize storage | none | `aictx init` | Setup remains CLI-only in v1. |
+| Validate storage | none | `aictx check` | Maintenance remains CLI-only in v1. |
+| Rebuild generated index | none | `aictx rebuild` | Maintenance remains CLI-only in v1. |
+| Show memory history | none | `aictx history` | Recovery/inspection remains CLI-only in v1. |
+| Restore memory | none | `aictx restore` | Recovery remains CLI-only in v1. |
+| Rewind memory | none | `aictx rewind` | Recovery remains CLI-only in v1. |
+| Inspect object | none | `aictx inspect` | Debug inspection remains CLI-only in v1. |
+| List stale memory | none | `aictx stale` | Debug inspection remains CLI-only in v1. |
+| Show graph neighborhood | none | `aictx graph` | Debug inspection remains CLI-only in v1. |
+| Export Obsidian projection | none | `aictx export obsidian` | Generated projection remains CLI-only in v1. |
 
 ## 3. Runtime Preconditions
 

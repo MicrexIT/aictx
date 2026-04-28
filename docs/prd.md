@@ -564,6 +564,8 @@ Design principle:
 * Agents should not need to orchestrate file writes, relation writes, index updates, or shell commands.
 * All memory writes should go through structured patch submission.
 * MCP should make Aictx easy to insert into existing coding-agent flows without becoming a spaghetti API.
+* MCP-first must not mean MCP-only: AI agents may use the CLI for supported setup, maintenance, recovery, export, and inspection operations that are intentionally outside the MCP contract.
+* Every supported Aictx capability should remain reachable to an AI agent through MCP or CLI without requiring direct `.aictx/` file edits.
 
 7.1 Required MCP tools
 
@@ -1924,6 +1926,8 @@ save_memory_patch
 diff_memory
 
 Avoid exposing too many granular tools.
+
+The agent capability model is MCP-first, CLI-complete. Routine memory work should happen through MCP when available. Commands that are user-facing, diagnostic, or recovery-oriented can remain CLI-only as long as agents are explicitly allowed to run them and receive stable `--json` output where automation benefits from it.
 
 Decision 7: UX must avoid graph/ontology language
 
