@@ -5,11 +5,14 @@ import { Command, CommanderError } from "commander";
 import { version } from "../generated/version.js";
 import { registerCheckCommand } from "./commands/check.js";
 import { registerDiffCommand } from "./commands/diff.js";
+import { registerGraphCommand } from "./commands/graph.js";
 import { registerInitCommand } from "./commands/init.js";
+import { registerInspectCommand } from "./commands/inspect.js";
 import { registerLoadCommand } from "./commands/load.js";
 import { registerRebuildCommand } from "./commands/rebuild.js";
 import { registerSaveCommand } from "./commands/save.js";
 import { registerSearchCommand } from "./commands/search.js";
+import { registerStaleCommand } from "./commands/stale.js";
 import {
   CLI_EXIT_SUCCESS,
   CLI_EXIT_USAGE,
@@ -67,6 +70,21 @@ export function createCliProgram(options: CliMainOptions = {}): Command {
     stderr: writeErr
   });
   registerSearchCommand(program, {
+    cwd: options.cwd ?? process.cwd(),
+    stdout: writeOut,
+    stderr: writeErr
+  });
+  registerInspectCommand(program, {
+    cwd: options.cwd ?? process.cwd(),
+    stdout: writeOut,
+    stderr: writeErr
+  });
+  registerStaleCommand(program, {
+    cwd: options.cwd ?? process.cwd(),
+    stdout: writeOut,
+    stderr: writeErr
+  });
+  registerGraphCommand(program, {
     cwd: options.cwd ?? process.cwd(),
     stdout: writeOut,
     stderr: writeErr

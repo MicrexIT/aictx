@@ -15,7 +15,14 @@ import { err, ok, type Result } from "../core/result.js";
 import type {
   AictxMeta,
   ObjectId,
+  ObjectStatus,
+  ObjectType,
+  Predicate,
+  RelationConfidence,
   RelationId,
+  RelationStatus,
+  Scope,
+  Source,
   ValidationIssue
 } from "../core/types.js";
 import {
@@ -42,7 +49,12 @@ import {
   initializeStorage,
   type InitStorageData
 } from "../storage/init.js";
-import { readCanonicalStorage } from "../storage/read.js";
+import type { StoredMemoryObject } from "../storage/objects.js";
+import {
+  readCanonicalStorage,
+  type CanonicalStorageSnapshot
+} from "../storage/read.js";
+import type { StoredMemoryRelation } from "../storage/relations.js";
 import { applyMemoryPatch } from "../storage/write.js";
 import {
   conflictMarkerError,
@@ -81,6 +93,20 @@ export interface SearchMemoryOptions extends GitWrapperOptions, SearchMemoryInpu
   clock?: Clock;
 }
 
+export interface InspectMemoryOptions extends GitWrapperOptions {
+  cwd: string;
+  id: ObjectId;
+}
+
+export interface ListStaleMemoryOptions extends GitWrapperOptions {
+  cwd: string;
+}
+
+export interface GraphMemoryOptions extends GitWrapperOptions {
+  cwd: string;
+  id: ObjectId;
+}
+
 export interface DiffMemoryOptions extends GitWrapperOptions {
   cwd: string;
 }
@@ -114,6 +140,54 @@ export interface CheckProjectData {
   valid: boolean;
   errors: ValidationIssue[];
   warnings: ValidationIssue[];
+}
+
+export interface MemoryObjectSummary {
+  id: ObjectId;
+  type: ObjectType;
+  status: ObjectStatus;
+  title: string;
+  body_path: string;
+  json_path: string;
+  scope: Scope;
+  tags: string[];
+  source: Source | null;
+  superseded_by: ObjectId | null;
+  created_at: string;
+  updated_at: string;
+  body: string;
+}
+
+export interface MemoryRelationSummary {
+  id: RelationId;
+  from: ObjectId;
+  predicate: Predicate;
+  to: ObjectId;
+  status: RelationStatus;
+  confidence: RelationConfidence | null;
+  evidence: Array<{ kind: "memory" | "relation" | "file" | "commit"; id: string }>;
+  content_hash: string | null;
+  created_at: string;
+  updated_at: string;
+  json_path: string;
+}
+
+export interface InspectMemoryData {
+  object: MemoryObjectSummary;
+  relations: {
+    outgoing: MemoryRelationSummary[];
+    incoming: MemoryRelationSummary[];
+  };
+}
+
+export interface ListStaleMemoryData {
+  objects: MemoryObjectSummary[];
+}
+
+export interface GraphMemoryData {
+  root_id: ObjectId;
+  objects: MemoryObjectSummary[];
+  relations: MemoryRelationSummary[];
 }
 
 export type AppResult<T> =
@@ -526,6 +600,105 @@ export async function searchMemory(
   };
 }
 
+export async function inspectMemory(
+  options: InspectMemoryOptions
+): Promise<AppResult<InspectMemoryData>> {
+  const prepared = await readOnlyCanonicalStorage(options);
+
+  if (!prepared.ok) {
+    return prepared;
+  }
+
+  const object = findStoredObject(prepared.storage.objects, options.id);
+
+  if (object === undefined) {
+    return {
+      ok: false,
+      error: objectNotFound(options.id),
+      warnings: prepared.storageWarnings,
+      meta: prepared.meta
+    };
+  }
+
+  return {
+    ok: true,
+    data: {
+      object: summarizeObject(object),
+      relations: {
+        outgoing: summarizeRelations(outgoingRelations(prepared.storage.relations, options.id)),
+        incoming: summarizeRelations(incomingRelations(prepared.storage.relations, options.id))
+      }
+    },
+    warnings: prepared.storageWarnings,
+    meta: prepared.meta
+  };
+}
+
+export async function listStaleMemory(
+  options: ListStaleMemoryOptions
+): Promise<AppResult<ListStaleMemoryData>> {
+  const prepared = await readOnlyCanonicalStorage(options);
+
+  if (!prepared.ok) {
+    return prepared;
+  }
+
+  return {
+    ok: true,
+    data: {
+      objects: prepared.storage.objects
+        .filter((object) => STALE_MEMORY_STATUSES.has(object.sidecar.status))
+        .sort(compareStaleMemoryObjects)
+        .map(summarizeObject)
+    },
+    warnings: prepared.storageWarnings,
+    meta: prepared.meta
+  };
+}
+
+export async function graphMemory(
+  options: GraphMemoryOptions
+): Promise<AppResult<GraphMemoryData>> {
+  const prepared = await readOnlyCanonicalStorage(options);
+
+  if (!prepared.ok) {
+    return prepared;
+  }
+
+  const root = findStoredObject(prepared.storage.objects, options.id);
+
+  if (root === undefined) {
+    return {
+      ok: false,
+      error: objectNotFound(options.id),
+      warnings: prepared.storageWarnings,
+      meta: prepared.meta
+    };
+  }
+
+  const directRelations = relationsForObject(prepared.storage.relations, options.id);
+  const objectIds = new Set<ObjectId>([options.id]);
+
+  for (const relation of directRelations) {
+    objectIds.add(relation.relation.from);
+    objectIds.add(relation.relation.to);
+  }
+
+  return {
+    ok: true,
+    data: {
+      root_id: options.id,
+      objects: prepared.storage.objects
+        .filter((object) => objectIds.has(object.sidecar.id))
+        .sort(compareStoredObjectsById)
+        .map(summarizeObject),
+      relations: summarizeRelations(directRelations)
+    },
+    warnings: prepared.storageWarnings,
+    meta: prepared.meta
+  };
+}
+
 export async function diffMemory(
   options: DiffMemoryOptions
 ): Promise<AppResult<DiffMemoryData>> {
@@ -728,12 +901,200 @@ export async function saveMemoryPatch(
 export const applicationOperations = {
   checkProject,
   diffMemory,
+  graphMemory,
   initProject,
+  inspectMemory,
+  listStaleMemory,
   loadMemory,
   rebuildIndex,
   saveMemoryPatch,
   searchMemory
 };
+
+const STALE_MEMORY_STATUSES = new Set<ObjectStatus>([
+  "stale",
+  "superseded",
+  "rejected"
+]);
+
+const STALE_MEMORY_STATUS_ORDER = new Map<ObjectStatus, number>([
+  ["stale", 0],
+  ["superseded", 1],
+  ["rejected", 2]
+]);
+
+type ReadOnlyCanonicalStorageResult =
+  | {
+      ok: true;
+      storage: CanonicalStorageSnapshot;
+      storageWarnings: string[];
+      meta: AictxMeta;
+    }
+  | {
+      ok: false;
+      error: AictxError;
+      warnings: string[];
+      meta: AictxMeta;
+    };
+
+async function readOnlyCanonicalStorage(
+  options: GitWrapperOptions & { cwd: string }
+): Promise<ReadOnlyCanonicalStorageResult> {
+  const paths = await resolveProjectPaths({
+    cwd: options.cwd,
+    mode: "require-initialized",
+    runner: options.runner
+  });
+
+  if (!paths.ok) {
+    return {
+      ok: false,
+      error: paths.error,
+      warnings: paths.warnings,
+      meta: await buildBestEffortMeta(options)
+    };
+  }
+
+  const meta = await buildMeta(paths.data, options);
+
+  if (!meta.ok) {
+    return meta;
+  }
+
+  const storage = await readCanonicalStorage(paths.data.projectRoot);
+
+  if (!storage.ok) {
+    return {
+      ok: false,
+      error: storage.error,
+      warnings: storage.warnings,
+      meta: meta.meta
+    };
+  }
+
+  return {
+    ok: true,
+    storage: storage.data,
+    storageWarnings: storage.warnings,
+    meta: meta.meta
+  };
+}
+
+function findStoredObject(
+  objects: readonly StoredMemoryObject[],
+  id: ObjectId
+): StoredMemoryObject | undefined {
+  return objects.find((object) => object.sidecar.id === id);
+}
+
+function relationsForObject(
+  relations: readonly StoredMemoryRelation[],
+  id: ObjectId
+): StoredMemoryRelation[] {
+  return relations
+    .filter((relation) => relation.relation.from === id || relation.relation.to === id)
+    .sort(compareStoredRelationsById);
+}
+
+function outgoingRelations(
+  relations: readonly StoredMemoryRelation[],
+  id: ObjectId
+): StoredMemoryRelation[] {
+  return relations
+    .filter((relation) => relation.relation.from === id)
+    .sort(compareStoredRelationsById);
+}
+
+function incomingRelations(
+  relations: readonly StoredMemoryRelation[],
+  id: ObjectId
+): StoredMemoryRelation[] {
+  return relations
+    .filter((relation) => relation.relation.to === id)
+    .sort(compareStoredRelationsById);
+}
+
+function summarizeObject(object: StoredMemoryObject): MemoryObjectSummary {
+  const sidecar = object.sidecar;
+
+  return {
+    id: sidecar.id,
+    type: sidecar.type,
+    status: sidecar.status,
+    title: sidecar.title,
+    body_path: object.bodyPath,
+    json_path: object.path,
+    scope: sidecar.scope,
+    tags: [...(sidecar.tags ?? [])],
+    source: sidecar.source ?? null,
+    superseded_by: sidecar.superseded_by ?? null,
+    created_at: sidecar.created_at,
+    updated_at: sidecar.updated_at,
+    body: object.body
+  };
+}
+
+function summarizeRelations(
+  relations: readonly StoredMemoryRelation[]
+): MemoryRelationSummary[] {
+  return relations.map(summarizeRelation);
+}
+
+function summarizeRelation(relation: StoredMemoryRelation): MemoryRelationSummary {
+  const data = relation.relation;
+
+  return {
+    id: data.id,
+    from: data.from,
+    predicate: data.predicate,
+    to: data.to,
+    status: data.status,
+    confidence: data.confidence ?? null,
+    evidence: [...(data.evidence ?? [])],
+    content_hash: data.content_hash ?? null,
+    created_at: data.created_at,
+    updated_at: data.updated_at,
+    json_path: relation.path
+  };
+}
+
+function compareStaleMemoryObjects(
+  left: StoredMemoryObject,
+  right: StoredMemoryObject
+): number {
+  const statusComparison =
+    staleStatusOrder(left.sidecar.status) - staleStatusOrder(right.sidecar.status);
+
+  if (statusComparison !== 0) {
+    return statusComparison;
+  }
+
+  return left.sidecar.id.localeCompare(right.sidecar.id);
+}
+
+function staleStatusOrder(status: ObjectStatus): number {
+  return STALE_MEMORY_STATUS_ORDER.get(status) ?? Number.MAX_SAFE_INTEGER;
+}
+
+function compareStoredObjectsById(
+  left: StoredMemoryObject,
+  right: StoredMemoryObject
+): number {
+  return left.sidecar.id.localeCompare(right.sidecar.id);
+}
+
+function compareStoredRelationsById(
+  left: StoredMemoryRelation,
+  right: StoredMemoryRelation
+): number {
+  return left.relation.id.localeCompare(right.relation.id);
+}
+
+function objectNotFound(id: ObjectId): AictxError {
+  return aictxError("AICtxObjectNotFound", "Memory object was not found.", {
+    id
+  });
+}
 
 type MetaBuildResult =
   | {

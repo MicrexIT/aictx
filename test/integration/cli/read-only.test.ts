@@ -1,0 +1,609 @@
+import {
+  mkdir,
+  mkdtemp,
+  readdir,
+  readFile,
+  realpath,
+  rm,
+  stat,
+  writeFile
+} from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { dirname, join, relative } from "node:path";
+
+import { afterEach, describe, expect, it } from "vitest";
+
+import { main, type CliOutputWriter } from "../../../src/cli/main.js";
+import type {
+  ObjectId,
+  ObjectStatus,
+  ObjectType,
+  Predicate,
+  RelationConfidence,
+  RelationStatus
+} from "../../../src/core/types.js";
+import {
+  computeObjectContentHash,
+  computeRelationContentHash
+} from "../../../src/storage/hashes.js";
+import type { MemoryObjectSidecar } from "../../../src/storage/objects.js";
+import { readCanonicalStorage } from "../../../src/storage/read.js";
+import type { MemoryRelation } from "../../../src/storage/relations.js";
+import { FIXED_TIMESTAMP, FIXED_TIMESTAMP_NEXT_MINUTE } from "../../fixtures/time.js";
+
+const tempRoots: string[] = [];
+
+interface CliRunResult {
+  exitCode: number;
+  stdout: string;
+  stderr: string;
+}
+
+interface ObjectSummary {
+  id: string;
+  type: string;
+  status: string;
+  title: string;
+  body_path: string;
+  json_path: string;
+  tags: string[];
+  superseded_by: string | null;
+  body: string;
+}
+
+interface RelationSummary {
+  id: string;
+  from: string;
+  predicate: string;
+  to: string;
+  status: string;
+  json_path: string;
+}
+
+interface InspectEnvelope {
+  ok: true;
+  data: {
+    object: ObjectSummary;
+    relations: {
+      outgoing: RelationSummary[];
+      incoming: RelationSummary[];
+    };
+  };
+}
+
+interface StaleEnvelope {
+  ok: true;
+  data: {
+    objects: ObjectSummary[];
+  };
+}
+
+interface GraphEnvelope {
+  ok: true;
+  data: {
+    root_id: string;
+    objects: ObjectSummary[];
+    relations: RelationSummary[];
+  };
+}
+
+interface ErrorEnvelope {
+  ok: false;
+  error: {
+    code: string;
+    message: string;
+    details?: {
+      id?: string;
+    };
+  };
+}
+
+interface MemoryFixture {
+  id: ObjectId;
+  type: ObjectType;
+  status: ObjectStatus;
+  title: string;
+  body: string;
+  tags?: string[];
+  supersededBy?: ObjectId | null;
+  updatedAt?: string;
+}
+
+interface RelationFixture {
+  id: string;
+  from: ObjectId;
+  predicate: Predicate;
+  to: ObjectId;
+  status?: RelationStatus;
+  confidence?: RelationConfidence;
+}
+
+afterEach(async () => {
+  await Promise.all(
+    tempRoots.splice(0).map((path) => rm(path, { recursive: true, force: true }))
+  );
+});
+
+describe("aictx read-only CLI commands", () => {
+  it("inspects one object with incoming and outgoing direct relations", async () => {
+    const projectRoot = await createReadOnlyFixtureProject("aictx-cli-inspect-");
+
+    const output = await runCli(
+      ["node", "aictx", "inspect", "decision.billing-retries", "--json"],
+      projectRoot
+    );
+
+    expect(output.exitCode).toBe(0);
+    expect(output.stderr).toBe("");
+    const envelope = JSON.parse(output.stdout) as InspectEnvelope;
+
+    expect(envelope.ok).toBe(true);
+    expect(envelope.data.object).toMatchObject({
+      id: "decision.billing-retries",
+      type: "decision",
+      status: "active",
+      title: "Billing retries",
+      body_path: ".aictx/memory/decisions/billing-retries.md",
+      json_path: ".aictx/memory/decisions/billing-retries.json"
+    });
+    expect(envelope.data.object.body).toContain("Billing retries run in the worker.");
+    expect(envelope.data.relations.outgoing.map((relation) => relation.id)).toEqual([
+      "rel.decision-requires-idempotency"
+    ]);
+    expect(envelope.data.relations.incoming.map((relation) => relation.id)).toEqual([
+      "rel.worker-affects-decision"
+    ]);
+  });
+
+  it("lists stale, superseded, and rejected memory only", async () => {
+    const projectRoot = await createReadOnlyFixtureProject("aictx-cli-stale-");
+
+    const output = await runCli(["node", "aictx", "stale", "--json"], projectRoot);
+
+    expect(output.exitCode).toBe(0);
+    expect(output.stderr).toBe("");
+    const envelope = JSON.parse(output.stdout) as StaleEnvelope;
+    const ids = envelope.data.objects.map((object) => object.id);
+
+    expect(envelope.ok).toBe(true);
+    expect(ids).toEqual([
+      "decision.old-queue",
+      "constraint.old-api",
+      "note.rejected-memory"
+    ]);
+    expect(ids).not.toContain("decision.billing-retries");
+    expect(ids).not.toContain("note.draft-memory");
+    expect(ids).not.toContain("question.open-memory");
+    expect(ids).not.toContain("question.closed-memory");
+  });
+
+  it("returns a one-hop relation neighborhood for graph debugging", async () => {
+    const projectRoot = await createReadOnlyFixtureProject("aictx-cli-graph-");
+
+    const output = await runCli(
+      ["node", "aictx", "graph", "decision.billing-retries", "--json"],
+      projectRoot
+    );
+
+    expect(output.exitCode).toBe(0);
+    expect(output.stderr).toBe("");
+    const envelope = JSON.parse(output.stdout) as GraphEnvelope;
+    const objectIds = envelope.data.objects.map((object) => object.id);
+    const relationIds = envelope.data.relations.map((relation) => relation.id);
+
+    expect(envelope.ok).toBe(true);
+    expect(envelope.data.root_id).toBe("decision.billing-retries");
+    expect(objectIds).toEqual([
+      "constraint.webhook-idempotency",
+      "decision.billing-retries",
+      "note.worker-details"
+    ]);
+    expect(objectIds).not.toContain("fact.second-hop-only");
+    expect(relationIds).toEqual([
+      "rel.decision-requires-idempotency",
+      "rel.worker-affects-decision"
+    ]);
+    expect(relationIds).not.toContain("rel.idempotency-mentions-second-hop");
+  });
+
+  it("prints compact human output for inspect, stale, and graph", async () => {
+    const projectRoot = await createReadOnlyFixtureProject("aictx-cli-readonly-human-");
+    const inspect = await runCli(
+      ["node", "aictx", "inspect", "decision.billing-retries"],
+      projectRoot
+    );
+    const stale = await runCli(["node", "aictx", "stale"], projectRoot);
+    const graph = await runCli(
+      ["node", "aictx", "graph", "decision.billing-retries"],
+      projectRoot
+    );
+
+    expect(inspect.exitCode).toBe(0);
+    expect(stale.exitCode).toBe(0);
+    expect(graph.exitCode).toBe(0);
+    expect(inspect.stdout).toContain("decision.billing-retries");
+    expect(inspect.stdout).toContain("Outgoing relations:");
+    expect(stale.stdout).toContain("decision.old-queue");
+    expect(stale.stdout).toContain("note.rejected-memory");
+    expect(graph.stdout).toContain("Relation neighborhood for decision.billing-retries");
+    expect(graph.stdout).toContain("rel.worker-affects-decision");
+    expect(() => JSON.parse(inspect.stdout) as unknown).toThrow();
+    expect(() => JSON.parse(stale.stdout) as unknown).toThrow();
+    expect(() => JSON.parse(graph.stdout) as unknown).toThrow();
+  });
+
+  it("returns AICtxObjectNotFound for missing inspect and graph roots", async () => {
+    const projectRoot = await createReadOnlyFixtureProject("aictx-cli-readonly-missing-");
+    const inspect = await runCli(
+      ["node", "aictx", "inspect", "decision.missing", "--json"],
+      projectRoot
+    );
+    const graph = await runCli(
+      ["node", "aictx", "graph", "decision.missing", "--json"],
+      projectRoot
+    );
+
+    expect(inspect.exitCode).toBe(1);
+    expect(graph.exitCode).toBe(1);
+    const inspectEnvelope = JSON.parse(inspect.stdout) as ErrorEnvelope;
+    const graphEnvelope = JSON.parse(graph.stdout) as ErrorEnvelope;
+
+    expect(inspectEnvelope.error).toMatchObject({
+      code: "AICtxObjectNotFound",
+      details: {
+        id: "decision.missing"
+      }
+    });
+    expect(graphEnvelope.error).toMatchObject({
+      code: "AICtxObjectNotFound",
+      details: {
+        id: "decision.missing"
+      }
+    });
+  });
+
+  it("does not mutate canonical Aictx files", async () => {
+    const projectRoot = await createReadOnlyFixtureProject("aictx-cli-readonly-mutation-");
+    const before = await readCanonicalFiles(projectRoot);
+
+    await expect(
+      runCli(["node", "aictx", "inspect", "decision.billing-retries", "--json"], projectRoot)
+    ).resolves.toMatchObject({ exitCode: 0 });
+    await expect(runCli(["node", "aictx", "stale", "--json"], projectRoot)).resolves.toMatchObject({
+      exitCode: 0
+    });
+    await expect(
+      runCli(["node", "aictx", "graph", "decision.billing-retries", "--json"], projectRoot)
+    ).resolves.toMatchObject({ exitCode: 0 });
+
+    await expect(readCanonicalFiles(projectRoot)).resolves.toEqual(before);
+  });
+});
+
+async function createReadOnlyFixtureProject(prefix: string): Promise<string> {
+  const projectRoot = await createInitializedProject(prefix);
+
+  await writeMemoryObject(projectRoot, {
+    id: "decision.billing-retries",
+    type: "decision",
+    status: "active",
+    title: "Billing retries",
+    body: "# Billing retries\n\nBilling retries run in the worker.\n",
+    tags: ["billing", "retries"],
+    updatedAt: FIXED_TIMESTAMP_NEXT_MINUTE
+  });
+  await writeMemoryObject(projectRoot, {
+    id: "constraint.webhook-idempotency",
+    type: "constraint",
+    status: "active",
+    title: "Webhook idempotency",
+    body: "# Webhook idempotency\n\nWebhook delivery IDs must be deduplicated.\n",
+    tags: ["webhooks"]
+  });
+  await writeMemoryObject(projectRoot, {
+    id: "note.worker-details",
+    type: "note",
+    status: "active",
+    title: "Worker details",
+    body: "# Worker details\n\nThe queue worker owns retry execution.\n",
+    tags: ["worker"]
+  });
+  await writeMemoryObject(projectRoot, {
+    id: "fact.second-hop-only",
+    type: "fact",
+    status: "active",
+    title: "Second-hop only",
+    body: "# Second-hop only\n\nThis object is only connected through another neighbor.\n"
+  });
+  await writeMemoryObject(projectRoot, {
+    id: "decision.old-queue",
+    type: "decision",
+    status: "stale",
+    title: "Old queue",
+    body: "# Old queue\n\nThe old queue design is stale.\n"
+  });
+  await writeMemoryObject(projectRoot, {
+    id: "constraint.old-api",
+    type: "constraint",
+    status: "superseded",
+    title: "Old API",
+    body: "# Old API\n\nThe old API constraint was superseded.\n",
+    supersededBy: "decision.billing-retries"
+  });
+  await writeMemoryObject(projectRoot, {
+    id: "note.rejected-memory",
+    type: "note",
+    status: "rejected",
+    title: "Rejected memory",
+    body: "# Rejected memory\n\nThis memory was rejected.\n"
+  });
+  await writeMemoryObject(projectRoot, {
+    id: "note.draft-memory",
+    type: "note",
+    status: "draft",
+    title: "Draft memory",
+    body: "# Draft memory\n\nThis draft should not be in stale output.\n"
+  });
+  await writeMemoryObject(projectRoot, {
+    id: "question.open-memory",
+    type: "question",
+    status: "open",
+    title: "Open memory",
+    body: "# Open memory\n\nThis open question should not be in stale output.\n"
+  });
+  await writeMemoryObject(projectRoot, {
+    id: "question.closed-memory",
+    type: "question",
+    status: "closed",
+    title: "Closed memory",
+    body: "# Closed memory\n\nThis closed question should not be in stale output.\n"
+  });
+  await writeRelation(projectRoot, {
+    id: "rel.decision-requires-idempotency",
+    from: "decision.billing-retries",
+    predicate: "requires",
+    to: "constraint.webhook-idempotency",
+    confidence: "high"
+  });
+  await writeRelation(projectRoot, {
+    id: "rel.worker-affects-decision",
+    from: "note.worker-details",
+    predicate: "affects",
+    to: "decision.billing-retries",
+    confidence: "medium"
+  });
+  await writeRelation(projectRoot, {
+    id: "rel.idempotency-mentions-second-hop",
+    from: "constraint.webhook-idempotency",
+    predicate: "mentions",
+    to: "fact.second-hop-only",
+    confidence: "low"
+  });
+
+  return projectRoot;
+}
+
+async function createInitializedProject(prefix: string): Promise<string> {
+  const projectRoot = await createTempRoot(prefix);
+  const output = await runCli(["node", "aictx", "init", "--json"], projectRoot);
+
+  expect(output.exitCode).toBe(0);
+  expect(output.stderr).toBe("");
+
+  return projectRoot;
+}
+
+async function runCli(argv: string[], cwd: string): Promise<CliRunResult> {
+  const output = createCapturedOutput();
+  const exitCode = await main(argv, {
+    ...output.writers,
+    cwd
+  });
+
+  return {
+    exitCode,
+    stdout: output.stdout(),
+    stderr: output.stderr()
+  };
+}
+
+function createCapturedOutput(): {
+  writers: { stdout: CliOutputWriter; stderr: CliOutputWriter };
+  stdout: () => string;
+  stderr: () => string;
+} {
+  let stdout = "";
+  let stderr = "";
+
+  return {
+    writers: {
+      stdout: (text) => {
+        stdout += text;
+      },
+      stderr: (text) => {
+        stderr += text;
+      }
+    },
+    stdout: () => stdout,
+    stderr: () => stderr
+  };
+}
+
+async function createTempRoot(prefix: string): Promise<string> {
+  const root = await mkdtemp(join(tmpdir(), prefix));
+  const resolvedRoot = await realpath(root);
+  tempRoots.push(resolvedRoot);
+  return resolvedRoot;
+}
+
+async function writeMemoryObject(projectRoot: string, fixture: MemoryFixture): Promise<void> {
+  const storage = await readStorageOrThrow(projectRoot);
+  const bodyPath = memoryBodyPath(fixture);
+  const sidecarWithoutHash = {
+    id: fixture.id,
+    type: fixture.type,
+    status: fixture.status,
+    title: fixture.title,
+    body_path: bodyPath,
+    scope: {
+      kind: "project",
+      project: storage.config.project.id,
+      branch: null,
+      task: null
+    },
+    tags: fixture.tags ?? [],
+    source: {
+      kind: "agent"
+    },
+    superseded_by: fixture.supersededBy ?? null,
+    created_at: FIXED_TIMESTAMP,
+    updated_at: fixture.updatedAt ?? FIXED_TIMESTAMP
+  } satisfies Omit<MemoryObjectSidecar, "content_hash">;
+  const sidecar: MemoryObjectSidecar = {
+    ...sidecarWithoutHash,
+    content_hash: computeObjectContentHash(sidecarWithoutHash, fixture.body)
+  };
+
+  await writeProjectFile(projectRoot, `.aictx/${bodyPath}`, fixture.body);
+  await writeJsonProjectFile(
+    projectRoot,
+    `.aictx/${bodyPath.replace(/\.md$/, ".json")}`,
+    sidecar
+  );
+}
+
+async function writeRelation(projectRoot: string, fixture: RelationFixture): Promise<void> {
+  const relationWithoutHash = {
+    id: fixture.id,
+    from: fixture.from,
+    predicate: fixture.predicate,
+    to: fixture.to,
+    status: fixture.status ?? "active",
+    ...(fixture.confidence === undefined ? {} : { confidence: fixture.confidence }),
+    evidence: [
+      {
+        kind: "memory",
+        id: fixture.from
+      }
+    ],
+    created_at: FIXED_TIMESTAMP,
+    updated_at: FIXED_TIMESTAMP
+  } satisfies Omit<MemoryRelation, "content_hash">;
+  const relation: MemoryRelation = {
+    ...relationWithoutHash,
+    content_hash: computeRelationContentHash(relationWithoutHash)
+  };
+
+  await writeJsonProjectFile(
+    projectRoot,
+    `.aictx/relations/${fixture.id.replace(/^rel\./, "")}.json`,
+    relation
+  );
+}
+
+function memoryBodyPath(fixture: MemoryFixture): string {
+  const slug = fixture.id.slice(fixture.id.indexOf(".") + 1);
+
+  return `memory/${memoryDirectory(fixture.type)}/${slug}.md`;
+}
+
+function memoryDirectory(type: ObjectType): string {
+  switch (type) {
+    case "decision":
+      return "decisions";
+    case "constraint":
+      return "constraints";
+    case "question":
+      return "questions";
+    case "fact":
+      return "facts";
+    case "note":
+      return "notes";
+    case "concept":
+      return "concepts";
+    case "project":
+    case "architecture":
+      throw new Error(`Unsupported fixture type for nested memory path: ${type}`);
+  }
+}
+
+async function readStorageOrThrow(projectRoot: string) {
+  const storage = await readCanonicalStorage(projectRoot);
+
+  expect(storage.ok).toBe(true);
+  if (!storage.ok) {
+    throw new Error(storage.error.message);
+  }
+
+  return storage.data;
+}
+
+async function writeJsonProjectFile(
+  projectRoot: string,
+  relativePath: string,
+  value: unknown
+): Promise<void> {
+  await writeProjectFile(projectRoot, relativePath, `${JSON.stringify(value, null, 2)}\n`);
+}
+
+async function writeProjectFile(
+  projectRoot: string,
+  relativePath: string,
+  contents: string
+): Promise<void> {
+  const target = join(projectRoot, relativePath);
+  await mkdir(dirname(target), { recursive: true });
+  await writeFile(target, contents, "utf8");
+}
+
+async function readCanonicalFiles(projectRoot: string): Promise<Record<string, string>> {
+  const files: Record<string, string> = {};
+
+  for (const root of [
+    ".aictx/config.json",
+    ".aictx/events.jsonl",
+    ".aictx/memory",
+    ".aictx/relations",
+    ".aictx/schema"
+  ]) {
+    const absoluteRoot = join(projectRoot, root);
+    const entries = await readFilesRecursively(projectRoot, absoluteRoot);
+
+    for (const [path, contents] of Object.entries(entries)) {
+      files[path] = contents;
+    }
+  }
+
+  return files;
+}
+
+async function readFilesRecursively(
+  projectRoot: string,
+  absolutePath: string
+): Promise<Record<string, string>> {
+  const pathStat = await stat(absolutePath);
+
+  if (pathStat.isFile()) {
+    return {
+      [relative(projectRoot, absolutePath)]: await readFile(absolutePath, "utf8")
+    };
+  }
+
+  const entries = await readdir(absolutePath, { withFileTypes: true });
+  const files: Record<string, string> = {};
+
+  for (const entry of entries) {
+    const child = join(absolutePath, entry.name);
+
+    if (entry.isDirectory()) {
+      Object.assign(files, await readFilesRecursively(projectRoot, child));
+      continue;
+    }
+
+    if (entry.isFile()) {
+      files[relative(projectRoot, child)] = await readFile(child, "utf8");
+    }
+  }
+
+  return files;
+}
