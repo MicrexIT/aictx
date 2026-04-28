@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "project": {
+    "id": "project.invalid-jsonl",
+    "name": "Invalid JSONL"
+  },
+  "memory": {
+    "defaultTokenBudget": 6000,
+    "autoIndex": true,
+    "saveContextPacks": false
+  },
+  "git": {
+    "trackContextPacks": false
+  }
+}

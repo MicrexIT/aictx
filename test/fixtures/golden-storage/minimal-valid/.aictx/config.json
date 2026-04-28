@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "project": {
+    "id": "project.golden-minimal",
+    "name": "Golden Minimal"
+  },
+  "memory": {
+    "defaultTokenBudget": 6000,
+    "autoIndex": true,
+    "saveContextPacks": false
+  },
+  "git": {
+    "trackContextPacks": false
+  }
+}

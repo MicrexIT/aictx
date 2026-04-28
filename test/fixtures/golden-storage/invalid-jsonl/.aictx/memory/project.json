@@ -1,0 +1,23 @@
+{
+  "id": "project.invalid-jsonl",
+  "type": "project",
+  "status": "active",
+  "title": "Invalid JSONL",
+  "body_path": "memory/project.md",
+  "scope": {
+    "kind": "project",
+    "project": "project.invalid-jsonl",
+    "branch": null,
+    "task": null
+  },
+  "tags": [
+    "fixture"
+  ],
+  "source": {
+    "kind": "system"
+  },
+  "superseded_by": null,
+  "content_hash": "sha256:91969cac20e117f500b27d97c8cbfa49742ed6c627a7c149321bb6865f978ea2",
+  "created_at": "2026-04-25T14:00:00+02:00",
+  "updated_at": "2026-04-25T14:00:00+02:00"
+}
