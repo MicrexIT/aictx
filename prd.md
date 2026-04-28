@@ -657,6 +657,20 @@ The MCP server should not expose arbitrary filesystem or shell access.
 
 The LLM should submit structured memory patches. Aictx should write files deterministically.
 
+7.4 MCP adapter validation dependency
+
+The MCP adapter may use Zod as a direct runtime dependency for transport-level tool input shape validation.
+
+This dependency is allowed because the MCP TypeScript SDK's high-level tool registration path is designed around Zod-compatible schemas, and declaring it directly is clearer than relying on a transitive or peer-installed copy.
+
+Zod should remain an adapter-boundary tool only:
+
+* Validate MCP input shape, required fields, primitive types, and optional field presence.
+* Do not duplicate product validation owned by shared application services.
+* Do not move patch semantics, token-budget rules, project resolution, Git behavior, conflict checks, secret detection, or storage validation into MCP-only schemas.
+* Do not expand the normalized MCP tool set.
+* Do not introduce network access, hosted services, embeddings, or cloud dependencies.
+
 ⸻
 
 8. Storage architecture
@@ -1928,6 +1942,8 @@ diff_memory
 Avoid exposing too many granular tools.
 
 The agent capability model is MCP-first, CLI-complete. Routine memory work should happen through MCP when available. Commands that are user-facing, diagnostic, or recovery-oriented can remain CLI-only as long as agents are explicitly allowed to run them and receive stable `--json` output where automation benefits from it.
+
+The MCP adapter may declare Zod directly and use it for tool input shape validation, but service-level validation must remain shared with the CLI so MCP behavior does not fork from CLI behavior.
 
 Decision 7: UX must avoid graph/ontology language
 

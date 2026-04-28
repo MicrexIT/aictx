@@ -1720,3 +1720,48 @@ Run:
 - pnpm typecheck
 - pnpm vitest run test/unit/export/ test/integration/cli/export-obsidian.test.ts test/integration/init/init.test.ts
 ```
+
+## T053: Add Direct Zod Dependency and MCP Registration Cleanup
+
+```text
+Plan roadmap task T053: Add Direct Zod Dependency and MCP Registration Cleanup.
+
+Read these files first:
+- implementation-roadmap.md
+- runtime-and-project-architecture-spec.md
+- mcp-and-cli-api-spec.md
+- prd.md
+
+Write scope:
+- package.json
+- pnpm-lock.yaml
+- src/mcp/server.ts
+- src/mcp/tools/load-memory.ts
+- src/mcp/tools/search-memory.ts
+- src/mcp/tools/save-memory-patch.ts
+- src/mcp/tools/diff-memory.ts
+- test/unit/mcp/
+- test/integration/mcp/
+- test/unit/agent-capability-map.test.ts
+
+Do not modify:
+- CLI command behavior or CLI response rendering.
+- Application service validation, patch semantics, token-budget rules, project resolution, Git behavior, conflict checks, secret detection, storage validation, canonical schemas, or response contracts.
+- MCP tool set beyond preserving exactly `load_memory`, `search_memory`, `save_memory_patch`, and `diff_memory`.
+- Files outside the write scope unless the plan identifies a necessary spec correction.
+
+Acceptance:
+- `package.json` declares `zod` directly.
+- Source code imports `zod` only as a direct dependency, not through MCP SDK internals.
+- All four v1 MCP tools are registered through the SDK's high-level tool registration path.
+- Zod schemas validate transport-level tool input shape only and do not duplicate product validation owned by shared services.
+- MCP exposes only `load_memory`, `search_memory`, `save_memory_patch`, and `diff_memory`.
+- Existing MCP workflow, read-tool, write-tool, and capability-map tests pass.
+- No public CLI, MCP, storage, patch, or response contracts change.
+- No network access, hosted service, embedding API, or cloud account is introduced.
+
+Run:
+- pnpm install
+- pnpm typecheck
+- pnpm vitest run test/integration/mcp/ test/unit/mcp/ test/unit/agent-capability-map.test.ts
+```

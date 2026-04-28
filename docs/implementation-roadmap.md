@@ -61,6 +61,7 @@ Foundation
   -> MCP adapter
   -> end-to-end hardening
   -> release packaging
+  -> final MCP adapter cleanup
 ```
 
 Reasoning:
@@ -2232,6 +2233,62 @@ Acceptance:
 * `--json` returns `format`, `output_dir`, `manifest_path`, `objects_exported`, `relations_linked`, `files_written`, and `files_removed`.
 * No network access, Obsidian installation, or Obsidian plugin is required.
 
+### T053: Add Direct Zod Dependency and MCP Registration Cleanup
+
+Goal:
+
+Clean up the MCP adapter after all v1 tools exist by declaring `zod` directly and using the MCP SDK's high-level tool registration path for transport-level input validation.
+
+Write scope:
+
+```text
+package.json
+pnpm-lock.yaml
+src/mcp/server.ts
+src/mcp/tools/load-memory.ts
+src/mcp/tools/search-memory.ts
+src/mcp/tools/save-memory-patch.ts
+src/mcp/tools/diff-memory.ts
+test/unit/mcp/
+test/integration/mcp/
+test/unit/agent-capability-map.test.ts
+```
+
+Depends on:
+
+```text
+T052
+```
+
+Implementation:
+
+* Add `zod` as a direct package dependency rather than relying on the MCP SDK's transitive or peer-installed copy.
+* Migrate MCP tool registration to `McpServer.registerTool` with Zod input schemas for all four normalized v1 tools.
+* Use Zod only for MCP transport-boundary shape validation, such as required fields, primitive types, and optional field presence.
+* Keep product validation, semantic validation, token-budget rules, patch validation, project resolution, Git rules, and safety rules in shared app/core services.
+* Preserve shared response envelopes in MCP `structuredContent` and text content.
+* Preserve exact CLI/MCP parity for load, search, save, and diff behavior.
+* Preserve the exact normalized v1 MCP tool set: `load_memory`, `search_memory`, `save_memory_patch`, and `diff_memory`.
+* Remove manual MCP input-schema plumbing or ad hoc request handlers that the high-level SDK registration path replaces.
+* Do not expose CLI-only setup, maintenance, recovery, inspection, stale, graph, export, shell, filesystem, or debug commands through MCP.
+
+Assignable subtasks:
+
+* `T053A`: Add direct `zod` dependency, update lockfile, and add shared MCP schema/result helper utilities if useful.
+* `T053B`: Migrate read and write MCP tools to high-level SDK registration with Zod input schemas.
+* `T053C`: Update MCP tests and capability guardrails to prove the tool set and CLI/MCP parity are unchanged.
+
+Acceptance:
+
+* `package.json` declares `zod` directly.
+* Source code imports `zod` only as a direct dependency, not through MCP SDK internals.
+* All four v1 MCP tools are registered through the SDK's high-level tool registration path.
+* Zod schemas validate transport-level tool input shape only and do not duplicate product validation owned by shared services.
+* MCP exposes only `load_memory`, `search_memory`, `save_memory_patch`, and `diff_memory`.
+* Existing MCP workflow, read-tool, write-tool, and capability-map tests pass.
+* No public CLI, MCP, storage, patch, or response contracts change.
+* No network access, hosted service, embedding API, or cloud account is introduced.
+
 ## 18. Parallelization Guidance
 
 Safe to parallelize after T001:
@@ -2252,6 +2309,7 @@ T019, T020, T021
 T031 through T036 if they edit shared CLI rendering
 T041 through T043 if they edit MCP server registration
 T046B with T049 or T050 if they edit shared documentation or generated guidance
+T053 with any earlier MCP task, because T053 is a final cleanup over the complete MCP adapter
 ```
 
 Reasoning:
@@ -2278,6 +2336,7 @@ PR 10: T041-T043
 PR 11: T044-T048, including T046B after T046
 PR 12: T049-T051
 PR 13: T052
+PR 14: T053
 ```
 
 Rules:
@@ -2300,6 +2359,7 @@ V1 implementation is complete when:
 * In Git projects, `aictx history`, `restore`, and `rewind` work only on `.aictx/`.
 * Outside Git, Git-only commands return `AICtxGitRequired`.
 * MCP exposes only `load_memory`, `search_memory`, `save_memory_patch`, and `diff_memory`.
+* MCP declares and uses `zod` directly for transport-level tool input shape validation only.
 * Every supported Aictx capability is reachable to AI agents through MCP or CLI.
 * Docs and generated guidance describe the MCP-first, CLI-complete model.
 * `aictx export obsidian` creates a generated Obsidian projection without changing canonical memory.
