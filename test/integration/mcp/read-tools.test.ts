@@ -108,7 +108,7 @@ afterEach(async () => {
 });
 
 describe("aictx MCP read tools", () => {
-  it("exposes only the normalized v1 read tool set", async () => {
+  it("exposes only the normalized v1 MCP tool set", async () => {
     const projectRoot = await createTempRoot("aictx-mcp-read-tools-");
     const started = await startMcpClient(projectRoot);
 
@@ -116,10 +116,14 @@ describe("aictx MCP read tools", () => {
       const result = await started.client.listTools();
       const toolNames = result.tools.map((tool) => tool.name).sort();
 
-      expect(toolNames).toEqual(["diff_memory", "load_memory", "search_memory"]);
+      expect(toolNames).toEqual([
+        "diff_memory",
+        "load_memory",
+        "save_memory_patch",
+        "search_memory"
+      ]);
       expect(toolNames).not.toEqual(
         expect.arrayContaining([
-          "save_memory_patch",
           "init",
           "check",
           "rebuild",

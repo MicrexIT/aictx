@@ -17,6 +17,7 @@ import {
 import { version } from "../generated/version.js";
 import { diffMemoryTool } from "./tools/diff-memory.js";
 import { loadMemoryTool } from "./tools/load-memory.js";
+import { saveMemoryPatchTool } from "./tools/save-memory-patch.js";
 import { searchMemoryTool } from "./tools/search-memory.js";
 
 export interface AictxMcpContext {
@@ -37,7 +38,7 @@ export interface StartMcpServerOptions extends CreateAictxMcpServerOptions {
   stdout?: Writable;
 }
 
-interface AictxMcpReadTool {
+interface AictxMcpTool {
   name: string;
   title: string;
   description: string;
@@ -49,9 +50,10 @@ interface AictxMcpReadTool {
   ) => Promise<CallToolResult>;
 }
 
-const READ_TOOLS: AictxMcpReadTool[] = [
+const TOOLS: AictxMcpTool[] = [
   loadMemoryTool,
   searchMemoryTool,
+  saveMemoryPatchTool,
   diffMemoryTool
 ];
 
@@ -70,7 +72,7 @@ export function createAictxMcpServer(
     server
   };
 
-  registerReadTools(mcp);
+  registerTools(mcp);
 
   return mcp;
 }
@@ -105,8 +107,8 @@ function formatError(error: unknown): string {
   return String(error);
 }
 
-function registerReadTools(mcp: AictxMcpServer): void {
-  const toolsByName = new Map(READ_TOOLS.map((tool) => [tool.name, tool]));
+function registerTools(mcp: AictxMcpServer): void {
+  const toolsByName = new Map(TOOLS.map((tool) => [tool.name, tool]));
 
   mcp.server.server.registerCapabilities({
     tools: {
@@ -115,7 +117,7 @@ function registerReadTools(mcp: AictxMcpServer): void {
   });
 
   mcp.server.server.setRequestHandler(ListToolsRequestSchema, () => ({
-    tools: READ_TOOLS.map((tool) => ({
+    tools: TOOLS.map((tool) => ({
       name: tool.name,
       title: tool.title,
       description: tool.description,
