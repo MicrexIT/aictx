@@ -60,7 +60,10 @@ import {
   type CanonicalStorageSnapshot
 } from "../storage/read.js";
 import type { StoredMemoryRelation } from "../storage/relations.js";
-import { applyMemoryPatch } from "../storage/write.js";
+import {
+  applyMemoryPatch,
+  restoreCanonicalStorageFromCommit
+} from "../storage/write.js";
 import {
   conflictMarkerError,
   scanProjectConflictMarkers
@@ -123,6 +126,17 @@ export interface ListMemoryHistoryOptions extends GitWrapperOptions {
   limit?: number;
 }
 
+export interface RestoreMemoryOptions extends GitWrapperOptions {
+  cwd: string;
+  commit: string;
+  clock?: Clock;
+}
+
+export interface RewindMemoryOptions extends GitWrapperOptions {
+  cwd: string;
+  clock?: Clock;
+}
+
 export interface SaveMemoryPatchOptions extends GitWrapperOptions {
   cwd: string;
   patch?: unknown;
@@ -158,6 +172,12 @@ export interface MemoryHistoryCommit {
 
 export interface MemoryHistoryData {
   commits: MemoryHistoryCommit[];
+}
+
+export interface RestoreMemoryData {
+  restored_from: string;
+  files_changed: string[];
+  index_rebuilt: boolean;
 }
 
 export interface CheckProjectData {
@@ -854,6 +874,72 @@ export async function listMemoryHistory(
   };
 }
 
+export async function restoreMemory(
+  options: RestoreMemoryOptions
+): Promise<AppResult<RestoreMemoryData>> {
+  const prepared = await prepareGitOnlyMemoryOperation(options);
+
+  if (!prepared.ok) {
+    return prepared;
+  }
+
+  return restoreResolvedMemory({
+    paths: prepared.paths,
+    meta: prepared.meta,
+    commit: options.commit,
+    operation: "restore",
+    clock: options.clock ?? systemClock,
+    runner: options.runner
+  });
+}
+
+export async function rewindMemory(
+  options: RewindMemoryOptions
+): Promise<AppResult<RestoreMemoryData>> {
+  const prepared = await prepareGitOnlyMemoryOperation(options);
+
+  if (!prepared.ok) {
+    return prepared;
+  }
+
+  const history = await getAictxHistory(prepared.paths.projectRoot, {
+    runner: options.runner,
+    limit: 2
+  });
+
+  if (!history.ok) {
+    return {
+      ok: false,
+      error: history.error,
+      warnings: history.warnings,
+      meta: prepared.meta
+    };
+  }
+
+  const previousCommit = history.data[1];
+
+  if (previousCommit === undefined) {
+    return {
+      ok: false,
+      error: aictxError(
+        "AICtxValidationFailed",
+        "No previous committed Aictx state is available to rewind to."
+      ),
+      warnings: history.warnings,
+      meta: prepared.meta
+    };
+  }
+
+  return restoreResolvedMemory({
+    paths: prepared.paths,
+    meta: prepared.meta,
+    commit: previousCommit.commit,
+    operation: "rewind",
+    clock: options.clock ?? systemClock,
+    runner: options.runner
+  });
+}
+
 export async function saveMemoryPatch(
   options: SaveMemoryPatchOptions
 ): Promise<AppResult<SaveMemoryData>> {
@@ -1000,6 +1086,8 @@ export const applicationOperations = {
   listStaleMemory,
   loadMemory,
   rebuildIndex,
+  restoreMemory,
+  rewindMemory,
   saveMemoryPatch,
   searchMemory
 };
@@ -1016,6 +1104,27 @@ const STALE_MEMORY_STATUS_ORDER = new Map<ObjectStatus, number>([
   ["rejected", 2]
 ]);
 
+type ResolvedGitOnlyMemoryOperation =
+  | {
+      ok: true;
+      paths: ProjectPaths;
+      meta: AictxMeta;
+    }
+  | {
+      ok: false;
+      error: AictxError;
+      warnings: string[];
+      meta: AictxMeta;
+    };
+
+interface RestoreResolvedMemoryOptions extends GitWrapperOptions {
+  paths: ProjectPaths;
+  meta: AictxMeta;
+  commit: string;
+  operation: "restore" | "rewind";
+  clock: Clock;
+}
+
 type ReadOnlyCanonicalStorageResult =
   | {
       ok: true;
@@ -1029,6 +1138,147 @@ type ReadOnlyCanonicalStorageResult =
       warnings: string[];
       meta: AictxMeta;
     };
+
+async function prepareGitOnlyMemoryOperation(
+  options: GitWrapperOptions & { cwd: string }
+): Promise<ResolvedGitOnlyMemoryOperation> {
+  const paths = await resolveProjectPaths({
+    cwd: options.cwd,
+    mode: "require-initialized",
+    runner: options.runner
+  });
+
+  if (!paths.ok) {
+    return {
+      ok: false,
+      error: paths.error,
+      warnings: paths.warnings,
+      meta: await buildBestEffortMeta(options)
+    };
+  }
+
+  const meta = await buildMeta(paths.data, options);
+
+  if (!meta.ok) {
+    return meta;
+  }
+
+  if (!meta.meta.git.available) {
+    return {
+      ok: false,
+      error: aictxError("AICtxGitRequired", "Git is required for this operation."),
+      warnings: [],
+      meta: meta.meta
+    };
+  }
+
+  return {
+    ok: true,
+    paths: paths.data,
+    meta: meta.meta
+  };
+}
+
+async function restoreResolvedMemory(
+  options: RestoreResolvedMemoryOptions
+): Promise<AppResult<RestoreMemoryData>> {
+  const restored = await withProjectLock(
+    {
+      aictxRoot: options.paths.aictxRoot,
+      operation: options.operation,
+      clock: options.clock
+    },
+    async () => {
+      const clean = await rejectDirtyMemoryBeforeRestore(options.paths, options);
+
+      if (!clean.ok) {
+        return clean;
+      }
+
+      const canonical = await restoreCanonicalStorageFromCommit({
+        projectRoot: options.paths.projectRoot,
+        commit: options.commit,
+        runner: options.runner
+      });
+
+      if (!canonical.ok) {
+        return canonical;
+      }
+
+      const rebuilt = await rebuildGeneratedIndex({
+        projectRoot: options.paths.projectRoot,
+        aictxRoot: options.paths.aictxRoot,
+        clock: options.clock,
+        git: options.meta.git
+      });
+
+      return ok(
+        {
+          restored_from: canonical.data.restored_from,
+          files_changed: canonical.data.files_changed,
+          index_rebuilt: rebuilt.ok
+        },
+        [
+          ...canonical.warnings,
+          ...rebuilt.warnings,
+          ...(rebuilt.ok ? [] : [`Index warning: ${rebuilt.error.message}`])
+        ]
+      );
+    }
+  );
+
+  if (!restored.ok) {
+    return {
+      ok: false,
+      error: restored.error,
+      warnings: restored.warnings,
+      meta: options.meta
+    };
+  }
+
+  const refreshedMeta = await buildMeta(options.paths, options);
+
+  if (!refreshedMeta.ok) {
+    return {
+      ok: true,
+      data: restored.data,
+      warnings: [
+        ...restored.warnings,
+        ...refreshedMeta.warnings,
+        `Git metadata refresh failed after ${options.operation}: ${refreshedMeta.error.message}`
+      ],
+      meta: refreshedMeta.meta
+    };
+  }
+
+  return {
+    ok: true,
+    data: restored.data,
+    warnings: restored.warnings,
+    meta: refreshedMeta.meta
+  };
+}
+
+async function rejectDirtyMemoryBeforeRestore(
+  paths: ProjectPaths,
+  options: GitWrapperOptions
+): Promise<Result<void>> {
+  const dirtyState = await getAictxDirtyState(paths.projectRoot, options);
+
+  if (!dirtyState.ok) {
+    return dirtyState;
+  }
+
+  if (!dirtyState.data.dirty) {
+    return ok(undefined);
+  }
+
+  return err(
+    aictxError("AICtxDirtyMemory", "Restore requires a clean Aictx working tree.", {
+      dirty_files: dirtyState.data.files
+    })
+  );
+}
 
 async function readOnlyCanonicalStorage(
   options: GitWrapperOptions & { cwd: string }
@@ -1226,7 +1476,9 @@ async function buildMeta(
   };
 }
 
-async function buildBestEffortMeta(options: InitProjectOptions): Promise<AictxMeta> {
+async function buildBestEffortMeta(
+  options: GitWrapperOptions & { cwd: string }
+): Promise<AictxMeta> {
   const paths = await resolveProjectPaths({
     cwd: options.cwd,
     mode: "init",

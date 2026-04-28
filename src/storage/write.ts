@@ -7,6 +7,11 @@ import {
   writeJsonAtomic,
   writeMarkdownAtomic
 } from "../core/fs.js";
+import {
+  getAictxDirtyState,
+  restoreAictxFromCommit,
+  type GitWrapperOptions
+} from "../core/git.js";
 import { err, ok, type Result } from "../core/result.js";
 import type {
   Evidence,
@@ -132,6 +137,16 @@ interface ObjectSidecarInput {
   supersededBy?: ObjectId | null | undefined;
 }
 
+export interface RestoreCanonicalStorageFromCommitOptions extends GitWrapperOptions {
+  projectRoot: string;
+  commit: string;
+}
+
+export interface RestoreCanonicalStorageFromCommitData {
+  restored_from: string;
+  files_changed: string[];
+}
+
 export async function applyMemoryPatch(
   options: PlanMemoryPatchOptions
 ): Promise<Result<PatchPlan>> {
@@ -188,6 +203,28 @@ export async function applyMemoryPatch(
   }
 
   return ok(planned.data, planned.warnings);
+}
+
+export async function restoreCanonicalStorageFromCommit(
+  options: RestoreCanonicalStorageFromCommitOptions
+): Promise<Result<RestoreCanonicalStorageFromCommitData>> {
+  const projectRoot = resolve(options.projectRoot);
+  const restored = await restoreAictxFromCommit(projectRoot, options.commit, options);
+
+  if (!restored.ok) {
+    return restored;
+  }
+
+  const changed = await getAictxDirtyState(projectRoot, options);
+
+  if (!changed.ok) {
+    return changed;
+  }
+
+  return ok({
+    restored_from: options.commit,
+    files_changed: changed.data.files
+  });
 }
 
 async function getValidators(

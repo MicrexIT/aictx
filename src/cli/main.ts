@@ -11,6 +11,8 @@ import { registerInitCommand } from "./commands/init.js";
 import { registerInspectCommand } from "./commands/inspect.js";
 import { registerLoadCommand } from "./commands/load.js";
 import { registerRebuildCommand } from "./commands/rebuild.js";
+import { registerRestoreCommand } from "./commands/restore.js";
+import { registerRewindCommand } from "./commands/rewind.js";
 import { registerSaveCommand } from "./commands/save.js";
 import { registerSearchCommand } from "./commands/search.js";
 import { registerStaleCommand } from "./commands/stale.js";
@@ -96,6 +98,16 @@ export function createCliProgram(options: CliMainOptions = {}): Command {
     stderr: writeErr
   });
   registerHistoryCommand(program, {
+    cwd: options.cwd ?? process.cwd(),
+    stdout: writeOut,
+    stderr: writeErr
+  });
+  registerRestoreCommand(program, {
+    cwd: options.cwd ?? process.cwd(),
+    stdout: writeOut,
+    stderr: writeErr
+  });
+  registerRewindCommand(program, {
     cwd: options.cwd ?? process.cwd(),
     stdout: writeOut,
     stderr: writeErr
