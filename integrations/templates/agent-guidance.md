@@ -4,6 +4,8 @@ Aictx is the project's local, Git-aware memory layer for AI coding agents.
 
 Use it to load durable project context before work and save important project knowledge after work. Do not edit `.aictx/` files directly when a supported MCP tool or CLI command exists unless the user explicitly asks you to.
 
+This guidance is optional and copyable. It is not canonical project memory.
+
 ## Capability Map
 
 Use MCP first for routine memory work:
@@ -42,7 +44,7 @@ Use CLI fallback when MCP is unavailable:
 aictx load "<task summary>"
 ```
 
-After meaningful work, save only durable memory that future agents should know:
+After meaningful work, save a structured patch only for durable memory that future agents should know:
 
 ```text
 save_memory_patch({ source, changes })
@@ -86,6 +88,8 @@ Do not save:
 ## Patch Guidance
 
 The agent is responsible for creating the semantic patch. Aictx validates and writes it.
+
+Aictx does not infer durable project meaning from diffs. Create patches from current evidence such as the task, loaded context, repository changes, tests, and conversation context.
 
 Keep patches small and reviewable. Prefer one or a few focused memory changes over broad rewrites.
 

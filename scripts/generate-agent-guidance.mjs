@@ -1,7 +1,9 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const templatePath = "integrations/templates/agent-guidance.md";
+const repoRootUrl = new URL("../", import.meta.url);
+const templateUrl = new URL("integrations/templates/agent-guidance.md", repoRootUrl);
 const generatedNotice = "<!-- Generated from integrations/templates/agent-guidance.md. Do not edit directly. -->";
 
 const targets = [
@@ -19,9 +21,12 @@ const targets = [
   }
 ];
 
-const template = await readFile(templatePath, "utf8");
+const template = await readFile(templateUrl, "utf8");
+const normalizedTemplate = template.trimEnd();
 
 for (const target of targets) {
-  await mkdir(dirname(target.path), { recursive: true });
-  await writeFile(join(target.path), `${target.prefix}${template.trimEnd()}\n`);
+  const targetUrl = new URL(target.path, repoRootUrl);
+
+  await mkdir(dirname(fileURLToPath(targetUrl)), { recursive: true });
+  await writeFile(targetUrl, `${target.prefix}${normalizedTemplate}\n`);
 }
