@@ -10,7 +10,11 @@ import {
 import type { GitState } from "./types.js";
 
 const AICTX_PATHSPEC = ".aictx";
-const IGNORED_DIRTY_PATHS = [".aictx/index/", ".aictx/context/"] as const;
+const IGNORED_DIRTY_PATHS = [
+  ".aictx/index/",
+  ".aictx/context/",
+  ".aictx/exports/"
+] as const;
 const IGNORED_DIRTY_FILES = [".aictx/.lock"] as const;
 const LOG_FIELD_SEPARATOR = "\u001f";
 

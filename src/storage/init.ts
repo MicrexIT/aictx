@@ -20,7 +20,12 @@ import { SCHEMA_FILES } from "../validation/schemas.js";
 import { computeObjectContentHash } from "./hashes.js";
 import type { AictxConfig, MemoryObjectSidecar } from "./objects.js";
 
-const GENERATED_GITIGNORE_ENTRIES = [".aictx/index/", ".aictx/context/", ".aictx/.lock"] as const;
+const GENERATED_GITIGNORE_ENTRIES = [
+  ".aictx/index/",
+  ".aictx/context/",
+  ".aictx/exports/",
+  ".aictx/.lock"
+] as const;
 const INDEX_UNAVAILABLE_WARNING =
   "Initial index was not built because the index module is not available yet.";
 const ALREADY_INITIALIZED_WARNING =

@@ -5,6 +5,7 @@ import { Command, CommanderError } from "commander";
 import { version } from "../generated/version.js";
 import { registerCheckCommand } from "./commands/check.js";
 import { registerDiffCommand } from "./commands/diff.js";
+import { registerExportCommand } from "./commands/export.js";
 import { registerGraphCommand } from "./commands/graph.js";
 import { registerHistoryCommand } from "./commands/history.js";
 import { registerInitCommand } from "./commands/init.js";
@@ -88,6 +89,11 @@ export function createCliProgram(options: CliMainOptions = {}): Command {
     stderr: writeErr
   });
   registerGraphCommand(program, {
+    cwd: options.cwd ?? process.cwd(),
+    stdout: writeOut,
+    stderr: writeErr
+  });
+  registerExportCommand(program, {
     cwd: options.cwd ?? process.cwd(),
     stdout: writeOut,
     stderr: writeErr

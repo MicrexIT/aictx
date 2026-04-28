@@ -25,6 +25,7 @@ describe("core errors", () => {
       "AICtxInvalidRelation",
       "AICtxSecretDetected",
       "AICtxIndexUnavailable",
+      "AICtxExportTargetInvalid",
       "AICtxLockBusy",
       "AICtxGitOperationFailed",
       "AICtxInternalError"

@@ -36,6 +36,10 @@ import {
   type LoadMemoryInput
 } from "../context/compile.js";
 import {
+  exportObsidianProjection as writeObsidianProjectionExport,
+  type ObsidianProjectionExportData
+} from "../export/obsidian.js";
+import {
   updateIndexAfterCanonicalWrite
 } from "../index/incremental.js";
 import {
@@ -137,6 +141,12 @@ export interface RewindMemoryOptions extends GitWrapperOptions {
   clock?: Clock;
 }
 
+export interface ExportObsidianProjectionOptions extends GitWrapperOptions {
+  cwd: string;
+  outDir?: string;
+  clock?: Clock;
+}
+
 export interface SaveMemoryPatchOptions extends GitWrapperOptions {
   cwd: string;
   patch?: unknown;
@@ -233,6 +243,8 @@ export interface GraphMemoryData {
   objects: MemoryObjectSummary[];
   relations: MemoryRelationSummary[];
 }
+
+export type ExportObsidianProjectionData = ObsidianProjectionExportData;
 
 export type AppResult<T> =
   | {
@@ -743,6 +755,78 @@ export async function graphMemory(
   };
 }
 
+export async function exportObsidianProjection(
+  options: ExportObsidianProjectionOptions
+): Promise<AppResult<ExportObsidianProjectionData>> {
+  const clock = options.clock ?? systemClock;
+  const paths = await resolveProjectPaths({
+    cwd: options.cwd,
+    mode: "require-initialized",
+    runner: options.runner
+  });
+
+  if (!paths.ok) {
+    return {
+      ok: false,
+      error: paths.error,
+      warnings: paths.warnings,
+      meta: await buildBestEffortMeta(options)
+    };
+  }
+
+  const meta = await buildMeta(paths.data, options);
+
+  if (!meta.ok) {
+    return meta;
+  }
+
+  const exported = await withProjectLock(
+    {
+      aictxRoot: paths.data.aictxRoot,
+      operation: "export",
+      clock
+    },
+    async () => {
+      const storage = await readCanonicalStorage(paths.data.projectRoot);
+
+      if (!storage.ok) {
+        return storage;
+      }
+
+      const projection = await writeObsidianProjectionExport({
+        projectRoot: paths.data.projectRoot,
+        storage: storage.data,
+        ...(options.outDir === undefined ? {} : { outDir: options.outDir })
+      });
+
+      if (!projection.ok) {
+        return {
+          ...projection,
+          warnings: [...storage.warnings, ...projection.warnings]
+        };
+      }
+
+      return ok(projection.data, [...storage.warnings, ...projection.warnings]);
+    }
+  );
+
+  if (!exported.ok) {
+    return {
+      ok: false,
+      error: exported.error,
+      warnings: exported.warnings,
+      meta: meta.meta
+    };
+  }
+
+  return {
+    ok: true,
+    data: exported.data,
+    warnings: exported.warnings,
+    meta: meta.meta
+  };
+}
+
 export async function diffMemory(
   options: DiffMemoryOptions
 ): Promise<AppResult<DiffMemoryData>> {
@@ -1079,6 +1163,7 @@ export async function saveMemoryPatch(
 export const applicationOperations = {
   checkProject,
   diffMemory,
+  exportObsidianProjection,
   graphMemory,
   initProject,
   inspectMemory,

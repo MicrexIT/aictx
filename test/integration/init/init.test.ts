@@ -64,6 +64,9 @@ describe("initProject", () => {
     await expect(readFile(join(repo, ".gitignore"), "utf8")).resolves.toContain(
       ".aictx/context/"
     );
+    await expect(readFile(join(repo, ".gitignore"), "utf8")).resolves.toContain(
+      ".aictx/exports/"
+    );
     await expect(readFile(join(repo, ".gitignore"), "utf8")).resolves.toContain(".aictx/.lock");
 
     const validation = await validateProject(repo);

@@ -22,6 +22,7 @@ export const AICTX_ERROR_CODES = [
   "AICtxInvalidRelation",
   "AICtxSecretDetected",
   "AICtxIndexUnavailable",
+  "AICtxExportTargetInvalid",
   "AICtxLockBusy",
   "AICtxGitOperationFailed",
   "AICtxInternalError"
