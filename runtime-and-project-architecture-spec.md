@@ -23,6 +23,7 @@ This spec depends on:
 * `mcp-and-cli-api-spec.md`
 * `indexing-and-context-compiler-spec.md`
 * `schemas-and-validation-spec.md`
+* `local-viewer-spec.md`
 
 This spec does not define:
 
@@ -32,6 +33,7 @@ This spec does not define:
 * SQLite schema details
 * Ranking formula details
 * Secret detection regexes
+* Local viewer UX and browser API details
 
 Those remain owned by the other specs.
 
@@ -48,7 +50,7 @@ Minimum Node version: 22
 Module format: ESM
 Package manager: pnpm
 Primary package type: CLI + MCP server
-Frontend: none in v1
+Frontend: local read-only Svelte/Vite viewer served by the CLI in v1 extension
 Hosted backend: none in v1
 ```
 
@@ -62,6 +64,7 @@ Rules:
 * When Git is available, the app must use the native `git` binary rather than reimplementing Git.
 * The app must use local SQLite for generated indexes.
 * The app must not require embeddings or external model APIs.
+* The local viewer must bind only to loopback and must not introduce a hosted backend.
 
 ## 3. Package Shape
 
@@ -94,6 +97,7 @@ Repository layout:
     indexing-and-context-compiler-spec.md
     schemas-and-validation-spec.md
     runtime-and-project-architecture-spec.md
+    local-viewer-spec.md
     implementation-roadmap.md
     agent-integration.md
   integrations/
@@ -171,6 +175,9 @@ Repository layout:
       tokens.ts
     export/
       obsidian.ts
+    viewer/
+      server.ts
+      api.ts
     schemas/
       config.schema.json
       object.schema.json
@@ -179,6 +186,8 @@ Repository layout:
       patch.schema.json
     generated/
       version.ts
+  viewer/
+    package files and Svelte/Vite source
   test/
     fixtures/
     unit/
@@ -224,6 +233,7 @@ Allowed import direction:
 ```text
 cli/*      -> app/*, core/*
 mcp/*      -> app/*, core/*
+viewer/*   -> app/*, core/*
 app/*      -> core/*, storage/*, validation/*, index/*, context/*, export/*
 context/*  -> index/*, storage/*, core/*
 index/*    -> storage/*, validation/*, core/*
@@ -966,6 +976,7 @@ pnpm dlx aictx init
 Rules:
 
 * Package must include `dist/` and schema files.
+* Package must include built local viewer assets under `dist/viewer/` once `aictx view` is implemented.
 * Package should include `docs/agent-integration.md`, `integrations/templates/agent-guidance.md`, and generated files under `integrations/codex/`, `integrations/claude/`, and `integrations/generic/`.
 * Package must not include test fixtures unless needed.
 * Package must declare Node engine `>=22`.
@@ -979,8 +990,8 @@ Deferred from v1:
 * Monorepo package split
 * Hosted sync service
 * Cloud MCP endpoint
-* Web UI
-* Visual graph UI
+* Hosted web UI
+* Full-project visual graph database UI
 * Obsidian plugin
 * Two-way Obsidian sync or importing Obsidian edits back into Aictx
 * Embedding provider plugins
@@ -1010,6 +1021,7 @@ Runtime architecture is implementation-ready when:
 * SQLite is local generated state and is accessed only through the index module.
 * JSON Schema validation uses project-local `.aictx/schema/` files.
 * Obsidian projection exports are generated state and never canonical input.
+* `aictx view` serves only a loopback local read-only viewer and does not mutate canonical memory.
 * No command requires network access, embeddings, API keys, or a cloud account.
 * Writes are protected by a local project lock.
 * Tests can exercise the main flows in temporary Git and non-Git project directories.

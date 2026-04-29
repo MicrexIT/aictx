@@ -61,10 +61,11 @@ The v1 agent model is MCP-first and CLI-complete. MCP handles routine memory wor
 | List stale memory | none | `aictx stale` |
 | Show graph neighborhood | none | `aictx graph` |
 | Export Obsidian projection | none | `aictx export obsidian` |
+| View local memory | none | `aictx view` |
 
-CLI-only capabilities are not MCP parity gaps. Do not expose setup, maintenance, recovery, export, or inspection commands as MCP tools solely to mirror the CLI command list.
+CLI-only capabilities are not MCP parity gaps. Do not expose setup, maintenance, recovery, export, inspection, or local viewing commands as MCP tools solely to mirror the CLI command list.
 
-Agents may use the CLI for supported setup, maintenance, recovery, export, and inspection operations. They should use supported MCP or CLI entrypoints instead of editing `.aictx/` files directly when a supported command exists.
+Agents may use the CLI for supported setup, maintenance, recovery, export, inspection, and local viewing operations. They should use supported MCP or CLI entrypoints instead of editing `.aictx/` files directly when a supported command exists.
 
 ## Structured Patches
 

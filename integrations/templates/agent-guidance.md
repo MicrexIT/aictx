@@ -15,7 +15,7 @@ Use MCP first for routine memory work:
 * `save_memory_patch` or `aictx save`
 * `diff_memory` or `aictx diff`
 
-Use CLI for v1 setup, maintenance, recovery, export, and inspection capabilities that are intentionally not exposed by MCP:
+Use CLI for v1 setup, maintenance, recovery, export, inspection, and local viewing capabilities that are intentionally not exposed by MCP:
 
 * `aictx init`
 * `aictx check`
@@ -27,6 +27,7 @@ Use CLI for v1 setup, maintenance, recovery, export, and inspection capabilities
 * `aictx stale`
 * `aictx graph`
 * `aictx export obsidian`
+* `aictx view`
 
 CLI-only capabilities are not MCP parity gaps. Do not add or ask for MCP tools solely to mirror these CLI commands.
 
@@ -56,7 +57,7 @@ Use CLI fallback only when MCP is unavailable:
 aictx save --stdin
 ```
 
-For setup, maintenance, inspection, export, or recovery operations that are not exposed by MCP, use the `aictx` CLI instead of editing `.aictx/` files directly.
+For setup, maintenance, inspection, export, local viewing, or recovery operations that are not exposed by MCP, use the `aictx` CLI instead of editing `.aictx/` files directly.
 
 Before finalizing, tell the user whether Aictx memory changed and suggest reviewing `.aictx/` changes.
 

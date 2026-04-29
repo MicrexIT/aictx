@@ -78,11 +78,12 @@ Required in v1:
 * Git-backed review, diff, history, and restore behavior when Git is available
 * Basic secret detection before saving memory
 * One-way generated Obsidian projection export for viewing memory in Obsidian
+* Local read-only web viewer for human memory inspection
 
 Agent capability split:
 
 * MCP + CLI capabilities: load, search, save, diff.
-* CLI-only capabilities in v1: init, check, rebuild, history, restore, rewind, inspect, stale, graph, export obsidian.
+* CLI-only capabilities in v1: init, check, rebuild, history, restore, rewind, inspect, stale, graph, export obsidian, view.
 * CLI-only capabilities are intentionally not MCP parity gaps and should not be added to MCP solely for command-list parity.
 * Agents should use supported MCP or CLI entrypoints instead of editing `.aictx/` files directly when a supported command exists.
 
@@ -94,7 +95,7 @@ Deferred from v1:
 * Team governance workflows
 * PR bots or GitHub/GitLab apps
 * Cloud MCP endpoint
-* Visual graph UI
+* Full-project visual graph database
 * Enterprise policy engine
 
 Extension points may be reserved for embeddings, cross-project/workspace/global scopes, and hosted team workflows, but they must not complicate the v1 local-first developer experience.
@@ -117,6 +118,7 @@ Aictx is not:
 
 * An Obsidian clone
 * An Obsidian-native database or two-way Obsidian sync layer
+* An Obsidian plugin
 * A generic note-taking app
 * A visual graph database
 * A hosted memory API first
@@ -556,6 +558,10 @@ Show graph relationships for debugging/advanced use. Graph visualization should 
 aictx export obsidian [--out <dir>]
 
 Generate a disposable Obsidian-compatible Markdown projection from canonical Aictx memory. Aictx remains the source of truth; exported files are generated and may be deleted and rebuilt.
+
+aictx view [--port <number>] [--open]
+
+Start a local loopback-only read-only web viewer for browsing canonical Aictx memory, searching objects, inspecting Markdown/JSON, seeing direct relation neighborhoods, and triggering the generated Obsidian projection export.
 
 ⸻
 
@@ -1999,8 +2005,8 @@ Avoid making the initial product feel like enterprise compliance software.
 
 Do not prioritize:
 
-* Full visual graph UI
-* Obsidian plugin as the core product
+* Full-project visual graph UI
+* Obsidian plugin
 * Two-way Obsidian sync or importing Obsidian edits back into Aictx
 * Custom Markdown editor
 * Hosted cloud-first architecture

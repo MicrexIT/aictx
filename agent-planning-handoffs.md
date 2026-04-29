@@ -1765,3 +1765,255 @@ Run:
 - pnpm typecheck
 - pnpm vitest run test/integration/mcp/ test/unit/mcp/ test/unit/agent-capability-map.test.ts
 ```
+
+## T054: Add Local Viewer Spec and Capability Docs
+
+```text
+Plan roadmap task T054: Add Local Viewer Spec and Capability Docs.
+
+Read these files first:
+- implementation-roadmap.md
+- local-viewer-spec.md
+- prd.md
+- runtime-and-project-architecture-spec.md
+- mcp-and-cli-api-spec.md
+- docs/agent-integration.md
+
+Write scope:
+- local-viewer-spec.md
+- docs/local-viewer-spec.md
+- prd.md
+- docs/prd.md
+- runtime-and-project-architecture-spec.md
+- docs/runtime-and-project-architecture-spec.md
+- mcp-and-cli-api-spec.md
+- docs/mcp-and-cli-api-spec.md
+- docs/agent-integration.md
+- integrations/templates/agent-guidance.md
+- integrations/codex/aictx/SKILL.md
+- integrations/claude/aictx/SKILL.md
+- integrations/claude/aictx.md
+- integrations/generic/aictx-agent-instructions.md
+- test/unit/agent-capability-map.test.ts
+
+Do not modify:
+- Viewer server, viewer UI, CLI command implementation, MCP server, canonical schemas, storage format, or patch behavior.
+- Files outside the write scope unless the plan identifies a necessary spec correction.
+
+Acceptance:
+- Root specs and `docs/` mirrors are in sync.
+- Capability guardrails include `aictx view` as CLI-only.
+- Guidance generation remains template-derived.
+- Specs clearly prohibit MCP exposure for `aictx view`.
+- No implementation files for the server or UI are added in this task.
+
+Run:
+- pnpm build:guidance
+- pnpm typecheck
+- pnpm vitest run test/unit/agent-capability-map.test.ts
+```
+
+## T055: Add Viewer Build and Package Foundation
+
+```text
+Plan roadmap task T055: Add Viewer Build and Package Foundation.
+
+Read these files first:
+- implementation-roadmap.md
+- local-viewer-spec.md
+- runtime-and-project-architecture-spec.md
+
+Write scope:
+- package.json
+- pnpm-lock.yaml
+- tsup.config.ts
+- scripts/
+- viewer/
+- test/integration/release/
+
+Do not modify:
+- `aictx view` command registration or runtime server behavior.
+- MCP tools or server registration.
+- Canonical storage, schemas, patch behavior, or Obsidian export logic.
+- Files outside the write scope unless the plan identifies a necessary spec correction.
+
+Acceptance:
+- `pnpm build` produces `dist/viewer/`.
+- `pnpm pack` includes built viewer assets.
+- Runtime serving will not require Vite or the Svelte compiler.
+- No local server command or viewer API is implemented yet.
+
+Run:
+- pnpm install
+- pnpm build
+- pnpm typecheck
+- pnpm vitest run test/integration/release/
+```
+
+## T056: Add `aictx view` Server and Local API
+
+```text
+Plan roadmap task T056: Add `aictx view` Server and Local API.
+
+Read these files first:
+- implementation-roadmap.md
+- local-viewer-spec.md
+- runtime-and-project-architecture-spec.md
+- mcp-and-cli-api-spec.md
+
+Write scope:
+- src/cli/main.ts
+- src/cli/commands/view.ts
+- src/app/operations.ts
+- src/viewer/
+- test/unit/viewer/
+- test/integration/cli/view.test.ts
+
+Do not modify:
+- MCP tools or MCP server registration.
+- Viewer Svelte UI beyond static placeholder wiring required to prove serving.
+- Canonical schemas, storage format, patch behavior, or context compiler behavior.
+- Files outside the write scope unless the plan identifies a necessary spec correction.
+
+Acceptance:
+- Startup prints a usable local URL and keeps the process running.
+- API requests without the token fail.
+- Bootstrap reads canonical storage without mutating it.
+- Export route uses the existing Obsidian projection service and writes generated files only.
+- MCP tool registration is unchanged.
+
+Run:
+- pnpm typecheck
+- pnpm vitest run test/unit/viewer/ test/integration/cli/view.test.ts
+```
+
+## T057: Build Read-Only Viewer Shell
+
+```text
+Plan roadmap task T057: Build Read-Only Viewer Shell.
+
+Read these files first:
+- implementation-roadmap.md
+- local-viewer-spec.md
+- runtime-and-project-architecture-spec.md
+
+Write scope:
+- viewer/
+- test/integration/viewer/
+
+Do not modify:
+- Viewer server API contract except for spec-approved corrections.
+- MCP tools, CLI command registration, canonical storage, schemas, or patch behavior.
+- Files outside the write scope unless the plan identifies a necessary spec correction.
+
+Acceptance:
+- A user can search and inspect memory objects from the viewer.
+- Markdown, JSON, and relation views render for the selected object.
+- Raw HTML in memory does not execute.
+- Browser smoke tests load the shell without console errors.
+
+Run:
+- pnpm build
+- pnpm typecheck
+- pnpm vitest run test/integration/viewer/
+```
+
+## T058: Add Selected-Node Graph Visualization
+
+```text
+Plan roadmap task T058: Add Selected-Node Graph Visualization.
+
+Read these files first:
+- implementation-roadmap.md
+- local-viewer-spec.md
+
+Write scope:
+- viewer/
+- test/integration/viewer/
+
+Do not modify:
+- Viewer server API unless performance requires a spec-approved graph endpoint.
+- MCP tools, CLI command registration, canonical storage, schemas, or patch behavior.
+- Files outside the write scope unless the plan identifies a necessary spec correction.
+
+Acceptance:
+- The graph updates when selection changes.
+- The graph contains only direct neighbors and direct relations.
+- Empty relation neighborhoods render clearly.
+- Browser tests verify the graph surface is nonblank for related objects.
+
+Run:
+- pnpm build
+- pnpm typecheck
+- pnpm vitest run test/integration/viewer/
+```
+
+## T059: Add Viewer Obsidian Export Action
+
+```text
+Plan roadmap task T059: Add Viewer Obsidian Export Action.
+
+Read these files first:
+- implementation-roadmap.md
+- local-viewer-spec.md
+- mcp-and-cli-api-spec.md
+- storage-format-spec.md
+
+Write scope:
+- viewer/
+- src/viewer/
+- test/integration/viewer/
+- test/integration/cli/export-obsidian.test.ts
+
+Do not modify:
+- Obsidian export file format except for spec-approved fixes.
+- Canonical schemas, storage format, patch behavior, or MCP tools.
+- Files outside the write scope unless the plan identifies a necessary spec correction.
+
+Acceptance:
+- Export action regenerates the Obsidian projection.
+- Canonical memory files, events, hashes, and SQLite are unchanged by export.
+- Unsafe output directories fail with the existing export-target error.
+- UI communicates export success, written files count, and manifest path.
+
+Run:
+- pnpm build
+- pnpm typecheck
+- pnpm vitest run test/integration/viewer/ test/integration/cli/export-obsidian.test.ts
+```
+
+## T060: Add Viewer Docs and End-to-End Verification
+
+```text
+Plan roadmap task T060: Add Viewer Docs and End-to-End Verification.
+
+Read these files first:
+- implementation-roadmap.md
+- local-viewer-spec.md
+- README.md
+- docs/agent-integration.md
+
+Write scope:
+- README.md
+- docs/agent-integration.md
+- test/integration/cli/
+- test/integration/release/
+- test/integration/viewer/
+- test/unit/agent-capability-map.test.ts
+
+Do not modify:
+- Product contracts unless the plan identifies a necessary spec correction.
+- MCP tools, canonical storage, schemas, or patch behavior.
+- Files outside the write scope unless the plan identifies a necessary spec correction.
+
+Acceptance:
+- README describes how to launch and use the viewer.
+- Browser tests pass for the primary viewer workflow.
+- Package tests prove viewer assets are present and serveable from the packed package.
+- Capability guardrails still prove MCP exposes only `load_memory`, `search_memory`, `save_memory_patch`, and `diff_memory`.
+
+Run:
+- pnpm build
+- pnpm typecheck
+- pnpm vitest run test/integration/cli/ test/integration/release/ test/integration/viewer/ test/unit/agent-capability-map.test.ts
+```

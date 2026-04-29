@@ -10,8 +10,9 @@ This document defines the v1 user-facing API for Aictx:
 * Structured memory patch format
 * Git availability and dirty-state behavior
 * Error codes
+* CLI-only local viewer entrypoint
 
-This spec depends on `storage-format-spec.md` for canonical files, IDs, statuses, relations, event names, and validation rules.
+This spec depends on `storage-format-spec.md` for canonical files, IDs, statuses, relations, event names, and validation rules. Local viewer details are owned by `local-viewer-spec.md`.
 
 This spec does not define:
 
@@ -36,13 +37,13 @@ V1 API behavior must follow these rules:
 * CLI and MCP must share the same core implementation path.
 * AI agents must be able to reach every supported Aictx capability through either MCP or CLI.
 * MCP is the preferred agent path for routine memory load, search, save, and diff workflows.
-* CLI is the supported fallback and advanced path for setup, maintenance, recovery, export, and inspection workflows.
+* CLI is the supported fallback and advanced path for setup, maintenance, recovery, export, inspection, and local viewing workflows.
 * The API must be usable without a cloud account, external API, embeddings, or hosted service.
 
 ### 2.1 Agent Capability Map
 
 V1 parity means agent reachability through MCP or CLI, not identical command lists.
-CLI-only capabilities are intentionally not MCP parity gaps; do not add setup, maintenance, recovery, export, or inspection tools to MCP just to mirror CLI commands.
+CLI-only capabilities are intentionally not MCP parity gaps; do not add setup, maintenance, recovery, export, inspection, or local viewing tools to MCP just to mirror CLI commands.
 When a supported MCP or CLI entrypoint exists, agents must use that entrypoint instead of editing `.aictx/` files directly.
 
 | Capability | MCP | CLI | Notes |
@@ -61,6 +62,7 @@ When a supported MCP or CLI entrypoint exists, agents must use that entrypoint i
 | List stale memory | none | `aictx stale` | Debug inspection remains CLI-only in v1. |
 | Show graph neighborhood | none | `aictx graph` | Debug inspection remains CLI-only in v1. |
 | Export Obsidian projection | none | `aictx export obsidian` | Generated projection remains CLI-only in v1. |
+| View local memory | none | `aictx view` | Local read-only viewer remains CLI-only in v1. |
 
 ## 3. Runtime Preconditions
 
@@ -533,9 +535,10 @@ aictx stale [--json]
 aictx inspect <id> [--json]
 aictx graph <id> [--json]
 aictx export obsidian [--out <dir>] [--json]
+aictx view [--port <number>] [--open] [--json]
 ```
 
-These commands must not mutate canonical storage. `aictx export obsidian` may write generated projection files only.
+These commands must not mutate canonical storage. `aictx export obsidian` and the explicit viewer Obsidian export action may write generated projection files only.
 
 Minimum behavior:
 
@@ -544,6 +547,7 @@ Minimum behavior:
 * `aictx inspect <id>` shows one memory object plus direct relations.
 * `aictx graph <id>` shows relation neighborhoods for debugging only.
 * `aictx export obsidian` writes a one-way generated Obsidian projection from canonical memory.
+* `aictx view` starts a loopback-only read-only web viewer for human memory inspection.
 
 ### 5.11 `aictx export obsidian`
 
@@ -582,6 +586,45 @@ Success data:
   "relations_linked": 12,
   "files_written": [],
   "files_removed": []
+}
+```
+
+### 5.12 `aictx view`
+
+Purpose:
+
+Start a local read-only web viewer for browsing canonical Aictx memory.
+
+Syntax:
+
+```bash
+aictx view [--port <number>] [--open] [--json]
+```
+
+Behavior:
+
+* Require initialized `.aictx/`.
+* Bind only to loopback.
+* Use an available random port by default.
+* If `--port <number>` is provided, bind only that port and fail if it is unavailable.
+* Print the viewer URL to stdout.
+* Include a per-run token in the launched URL and require it for all viewer API requests.
+* Serve bundled Svelte/Vite static assets from the package.
+* Keep running until interrupted.
+* `--open` may launch the user's default browser after the server starts.
+* Do not mutate canonical memory while starting or serving the viewer.
+* Do not expose an MCP tool for local viewing.
+* Follow `local-viewer-spec.md` for the local API, UI behavior, security boundary, and packaging details.
+
+Success data:
+
+```json
+{
+  "url": "http://127.0.0.1:49152/?token=<redacted>",
+  "host": "127.0.0.1",
+  "port": 49152,
+  "token_required": true,
+  "open_attempted": false
 }
 ```
 

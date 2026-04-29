@@ -7,6 +7,7 @@ const root = process.cwd();
 const generatedNotice = "<!-- Generated from integrations/templates/agent-guidance.md. Do not edit directly. -->";
 
 const mirroredSpecs = [
+  "local-viewer-spec.md",
   "mcp-and-cli-api-spec.md",
   "prd.md",
   "runtime-and-project-architecture-spec.md"
@@ -99,6 +100,12 @@ const cliOnlyCapabilities = [
     mcp: "none",
     cli: "`aictx export obsidian`",
     notes: "Generated projection remains CLI-only in v1."
+  },
+  {
+    capability: "View local memory",
+    mcp: "none",
+    cli: "`aictx view`",
+    notes: "Local read-only viewer remains CLI-only in v1."
   }
 ] as const;
 
@@ -119,7 +126,8 @@ const exactCliOnlyCommands = [
   "`aictx inspect`",
   "`aictx stale`",
   "`aictx graph`",
-  "`aictx export obsidian`"
+  "`aictx export obsidian`",
+  "`aictx view`"
 ] as const;
 
 const guidanceTargets = [
@@ -224,7 +232,7 @@ describe("agent capability map guardrail", () => {
       const guidance = await readProjectFile(path);
 
       expect(guidance.indexOf("Use MCP first for routine memory work")).toBeLessThan(
-        guidance.indexOf("Use CLI for v1 setup, maintenance, recovery, export, and inspection capabilities")
+        guidance.indexOf("Use CLI for v1 setup, maintenance, recovery, export, inspection, and local viewing capabilities")
       );
       expect(guidance.indexOf("load_memory({ task: \"<task summary>\" })")).toBeLessThan(
         guidance.indexOf("aictx load \"<task summary>\"")

@@ -14,6 +14,7 @@ This roadmap depends on:
 * `indexing-and-context-compiler-spec.md`
 * `schemas-and-validation-spec.md`
 * `runtime-and-project-architecture-spec.md`
+* `local-viewer-spec.md`
 
 ## 2. Roadmap Principles
 
@@ -62,6 +63,8 @@ Foundation
   -> end-to-end hardening
   -> release packaging
   -> final MCP adapter cleanup
+  -> local viewer spec and foundation
+  -> local viewer server, UI, export action, and browser verification
 ```
 
 Reasoning:
@@ -2289,6 +2292,272 @@ Acceptance:
 * No public CLI, MCP, storage, patch, or response contracts change.
 * No network access, hosted service, embedding API, or cloud account is introduced.
 
+### T054: Add Local Viewer Spec and Capability Docs
+
+Goal:
+
+Define the local read-only viewer feature before implementation.
+
+Write scope:
+
+```text
+local-viewer-spec.md
+docs/local-viewer-spec.md
+prd.md
+docs/prd.md
+runtime-and-project-architecture-spec.md
+docs/runtime-and-project-architecture-spec.md
+mcp-and-cli-api-spec.md
+docs/mcp-and-cli-api-spec.md
+docs/agent-integration.md
+integrations/templates/agent-guidance.md
+integrations/codex/aictx/SKILL.md
+integrations/claude/aictx/SKILL.md
+integrations/claude/aictx.md
+integrations/generic/aictx-agent-instructions.md
+test/unit/agent-capability-map.test.ts
+```
+
+Depends on:
+
+```text
+T053
+```
+
+Implementation:
+
+* Add `local-viewer-spec.md` and keep the `docs/` mirror identical.
+* Specify `aictx view [--port <number>] [--open] [--json]` as a CLI-only local viewer command.
+* Document Svelte/Vite as the viewer stack and loopback-only local serving as the runtime model.
+* Document that the viewer is read-only for canonical memory and may only write generated Obsidian projection files through the existing export service.
+* Update capability maps and generated guidance so `aictx view` is CLI-only and not exposed through MCP.
+* Keep Obsidian plugin installation and two-way Obsidian sync out of scope.
+
+Acceptance:
+
+* Root specs and `docs/` mirrors are in sync.
+* Capability guardrails include `aictx view` as CLI-only.
+* Guidance generation remains template-derived.
+* Specs clearly prohibit MCP exposure for `aictx view`.
+* No implementation files for the server or UI are added in this task.
+
+### T055: Add Viewer Build and Package Foundation
+
+Goal:
+
+Add the Svelte/Vite viewer build pipeline and package asset handling without adding viewer behavior.
+
+Write scope:
+
+```text
+package.json
+pnpm-lock.yaml
+tsup.config.ts
+scripts/
+viewer/
+test/integration/release/
+```
+
+Depends on:
+
+```text
+T054
+```
+
+Implementation:
+
+* Add Svelte/Vite dependencies and build scripts for `viewer/`.
+* Configure the package build so static viewer assets are produced under `dist/viewer/`.
+* Ensure packed npm packages include built viewer assets but not unnecessary source fixtures.
+* Add a minimal static viewer placeholder that proves asset serving can be packaged later.
+
+Acceptance:
+
+* `pnpm build` produces `dist/viewer/`.
+* `pnpm pack` includes built viewer assets.
+* Runtime serving will not require Vite or the Svelte compiler.
+* No local server command or viewer API is implemented yet.
+
+### T056: Add `aictx view` Server and Local API
+
+Goal:
+
+Implement the CLI command, loopback-only server, static asset serving, and local API.
+
+Write scope:
+
+```text
+src/cli/main.ts
+src/cli/commands/view.ts
+src/app/operations.ts
+src/viewer/
+test/unit/viewer/
+test/integration/cli/view.test.ts
+```
+
+Depends on:
+
+```text
+T055
+```
+
+Implementation:
+
+* Add `aictx view [--port <number>] [--open] [--json]`.
+* Bind only to loopback, choose a random available port by default, and fail clearly for unavailable explicit ports.
+* Generate a per-run token and require it for all `/api/*` requests.
+* Serve built static assets from `dist/viewer/`.
+* Add `GET /api/bootstrap` for read-only memory data and `POST /api/export/obsidian` for generated export.
+* Keep CORS disabled and reject arbitrary filesystem, shell, Git, and debug endpoints.
+
+Acceptance:
+
+* Startup prints a usable local URL and keeps the process running.
+* API requests without the token fail.
+* Bootstrap reads canonical storage without mutating it.
+* Export route uses the existing Obsidian projection service and writes generated files only.
+* MCP tool registration is unchanged.
+
+### T057: Build Read-Only Viewer Shell
+
+Goal:
+
+Build the first usable Svelte viewer interface without graph visualization.
+
+Write scope:
+
+```text
+viewer/
+test/integration/viewer/
+```
+
+Depends on:
+
+```text
+T056
+```
+
+Implementation:
+
+* Load bootstrap data from the local API.
+* Build search, type/status/tag filters, object list, selected Markdown view, sidecar JSON view, and incoming/outgoing relation views.
+* Render Markdown with raw HTML disabled or sanitized.
+* Keep all canonical memory editing controls out of the UI.
+
+Acceptance:
+
+* A user can search and inspect memory objects from the viewer.
+* Markdown, JSON, and relation views render for the selected object.
+* Raw HTML in memory does not execute.
+* Browser smoke tests load the shell without console errors.
+
+### T058: Add Selected-Node Graph Visualization
+
+Goal:
+
+Add graph context for the selected object only.
+
+Write scope:
+
+```text
+viewer/
+test/integration/viewer/
+```
+
+Depends on:
+
+```text
+T057
+```
+
+Implementation:
+
+* Add a selected-node graph view showing the selected object, direct incoming/outgoing neighbor objects, and direct relations.
+* Reuse bootstrap relation data instead of adding a new graph API unless performance requires it.
+* Keep full-project graph exploration out of scope.
+
+Acceptance:
+
+* The graph updates when selection changes.
+* The graph contains only direct neighbors and direct relations.
+* Empty relation neighborhoods render clearly.
+* Browser tests verify the graph surface is nonblank for related objects.
+
+### T059: Add Viewer Obsidian Export Action
+
+Goal:
+
+Expose generated Obsidian projection export from the viewer.
+
+Write scope:
+
+```text
+viewer/
+src/viewer/
+test/integration/viewer/
+test/integration/cli/export-obsidian.test.ts
+```
+
+Depends on:
+
+```text
+T056
+T057
+```
+
+Implementation:
+
+* Add an explicit export control in the viewer.
+* Allow the user to use the default export target or provide a project-relative output directory.
+* Call `POST /api/export/obsidian` and render success/failure details.
+* Preserve all existing export target safety rules.
+
+Acceptance:
+
+* Export action regenerates the Obsidian projection.
+* Canonical memory files, events, hashes, and SQLite are unchanged by export.
+* Unsafe output directories fail with the existing export-target error.
+* UI communicates export success, written files count, and manifest path.
+
+### T060: Add Viewer Docs and End-to-End Verification
+
+Goal:
+
+Document and verify the complete local viewer workflow.
+
+Write scope:
+
+```text
+README.md
+docs/agent-integration.md
+test/integration/cli/
+test/integration/release/
+test/integration/viewer/
+test/unit/agent-capability-map.test.ts
+```
+
+Depends on:
+
+```text
+T057
+T058
+T059
+```
+
+Implementation:
+
+* Document `aictx view`, its read-only boundary, and the Obsidian export action.
+* Add end-to-end browser coverage for startup, bootstrap, search/filter, selected-node graph, Markdown safety, and export.
+* Add release/package tests proving packed assets serve correctly.
+* Keep agent guidance explicit that `aictx view` is CLI-only and not an MCP parity gap.
+
+Acceptance:
+
+* README describes how to launch and use the viewer.
+* Browser tests pass for the primary viewer workflow.
+* Package tests prove viewer assets are present and serveable from the packed package.
+* Capability guardrails still prove MCP exposes only `load_memory`, `search_memory`, `save_memory_patch`, and `diff_memory`.
+
 ## 18. Parallelization Guidance
 
 Safe to parallelize after T001:
@@ -2310,6 +2579,7 @@ T031 through T036 if they edit shared CLI rendering
 T041 through T043 if they edit MCP server registration
 T046B with T049 or T050 if they edit shared documentation or generated guidance
 T053 with any earlier MCP task, because T053 is a final cleanup over the complete MCP adapter
+T056 through T059 if they edit the viewer API contract or shared viewer state
 ```
 
 Reasoning:
@@ -2317,6 +2587,7 @@ Reasoning:
 * Patch write tasks touch the same planner and writer.
 * Index tasks touch schema and database lifecycle.
 * CLI and MCP adapters share command registration and response rendering.
+* Viewer server and UI tasks share the local API contract and browser workflow.
 
 ## 19. Recommended Pull Request Slices
 
@@ -2337,6 +2608,9 @@ PR 11: T044-T048, including T046B after T046
 PR 12: T049-T051
 PR 13: T052
 PR 14: T053
+PR 15: T054
+PR 16: T055-T056
+PR 17: T057-T060
 ```
 
 Rules:
@@ -2363,6 +2637,7 @@ V1 implementation is complete when:
 * Every supported Aictx capability is reachable to AI agents through MCP or CLI.
 * Docs and generated guidance describe the MCP-first, CLI-complete model.
 * `aictx export obsidian` creates a generated Obsidian projection without changing canonical memory.
+* `aictx view` serves a loopback-only read-only viewer for search, document inspection, direct relation graph context, and generated Obsidian export.
 * No core command requires network access, API keys, embeddings, or hosted services.
 * Write operations are protected by `.aictx/.lock`.
 * Test coverage includes unit, integration, CLI workflow, MCP workflow, and safety regressions.
