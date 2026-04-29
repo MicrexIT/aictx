@@ -1,4 +1,3 @@
-import DatabaseConstructor from "better-sqlite3";
 import { randomUUID } from "node:crypto";
 import { lstat, mkdir, realpath, rename, rm } from "node:fs/promises";
 import { dirname, isAbsolute, join, relative } from "node:path";
@@ -16,8 +15,7 @@ import {
   REQUIRED_META_DEFAULTS
 } from "./migrations.js";
 import { resolveIndexDatabasePath } from "./sqlite.js";
-
-type SqliteDatabase = DatabaseConstructor.Database;
+import { openSqliteDatabase, type SqliteDatabase } from "./sqlite-driver.js";
 
 export interface RebuildIndexOptions {
   projectRoot: string;
@@ -172,7 +170,7 @@ async function buildTemporaryDatabase(
   let db: SqliteDatabase | null = null;
 
   try {
-    db = new DatabaseConstructor(options.path);
+    db = await openSqliteDatabase(options.path);
     db.pragma("journal_mode = DELETE");
 
     const migrated = migrateIndexDatabase(db);

@@ -154,7 +154,7 @@ Initialize `.aictx/` inside the current project root.
 Syntax:
 
 ```bash
-aictx init [--json]
+aictx init [--no-agent-guidance] [--json]
 ```
 
 Behavior:
@@ -169,6 +169,8 @@ Behavior:
 * Create empty `events.jsonl`.
 * Create generated directories.
 * If Git is available, add or recommend `.gitignore` entries for `.aictx/index/`, `.aictx/context/`, `.aictx/exports/`, and `.aictx/.lock`.
+* Create or update marked Aictx guidance sections in `AGENTS.md` and `CLAUDE.md` unless `--no-agent-guidance` is provided.
+* Do not install user-global skills or edit client-specific config such as `~/.codex`, `~/.claude`, `.codex/config.toml`, or `.claude/skills/`.
 * Build the initial local index if possible.
 * Do not create a Git commit.
 
@@ -183,17 +185,36 @@ Success data:
 {
   "created": true,
   "files_created": [
+    "AGENTS.md",
+    "CLAUDE.md",
     ".aictx/config.json",
     ".aictx/events.jsonl"
   ],
   "gitignore_updated": true,
   "git_available": true,
   "index_built": true,
+  "agent_guidance": {
+    "enabled": true,
+    "targets": [
+      {
+        "path": "AGENTS.md",
+        "status": "created"
+      },
+      {
+        "path": "CLAUDE.md",
+        "status": "created"
+      }
+    ],
+    "optional_skills": [
+      "integrations/codex/aictx/SKILL.md",
+      "integrations/claude/aictx/SKILL.md"
+    ]
+  },
   "next_steps": [
-    "Run `aictx load \"your task\"` before a coding task.",
-    "Use MCP `save_memory_patch` or `aictx save --stdin` with a structured patch after meaningful work.",
+    "Agents are now instructed through `AGENTS.md` and `CLAUDE.md` to load and save Aictx memory.",
+    "Configure the `aictx-mcp` server in agent clients that support MCP so agents can use `load_memory` and `save_memory_patch`; agents can fall back to `aictx load` and `aictx save --stdin`.",
     "Review memory changes in `.aictx/`; in Git projects, use `aictx diff` before committing.",
-    "Optionally copy generated repo-provided agent guidance from integrations/ into your coding-agent setup."
+    "Optional bundled skills are available under `integrations/codex/` and `integrations/claude/`."
   ]
 }
 ```

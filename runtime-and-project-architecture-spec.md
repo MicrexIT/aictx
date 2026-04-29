@@ -194,7 +194,7 @@ Packaging rules:
 * `integrations/templates/agent-guidance.md` is the canonical source for agent guidance text.
 * `scripts/generate-agent-guidance.mjs` generates target-specific guidance files from the canonical template.
 * Generated guidance files must not be edited directly.
-* `integrations/codex/aictx/SKILL.md`, `integrations/claude/aictx.md`, and `integrations/generic/aictx-agent-instructions.md` are packaged as optional agent guidance.
+* `integrations/codex/aictx/SKILL.md`, `integrations/claude/aictx/SKILL.md`, `integrations/claude/aictx.md`, and `integrations/generic/aictx-agent-instructions.md` are packaged as optional agent guidance.
 * Specs may live at repo root during planning, but the implementation repo should place them under `docs/`.
 
 ## 4. Public Entry Points
@@ -860,6 +860,7 @@ Input:
 
 Outputs:
   integrations/codex/aictx/SKILL.md
+  integrations/claude/aictx/SKILL.md
   integrations/claude/aictx.md
   integrations/generic/aictx-agent-instructions.md
 ```
@@ -867,8 +868,8 @@ Outputs:
 Rules:
 
 * The template owns the shared guidance body.
-* The Codex output prepends Codex skill frontmatter.
-* Claude and generic outputs prepend only a generated-file notice unless a target-specific wrapper is needed.
+* The Codex and Claude skill outputs prepend shared `aictx-memory` skill frontmatter.
+* Claude markdown and generic outputs prepend only a generated-file notice unless a target-specific wrapper is needed.
 * Generated outputs must include a visible "do not edit directly" notice.
 * The script must be deterministic.
 * A unit test should fail if running the generator would change checked-in generated files.

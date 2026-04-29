@@ -46,6 +46,29 @@ pnpm exec aictx load "fix Stripe webhook retries"
 
 The examples below use `aictx` directly for readability.
 
+## Local Package Testing
+
+For a fast local confidence check before publishing or trying the package in
+another project, run:
+
+```bash
+pnpm test:local
+```
+
+This type-checks the source and runs the package smoke test. The smoke test
+builds the project, creates the same tarball `pnpm publish` would publish,
+installs that tarball into a clean temporary project, runs the installed
+`aictx` binary, and starts the installed `aictx-mcp` server through the MCP
+client.
+
+To run only the packed-artifact smoke test:
+
+```bash
+pnpm test:package
+```
+
+Use `pnpm test` when you need the full unit and integration suite.
+
 ## Mental Model
 
 `.aictx/` contains canonical memory and generated support files.
@@ -75,6 +98,11 @@ Initialize memory storage inside an existing project:
 ```bash
 aictx init
 ```
+
+By default, init also creates or updates marked Aictx sections in `AGENTS.md`
+and `CLAUDE.md` so coding agents are told to load memory before non-trivial
+work and save durable memory after meaningful work. Use
+`aictx init --no-agent-guidance` to skip those repo instruction files.
 
 Before a task, load relevant memory:
 
@@ -461,14 +489,22 @@ describe. Aictx never creates Git commits automatically.
 
 ## Agent Guidance
 
-Generated guidance files are available for agent setup:
+`aictx init` installs concise repo-level guidance in `AGENTS.md` and
+`CLAUDE.md` by default. Generated guidance files are also available for agent
+clients that support skills or copyable instruction files:
 
 * [Codex skill](integrations/codex/aictx/SKILL.md)
+* [Claude skill](integrations/claude/aictx/SKILL.md)
 * [Claude guidance](integrations/claude/aictx.md)
 * [Generic agent instructions](integrations/generic/aictx-agent-instructions.md)
 
 These files are generated from
 [integrations/templates/agent-guidance.md](integrations/templates/agent-guidance.md).
+
+Codex users can enable a skill folder with `skills.config[].path` in Codex
+configuration. Claude Code users can use a project skill under
+`.claude/skills/aictx-memory/SKILL.md`. Aictx does not install client-specific
+skills or edit user-global agent configuration by default.
 
 ## Development
 
@@ -500,3 +536,56 @@ pnpm dev -- load "document the restore flow"
 pnpm test
 pnpm typecheck
 ```
+
+## Use The Local Package In Another Repo
+
+Use the packed tarball when testing Aictx in another local project. This uses
+the same package artifact that would be published to npm.
+
+From this repo:
+
+```bash
+cd /path/to/aictx
+pnpm build
+mkdir -p /tmp/aictx-pack
+pnpm pack --pack-destination /tmp/aictx-pack
+```
+
+This creates a tarball such as:
+
+```bash
+/tmp/aictx-pack/aictx-0.1.0.tgz
+```
+
+Then install it in the other repo:
+
+```bash
+cd /path/to/other/repo
+pnpm add -D /tmp/aictx-pack/aictx-0.1.0.tgz
+pnpm exec aictx --version
+pnpm exec aictx init
+```
+
+With npm:
+
+```bash
+cd /path/to/other/repo
+npm install --save-dev /tmp/aictx-pack/aictx-0.1.0.tgz
+npx aictx --version
+```
+
+After rebuilding Aictx locally, reinstall the tarball in the consumer repo:
+
+```bash
+cd /Users/micrex/Dev/remics/projects/aictx
+pnpm build
+pnpm pack --pack-destination /tmp/aictx-pack
+
+cd /path/to/other/repo
+pnpm remove aictx
+pnpm add -D /tmp/aictx-pack/aictx-0.1.0.tgz
+```
+
+Prefer this over `pnpm link` or `npm link` for package validation, because the
+published binaries point at `dist/` and the tarball verifies the built files,
+schemas, docs, integrations, and `bin` entries exactly as a real install would.

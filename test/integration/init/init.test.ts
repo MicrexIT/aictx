@@ -48,6 +48,8 @@ describe("initProject", () => {
     expect(result.data.index_built).toBe(true);
     expect(result.data.files_created).toEqual(
       expect.arrayContaining([
+        "AGENTS.md",
+        "CLAUDE.md",
         ".aictx/config.json",
         ".aictx/events.jsonl",
         ".aictx/memory/project.md",
@@ -68,6 +70,35 @@ describe("initProject", () => {
       ".aictx/exports/"
     );
     await expect(readFile(join(repo, ".gitignore"), "utf8")).resolves.toContain(".aictx/.lock");
+    await expect(readFile(join(repo, "AGENTS.md"), "utf8")).resolves.toContain(
+      "After meaningful work, autonomously save durable project knowledge:"
+    );
+    await expect(readFile(join(repo, "CLAUDE.md"), "utf8")).resolves.toContain(
+      "save_memory_patch({ patch: { source, changes } })"
+    );
+    await expect(readFile(join(repo, "AGENTS.md"), "utf8")).resolves.not.toMatch(
+      /install .*skill/i
+    );
+    await expect(readFile(join(repo, "CLAUDE.md"), "utf8")).resolves.not.toMatch(
+      /install .*skill/i
+    );
+    expect(result.data.agent_guidance).toEqual({
+      enabled: true,
+      targets: [
+        {
+          path: "AGENTS.md",
+          status: "created"
+        },
+        {
+          path: "CLAUDE.md",
+          status: "created"
+        }
+      ],
+      optional_skills: [
+        "integrations/codex/aictx/SKILL.md",
+        "integrations/claude/aictx/SKILL.md"
+      ]
+    });
 
     const validation = await validateProject(repo);
     expect(validation).toEqual({
@@ -107,6 +138,7 @@ describe("initProject", () => {
     expect(result.data.next_steps.join("\n")).toContain("aictx load");
     expect(result.data.next_steps.join("\n")).toContain("save_memory_patch");
     expect(result.data.next_steps.join("\n")).toContain("aictx diff");
+    expect(result.data.next_steps.join("\n")).toContain("integrations/codex");
 
     const validation = await validateProject(projectRoot);
     expect(validation).toEqual({
@@ -153,6 +185,117 @@ describe("initProject", () => {
         ])
       );
     }
+  });
+
+  it("installs missing agent guidance when valid storage already exists", async () => {
+    const projectRoot = await createTempRoot("aictx-init-existing-guidance-");
+    const first = await initProject({
+      cwd: projectRoot,
+      clock: createFixedTestClock()
+    });
+
+    expect(first.ok).toBe(true);
+    await rm(join(projectRoot, "AGENTS.md"));
+    await rm(join(projectRoot, "CLAUDE.md"));
+
+    const second = await initProject({
+      cwd: projectRoot,
+      clock: createFixedTestClock()
+    });
+
+    expect(second.ok).toBe(true);
+    if (second.ok) {
+      expect(second.data.created).toBe(false);
+      expect(second.data.files_created).toEqual(["AGENTS.md", "CLAUDE.md"]);
+      expect(second.data.agent_guidance.targets).toEqual([
+        {
+          path: "AGENTS.md",
+          status: "created"
+        },
+        {
+          path: "CLAUDE.md",
+          status: "created"
+        }
+      ]);
+    }
+  });
+
+  it("appends or replaces marked agent guidance without duplicating blocks", async () => {
+    const projectRoot = await createTempRoot("aictx-init-guidance-update-");
+    await writeFile(join(projectRoot, "AGENTS.md"), "# Existing instructions\n");
+    await writeFile(
+      join(projectRoot, "CLAUDE.md"),
+      [
+        "# Claude instructions",
+        "",
+        "<!-- aictx-memory:start -->",
+        "old guidance",
+        "<!-- aictx-memory:end -->",
+        "",
+        "Keep this line."
+      ].join("\n")
+    );
+
+    const result = await initProject({
+      cwd: projectRoot,
+      clock: createFixedTestClock()
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+
+    expect(result.data.agent_guidance.targets).toEqual([
+      {
+        path: "AGENTS.md",
+        status: "updated"
+      },
+      {
+        path: "CLAUDE.md",
+        status: "updated"
+      }
+    ]);
+
+    const agents = await readFile(join(projectRoot, "AGENTS.md"), "utf8");
+    const claude = await readFile(join(projectRoot, "CLAUDE.md"), "utf8");
+
+    expect(agents).toContain("# Existing instructions");
+    expect(agents).toContain("<!-- aictx-memory:start -->");
+    expect(agents).toContain("autonomously save durable project knowledge");
+    expect(claude).not.toContain("old guidance");
+    expect(claude).toContain("Keep this line.");
+    expect(countOccurrences(claude, "<!-- aictx-memory:start -->")).toBe(1);
+  });
+
+  it("skips malformed marked agent guidance and reports a warning", async () => {
+    const projectRoot = await createTempRoot("aictx-init-guidance-malformed-");
+    await writeFile(join(projectRoot, "AGENTS.md"), "<!-- aictx-memory:start -->\n");
+
+    const result = await initProject({
+      cwd: projectRoot,
+      clock: createFixedTestClock()
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+
+    expect(result.data.agent_guidance.targets).toEqual([
+      {
+        path: "AGENTS.md",
+        status: "skipped"
+      },
+      {
+        path: "CLAUDE.md",
+        status: "created"
+      }
+    ]);
+    expect(result.warnings.join("\n")).toContain("AGENTS.md");
+    await expect(readFile(join(projectRoot, "AGENTS.md"), "utf8")).resolves.toBe(
+      "<!-- aictx-memory:start -->\n"
+    );
   });
 
   it("returns success when existing storage has branch-scoped memory for the current branch", async () => {
@@ -297,4 +440,8 @@ async function writeProjectFile(
 
 function stableJson(value: unknown): string {
   return `${JSON.stringify(value, null, 2)}\n`;
+}
+
+function countOccurrences(value: string, search: string): number {
+  return value.split(search).length - 1;
 }

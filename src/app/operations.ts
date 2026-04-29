@@ -1,4 +1,3 @@
-import DatabaseConstructor from "better-sqlite3";
 import { systemClock, type Clock } from "../core/clock.js";
 import { aictxError, type AictxError, type JsonValue } from "../core/errors.js";
 import { readUtf8FileInsideRoot } from "../core/fs.js";
@@ -53,6 +52,7 @@ import {
   type SearchMemoryData,
   type SearchMemoryInput
 } from "../index/search.js";
+import { openSqliteDatabase } from "../index/sqlite-driver.js";
 import { resolveIndexDatabasePath } from "../index/sqlite.js";
 import {
   initializeStorage,
@@ -86,6 +86,7 @@ const HISTORY_FIELD_SEPARATOR = "\u001f";
 export interface InitProjectOptions extends GitWrapperOptions {
   cwd: string;
   clock?: Clock;
+  agentGuidance?: boolean;
 }
 
 export interface RebuildIndexOptions extends GitWrapperOptions {
@@ -267,6 +268,7 @@ export async function initProject(
   const initialized = await initializeStorage({
     cwd: options.cwd,
     clock,
+    agentGuidance: options.agentGuidance ?? true,
     runner: options.runner
   });
 
@@ -1891,10 +1893,10 @@ async function generatedIndexWarnings(paths: ProjectPaths): Promise<ValidationIs
     return [generatedIndexWarning(databasePath.error.message)];
   }
 
-  let db: DatabaseConstructor.Database | null = null;
+  let db: Awaited<ReturnType<typeof openSqliteDatabase>> | null = null;
 
   try {
-    db = new DatabaseConstructor(databasePath.data, {
+    db = await openSqliteDatabase(databasePath.data, {
       readonly: true,
       fileMustExist: true
     });

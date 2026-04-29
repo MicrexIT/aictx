@@ -9,6 +9,7 @@ const guideTargets = [
   "docs/agent-integration.md",
   "integrations/templates/agent-guidance.md",
   "integrations/codex/aictx/SKILL.md",
+  "integrations/claude/aictx/SKILL.md",
   "integrations/claude/aictx.md",
   "integrations/generic/aictx-agent-instructions.md"
 ] as const;
@@ -16,6 +17,7 @@ const guideTargets = [
 const generatedGuidanceTargets = [
   "integrations/templates/agent-guidance.md",
   "integrations/codex/aictx/SKILL.md",
+  "integrations/claude/aictx/SKILL.md",
   "integrations/claude/aictx.md",
   "integrations/generic/aictx-agent-instructions.md"
 ] as const;
@@ -66,9 +68,9 @@ describe("agent guidance content", () => {
       );
       expect(content).toContain("load_memory({ task: \"<task summary>\" })");
       expect(content).toContain(
-        "After meaningful work, save a structured patch only for durable memory that future agents should know:"
+        "After meaningful work, autonomously save a structured patch only for durable memory that future agents should know:"
       );
-      expect(content).toContain("save_memory_patch({ source, changes })");
+      expect(content).toContain("save_memory_patch({ patch: { source, changes } })");
     }
   });
 

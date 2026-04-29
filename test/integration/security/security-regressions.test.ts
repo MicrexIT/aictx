@@ -238,7 +238,15 @@ describe("integration security regression guardrails", () => {
             name: toolName,
             arguments: {}
           })
-        ).rejects.toThrow(/not found/i);
+        ).resolves.toMatchObject({
+          isError: true,
+          content: expect.arrayContaining([
+            expect.objectContaining({
+              type: "text",
+              text: expect.stringMatching(/not found/i)
+            })
+          ])
+        });
       }
     } finally {
       await started.close();

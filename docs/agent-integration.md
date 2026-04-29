@@ -10,6 +10,8 @@ Aictx gives coding agents a local project-memory workflow:
 
 The normal agent loop should be one load call before work and one save call after meaningful work.
 
+`aictx init` installs concise repo-level guidance in `AGENTS.md` and `CLAUDE.md` by default, so agents that read those files are instructed to use this loop without the user steering every task. Use `aictx init --no-agent-guidance` when a project does not want those instruction files updated.
+
 ## Routine Workflow
 
 Use MCP first when the client has Aictx MCP configured:
@@ -103,13 +105,16 @@ Do not save secrets, tokens, credentials, private keys, sensitive logs, unverifi
 
 ## Generated Agent Guidance
 
-The files under `integrations/` are optional, copyable agent instructions generated from `integrations/templates/agent-guidance.md`.
+The files under `integrations/` are optional, copyable agent instructions and skills generated from `integrations/templates/agent-guidance.md`.
 
 Use whichever target fits the agent client:
 
 * `integrations/codex/aictx/SKILL.md`
+* `integrations/claude/aictx/SKILL.md`
 * `integrations/claude/aictx.md`
 * `integrations/generic/aictx-agent-instructions.md`
+
+Codex users can enable a skill folder through `skills.config[].path` in Codex configuration. Claude Code supports project skills under `.claude/skills/<skill-name>/SKILL.md`; for Aictx, use the shared skill name `aictx-memory`.
 
 Generated guidance is not canonical memory. It is a setup aid for instructing agents how to use Aictx in projects that have opted into it.
 

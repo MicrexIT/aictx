@@ -19,8 +19,9 @@ export function registerInitCommand(
   program
     .command("init")
     .description("Initialize Aictx memory storage in this project.")
-    .action(async (_commandOptions: unknown, command: Command) => {
-      const result = await initProject(initProjectOptions(options));
+    .option("--no-agent-guidance", "Skip AGENTS.md and CLAUDE.md setup.")
+    .action(async (commandOptions: InitCommandOptions, command: Command) => {
+      const result = await initProject(initProjectOptions(options, commandOptions));
       const rendered = renderAppResult(result, {
         json: isJsonMode(command),
         renderData: renderInitData
@@ -39,9 +40,17 @@ export function registerInitCommand(
     });
 }
 
-function initProjectOptions(options: RegisterInitCommandOptions): InitProjectOptions {
+interface InitCommandOptions {
+  agentGuidance?: boolean;
+}
+
+function initProjectOptions(
+  options: RegisterInitCommandOptions,
+  commandOptions: InitCommandOptions
+): InitProjectOptions {
   return {
-    cwd: options.cwd
+    cwd: options.cwd,
+    agentGuidance: commandOptions.agentGuidance !== false
   };
 }
 
@@ -55,6 +64,11 @@ function renderInitData(data: {
   files_created: string[];
   gitignore_updated: boolean;
   index_built: boolean;
+  agent_guidance: {
+    enabled: boolean;
+    targets: Array<{ path: string; status: string }>;
+    optional_skills: string[];
+  };
   next_steps: string[];
 }): string {
   const lines = [
@@ -62,6 +76,7 @@ function renderInitData(data: {
     ...renderCreatedFiles(data.files_created),
     `Gitignore ${data.gitignore_updated ? "updated" : "unchanged"}.`,
     `Index ${data.index_built ? "built" : "not built"}.`,
+    ...renderAgentGuidance(data.agent_guidance),
     ...renderNextSteps(data.next_steps)
   ];
 
@@ -74,6 +89,22 @@ function renderCreatedFiles(filesCreated: readonly string[]): string[] {
   }
 
   return ["Created files:", ...filesCreated.map((file) => `- ${file}`)];
+}
+
+function renderAgentGuidance(agentGuidance: {
+  enabled: boolean;
+  targets: Array<{ path: string; status: string }>;
+  optional_skills: string[];
+}): string[] {
+  if (!agentGuidance.enabled) {
+    return ["Agent guidance skipped."];
+  }
+
+  return [
+    "Agent guidance installed:",
+    ...agentGuidance.targets.map((target) => `- ${target.path}: ${target.status}`),
+    `Optional bundled skills: ${agentGuidance.optional_skills.join(", ")}`
+  ];
 }
 
 function renderNextSteps(nextSteps: readonly string[]): string[] {

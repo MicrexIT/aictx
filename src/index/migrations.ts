@@ -1,7 +1,6 @@
-import type DatabaseConstructor from "better-sqlite3";
-
 import { aictxError } from "../core/errors.js";
 import { err, ok, type Result } from "../core/result.js";
+import type { SqliteDatabase } from "./sqlite-driver.js";
 
 export const CURRENT_INDEX_SCHEMA_VERSION = 1;
 
@@ -15,8 +14,6 @@ export const REQUIRED_META_DEFAULTS = {
   relation_count: "0",
   event_count: "0"
 } as const;
-
-type SqliteDatabase = DatabaseConstructor.Database;
 
 interface MetaRow {
   value: string;

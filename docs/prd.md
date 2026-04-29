@@ -73,7 +73,7 @@ Required in v1:
 * Local generated SQLite index with FTS
 * CLI commands for init, load, save, diff, check, rebuild, history, restore, and rewind
 * MCP server with a small normalized tool set
-* Optional repo-provided agent guidance generated from one shared template
+* Default repo-level agent guidance plus optional generated skill artifacts from one shared template
 * Patch-first memory writes
 * Git-backed review, diff, history, and restore behavior when Git is available
 * Basic secret detection before saving memory
@@ -1731,35 +1731,32 @@ Global, workspace, and cross-project memory are deferred from v1. The storage mo
 
 Aictx should integrate with existing AI coding workflows rather than forcing a new workflow.
 
-V1 should not modify repo-level agent instruction files by default.
+V1 should install concise repo-level agent instruction files by default.
 
 Reasoning:
 
-* `aictx init` should be predictable and low-surprise.
-* Agent instruction files and skills are tool-specific and often user-owned.
-* The first-run path should stay focused on `.aictx/` plus `.gitignore` entries when Git is available.
+* The desired first-run experience is that agents can start using Aictx memory without the human reminding them to load or save context.
+* `AGENTS.md` and `CLAUDE.md` are transparent, reviewable repo files and can carry short cross-agent instructions without user-global configuration.
+* Tool-specific skills are still optional because installing them can require client-specific configuration or user-global state.
 
-V1 should ship optional, copyable agent guidance that users can adopt or edit.
+`aictx init` should create or update marked Aictx sections in `AGENTS.md` and `CLAUDE.md` by default. Users can opt out with `aictx init --no-agent-guidance`.
+
+V1 should also ship optional, copyable agent guidance and skill artifacts that users can adopt or edit.
 
 Required v1 guidance source and generated artifacts:
 
 * `docs/agent-integration.md`
 * `integrations/templates/agent-guidance.md`
 * `integrations/codex/aictx/SKILL.md`
+* `integrations/claude/aictx/SKILL.md`
 * `integrations/claude/aictx.md`
 * `integrations/generic/aictx-agent-instructions.md`
-
-V1 documentation may also provide copyable snippets for:
-
-* AGENTS.md
-* CLAUDE.md
-* .cursor/rules/aictx.mdc
 
 The template is the canonical guidance source. Agent-specific guidance files should be generated from the template during the npm build, so Codex, Claude, and generic instructions do not drift.
 
 Generated guidance is a guidance layer. It must not be treated as canonical memory, and Aictx must work without it.
 
-A future explicit helper command may create or update agent instruction files, but default init should not.
+Default init must not install user-global skills, edit `~/.codex`, edit `~/.claude`, or modify client-specific project config such as `.codex/config.toml` or `.claude/skills/`.
 
 21.2 Example agent instructions
 

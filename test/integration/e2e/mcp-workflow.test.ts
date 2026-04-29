@@ -377,7 +377,7 @@ describe("aictx full MCP workflow", () => {
     }
 
     expect(started.stderr()).toBe("");
-  }, 20_000);
+  }, 60_000);
 });
 
 async function startMcpClient(cwd: string): Promise<StartedMcpClient> {

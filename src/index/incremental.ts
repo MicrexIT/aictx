@@ -1,4 +1,3 @@
-import type DatabaseConstructor from "better-sqlite3";
 import { lstat } from "node:fs/promises";
 
 import type { Clock } from "../core/clock.js";
@@ -18,8 +17,7 @@ import {
   resolveIndexDatabasePath,
   type IndexDatabaseConnection
 } from "./sqlite.js";
-
-type SqliteDatabase = DatabaseConstructor.Database;
+import type { SqliteDatabase } from "./sqlite-driver.js";
 type MetaKey = keyof typeof REQUIRED_META_DEFAULTS;
 
 export interface IncrementalIndexTouchedChanges {

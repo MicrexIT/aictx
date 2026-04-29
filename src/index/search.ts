@@ -1,4 +1,3 @@
-import type DatabaseConstructor from "better-sqlite3";
 import { lstat } from "node:fs/promises";
 
 import { aictxError, type JsonValue } from "../core/errors.js";
@@ -18,8 +17,7 @@ import {
   resolveIndexDatabasePath,
   type IndexDatabaseConnection
 } from "./sqlite.js";
-
-type SqliteDatabase = DatabaseConstructor.Database;
+import type { SqliteDatabase } from "./sqlite-driver.js";
 
 const DEFAULT_LIMIT = 10;
 const MIN_LIMIT = 1;

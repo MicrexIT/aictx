@@ -1,4 +1,3 @@
-import DatabaseConstructor from "better-sqlite3";
 import { lstat, mkdir, realpath } from "node:fs/promises";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
 
@@ -6,14 +5,15 @@ import { aictxError } from "../core/errors.js";
 import { resolveInsideRoot } from "../core/fs.js";
 import { err, ok, type Result } from "../core/result.js";
 import { migrateIndexDatabase } from "./migrations.js";
+import { openSqliteDatabase, type SqliteDatabase } from "./sqlite-driver.js";
 
 export const INDEX_DATABASE_RELATIVE_PATH = "index/aictx.sqlite";
-
-type SqliteDatabase = DatabaseConstructor.Database;
 
 export interface OpenIndexDatabaseOptions {
   aictxRoot: string;
   migrate?: boolean;
+  readonly?: boolean;
+  fileMustExist?: boolean;
 }
 
 export interface IndexDatabaseConnection {
@@ -45,7 +45,10 @@ export async function openIndexDatabase(
   let db: SqliteDatabase;
 
   try {
-    db = new DatabaseConstructor(databasePath.data);
+    db = await openSqliteDatabase(databasePath.data, {
+      ...(options.readonly === undefined ? {} : { readonly: options.readonly }),
+      ...(options.fileMustExist === undefined ? {} : { fileMustExist: options.fileMustExist })
+    });
   } catch (error) {
     return err(
       aictxError("AICtxIndexUnavailable", "SQLite index database could not be opened.", {

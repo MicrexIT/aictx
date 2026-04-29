@@ -44,10 +44,10 @@ Use CLI fallback when MCP is unavailable:
 aictx load "<task summary>"
 ```
 
-After meaningful work, save a structured patch only for durable memory that future agents should know:
+After meaningful work, autonomously save a structured patch only for durable memory that future agents should know:
 
 ```text
-save_memory_patch({ source, changes })
+save_memory_patch({ patch: { source, changes } })
 ```
 
 Use CLI fallback only when MCP is unavailable:
@@ -58,7 +58,7 @@ aictx save --stdin
 
 For setup, maintenance, inspection, export, or recovery operations that are not exposed by MCP, use the `aictx` CLI instead of editing `.aictx/` files directly.
 
-Before finalizing, tell the user if memory changed and suggest reviewing `.aictx/` changes.
+Before finalizing, tell the user whether Aictx memory changed and suggest reviewing `.aictx/` changes.
 
 In Git projects, suggest:
 

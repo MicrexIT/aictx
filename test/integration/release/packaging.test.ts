@@ -124,6 +124,7 @@ const requiredPackedPaths = [
   "docs/agent-integration.md",
   "integrations/templates/agent-guidance.md",
   "integrations/codex/aictx/SKILL.md",
+  "integrations/claude/aictx/SKILL.md",
   "integrations/claude/aictx.md",
   "integrations/generic/aictx-agent-instructions.md"
 ];

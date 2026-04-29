@@ -14,6 +14,11 @@ interface InitSuccessEnvelope {
   data: {
     created: boolean;
     index_built: boolean;
+    agent_guidance: {
+      enabled: boolean;
+      targets: Array<{ path: string; status: string }>;
+      optional_skills: string[];
+    };
   };
   warnings: string[];
   meta: {
@@ -50,6 +55,17 @@ describe("aictx init CLI", () => {
     expect(envelope.ok).toBe(true);
     expect(envelope.data.created).toBe(true);
     expect(envelope.data.index_built).toBe(true);
+    expect(envelope.data.agent_guidance.enabled).toBe(true);
+    expect(envelope.data.agent_guidance.targets).toEqual([
+      {
+        path: "AGENTS.md",
+        status: "created"
+      },
+      {
+        path: "CLAUDE.md",
+        status: "created"
+      }
+    ]);
     expect(envelope.meta.project_root).toBe(repo);
     expect(envelope.meta.aictx_root).toBe(join(repo, ".aictx"));
     expect(envelope.meta.git.available).toBe(true);
@@ -98,8 +114,49 @@ describe("aictx init CLI", () => {
     expect(output.stdout()).toContain(".aictx/config.json");
     expect(output.stdout()).toContain(".aictx/events.jsonl");
     expect(output.stdout()).toContain("Index built.");
+    expect(output.stdout()).toContain("Agent guidance installed:");
+    expect(output.stdout()).toContain("AGENTS.md: created");
+    expect(output.stdout()).toContain("CLAUDE.md: created");
+    expect(output.stdout()).toContain("Optional bundled skills:");
     expect(output.stdout()).toContain("Next steps:");
     expect(output.stdout()).toContain("aictx load");
+  });
+
+  it("skips repo agent guidance when requested", async () => {
+    const projectRoot = await createTempRoot("aictx-cli-init-no-guidance-");
+    const output = createCapturedOutput();
+
+    const exitCode = await main(["node", "aictx", "init", "--no-agent-guidance", "--json"], {
+      ...output.writers,
+      cwd: projectRoot
+    });
+
+    expect(exitCode).toBe(0);
+    expect(output.stderr()).toBe("");
+    const envelope = parseInitSuccessEnvelope(output.stdout());
+    expect(envelope.data.agent_guidance).toEqual({
+      enabled: false,
+      targets: [
+        {
+          path: "AGENTS.md",
+          status: "skipped"
+        },
+        {
+          path: "CLAUDE.md",
+          status: "skipped"
+        }
+      ],
+      optional_skills: [
+        "integrations/codex/aictx/SKILL.md",
+        "integrations/claude/aictx/SKILL.md"
+      ]
+    });
+    await expect(access(join(projectRoot, "AGENTS.md"))).rejects.toMatchObject({
+      code: "ENOENT"
+    });
+    await expect(access(join(projectRoot, "CLAUDE.md"))).rejects.toMatchObject({
+      code: "ENOENT"
+    });
   });
 });
 
