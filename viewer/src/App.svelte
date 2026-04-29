@@ -86,9 +86,19 @@
     storage_warnings: string[];
   }
 
-  interface ViewerSuccessEnvelope {
+  interface ExportObsidianProjectionData {
+    format: "obsidian";
+    output_dir: string;
+    manifest_path: string;
+    objects_exported: number;
+    relations_linked: number;
+    files_written: string[];
+    files_removed: string[];
+  }
+
+  interface ViewerSuccessEnvelope<TData = ViewerBootstrapData> {
     ok: true;
-    data: ViewerBootstrapData;
+    data: TData;
     warnings: string[];
     meta: {
       project_root: string;
@@ -112,8 +122,10 @@
     warnings: string[];
   }
 
-  type ViewerEnvelope = ViewerSuccessEnvelope | ViewerErrorEnvelope;
+  type ViewerEnvelope = ViewerSuccessEnvelope<ViewerBootstrapData> | ViewerErrorEnvelope;
+  type ExportEnvelope = ViewerSuccessEnvelope<ExportObsidianProjectionData> | ViewerErrorEnvelope;
   type ViewerState = "loading" | "ready" | "error";
+  type ExportState = "idle" | "running" | "success" | "error";
   type DetailTab = "markdown" | "json";
 
   interface MarkdownBlock {
@@ -151,6 +163,12 @@
   let tagFilter = $state("all");
   let selectedObjectId = $state<string | null>(null);
   let activeTab = $state<DetailTab>("markdown");
+  let exportOutDir = $state("");
+  let exportState = $state<ExportState>("idle");
+  let exportMessage = $state("");
+  let exportErrorCode = $state("");
+  let exportFilesWritten = $state(0);
+  let exportManifestPath = $state("");
 
   const allOption = "all";
   const graphWidth = 640;
@@ -239,6 +257,56 @@
     } catch (error) {
       loadState = "error";
       errorMessage = error instanceof Error ? error.message : String(error);
+    }
+  }
+
+  async function exportObsidian(): Promise<void> {
+    if (token === "") {
+      exportState = "error";
+      exportErrorCode = "AICtxValidationFailed";
+      exportMessage = "Viewer API token is missing from the local URL.";
+      return;
+    }
+
+    exportState = "running";
+    exportMessage = "Exporting Obsidian projection.";
+    exportErrorCode = "";
+    exportFilesWritten = 0;
+    exportManifestPath = "";
+
+    const trimmedOutDir = exportOutDir.trim();
+    const requestBody = trimmedOutDir === "" ? {} : { outDir: trimmedOutDir };
+
+    try {
+      const response = await fetch(`/api/export/obsidian?token=${encodeURIComponent(token)}`, {
+        method: "POST",
+        headers: {
+          accept: "application/json",
+          "content-type": "application/json"
+        },
+        body: JSON.stringify(requestBody)
+      });
+      const envelope = (await response.json()) as ExportEnvelope;
+
+      warnings = uniqueSorted([...warnings, ...(envelope.warnings ?? [])]);
+
+      if (!response.ok || !envelope.ok) {
+        exportState = "error";
+        exportErrorCode = envelope.ok ? "" : envelope.error.code;
+        exportMessage = envelope.ok
+          ? `Viewer export request failed with HTTP ${response.status}.`
+          : `${envelope.error.code}: ${envelope.error.message}`;
+        return;
+      }
+
+      exportState = "success";
+      exportMessage = "Export complete.";
+      exportFilesWritten = envelope.data.files_written.length;
+      exportManifestPath = envelope.data.manifest_path;
+    } catch (error) {
+      exportState = "error";
+      exportErrorCode = "AICtxInternalError";
+      exportMessage = error instanceof Error ? error.message : String(error);
     }
   }
 
@@ -629,6 +697,64 @@
         <section class="project-panel" aria-label="Project metadata">
           <p class="project-name">{bootstrap.project.name}</p>
           <p class="project-id">{bootstrap.project.id}</p>
+
+          <form
+            class="export-panel"
+            aria-label="Obsidian export"
+            onsubmit={(event) => {
+              event.preventDefault();
+              void exportObsidian();
+            }}
+          >
+            <label class="field">
+              <span>Obsidian output</span>
+              <input
+                type="text"
+                bind:value={exportOutDir}
+                placeholder=".aictx/exports/obsidian"
+                autocomplete="off"
+                disabled={exportState === "running"}
+                data-testid="obsidian-export-out-dir"
+              />
+            </label>
+
+            <button
+              type="submit"
+              class="primary-action"
+              disabled={exportState === "running"}
+              data-testid="obsidian-export-submit"
+            >
+              {exportState === "running" ? "Exporting" : "Export"}
+            </button>
+
+            {#if exportState !== "idle"}
+              <section
+                class:export-status-error={exportState === "error"}
+                class:export-status-success={exportState === "success"}
+                class="export-status"
+                role={exportState === "error" ? "alert" : "status"}
+                aria-live="polite"
+                data-testid="obsidian-export-status"
+              >
+                <p>{exportMessage}</p>
+                {#if exportState === "error" && exportErrorCode !== ""}
+                  <p class="export-code">{exportErrorCode}</p>
+                {/if}
+                {#if exportState === "success"}
+                  <dl>
+                    <div>
+                      <dt>Files written</dt>
+                      <dd data-testid="obsidian-export-files-written">{exportFilesWritten}</dd>
+                    </div>
+                    <div>
+                      <dt>Manifest</dt>
+                      <dd data-testid="obsidian-export-manifest-path">{exportManifestPath}</dd>
+                    </div>
+                  </dl>
+                {/if}
+              </section>
+            {/if}
+          </form>
         </section>
 
         <section class="filters" aria-label="Search and filters">
@@ -1146,6 +1272,92 @@
     color: #60706b;
     font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
     font-size: 0.78rem;
+  }
+
+  .export-panel {
+    display: grid;
+    gap: 10px;
+    margin-top: 14px;
+    border-top: 1px solid #e1e4e2;
+    padding-top: 14px;
+  }
+
+  .primary-action {
+    width: 100%;
+    min-height: 38px;
+    border: 1px solid #0b5f59;
+    border-radius: 6px;
+    padding: 8px 10px;
+    color: #ffffff;
+    background: #0f766e;
+    font-weight: 800;
+  }
+
+  .primary-action:hover:not(:disabled) {
+    background: #0b5f59;
+  }
+
+  .primary-action:disabled {
+    border-color: #a7b6b2;
+    color: #52615d;
+    background: #eef2f1;
+  }
+
+  .export-status {
+    display: grid;
+    gap: 8px;
+    border: 1px solid #cfd4d3;
+    border-radius: 7px;
+    padding: 10px;
+    background: #f8fbfa;
+    color: #263141;
+  }
+
+  .export-status p {
+    margin: 0;
+    overflow-wrap: anywhere;
+    font-size: 0.84rem;
+    line-height: 1.4;
+  }
+
+  .export-status-success {
+    border-color: #85aaa4;
+    background: #eef7f4;
+  }
+
+  .export-status-error {
+    border-color: #dab0a3;
+    background: #fff4ef;
+  }
+
+  .export-code {
+    color: #8b2e19;
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+    font-weight: 800;
+  }
+
+  .export-status dl {
+    display: grid;
+    gap: 8px;
+    margin: 0;
+  }
+
+  .export-status div {
+    display: grid;
+    gap: 3px;
+  }
+
+  .export-status dt {
+    color: #52615d;
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+  }
+
+  .export-status dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+    font-size: 0.82rem;
   }
 
   .filters {
