@@ -18,9 +18,10 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "pnpm build:guidance && pnpm build:code && pnpm build:schemas",
+    "build": "pnpm build:guidance && pnpm build:code && pnpm build:schemas && pnpm build:viewer",
     "build:code": "tsup",
     "build:schemas": "node scripts/copy-schemas.mjs",
+    "build:viewer": "vite build --config viewer/vite.config.ts",
     "build:guidance": "node scripts/generate-agent-guidance.mjs",
     "dev": "tsx src/cli/main.ts",
     "dev:mcp": "tsx src/mcp/server.ts",
@@ -28,7 +29,7 @@
     "test:local": "pnpm typecheck && pnpm test:package",
     "test:package": "vitest run test/integration/release/packaging.test.ts",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit && svelte-check --tsconfig viewer/tsconfig.json"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
@@ -39,10 +40,14 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "^5.1.1",
     "@types/node": "^25.6.0",
+    "svelte": "^5.55.5",
+    "svelte-check": "^4.4.6",
     "tsup": "^8.5.1",
     "tsx": "^4.21.0",
     "typescript": "^6.0.3",
+    "vite": "^6.3.7",
     "vitest": "^4.1.5"
   }
 }
