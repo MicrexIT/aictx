@@ -18,6 +18,10 @@ import { registerSaveCommand } from "./commands/save.js";
 import { registerSearchCommand } from "./commands/search.js";
 import { registerStaleCommand } from "./commands/stale.js";
 import {
+  registerViewCommand,
+  type ViewerUrlOpener
+} from "./commands/view.js";
+import {
   CLI_EXIT_SUCCESS,
   CLI_EXIT_USAGE,
   type CliExitCode
@@ -30,6 +34,11 @@ export interface CliMainOptions {
   stderr?: CliOutputWriter;
   stdin?: Readable;
   cwd?: string;
+  viewer?: {
+    assetsDir?: string;
+    opener?: ViewerUrlOpener;
+    shutdownSignal?: AbortSignal;
+  };
 }
 
 export function createCliProgram(options: CliMainOptions = {}): Command {
@@ -97,6 +106,18 @@ export function createCliProgram(options: CliMainOptions = {}): Command {
     cwd: options.cwd ?? process.cwd(),
     stdout: writeOut,
     stderr: writeErr
+  });
+  registerViewCommand(program, {
+    cwd: options.cwd ?? process.cwd(),
+    stdout: writeOut,
+    stderr: writeErr,
+    ...(options.viewer?.assetsDir === undefined
+      ? {}
+      : { assetsDir: options.viewer.assetsDir }),
+    ...(options.viewer?.opener === undefined ? {} : { opener: options.viewer.opener }),
+    ...(options.viewer?.shutdownSignal === undefined
+      ? {}
+      : { shutdownSignal: options.viewer.shutdownSignal })
   });
   registerDiffCommand(program, {
     cwd: options.cwd ?? process.cwd(),

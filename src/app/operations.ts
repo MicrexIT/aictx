@@ -148,6 +148,10 @@ export interface ExportObsidianProjectionOptions extends GitWrapperOptions {
   clock?: Clock;
 }
 
+export interface GetViewerBootstrapOptions extends GitWrapperOptions {
+  cwd: string;
+}
+
 export interface SaveMemoryPatchOptions extends GitWrapperOptions {
   cwd: string;
   patch?: unknown;
@@ -243,6 +247,24 @@ export interface GraphMemoryData {
   root_id: ObjectId;
   objects: MemoryObjectSummary[];
   relations: MemoryRelationSummary[];
+}
+
+export interface ViewerBootstrapData {
+  project: {
+    id: string;
+    name: string;
+  };
+  objects: MemoryObjectSummary[];
+  relations: MemoryRelationSummary[];
+  counts: {
+    objects: number;
+    relations: number;
+    stale_objects: number;
+    superseded_objects: number;
+    rejected_objects: number;
+    active_relations: number;
+  };
+  storage_warnings: string[];
 }
 
 export type ExportObsidianProjectionData = ObsidianProjectionExportData;
@@ -757,6 +779,44 @@ export async function graphMemory(
   };
 }
 
+export async function getViewerBootstrap(
+  options: GetViewerBootstrapOptions
+): Promise<AppResult<ViewerBootstrapData>> {
+  const prepared = await readOnlyCanonicalStorage(options);
+
+  if (!prepared.ok) {
+    return prepared;
+  }
+
+  const objects = [...prepared.storage.objects].sort(compareStoredObjectsById);
+  const relations = [...prepared.storage.relations].sort(compareStoredRelationsById);
+
+  return {
+    ok: true,
+    data: {
+      project: {
+        id: prepared.storage.config.project.id,
+        name: prepared.storage.config.project.name
+      },
+      objects: objects.map(summarizeObject),
+      relations: summarizeRelations(relations),
+      counts: {
+        objects: objects.length,
+        relations: relations.length,
+        stale_objects: countObjectsByStatus(objects, "stale"),
+        superseded_objects: countObjectsByStatus(objects, "superseded"),
+        rejected_objects: countObjectsByStatus(objects, "rejected"),
+        active_relations: relations.filter(
+          (relation) => relation.relation.status === "active"
+        ).length
+      },
+      storage_warnings: prepared.storageWarnings
+    },
+    warnings: prepared.storageWarnings,
+    meta: prepared.meta
+  };
+}
+
 export async function exportObsidianProjection(
   options: ExportObsidianProjectionOptions
 ): Promise<AppResult<ExportObsidianProjectionData>> {
@@ -1166,6 +1226,7 @@ export const applicationOperations = {
   checkProject,
   diffMemory,
   exportObsidianProjection,
+  getViewerBootstrap,
   graphMemory,
   initProject,
   inspectMemory,
@@ -1468,6 +1529,13 @@ function summarizeRelations(
   relations: readonly StoredMemoryRelation[]
 ): MemoryRelationSummary[] {
   return relations.map(summarizeRelation);
+}
+
+function countObjectsByStatus(
+  objects: readonly StoredMemoryObject[],
+  status: ObjectStatus
+): number {
+  return objects.filter((object) => object.sidecar.status === status).length;
 }
 
 function summarizeRelation(relation: StoredMemoryRelation): MemoryRelationSummary {
