@@ -123,6 +123,24 @@
     items?: string[];
   }
 
+  type GraphNodeRole = "selected" | "incoming" | "outgoing" | "both";
+
+  interface GraphNode {
+    id: string;
+    title: string;
+    subtitle: string;
+    missing: boolean;
+    role: GraphNodeRole;
+    x: number;
+    y: number;
+  }
+
+  interface GraphEdge {
+    relation: MemoryRelationSummary;
+    fromId: string;
+    toId: string;
+  }
+
   let loadState = $state<ViewerState>("loading");
   let bootstrap = $state<ViewerBootstrapData | null>(null);
   let warnings = $state<string[]>([]);
@@ -135,6 +153,8 @@
   let activeTab = $state<DetailTab>("markdown");
 
   const allOption = "all";
+  const graphWidth = 640;
+  const graphHeight = 300;
   const token = new URLSearchParams(window.location.search).get("token") ?? "";
   const objects = $derived(bootstrap?.objects ?? []);
   const relations = $derived(bootstrap?.relations ?? []);
@@ -154,20 +174,34 @@
   const markdownBlocks = $derived(
     selectedObject === null ? [] : parseMarkdownBlocks(selectedObject.body)
   );
-  const incomingRelations = $derived.by(() =>
+  const directRelations = $derived.by(() =>
     selectedObject === null
       ? []
       : relations
-          .filter((relation) => relation.to === selectedObject.id)
+          .filter((relation) => relation.from === selectedObject.id || relation.to === selectedObject.id)
           .sort(compareRelations)
+  );
+  const incomingRelations = $derived.by(() =>
+    selectedObject === null
+      ? []
+      : directRelations.filter((relation) => relation.to === selectedObject.id)
   );
   const outgoingRelations = $derived.by(() =>
     selectedObject === null
       ? []
-      : relations
-          .filter((relation) => relation.from === selectedObject.id)
-          .sort(compareRelations)
+      : directRelations.filter((relation) => relation.from === selectedObject.id)
   );
+  const graphNodes = $derived.by(() =>
+    selectedObject === null ? [] : buildGraphNodes(selectedObject, directRelations, objectById)
+  );
+  const graphEdges = $derived.by(() =>
+    directRelations.map((relation) => ({
+      relation,
+      fromId: relation.from,
+      toId: relation.to
+    }))
+  );
+  const graphNodeById = $derived(new Map(graphNodes.map((node) => [node.id, node])));
   const visibleWarnings = $derived(uniqueSorted([...(bootstrap?.storage_warnings ?? []), ...warnings]));
 
   onMount(() => {
@@ -264,6 +298,154 @@
     return counterpart === undefined
       ? relationCounterpart(relation, objectId)
       : `${counterpart.title} (${counterpart.id})`;
+  }
+
+  function buildGraphNodes(
+    selected: MemoryObjectSummary,
+    relationList: MemoryRelationSummary[],
+    objectLookup: Map<string, MemoryObjectSummary>
+  ): GraphNode[] {
+    const incomingIds: string[] = [];
+    const outgoingIds: string[] = [];
+
+    for (const relation of relationList) {
+      if (
+        relation.to === selected.id &&
+        relation.from !== selected.id &&
+        !incomingIds.includes(relation.from)
+      ) {
+        incomingIds.push(relation.from);
+      }
+
+      if (
+        relation.from === selected.id &&
+        relation.to !== selected.id &&
+        !outgoingIds.includes(relation.to)
+      ) {
+        outgoingIds.push(relation.to);
+      }
+    }
+
+    const bothIds = incomingIds
+      .filter((id) => outgoingIds.includes(id))
+      .sort((left, right) => left.localeCompare(right));
+    const incomingOnlyIds = incomingIds
+      .filter((id) => !outgoingIds.includes(id))
+      .sort((left, right) => left.localeCompare(right));
+    const outgoingOnlyIds = outgoingIds
+      .filter((id) => !incomingIds.includes(id))
+      .sort((left, right) => left.localeCompare(right));
+    const nodes: GraphNode[] = [
+      graphNodeForObject(selected, "selected", graphWidth / 2, graphHeight / 2)
+    ];
+
+    nodes.push(
+      ...graphNeighborNodes(incomingOnlyIds, "incoming", 132, objectLookup),
+      ...graphNeighborNodes(outgoingOnlyIds, "outgoing", 508, objectLookup),
+      ...graphNeighborNodes(bothIds, "both", graphWidth / 2, objectLookup)
+    );
+
+    return nodes;
+  }
+
+  function graphNeighborNodes(
+    ids: string[],
+    role: Exclude<GraphNodeRole, "selected">,
+    x: number,
+    objectLookup: Map<string, MemoryObjectSummary>
+  ): GraphNode[] {
+    return graphYPositions(ids.length, role).map((y, index) =>
+      graphNodeForId(ids[index], role, x, y, objectLookup)
+    );
+  }
+
+  function graphYPositions(count: number, role: Exclude<GraphNodeRole, "selected">): number[] {
+    if (count <= 0) {
+      return [];
+    }
+
+    if (role === "both") {
+      return count === 1
+        ? [64]
+        : Array.from({ length: count }, (_, index) => 54 + (192 / (count - 1)) * index);
+    }
+
+    if (count === 1) {
+      return [graphHeight / 2];
+    }
+
+    return Array.from({ length: count }, (_, index) => 58 + (184 / (count - 1)) * index);
+  }
+
+  function graphNodeForId(
+    id: string,
+    role: GraphNodeRole,
+    x: number,
+    y: number,
+    objectLookup: Map<string, MemoryObjectSummary>
+  ): GraphNode {
+    const object = objectLookup.get(id);
+
+    if (object === undefined) {
+      return {
+        id,
+        title: id,
+        subtitle: "Missing endpoint",
+        missing: true,
+        role,
+        x,
+        y
+      };
+    }
+
+    return graphNodeForObject(object, role, x, y);
+  }
+
+  function graphNodeForObject(
+    object: MemoryObjectSummary,
+    role: GraphNodeRole,
+    x: number,
+    y: number
+  ): GraphNode {
+    return {
+      id: object.id,
+      title: object.title,
+      subtitle: `${object.type} / ${object.status}`,
+      missing: false,
+      role,
+      x,
+      y
+    };
+  }
+
+  function graphNodeRadius(node: GraphNode): number {
+    return node.role === "selected" ? 42 : 34;
+  }
+
+  function graphConnectionPoint(node: GraphNode, toward: GraphNode, offset: number): { x: number; y: number } {
+    const deltaX = toward.x - node.x;
+    const deltaY = toward.y - node.y;
+    const length = Math.hypot(deltaX, deltaY);
+
+    if (length === 0) {
+      return {
+        x: node.x,
+        y: node.y - offset
+      };
+    }
+
+    return {
+      x: node.x + (deltaX / length) * offset,
+      y: node.y + (deltaY / length) * offset
+    };
+  }
+
+  function graphText(value: string, maxLength: number): string {
+    return value.length > maxLength ? `${value.slice(0, maxLength - 1)}...` : value;
+  }
+
+  function graphMidpoint(start: number, end: number): number {
+    return start + (end - start) / 2;
   }
 
   function sidecarJsonForObject(object: MemoryObjectSummary): Record<string, unknown> {
@@ -640,6 +822,88 @@
             </dl>
           </section>
 
+          <section class="graph-panel" aria-label="Selected-node relation graph" data-testid="relation-graph">
+            <h2>Graph</h2>
+            <div class="graph-surface">
+              <svg
+                class="relation-graph-svg"
+                viewBox={`0 0 ${graphWidth} ${graphHeight}`}
+                role="img"
+                aria-labelledby="relation-graph-title"
+                data-testid="relation-graph-svg"
+              >
+                <title id="relation-graph-title">
+                  Direct relation graph for {selectedObject.title}
+                </title>
+                <defs>
+                  <marker
+                    id="graph-arrow"
+                    markerWidth="8"
+                    markerHeight="8"
+                    refX="7"
+                    refY="4"
+                    orient="auto"
+                    markerUnits="strokeWidth"
+                  >
+                    <path d="M0,0 L8,4 L0,8 Z" fill="#7d9994" />
+                  </marker>
+                </defs>
+
+                {#each graphEdges as edge (edge.relation.id)}
+                  {@const fromNode = graphNodeById.get(edge.fromId)}
+                  {@const toNode = graphNodeById.get(edge.toId)}
+                  {#if fromNode !== undefined && toNode !== undefined}
+                    {@const startPoint = graphConnectionPoint(fromNode, toNode, graphNodeRadius(fromNode) + 4)}
+                    {@const endPoint = graphConnectionPoint(toNode, fromNode, graphNodeRadius(toNode) + 9)}
+                    <g class="graph-edge" data-testid={`relation-graph-edge-${edge.relation.id}`}>
+                      <line
+                        x1={startPoint.x}
+                        y1={startPoint.y}
+                        x2={endPoint.x}
+                        y2={endPoint.y}
+                        marker-end="url(#graph-arrow)"
+                      />
+                      <text
+                        x={graphMidpoint(fromNode.x, toNode.x)}
+                        y={graphMidpoint(fromNode.y, toNode.y) - 8}
+                      >
+                        {edge.relation.predicate}
+                      </text>
+                    </g>
+                  {/if}
+                {/each}
+
+                {#each graphNodes as node (node.id)}
+                  <g
+                    class:selected-node={node.role === "selected"}
+                    class:missing-node={node.missing}
+                    class="graph-node"
+                    data-testid={`relation-graph-node-${node.id}`}
+                  >
+                    <title>{node.title} ({node.id})</title>
+                    <circle cx={node.x} cy={node.y} r={graphNodeRadius(node)} />
+                    <text class="graph-node-title" x={node.x} y={node.y - 3}>
+                      {graphText(node.title, node.role === "selected" ? 22 : 18)}
+                    </text>
+                    <text class="graph-node-subtitle" x={node.x} y={node.y + 16}>
+                      {graphText(node.subtitle, node.role === "selected" ? 24 : 18)}
+                    </text>
+                  </g>
+                {/each}
+              </svg>
+            </div>
+
+            {#if directRelations.length === 0}
+              <p class="empty-copy" data-testid="relation-graph-empty">
+                No direct relations for this object.
+              </p>
+            {:else}
+              <p class="graph-count">
+                {graphNodes.length} nodes / {graphEdges.length} relations
+              </p>
+            {/if}
+          </section>
+
           <section class="relations-panel" aria-label="Outgoing relations">
             <h2>Outgoing</h2>
             {#if outgoingRelations.length === 0}
@@ -861,6 +1125,7 @@
   .project-panel,
   .filters,
   .metadata-panel,
+  .graph-panel,
   .relations-panel,
   .warnings,
   .list-header {
@@ -1126,6 +1391,99 @@
     font-size: 0.86rem;
   }
 
+  .graph-panel {
+    display: grid;
+    gap: 10px;
+    overflow: hidden;
+  }
+
+  .graph-panel h2 {
+    margin-bottom: 2px;
+    font-size: 1rem;
+  }
+
+  .graph-surface {
+    min-height: 150px;
+    border: 1px solid #d4d9d5;
+    border-radius: 7px;
+    background:
+      linear-gradient(90deg, rgb(15 118 110 / 6%) 1px, transparent 1px),
+      linear-gradient(rgb(15 118 110 / 6%) 1px, transparent 1px),
+      #f8fbfa;
+    background-size: 20px 20px;
+  }
+
+  .relation-graph-svg {
+    display: block;
+    width: 100%;
+    min-height: 150px;
+  }
+
+  .graph-edge line {
+    stroke: #7d9994;
+    stroke-width: 3;
+    vector-effect: non-scaling-stroke;
+  }
+
+  .graph-edge text {
+    fill: #28514b;
+    font-size: 17px;
+    font-weight: 800;
+    paint-order: stroke;
+    pointer-events: none;
+    stroke: #f8fbfa;
+    stroke-linejoin: round;
+    stroke-width: 5px;
+    text-anchor: middle;
+  }
+
+  .graph-node circle {
+    fill: #ffffff;
+    stroke: #9fb6b1;
+    stroke-width: 3;
+    vector-effect: non-scaling-stroke;
+  }
+
+  .graph-node.selected-node circle {
+    fill: #0f766e;
+    stroke: #0b5f59;
+  }
+
+  .graph-node.missing-node circle {
+    fill: #fff7df;
+    stroke: #c9a84d;
+    stroke-dasharray: 6 5;
+  }
+
+  .graph-node text {
+    pointer-events: none;
+    text-anchor: middle;
+  }
+
+  .graph-node-title {
+    fill: #121826;
+    font-size: 18px;
+    font-weight: 800;
+  }
+
+  .graph-node-subtitle {
+    fill: #52615d;
+    font-size: 12px;
+    font-weight: 800;
+  }
+
+  .graph-node.selected-node .graph-node-title,
+  .graph-node.selected-node .graph-node-subtitle {
+    fill: #ffffff;
+  }
+
+  .graph-count {
+    margin: 0;
+    color: #60706b;
+    font-size: 0.82rem;
+    font-weight: 800;
+  }
+
   .relations-panel {
     overflow: auto;
   }
@@ -1209,10 +1567,11 @@
     .inspector {
       grid-column: 1 / -1;
       display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-columns: minmax(260px, 1.15fr) repeat(3, minmax(0, 1fr));
     }
 
     .metadata-panel,
+    .graph-panel,
     .relations-panel {
       border-bottom: 0;
       border-right: 1px solid #e1e4e2;
@@ -1244,6 +1603,7 @@
     }
 
     .metadata-panel,
+    .graph-panel,
     .relations-panel {
       border-right: 0;
       border-bottom: 1px solid #e1e4e2;

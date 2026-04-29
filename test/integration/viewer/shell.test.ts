@@ -94,14 +94,35 @@ describe("read-only viewer shell", () => {
       await assertSelectedObject(page, "Viewer Shell Layout", "decision.viewer-shell");
       await expectText(page, '[data-testid="outgoing-relations"]', "requires");
       await expectText(page, '[data-testid="outgoing-relations"]', "Viewer Markdown Safety");
+      await assertGraphSurfaceNonblank(page);
+      await assertSelectedGraphNode(page, "decision.viewer-shell");
+      await expectText(page, '[data-testid="relation-graph"]', "Viewer Shell Layout");
+      await expectText(page, '[data-testid="relation-graph"]', "Viewer Markdown Safety");
+      await expectText(page, '[data-testid="relation-graph"]', "requires");
+      await expectNoText(page, '[data-testid="relation-graph"]', "Unrelated Source");
+      await expectNoText(page, '[data-testid="relation-graph"]', "Unrelated Target");
+      await expectCount(page, '[data-testid="relation-graph-svg"] [data-testid^="relation-graph-edge-"]', 1);
 
       await page.getByRole("button", { name: /to Viewer Markdown Safety/ }).click();
       await assertSelectedObject(page, "Viewer Markdown Safety", "constraint.viewer-markdown");
+      await assertGraphSurfaceNonblank(page);
+      await assertSelectedGraphNode(page, "constraint.viewer-markdown");
+      await expectText(page, '[data-testid="relation-graph"]', "Viewer Shell Layout");
+      await expectText(page, '[data-testid="relation-graph"]', "requires");
+      await expectNoText(page, '[data-testid="relation-graph"]', "Unrelated Source");
 
       await page.locator('[data-testid="json-tab"]').click();
       await expectText(page, '[data-testid="json-view"]', '"id": "constraint.viewer-markdown"');
       await expectText(page, '[data-testid="json-view"]', '"body_path": ".aictx/memory/constraints/viewer-markdown.md"');
       await expectText(page, '[data-testid="incoming-relations"]', "Viewer Shell Layout");
+
+      await page.fill('[data-testid="viewer-search"]', "empty neighborhood");
+      await page.locator('[data-testid="object-row-note.viewer-empty"]').click();
+      await assertSelectedObject(page, "Viewer Empty Neighborhood", "note.viewer-empty");
+      await assertSelectedGraphNode(page, "note.viewer-empty");
+      await expectText(page, '[data-testid="relation-graph"]', "Viewer Empty Neighborhood");
+      await expectText(page, '[data-testid="relation-graph-empty"]', "No direct relations for this object.");
+      await expectCount(page, '[data-testid="relation-graph-svg"] [data-testid^="relation-graph-edge-"]', 0);
 
       expect(await page.evaluate("window.__AICTX_HTML_EXECUTED")).toBeUndefined();
       expect(consoleErrors()).toEqual([]);
@@ -127,9 +148,33 @@ async function assertMarkdownIsSafe(page: Page): Promise<void> {
   await expect(markdown.textContent()).resolves.toContain("Verify search works");
 }
 
+async function assertGraphSurfaceNonblank(page: Page): Promise<void> {
+  const graph = page.locator('[data-testid="relation-graph-svg"]');
+
+  await graph.waitFor();
+  const box = await graph.boundingBox();
+
+  expect(box).not.toBeNull();
+  expect(box?.width ?? 0).toBeGreaterThan(100);
+  expect(box?.height ?? 0).toBeGreaterThan(100);
+  await expectCount(page, '[data-testid="relation-graph-svg"] [data-testid^="relation-graph-edge-"]', 1);
+}
+
+async function assertSelectedGraphNode(page: Page, id: string): Promise<void> {
+  const node = page.locator(`[data-testid="relation-graph-node-${id}"]`);
+
+  await node.waitFor();
+  await expect(node.getAttribute("class")).resolves.toContain("selected-node");
+}
+
 async function expectText(page: Page, selector: string, expected: string): Promise<void> {
   await page.locator(selector).waitFor();
   await expect(page.locator(selector).textContent()).resolves.toContain(expected);
+}
+
+async function expectNoText(page: Page, selector: string, expected: string): Promise<void> {
+  await page.locator(selector).waitFor();
+  await expect(page.locator(selector).textContent()).resolves.not.toContain(expected);
 }
 
 async function expectCount(page: Page, selector: string, expected: number): Promise<void> {
@@ -190,11 +235,48 @@ async function writeViewerFixtures(projectRoot: string): Promise<void> {
     tags: ["billing"],
     updatedAt: FIXED_TIMESTAMP
   });
+  await writeMemoryObject(projectRoot, {
+    id: "note.viewer-empty",
+    type: "note",
+    status: "active",
+    title: "Viewer Empty Neighborhood",
+    bodyPath: "memory/notes/viewer-empty.md",
+    body: "# Viewer Empty Neighborhood\n\nThis fixture has no direct relation neighborhood.\n",
+    tags: ["viewer", "empty"],
+    updatedAt: FIXED_TIMESTAMP
+  });
+  await writeMemoryObject(projectRoot, {
+    id: "fact.viewer-unrelated-source",
+    type: "fact",
+    status: "active",
+    title: "Unrelated Source",
+    bodyPath: "memory/facts/viewer-unrelated-source.md",
+    body: "# Unrelated Source\n\nThis fixture must not appear in another object's selected graph.\n",
+    tags: ["viewer", "unrelated"],
+    updatedAt: FIXED_TIMESTAMP
+  });
+  await writeMemoryObject(projectRoot, {
+    id: "fact.viewer-unrelated-target",
+    type: "fact",
+    status: "active",
+    title: "Unrelated Target",
+    bodyPath: "memory/facts/viewer-unrelated-target.md",
+    body: "# Unrelated Target\n\nThis fixture is linked only to the unrelated source.\n",
+    tags: ["viewer", "unrelated"],
+    updatedAt: FIXED_TIMESTAMP
+  });
   await writeRelation(projectRoot, {
     id: "rel.viewer-shell-requires-markdown",
     from: "decision.viewer-shell",
     predicate: "requires",
     to: "constraint.viewer-markdown",
+    status: "active"
+  });
+  await writeRelation(projectRoot, {
+    id: "rel.viewer-unrelated-affects-target",
+    from: "fact.viewer-unrelated-source",
+    predicate: "affects",
+    to: "fact.viewer-unrelated-target",
     status: "active"
   });
 }
