@@ -559,7 +559,7 @@ aictx export obsidian [--out <dir>]
 
 Generate a disposable Obsidian-compatible Markdown projection from canonical Aictx memory. Aictx remains the source of truth; exported files are generated and may be deleted and rebuilt.
 
-aictx view [--port <number>] [--open]
+aictx view [--port <number>] [--open] [--json]
 
 Start a local loopback-only read-only web viewer for browsing canonical Aictx memory, searching objects, inspecting Markdown/JSON, seeing direct relation neighborhoods, and triggering the generated Obsidian projection export.
 
@@ -578,8 +578,8 @@ Design principle:
 * All memory writes should go through structured patch submission.
 * MCP should make Aictx easy to insert into existing coding-agent flows without becoming a spaghetti API.
 * MCP exposes load, search, save, and diff; the CLI also exposes those routine capabilities.
-* Setup, maintenance, recovery, export, and inspection capabilities remain CLI-only in v1: init, check, rebuild, history, restore, rewind, inspect, stale, graph, and export obsidian.
-* MCP-first must not mean MCP-only: AI agents may use the CLI for supported setup, maintenance, recovery, export, and inspection operations that are intentionally outside the MCP contract.
+* Setup, maintenance, recovery, export, inspection, and local viewing capabilities remain CLI-only in v1: init, check, rebuild, history, restore, rewind, inspect, stale, graph, export obsidian, and view.
+* MCP-first must not mean MCP-only: AI agents may use the CLI for supported setup, maintenance, recovery, export, inspection, and local viewing operations that are intentionally outside the MCP contract.
 * Every supported Aictx capability should remain reachable to an AI agent through MCP or CLI without requiring direct `.aictx/` file edits.
 * CLI-only capabilities should not be added to MCP just to create command-list parity.
 

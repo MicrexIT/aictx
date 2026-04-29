@@ -271,4 +271,20 @@ describe("agent capability map guardrail", () => {
       expect(content).toMatch(/editing `\.aictx\/` files directly/);
     }
   });
+
+  it("documents local viewing as CLI-only with JSON startup output", async () => {
+    const localViewerSpec = await readProjectFile("local-viewer-spec.md");
+    const prd = await readProjectFile("prd.md");
+    const apiSpec = await readProjectFile("mcp-and-cli-api-spec.md");
+
+    for (const content of [localViewerSpec, prd, apiSpec]) {
+      expect(content).toContain("aictx view [--port <number>] [--open] [--json]");
+    }
+
+    expect(prd).toContain(
+      "Setup, maintenance, recovery, export, inspection, and local viewing capabilities remain CLI-only in v1"
+    );
+    expect(apiSpec).toContain("Do not expose an MCP tool for local viewing.");
+    expect(localViewerSpec).toContain("Do not add `aictx view` to MCP.");
+  });
 });

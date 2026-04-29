@@ -49,7 +49,7 @@ Rules:
 Syntax:
 
 ```bash
-aictx view [--port <number>] [--open]
+aictx view [--port <number>] [--open] [--json]
 ```
 
 Behavior:
