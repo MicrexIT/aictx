@@ -56,10 +56,11 @@ pnpm test:local
 ```
 
 This type-checks the source and runs the package smoke test. The smoke test
-builds the project, creates the same tarball `pnpm publish` would publish,
-installs that tarball into a clean temporary project, runs the installed
-`aictx` binary, and starts the installed `aictx-mcp` server through the MCP
-client.
+uses the current build output, building it first if the required artifacts are
+missing, creates the same tarball `pnpm publish` would publish, installs that
+tarball into a clean temporary project, runs the installed `aictx` binary,
+serves the installed viewer assets, and starts the installed `aictx-mcp` server
+through the MCP client.
 
 To run only the packed-artifact smoke test:
 
@@ -371,6 +372,39 @@ By default, the projection is written under `.aictx/exports/obsidian/`. Use
 `--out <dir>` to choose another output directory inside the project root. This
 does not mutate canonical memory.
 
+### Local Viewer
+
+#### `aictx view`
+
+Starts the local read-only memory viewer.
+
+```bash
+aictx view
+aictx view --open
+aictx view --port 4888
+aictx view --json
+```
+
+The command requires an initialized `.aictx/` directory, binds only to
+`127.0.0.1`, chooses an available random port by default, and prints a local URL
+that includes a per-run API token. Open that URL in a browser to inspect memory.
+Use `--port <number>` when you need a fixed loopback port, and `--open` when you
+want Aictx to try launching the default browser after the server starts.
+
+Inside the viewer, use the search box and type, status, and tag filters to find
+memory objects. Selecting an object shows its canonical Markdown body, sidecar
+JSON, metadata, incoming and outgoing relations, and a selected-node graph with
+only direct neighbors.
+
+The viewer does not edit canonical memory. The only write action in the viewer
+is the explicit Obsidian export button, which calls the same generated
+projection service as `aictx export obsidian` and writes generated projection
+files only.
+
+`aictx view --json` prints the shared startup envelope after the server is
+listening. The command remains a long-running local server process until it is
+interrupted.
+
 ## MCP Setup
 
 Configure your MCP client to start `aictx-mcp` from the project root. The MCP
@@ -464,10 +498,12 @@ MCP or CLI. It does not mean MCP and CLI expose identical command lists.
 | List stale memory | none | `aictx stale` | Debug inspection remains CLI-only in v1. |
 | Show graph neighborhood | none | `aictx graph` | Debug inspection remains CLI-only in v1. |
 | Export Obsidian projection | none | `aictx export obsidian` | Generated projection remains CLI-only in v1. |
+| View local memory | none | `aictx view` | Local read-only viewer remains CLI-only in v1. |
 
-CLI-only capabilities should not be added to MCP solely to mirror CLI commands.
-Agents should use supported MCP tools or CLI commands instead of editing
-`.aictx/` files directly unless the user explicitly asks for a direct file edit.
+CLI-only capabilities are not MCP parity gaps and should not be added to MCP
+solely to mirror CLI commands. Agents should use supported MCP tools or CLI
+commands instead of editing `.aictx/` files directly unless the user explicitly
+asks for a direct file edit.
 
 ## Files And Review
 
@@ -518,13 +554,15 @@ Repository commands:
 
 | Command | What it does |
 | --- | --- |
-| `pnpm build` | Runs the full package build: generated agent guidance, TypeScript bundling, and schema copying. |
+| `pnpm build` | Runs the full package build: generated agent guidance, TypeScript bundling, schema copying, and viewer asset build. |
 | `pnpm build:code` | Bundles the CLI and MCP server with `tsup`. |
 | `pnpm build:schemas` | Copies JSON schema files into the build output. |
 | `pnpm build:guidance` | Regenerates agent guidance files under `integrations/`. |
+| `pnpm build:viewer` | Builds the bundled local viewer assets into `dist/viewer/`. |
 | `pnpm dev` | Runs the CLI from TypeScript sources with `tsx`. Pass CLI arguments after `--`, for example `pnpm dev -- load "task"`. |
 | `pnpm dev:mcp` | Runs the MCP stdio server from TypeScript sources with `tsx`. |
 | `pnpm test` | Runs the Vitest test suite once. |
+| `pnpm test:package` | Builds and verifies the packed package, including installed CLI, MCP, and viewer assets. |
 | `pnpm test:watch` | Runs Vitest in watch mode for local development. |
 | `pnpm typecheck` | Runs TypeScript type checking without emitting files. |
 

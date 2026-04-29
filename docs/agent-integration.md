@@ -67,6 +67,20 @@ CLI-only capabilities are not MCP parity gaps. Do not expose setup, maintenance,
 
 Agents may use the CLI for supported setup, maintenance, recovery, export, inspection, and local viewing operations. They should use supported MCP or CLI entrypoints instead of editing `.aictx/` files directly when a supported command exists.
 
+## Local Viewer
+
+`aictx view` starts a local, read-only browser viewer for human inspection. It is
+CLI-only in v1 and should not be added to MCP just to mirror the CLI command
+list. Local viewing is not a routine MCP memory operation; use the viewer when a
+user or agent needs to inspect memory objects, sidecar JSON, direct relations,
+the selected-node graph, or the generated Obsidian export action in a browser.
+
+The viewer binds to loopback and prints a tokenized local URL. It must not be
+used as a shortcut for editing `.aictx/` files directly. The only write action
+available through the viewer is the explicit Obsidian projection export, which
+writes generated projection files through the same service as
+`aictx export obsidian`.
+
 ## Structured Patches
 
 The agent creates the structured patch. Aictx validates it, writes canonical Markdown and JSON files, appends events, updates generated local indexes, and leaves the result reviewable.

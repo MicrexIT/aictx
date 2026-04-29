@@ -1,3 +1,4 @@
+import { spawn, type ChildProcessByStdio } from "node:child_process";
 import { mkdtemp, readFile, realpath, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -39,6 +40,26 @@ interface StartedMcpClient {
   stderr: () => string;
 }
 
+interface StartedViewerProcess {
+  url: string;
+  close: () => Promise<void>;
+  stderr: () => string;
+  stdout: () => string;
+}
+
+interface ViewerStartupEnvelope {
+  ok: true;
+  data: {
+    url: string;
+    host: "127.0.0.1";
+    port: number;
+    token_required: true;
+    open_attempted: boolean;
+  };
+}
+
+type ViewerChildProcess = ChildProcessByStdio<null, Readable, Readable>;
+
 afterEach(async () => {
   await Promise.all(
     tempRoots.splice(0).map((path) => rm(path, { recursive: true, force: true }))
@@ -50,7 +71,7 @@ describe("release package", () => {
     const packDestination = await createTempRoot("aictx-release-pack-");
     const installRoot = await createTempRoot("aictx-release-install-");
 
-    await expectSuccessfulCommand("pnpm", ["build"], repoRoot);
+    await ensureBuiltPackageOutput();
     await expect(readFile(join(repoRoot, "dist", "viewer", "index.html"), "utf8")).resolves.toContain(
       '<script type="module"'
     );
@@ -120,6 +141,15 @@ describe("release package", () => {
 
     await expectSuccessfulCommand("pnpm", ["add", "--offline", pack.filename], installRoot);
 
+    const viewerProjectRoot = await createTempRoot("aictx-release-viewer-project-");
+    const init = await expectSuccessfulCommand(
+      installedBin("aictx", installRoot),
+      ["init", "--json"],
+      viewerProjectRoot
+    );
+
+    expect(init.stderr).toBe("");
+
     const aictxHelp = await expectSuccessfulCommand(
       installedBin("aictx", installRoot),
       ["--help"],
@@ -129,6 +159,16 @@ describe("release package", () => {
     expect(aictxHelp.stderr).toBe("");
     expect(aictxHelp.stdout).toContain("Usage: aictx");
     expect(aictxHelp.stdout).toContain("Aictx project memory CLI");
+
+    const viewer = await startInstalledViewerProcess(installRoot, viewerProjectRoot);
+
+    try {
+      await expectInstalledViewerAssetsServe(viewer.url);
+    } finally {
+      await viewer.close();
+    }
+
+    expect(viewer.stderr()).toBe("");
 
     const started = await startInstalledMcpClient(installRoot);
 
@@ -142,7 +182,7 @@ describe("release package", () => {
     }
 
     expect(started.stderr()).toBe("");
-  }, 120_000);
+  }, 180_000);
 });
 
 const requiredPackedPaths = [
@@ -164,6 +204,18 @@ const requiredPackedPaths = [
   "integrations/claude/aictx.md",
   "integrations/generic/aictx-agent-instructions.md"
 ];
+
+async function ensureBuiltPackageOutput(): Promise<void> {
+  try {
+    await Promise.all([
+      readFile(join(repoRoot, "dist", "cli", "main.js"), "utf8"),
+      readFile(join(repoRoot, "dist", "mcp", "server.js"), "utf8"),
+      readFile(join(repoRoot, "dist", "viewer", "index.html"), "utf8")
+    ]);
+  } catch {
+    await expectSuccessfulCommand("pnpm", ["build"], repoRoot);
+  }
+}
 
 async function expectSuccessfulCommand(
   command: string,
@@ -252,6 +304,190 @@ async function startInstalledMcpClient(cwd: string): Promise<StartedMcpClient> {
   };
 }
 
+async function startInstalledViewerProcess(
+  installRoot: string,
+  cwd: string
+): Promise<StartedViewerProcess> {
+  const child = spawn(installedBin("aictx", installRoot), ["view", "--json"], {
+    cwd,
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  let stdout = "";
+  let stderr = "";
+  let closed = false;
+  const closedPromise = new Promise<void>((resolveClose) => {
+    child.once("close", () => {
+      closed = true;
+      resolveClose();
+    });
+  });
+
+  child.stdout.setEncoding("utf8");
+  child.stdout.on("data", (chunk: string) => {
+    stdout += chunk;
+  });
+  child.stderr.setEncoding("utf8");
+  child.stderr.on("data", (chunk: string) => {
+    stderr += chunk;
+  });
+
+  const startup = waitForViewerStartup(child, () => stdout, () => stderr);
+  let envelope: ViewerStartupEnvelope;
+
+  try {
+    envelope = await startup;
+  } catch (error) {
+    if (!closed) {
+      child.kill("SIGTERM");
+    }
+
+    await closedPromise;
+    throw error;
+  }
+
+  return {
+    url: envelope.data.url,
+    close: async () => {
+      if (!closed) {
+        child.kill("SIGTERM");
+      }
+
+      await closedPromise;
+    },
+    stderr: () => stderr,
+    stdout: () => stdout
+  };
+}
+
+function waitForViewerStartup(
+  child: ViewerChildProcess,
+  readStdout: () => string,
+  readStderr: () => string
+): Promise<ViewerStartupEnvelope> {
+  return new Promise((resolveStartup, rejectStartup) => {
+    let settled = false;
+    const timeout = setTimeout(() => {
+      settle(new Error(`Timed out waiting for viewer startup. stderr: ${readStderr()}`));
+    }, 5_000);
+
+    const settle = (value: ViewerStartupEnvelope | Error): void => {
+      if (settled) {
+        return;
+      }
+
+      settled = true;
+      clearTimeout(timeout);
+
+      if (value instanceof Error) {
+        rejectStartup(value);
+        return;
+      }
+
+      resolveStartup(value);
+    };
+
+    const tryParseStartup = (): void => {
+      const output = readStdout().trim();
+
+      if (!output.endsWith("}")) {
+        return;
+      }
+
+      try {
+        const parsed = JSON.parse(output) as unknown;
+
+        if (!isViewerStartupEnvelope(parsed)) {
+          settle(new Error(`Unexpected viewer startup envelope: ${output}`));
+          return;
+        }
+
+        settle(parsed);
+      } catch (error) {
+        settle(new Error(`Viewer startup JSON could not be parsed: ${messageFromUnknown(error)}`));
+      }
+    };
+
+    child.stdout.on("data", tryParseStartup);
+    child.once("error", (error) => {
+      settle(error);
+    });
+    child.once("close", (exitCode, signal) => {
+      settle(new Error(
+        `Viewer exited before startup. exit=${String(exitCode)} signal=${String(signal)} stderr=${readStderr()}`
+      ));
+    });
+    tryParseStartup();
+  });
+}
+
+async function expectInstalledViewerAssetsServe(url: string): Promise<void> {
+  const viewerUrl = new URL(url);
+
+  expect(viewerUrl.hostname).toBe("127.0.0.1");
+  expect(viewerUrl.searchParams.get("token")).toBeTruthy();
+
+  const htmlResponse = await fetch(viewerUrl);
+
+  expect(htmlResponse.status).toBe(200);
+  expect(htmlResponse.headers.get("content-type")).toContain("text/html");
+
+  const html = await htmlResponse.text();
+  const assetPaths = extractViewerAssetPaths(html);
+
+  expect(html).toContain('<script type="module"');
+  expect(assetPaths.some((path) => path.endsWith(".js"))).toBe(true);
+  expect(assetPaths.some((path) => path.endsWith(".css"))).toBe(true);
+
+  for (const assetPath of assetPaths) {
+    const assetUrl = new URL(assetPath, viewerUrl);
+    const assetResponse = await fetch(assetUrl);
+    const assetBody = await assetResponse.text();
+
+    expect(assetResponse.status).toBe(200);
+    expect(assetBody.length).toBeGreaterThan(0);
+
+    if (assetPath.endsWith(".js")) {
+      expect(assetResponse.headers.get("content-type")).toContain("text/javascript");
+    }
+
+    if (assetPath.endsWith(".css")) {
+      expect(assetResponse.headers.get("content-type")).toContain("text/css");
+    }
+  }
+
+  const bootstrapUrl = new URL("/api/bootstrap", viewerUrl);
+  bootstrapUrl.searchParams.set("token", viewerUrl.searchParams.get("token") ?? "");
+  await expect(fetch(bootstrapUrl)).resolves.toMatchObject({ status: 200 });
+}
+
+function extractViewerAssetPaths(html: string): string[] {
+  const paths = new Set<string>();
+
+  for (const match of html.matchAll(/(?:src|href)="(?<path>\.\/assets\/[^"]+)"/g)) {
+    const path = match.groups?.path;
+
+    if (path !== undefined) {
+      paths.add(path);
+    }
+  }
+
+  return [...paths].sort();
+}
+
+function isViewerStartupEnvelope(value: unknown): value is ViewerStartupEnvelope {
+  if (!isRecord(value) || value.ok !== true || !isRecord(value.data)) {
+    return false;
+  }
+
+  return (
+    typeof value.data.url === "string" &&
+    value.data.host === "127.0.0.1" &&
+    typeof value.data.port === "number" &&
+    value.data.token_required === true &&
+    typeof value.data.open_attempted === "boolean"
+  );
+}
+
 function installedBin(name: "aictx" | "aictx-mcp", installRoot: string): string {
   return join(installRoot, "node_modules", ".bin", executableName(name));
 }
@@ -267,4 +503,12 @@ async function createTempRoot(prefix: string): Promise<string> {
   tempRoots.push(resolvedRoot);
 
   return resolvedRoot;
+}
+
+function messageFromUnknown(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return String(error);
 }

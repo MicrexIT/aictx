@@ -23,6 +23,8 @@ import {
 
 const repoRoot = resolve(fileURLToPath(new URL("../../..", import.meta.url)));
 const viewerAssetsDir = join(repoRoot, "dist", "viewer");
+const GRAPH_WIDTH = 640;
+const GRAPH_HEIGHT = 300;
 const tempRoots: string[] = [];
 
 interface MemoryFixture {
@@ -78,6 +80,21 @@ describe("read-only viewer shell", () => {
 
       await page.goto(started.data.url, { waitUntil: "domcontentloaded" });
       await page.locator('[data-testid="viewer-search"]').waitFor();
+      await expectText(page, '[aria-label="Project memory counts"]', "Objects");
+      await expectText(page, '[aria-label="Project memory counts"]', "8");
+      await expectText(page, '[aria-label="Project memory counts"]', "Relations");
+      await expectText(page, '[aria-label="Project memory counts"]', "2");
+
+      await page.selectOption('[data-testid="viewer-type-filter"]', "decision");
+      await expectCount(page, '[data-testid="object-row-decision.viewer-shell"]', 1);
+      await expectCount(page, '[data-testid="object-row-constraint.viewer-markdown"]', 0);
+
+      await page.selectOption('[data-testid="viewer-type-filter"]', "all");
+      await page.selectOption('[data-testid="viewer-status-filter"]', "stale");
+      await expectCount(page, '[data-testid="object-row-fact.billing-context"]', 1);
+      await expectCount(page, '[data-testid="object-row-decision.viewer-shell"]', 0);
+
+      await page.selectOption('[data-testid="viewer-status-filter"]', "all");
 
       await page.fill('[data-testid="viewer-search"]', "markdown safety");
       await page.locator('[data-testid="object-row-constraint.viewer-markdown"]').click();
@@ -102,6 +119,9 @@ describe("read-only viewer shell", () => {
       await expectNoText(page, '[data-testid="relation-graph"]', "Unrelated Source");
       await expectNoText(page, '[data-testid="relation-graph"]', "Unrelated Target");
       await expectCount(page, '[data-testid="relation-graph-svg"] [data-testid^="relation-graph-edge-"]', 1);
+      await assertGraphNodeWithinViewBox(page, "decision.viewer-shell");
+      await assertGraphNodeWithinViewBox(page, "constraint.viewer-markdown");
+      await assertGraphEdgeWithinViewBox(page, "rel.viewer-shell-requires-markdown");
 
       await page.getByRole("button", { name: /to Viewer Markdown Safety/ }).click();
       await assertSelectedObject(page, "Viewer Markdown Safety", "constraint.viewer-markdown");
@@ -165,6 +185,44 @@ async function assertSelectedGraphNode(page: Page, id: string): Promise<void> {
 
   await node.waitFor();
   await expect(node.getAttribute("class")).resolves.toContain("selected-node");
+}
+
+async function assertGraphNodeWithinViewBox(page: Page, id: string): Promise<void> {
+  const circle = page.locator(`[data-testid="relation-graph-node-${id}"] circle`);
+  const cx = await numberAttribute(circle, "cx");
+  const cy = await numberAttribute(circle, "cy");
+  const radius = await numberAttribute(circle, "r");
+
+  expect(cx - radius).toBeGreaterThanOrEqual(0);
+  expect(cy - radius).toBeGreaterThanOrEqual(0);
+  expect(cx + radius).toBeLessThanOrEqual(GRAPH_WIDTH);
+  expect(cy + radius).toBeLessThanOrEqual(GRAPH_HEIGHT);
+}
+
+async function assertGraphEdgeWithinViewBox(page: Page, id: string): Promise<void> {
+  const line = page.locator(`[data-testid="relation-graph-edge-${id}"] line`);
+
+  for (const attribute of ["x1", "y1", "x2", "y2"] as const) {
+    const value = await numberAttribute(line, attribute);
+    const upperBound = attribute.startsWith("x") ? GRAPH_WIDTH : GRAPH_HEIGHT;
+
+    expect(value).toBeGreaterThanOrEqual(0);
+    expect(value).toBeLessThanOrEqual(upperBound);
+  }
+}
+
+async function numberAttribute(
+  locator: ReturnType<Page["locator"]>,
+  attribute: string
+): Promise<number> {
+  const rawValue = await locator.getAttribute(attribute);
+  const value = Number(rawValue);
+
+  if (rawValue === null || !Number.isFinite(value)) {
+    throw new Error(`Expected numeric ${attribute} attribute, got ${String(rawValue)}.`);
+  }
+
+  return value;
 }
 
 async function expectText(page: Page, selector: string, expected: string): Promise<void> {

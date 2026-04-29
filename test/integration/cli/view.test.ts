@@ -87,6 +87,43 @@ describe("aictx view CLI", () => {
     expect(output.stderr()).toBe("");
   });
 
+  it("starts on an explicit available loopback port", async () => {
+    const projectRoot = await createInitializedProject("aictx-cli-view-port-project-");
+    const assetsDir = await createViewerAssets("aictx-cli-view-port-assets-");
+    const port = await getAvailableLoopbackPort();
+    const output = createCapturedOutput();
+    const shutdown = new AbortController();
+    const running = main(["node", "aictx", "view", "--port", String(port), "--json"], {
+      ...output.writers,
+      cwd: projectRoot,
+      viewer: {
+        assetsDir,
+        shutdownSignal: shutdown.signal
+      }
+    });
+    const envelope = await waitForJsonOutput<{
+      ok: true;
+      data: {
+        url: string;
+        host: string;
+        port: number;
+        token_required: true;
+        open_attempted: boolean;
+      };
+    }>(output.stdout);
+
+    expect(envelope.ok).toBe(true);
+    expect(envelope.data.host).toBe(LOOPBACK_HOST);
+    expect(envelope.data.port).toBe(port);
+    expect(new URL(envelope.data.url).port).toBe(String(port));
+    await expect(fetch(envelope.data.url)).resolves.toMatchObject({ status: 200 });
+    await expect(promiseState(running)).resolves.toBe("pending");
+
+    shutdown.abort();
+    await expect(running).resolves.toBe(0);
+    expect(output.stderr()).toBe("");
+  });
+
   it("fails clearly for an unavailable explicit port", async () => {
     const projectRoot = await createInitializedProject("aictx-cli-view-busy-project-");
     const assetsDir = await createViewerAssets("aictx-cli-view-busy-assets-");
@@ -239,6 +276,24 @@ function listenOnLoopback(server: ReturnType<typeof createServer>, port: number)
       resolveListen();
     });
   });
+}
+
+async function getAvailableLoopbackPort(): Promise<number> {
+  const server = createServer();
+
+  await listenOnLoopback(server, 0);
+
+  try {
+    const address = server.address();
+
+    if (typeof address === "object" && address !== null) {
+      return address.port;
+    }
+
+    throw new Error("Loopback server did not report a port.");
+  } finally {
+    await closeNodeServer(server);
+  }
 }
 
 function closeNodeServer(server: ReturnType<typeof createServer>): Promise<void> {

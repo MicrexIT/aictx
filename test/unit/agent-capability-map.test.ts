@@ -258,6 +258,8 @@ describe("agent capability map guardrail", () => {
   it("keeps docs explicit about MCP parity and direct-edit guardrails", async () => {
     const docsAndGuidance = [
       ...mirroredSpecs,
+      "README.md",
+      "docs/agent-integration.md",
       "integrations/templates/agent-guidance.md"
     ] as const;
 
@@ -269,6 +271,17 @@ describe("agent capability map guardrail", () => {
         /do not add .* to MCP|not (?:be )?added to MCP|do not add or ask for MCP tools solely to mirror these CLI commands/i
       );
       expect(content).toMatch(/editing `\.aictx\/` files directly/);
+    }
+  });
+
+  it("keeps README and agent docs explicit that local viewing is CLI-only", async () => {
+    for (const path of ["README.md", "docs/agent-integration.md"] as const) {
+      const content = await readProjectFile(path);
+
+      expect(content).toContain("| View local memory | none | `aictx view`");
+      expect(content).toContain("CLI-only");
+      expect(content).toContain("not MCP parity gaps");
+      expect(content).toMatch(/aictx view.*CLI-only|CLI-only.*aictx view/s);
     }
   });
 
