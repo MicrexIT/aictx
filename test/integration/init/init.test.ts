@@ -298,6 +298,46 @@ describe("initProject", () => {
     );
   });
 
+  it("skips unmarked existing Aictx guidance instead of appending a duplicate block", async () => {
+    const projectRoot = await createTempRoot("aictx-init-guidance-unmarked-");
+    await writeFile(
+      join(projectRoot, "AGENTS.md"),
+      [
+        "# Existing instructions",
+        "",
+        "Aictx project memory:",
+        "- Run `aictx load \"task\"` before coding.",
+        "- Use `save_memory_patch` after meaningful work."
+      ].join("\n")
+    );
+
+    const result = await initProject({
+      cwd: projectRoot,
+      clock: createFixedTestClock()
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+
+    expect(result.data.agent_guidance.targets).toEqual([
+      {
+        path: "AGENTS.md",
+        status: "skipped"
+      },
+      {
+        path: "CLAUDE.md",
+        status: "created"
+      }
+    ]);
+    expect(result.warnings.join("\n")).toContain("AGENTS.md");
+
+    const agents = await readFile(join(projectRoot, "AGENTS.md"), "utf8");
+    expect(agents).toContain("Aictx project memory");
+    expect(agents).not.toContain("<!-- aictx-memory:start -->");
+  });
+
   it("returns success when existing storage has branch-scoped memory for the current branch", async () => {
     const repo = await createRepo("branch-scoped");
     const first = await initProject({

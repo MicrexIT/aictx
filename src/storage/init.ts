@@ -679,6 +679,10 @@ function applyAgentGuidanceBlock(
   const endCount = countOccurrences(contents, AGENT_GUIDANCE_END_MARKER);
 
   if (startCount === 0 && endCount === 0) {
+    if (containsUnmarkedAictxGuidance(contents)) {
+      return { status: "skipped" };
+    }
+
     const base = contents.replace(/\n*$/, "");
     const separator = base === "" ? "" : "\n\n";
 
@@ -703,6 +707,10 @@ function applyAgentGuidanceBlock(
     status: "updated",
     contents: `${contents.slice(0, startIndex)}${AGENT_GUIDANCE_BLOCK}${contents.slice(suffixStart)}`
   };
+}
+
+function containsUnmarkedAictxGuidance(contents: string): boolean {
+  return /\bAictx\b/i.test(contents) && /\b(load_memory|save_memory_patch|aictx load|aictx save)\b/i.test(contents);
 }
 
 function countOccurrences(value: string, search: string): number {
