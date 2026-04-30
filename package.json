@@ -1,5 +1,5 @@
 {
-  "name": "aictx",
+  "name": "@aictx/memory",
   "version": "0.1.4",
   "license": "MIT",
   "type": "module",
