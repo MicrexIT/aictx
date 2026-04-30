@@ -1,5 +1,5 @@
 import { spawn, type ChildProcessByStdio } from "node:child_process";
-import { mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, realpath, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -31,7 +31,12 @@ interface PackageJson {
     node?: string;
   };
   license?: string;
+  name?: string;
+  publishConfig?: {
+    access?: string;
+  };
   scripts?: Record<string, string>;
+  version?: string;
 }
 
 interface StartedMcpClient {
@@ -109,14 +114,21 @@ describe("release package", () => {
     expect(packedPaths.every((path) => !path.startsWith("viewer/"))).toBe(true);
 
     const packageJson = parsePackageJson(await readFile(join(repoRoot, "package.json"), "utf8"));
+    const packageVersion = requirePackageVersion(packageJson);
 
+    expect(packageJson.name).toBe("@aictx/memory");
+    expect(packageJson.publishConfig).toEqual({
+      access: "public"
+    });
     expect(packageJson.license).toBe("MIT");
     expect(packageJson.engines?.node).toBe(">=22");
     expect(packageJson.bin).toEqual({
-      aictx: "./dist/cli/main.js",
-      "aictx-mcp": "./dist/mcp/server.js"
+      aictx: "dist/cli/main.js",
+      "aictx-mcp": "dist/mcp/server.js"
     });
     expect(packageJson.scripts?.build).toContain("pnpm build:viewer");
+    expect(packageJson.scripts?.build).toContain("pnpm build:version");
+    expect(packageJson.scripts?.["build:version"]).toBe("node scripts/generate-version.mjs");
     expect(packageJson.scripts?.["build:viewer"]).toBe("vite build --config viewer/vite.config.ts");
     expect(packageJson.devDependencies).toEqual(
       expect.objectContaining({
@@ -134,6 +146,8 @@ describe("release package", () => {
         vite: expect.any(String)
       })
     );
+
+    await expectCliSymlinkRuns(packageVersion);
 
     for (const requiredPath of requiredPackedPaths) {
       expect(packedPathSet.has(requiredPath)).toBe(true);
@@ -162,6 +176,15 @@ describe("release package", () => {
     expect(aictxHelp.stdout).toContain("Usage: aictx");
     expect(aictxHelp.stdout).toContain("Aictx project memory CLI");
 
+    const aictxVersion = await expectSuccessfulCommand(
+      installedBin("aictx", installRoot),
+      ["--version"],
+      installRoot
+    );
+
+    expect(aictxVersion.stderr).toBe("");
+    expect(aictxVersion.stdout).toBe(`${packageVersion}\n`);
+
     const viewer = await startInstalledViewerProcess(installRoot, viewerProjectRoot);
 
     try {
@@ -177,7 +200,8 @@ describe("release package", () => {
     try {
       await expect(started.client.ping()).resolves.toEqual({});
       expect(started.client.getServerVersion()).toMatchObject({
-        name: "aictx-mcp"
+        name: "aictx-mcp",
+        version: packageVersion
       });
     } finally {
       await started.close();
@@ -278,6 +302,26 @@ function parsePackageJson(contents: string): PackageJson {
   return parsed as PackageJson;
 }
 
+function requirePackageVersion(packageJson: PackageJson): string {
+  if (typeof packageJson.version !== "string" || packageJson.version.length === 0) {
+    throw new Error("package.json must declare a non-empty version.");
+  }
+
+  return packageJson.version;
+}
+
+async function expectCliSymlinkRuns(packageVersion: string): Promise<void> {
+  const binRoot = await createTempRoot("aictx-release-bin-symlink-");
+  const binPath = join(binRoot, executableName("aictx"));
+
+  await symlink(join(repoRoot, "dist", "cli", "main.js"), binPath);
+
+  const result = await expectSuccessfulCommand(binPath, ["--version"], binRoot);
+
+  expect(result.stderr).toBe("");
+  expect(result.stdout).toBe(`${packageVersion}\n`);
+}
+
 async function writeOfflineInstallPackageJson(
   installRoot: string,
   packageJson: PackageJson
@@ -348,7 +392,7 @@ async function readInstalledPackageFile(
   installRoot: string,
   relativePath: string
 ): Promise<string> {
-  return readFile(join(installRoot, "node_modules", "aictx", relativePath), "utf8");
+  return readFile(join(installRoot, "node_modules", "@aictx", "memory", relativePath), "utf8");
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

@@ -23,7 +23,7 @@ Aictx requires Node.js `>=22`.
 Install it globally for the best MCP experience:
 
 ```bash
-npm install -g aictx
+npm install -g @aictx/memory
 ```
 
 Global install is the recommended default for regular CLI and MCP use. You do
@@ -33,15 +33,15 @@ project to pin its own Aictx version.
 For project-local version pinning, install Aictx as a dev dependency:
 
 ```bash
-pnpm add -D aictx
+pnpm add -D @aictx/memory
 ```
 
 Or with npm:
 
 ```bash
-npm install -D aictx
+npm install -D @aictx/memory
 # equivalent long form:
-npm install --save-dev aictx
+npm install --save-dev @aictx/memory
 ```
 
 The package provides two binaries:
@@ -56,13 +56,21 @@ your package manager:
 pnpm exec aictx init
 pnpm exec aictx load "fix Stripe webhook retries"
 npm exec aictx init
-npx aictx init
 ./node_modules/.bin/aictx init
+```
+
+For one-off execution without a global or local install, name the scoped package
+explicitly:
+
+```bash
+pnpm --package @aictx/memory dlx aictx init
+npx --package @aictx/memory -- aictx init
 ```
 
 The examples below use `aictx` directly for readability. If `aictx` is not on
 `PATH`, use the project package-manager form, such as `pnpm exec aictx`,
-`npm exec aictx`, `npx aictx`, or `./node_modules/.bin/aictx`.
+`npm exec aictx`, or `./node_modules/.bin/aictx`. For one-off `npx` usage, name
+the package explicitly with `npx --package @aictx/memory -- aictx`.
 
 ## Local Package Testing
 
@@ -146,8 +154,13 @@ If `aictx` is not on `PATH`, use a project-local command instead:
 ```bash
 pnpm exec aictx init
 npm exec aictx init
-npx aictx init
 ./node_modules/.bin/aictx init
+```
+
+For one-off execution without installing first:
+
+```bash
+npx --package @aictx/memory -- aictx init
 ```
 
 By default, init also creates or updates marked Aictx sections in `AGENTS.md`
@@ -549,7 +562,7 @@ arguments:
 ```json
 {
   "command": "npx",
-  "args": ["aictx-mcp"],
+  "args": ["--package", "@aictx/memory", "--", "aictx-mcp"],
   "cwd": "/path/to/your/project"
 }
 ```
@@ -564,8 +577,9 @@ Or use the local binary path directly:
 ```
 
 In command-line form, the local MCP launch commands are
-`pnpm exec aictx-mcp`, `npm exec aictx-mcp`, `npx aictx-mcp`, or
-`./node_modules/.bin/aictx-mcp`.
+`pnpm exec aictx-mcp`, `npm exec aictx-mcp`, or
+`./node_modules/.bin/aictx-mcp`. For one-off `npx` usage, run
+`npx --package @aictx/memory -- aictx-mcp`.
 
 ### MCP Tools
 
@@ -688,8 +702,8 @@ configuration. Claude Code users can use a project skill under
 skills or edit user-global agent configuration by default.
 
 Generated guidance tells agents to use package-manager fallbacks when `aictx`
-or `aictx-mcp` is not on `PATH`, including `pnpm exec`, `npm exec`, `npx`, and
-`./node_modules/.bin/` commands.
+or `aictx-mcp` is not on `PATH`, including `pnpm exec`, `npm exec`,
+`./node_modules/.bin/`, and explicit scoped-package `npx --package` commands.
 
 ## Development
 
@@ -741,14 +755,14 @@ pnpm pack --pack-destination /tmp/aictx-pack
 This creates a tarball such as:
 
 ```bash
-/tmp/aictx-pack/aictx-0.1.0.tgz
+/tmp/aictx-pack/aictx-memory-0.1.4.tgz
 ```
 
 Then install it in the other repo:
 
 ```bash
 cd /path/to/other/repo
-pnpm add -D /tmp/aictx-pack/aictx-0.1.0.tgz
+pnpm add -D /tmp/aictx-pack/aictx-memory-0.1.4.tgz
 pnpm exec aictx --version
 pnpm exec aictx init
 ```
@@ -757,8 +771,8 @@ With npm:
 
 ```bash
 cd /path/to/other/repo
-npm install --save-dev /tmp/aictx-pack/aictx-0.1.0.tgz
-npx aictx --version
+npm install --save-dev /tmp/aictx-pack/aictx-memory-0.1.4.tgz
+npx --package /tmp/aictx-pack/aictx-memory-0.1.4.tgz -- aictx --version
 ```
 
 After rebuilding Aictx locally, reinstall the tarball in the consumer repo:
@@ -769,8 +783,8 @@ pnpm build
 pnpm pack --pack-destination /tmp/aictx-pack
 
 cd /path/to/other/repo
-pnpm remove aictx
-pnpm add -D /tmp/aictx-pack/aictx-0.1.0.tgz
+pnpm remove @aictx/memory
+pnpm add -D /tmp/aictx-pack/aictx-memory-0.1.4.tgz
 ```
 
 Prefer this over `pnpm link` or `npm link` for package validation, because the

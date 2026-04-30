@@ -46,9 +46,10 @@ If `aictx` is not on `PATH`, run the same commands through the project package m
 ```bash
 pnpm exec aictx load "<task summary>"
 npm exec aictx load "<task summary>"
-npx aictx load "<task summary>"
 ./node_modules/.bin/aictx load "<task summary>"
 ```
+
+For one-off `npx` usage without a project-local install, name the scoped package explicitly: `npx --package @aictx/memory -- aictx load "<task summary>"`.
 
 Load modes are `coding`, `debugging`, `review`, `architecture`, and
 `onboarding`. Modes tune deterministic ranking and rendering only; they do not
@@ -72,7 +73,7 @@ when a project should pin its own Aictx version. The routine MCP tools accept
 keeping each project's `.aictx/` memory isolated. When `project_root` is omitted,
 tools use the server launch directory for backward compatibility.
 
-When `aictx-mcp` is not on `PATH`, configure the MCP client to launch it through the project package manager or local binary path, such as `pnpm exec aictx-mcp`, `npm exec aictx-mcp`, `npx aictx-mcp`, or `./node_modules/.bin/aictx-mcp`.
+When `aictx-mcp` is not on `PATH`, configure the MCP client to launch it through the project package manager or local binary path, such as `pnpm exec aictx-mcp`, `npm exec aictx-mcp`, or `./node_modules/.bin/aictx-mcp`. For one-off `npx` usage, name the scoped package explicitly: `npx --package @aictx/memory -- aictx-mcp`.
 
 Use `aictx suggest --from-diff --json` when the agent needs a deterministic review packet for current code changes before drafting memory. Use `aictx suggest --bootstrap --json` for a first-run repo memory pass. Use `aictx audit --json` to find deterministic memory hygiene issues. These commands do not write memory.
 
@@ -293,7 +294,7 @@ Use whichever target fits the agent client:
 
 Codex users can enable a skill folder through `skills.config[].path` in Codex configuration. Claude Code supports project skills under `.claude/skills/<skill-name>/SKILL.md`; for Aictx, use the shared skill name `aictx-memory`.
 
-If `aictx` is not on `PATH`, use the package manager binary path for the project, such as `pnpm exec aictx`, `npm exec aictx`, `npx aictx`, or `./node_modules/.bin/aictx`. MCP clients can start `aictx-mcp` globally once and pass `project_root` on routine tool calls; with project-local installs, use the equivalent package-manager command when needed. `aictx init` does not start MCP.
+If `aictx` is not on `PATH`, use the package manager binary path for the project, such as `pnpm exec aictx`, `npm exec aictx`, or `./node_modules/.bin/aictx`. For one-off `npx` usage, name the scoped package explicitly: `npx --package @aictx/memory -- aictx`. MCP clients can start `aictx-mcp` globally once and pass `project_root` on routine tool calls; with project-local installs, use the equivalent package-manager command when needed. `aictx init` does not start MCP.
 
 Generated guidance is not canonical memory. It is a setup aid for instructing agents how to use Aictx in projects that have opted into it.
 

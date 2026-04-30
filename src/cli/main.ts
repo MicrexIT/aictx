@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 
+import { realpathSync } from "node:fs";
 import type { Readable } from "node:stream";
+import { fileURLToPath } from "node:url";
 import { Command, CommanderError } from "commander";
 import { version } from "../generated/version.js";
 import { registerAuditCommand } from "./commands/audit.js";
@@ -193,6 +195,20 @@ function isCliExitCode(exitCode: number): exitCode is CliExitCode {
   return exitCode === 0 || exitCode === 1 || exitCode === 2 || exitCode === 3;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isEntrypoint()) {
   process.exitCode = await main();
+}
+
+function isEntrypoint(): boolean {
+  const argvPath = process.argv[1];
+
+  if (argvPath === undefined) {
+    return false;
+  }
+
+  try {
+    return realpathSync(fileURLToPath(import.meta.url)) === realpathSync(argvPath);
+  } catch {
+    return fileURLToPath(import.meta.url) === argvPath;
+  }
 }

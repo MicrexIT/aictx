@@ -272,15 +272,18 @@ Required `package.json` baseline:
 
 ```json
 {
-  "name": "aictx",
-  "version": "0.1.0",
+  "name": "@aictx/memory",
+  "version": "0.1.4",
   "type": "module",
+  "publishConfig": {
+    "access": "public"
+  },
   "engines": {
     "node": ">=22"
   },
   "bin": {
-    "aictx": "./dist/cli/main.js",
-    "aictx-mcp": "./dist/mcp/server.js"
+    "aictx": "dist/cli/main.js",
+    "aictx-mcp": "dist/mcp/server.js"
   },
   "files": [
     "dist",
@@ -290,15 +293,19 @@ Required `package.json` baseline:
     "LICENSE"
   ],
   "scripts": {
-    "build": "pnpm build:guidance && pnpm build:code && pnpm build:schemas",
+    "build": "pnpm build:guidance && pnpm build:version && pnpm build:code && pnpm build:schemas && pnpm build:viewer",
     "build:code": "tsup",
     "build:schemas": "node scripts/copy-schemas.mjs",
+    "build:version": "node scripts/generate-version.mjs",
+    "build:viewer": "vite build --config viewer/vite.config.ts",
     "build:guidance": "node scripts/generate-agent-guidance.mjs",
     "dev": "tsx src/cli/main.ts",
     "dev:mcp": "tsx src/mcp/server.ts",
     "test": "vitest run",
+    "test:local": "pnpm typecheck && pnpm test:package",
+    "test:package": "vitest run test/integration/release/packaging.test.ts",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit && svelte-check --tsconfig viewer/tsconfig.json"
   }
 }
 ```
@@ -306,31 +313,38 @@ Required `package.json` baseline:
 Required runtime dependencies:
 
 ```text
-commander
 @modelcontextprotocol/sdk
+@sqlite.org/sqlite-wasm
 ajv
-better-sqlite3
+commander
 fast-glob
+zod
 ```
 
 Required development dependencies:
 
 ```text
+@sveltejs/vite-plugin-svelte
+@types/node
+playwright
+svelte
+svelte-check
 typescript
 tsup
-vitest
-@types/node
-@types/better-sqlite3
 tsx
+vite
+vitest
 ```
 
 Dependency roles:
 
 * `commander` owns CLI parsing only.
 * `@modelcontextprotocol/sdk` owns MCP transport and tool registration only.
+* `@sqlite.org/sqlite-wasm` owns local SQLite access through the project driver.
 * `ajv` owns JSON Schema Draft 2020-12 validation.
-* `better-sqlite3` owns local SQLite access.
 * `fast-glob` owns deterministic discovery of `.aictx/` canonical files.
+* `zod` owns MCP and API boundary validation.
+* Svelte and Vite own the local viewer build.
 * TypeScript owns static types.
 * `tsup` builds distributable ESM JavaScript.
 * `vitest` runs unit and integration tests.
@@ -1006,8 +1020,8 @@ npm package with CLI binaries
 Install examples:
 
 ```bash
-npm install -g aictx
-pnpm dlx aictx init
+npm install -g @aictx/memory
+pnpm --package @aictx/memory dlx aictx init
 ```
 
 Rules:

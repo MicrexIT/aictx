@@ -3,12 +3,15 @@
   "version": "0.1.4",
   "license": "MIT",
   "type": "module",
+  "publishConfig": {
+    "access": "public"
+  },
   "engines": {
     "node": ">=22"
   },
   "bin": {
-    "aictx": "./dist/cli/main.js",
-    "aictx-mcp": "./dist/mcp/server.js"
+    "aictx": "dist/cli/main.js",
+    "aictx-mcp": "dist/mcp/server.js"
   },
   "files": [
     "dist",
@@ -18,9 +21,10 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "pnpm build:guidance && pnpm build:code && pnpm build:schemas && pnpm build:viewer",
+    "build": "pnpm build:guidance && pnpm build:version && pnpm build:code && pnpm build:schemas && pnpm build:viewer",
     "build:code": "tsup",
     "build:schemas": "node scripts/copy-schemas.mjs",
+    "build:version": "node scripts/generate-version.mjs",
     "build:viewer": "vite build --config viewer/vite.config.ts",
     "build:guidance": "node scripts/generate-agent-guidance.mjs",
     "dev": "tsx src/cli/main.ts",

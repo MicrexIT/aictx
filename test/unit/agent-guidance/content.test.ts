@@ -79,11 +79,11 @@ const lifecycleRules = [
 const packageManagerFallbacks = [
   "pnpm exec aictx",
   "npm exec aictx",
-  "npx aictx",
+  "npx --package @aictx/memory -- aictx",
   "./node_modules/.bin/aictx",
   "pnpm exec aictx-mcp",
   "npm exec aictx-mcp",
-  "npx aictx-mcp",
+  "npx --package @aictx/memory -- aictx-mcp",
   "./node_modules/.bin/aictx-mcp"
 ] as const;
 
