@@ -2,14 +2,23 @@ import type { CallToolResult, ToolAnnotations } from "@modelcontextprotocol/sdk/
 import { z } from "zod";
 
 import { diffMemory } from "../../app/operations.js";
+import {
+  PROJECT_ROOT_ARGUMENT_DESCRIPTION,
+  resolveMcpProjectCwd,
+  type AictxMcpContext,
+  type ProjectScopedMcpArgs
+} from "../context.js";
 
-interface AictxMcpContext {
-  cwd: string;
-}
+const DIFF_MEMORY_INPUT_SCHEMA = z
+  .object({
+    project_root: z
+      .string()
+      .optional()
+      .describe(PROJECT_ROOT_ARGUMENT_DESCRIPTION)
+  })
+  .strict();
 
-const DIFF_MEMORY_INPUT_SCHEMA = z.object({}).strict();
-
-type DiffMemoryArgs = z.infer<typeof DIFF_MEMORY_INPUT_SCHEMA>;
+type DiffMemoryArgs = z.infer<typeof DIFF_MEMORY_INPUT_SCHEMA> & ProjectScopedMcpArgs;
 
 const READ_ONLY_TOOL_ANNOTATIONS: ToolAnnotations = {
   readOnlyHint: true,
@@ -29,9 +38,9 @@ export const diffMemoryTool = {
 
 async function callDiffMemoryTool(
   context: AictxMcpContext,
-  _args: DiffMemoryArgs
+  args: DiffMemoryArgs
 ): Promise<CallToolResult> {
-  const result = await diffMemory({ cwd: context.cwd });
+  const result = await diffMemory({ cwd: resolveMcpProjectCwd(context, args) });
 
   return toToolResult(result);
 }

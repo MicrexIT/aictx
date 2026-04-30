@@ -728,7 +728,7 @@ function countOccurrences(value: string, search: string): number {
 function nextSteps(agentGuidance: AgentGuidanceData): string[] {
   return [
     agentGuidanceNextStep(agentGuidance),
-    "`aictx init` does not start MCP; configure agent clients that support MCP to launch `aictx-mcp` from this project root so agents can use `load_memory` and `save_memory_patch`. Agents can fall back to `aictx load` and `aictx save --stdin` when MCP is unavailable.",
+    "`aictx init` does not start MCP; configure agent clients that support MCP to launch `aictx-mcp` so agents can use `load_memory` and `save_memory_patch`. A globally launched MCP server can serve this project when tool calls include this project root as `project_root`. Agents can fall back to `aictx load` and `aictx save --stdin` when MCP is unavailable.",
     "Review memory changes in `.aictx/`; in Git projects, use `aictx diff` before committing.",
     "Optional bundled skills are available under `integrations/codex/` and `integrations/claude/`."
   ];

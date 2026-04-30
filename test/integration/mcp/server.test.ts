@@ -9,6 +9,7 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { afterEach, describe, expect, it } from "vitest";
 
+import { initProject } from "../../../src/app/operations.js";
 import { createAictxMcpServer } from "../../../src/mcp/server.js";
 import { version } from "../../../src/generated/version.js";
 
@@ -118,7 +119,82 @@ describe("aictx MCP server bootstrap", () => {
     expect(started.stderr()).toBe("");
     await expect(readdir(projectRoot)).resolves.toEqual([]);
   });
+
+  it("serves multiple isolated projects from one globally launched process", async () => {
+    const serverRoot = await createTempRoot("aictx-mcp-global-");
+    const alphaRoot = await createInitializedProject("aictx-mcp-alpha-");
+    const betaRoot = await createInitializedProject("aictx-mcp-beta-");
+    const started = await startMcpClient(serverRoot);
+
+    try {
+      await expect(started.client.ping()).resolves.toEqual({});
+
+      await started.client.callTool({
+        name: "save_memory_patch",
+        arguments: {
+          project_root: alphaRoot,
+          patch: createProjectNotePatch("Alpha-only deployment fact")
+        }
+      });
+      await started.client.callTool({
+        name: "save_memory_patch",
+        arguments: {
+          project_root: betaRoot,
+          patch: createProjectNotePatch("Beta-only deployment fact")
+        }
+      });
+
+      const alphaSearch = parseToolEnvelope<SearchEnvelope>(
+        await started.client.callTool({
+          name: "search_memory",
+          arguments: {
+            project_root: alphaRoot,
+            query: "deployment fact",
+            limit: 10
+          }
+        })
+      );
+      const betaSearch = parseToolEnvelope<SearchEnvelope>(
+        await started.client.callTool({
+          name: "search_memory",
+          arguments: {
+            project_root: betaRoot,
+            query: "deployment fact",
+            limit: 10
+          }
+        })
+      );
+
+      expect(alphaSearch.ok).toBe(true);
+      expect(betaSearch.ok).toBe(true);
+      expect(alphaSearch.data.matches.map((match) => match.title)).toContain(
+        "Alpha-only deployment fact"
+      );
+      expect(alphaSearch.data.matches.map((match) => match.title)).not.toContain(
+        "Beta-only deployment fact"
+      );
+      expect(betaSearch.data.matches.map((match) => match.title)).toContain(
+        "Beta-only deployment fact"
+      );
+      expect(betaSearch.data.matches.map((match) => match.title)).not.toContain(
+        "Alpha-only deployment fact"
+      );
+    } finally {
+      await started.close();
+    }
+
+    expect(started.stderr()).toBe("");
+  });
 });
+
+interface SearchEnvelope {
+  ok: true;
+  data: {
+    matches: Array<{
+      title: string;
+    }>;
+  };
+}
 
 async function startMcpClient(cwd: string): Promise<StartedMcpClient> {
   const transport = new StdioClientTransport({
@@ -158,4 +234,54 @@ async function createTempRoot(prefix: string): Promise<string> {
   const resolvedRoot = await realpath(root);
   tempRoots.push(resolvedRoot);
   return resolvedRoot;
+}
+
+async function createInitializedProject(prefix: string): Promise<string> {
+  const projectRoot = await createTempRoot(prefix);
+  const result = await initProject({
+    cwd: projectRoot,
+    agentGuidance: false
+  });
+
+  if (!result.ok) {
+    throw new Error(result.error.message);
+  }
+
+  return projectRoot;
+}
+
+function createProjectNotePatch(title: string): Record<string, unknown> {
+  return {
+    source: {
+      kind: "agent",
+      task: "Exercise global MCP project targeting"
+    },
+    changes: [
+      {
+        op: "create_object",
+        type: "note",
+        title,
+        body: `${title} belongs only to its initialized Aictx project.`,
+        tags: ["mcp", "global-server"]
+      }
+    ]
+  };
+}
+
+function parseToolEnvelope<T>(result: unknown): T {
+  if (!isRecord(result) || !Array.isArray(result.content)) {
+    throw new Error("Expected a call tool result.");
+  }
+
+  const content = result.content[0];
+
+  if (!isRecord(content) || content.type !== "text" || typeof content.text !== "string") {
+    throw new Error("Expected a text tool result.");
+  }
+
+  return JSON.parse(content.text) as T;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
 }

@@ -70,14 +70,14 @@ When a supported MCP or CLI entrypoint exists, agents must use that entrypoint i
 
 All commands and MCP tools must resolve the project root before doing work.
 
-V1 assumes Aictx is being run inside an existing project directory. Aictx does not create or own a separate Git repository. When Git is available, `.aictx/` is stored inside the enclosing project Git worktree. When Git is unavailable, `.aictx/` is stored under the resolved local project root.
+V1 assumes CLI commands are being run inside an existing project directory. MCP tools may either use the MCP server process current working directory for backward compatibility or an explicit `project_root` input for globally launched MCP servers. Aictx does not create or own a separate Git repository. When Git is available, `.aictx/` is stored inside the enclosing project Git worktree. When Git is unavailable, `.aictx/` is stored under the resolved local project root.
 
 Project root resolution:
 
-* Start from the current working directory.
+* Start from the current working directory, or from MCP `project_root` when a tool call provides it.
 * If inside a Git worktree, use the enclosing Git worktree root as `project_root`.
-* If not inside a Git worktree and the command is `init`, use the current working directory as `project_root`.
-* If not inside a Git worktree and the command is not `init`, walk upward from the current working directory to find the nearest `.aictx/config.json`; its parent directory is `project_root`.
+* If not inside a Git worktree and the command is `init`, use the starting directory as `project_root`.
+* If not inside a Git worktree and the command is not `init`, walk upward from the starting directory to find the nearest `.aictx/config.json`; its parent directory is `project_root`.
 * Use `<project-root>/.aictx` as the Aictx root.
 
 Errors:
@@ -217,7 +217,7 @@ Success data:
   },
   "next_steps": [
     "Agents are now instructed through `AGENTS.md` and `CLAUDE.md` to load and save Aictx memory.",
-    "`aictx init` does not start MCP; configure agent clients that support MCP to launch `aictx-mcp` from this project root so agents can use `load_memory` and `save_memory_patch`. Agents can fall back to `aictx load` and `aictx save --stdin` when MCP is unavailable.",
+    "`aictx init` does not start MCP; configure agent clients that support MCP to launch `aictx-mcp` so agents can use `load_memory` and `save_memory_patch`. A globally launched MCP server can serve this project when tool calls include this project root as `project_root`. Agents can fall back to `aictx load` and `aictx save --stdin` when MCP is unavailable.",
     "Review memory changes in `.aictx/`; in Git projects, use `aictx diff` before committing.",
     "Optional bundled skills are available under `integrations/codex/` and `integrations/claude/`."
   ]
@@ -733,7 +733,8 @@ Input:
 {
   "task": "Fix Stripe webhook retries",
   "token_budget": 6000,
-  "mode": "coding"
+  "mode": "coding",
+  "project_root": "/repo"
 }
 ```
 
@@ -743,10 +744,12 @@ Input fields:
 * `token_budget` is optional. If omitted, no token target is applied.
 * `mode` is optional and defaults to `coding`.
 * Allowed modes are `coding`, `debugging`, `review`, `architecture`, and `onboarding`.
+* `project_root` is optional. If omitted, the MCP server launch directory is used.
 
 Behavior:
 
 * Same core behavior as `aictx load`.
+* Must keep each target project's memory isolated to its own `.aictx/` directory.
 * Must return Markdown context pack plus structured references.
 * Must use the same deterministic mode-aware ranking and rendering as CLI `aictx load --mode`.
 * Must preserve high-priority task memory even when an explicit token budget target is exceeded.
@@ -779,7 +782,8 @@ Input:
 ```json
 {
   "query": "Stripe webhook idempotency",
-  "limit": 10
+  "limit": 10,
+  "project_root": "/repo"
 }
 ```
 
@@ -787,6 +791,7 @@ Input fields:
 
 * `query` is required.
 * `limit` is optional and defaults to `10`.
+* `project_root` is optional. If omitted, the MCP server launch directory is used.
 
 Behavior:
 
@@ -817,6 +822,7 @@ Input:
 
 ```json
 {
+  "project_root": "/repo",
   "patch": {
     "source": {
       "kind": "agent",
@@ -839,6 +845,7 @@ Behavior:
 
 * Same core behavior as `aictx save --stdin`.
 * Validate and apply the structured patch.
+* Must write only to the selected project's isolated `.aictx/` directory.
 * Must not infer semantic memory from code diffs.
 * Must not commit.
 * Must reject writes on unresolved `.aictx/` conflict markers.
@@ -866,8 +873,14 @@ Output data:
 Input:
 
 ```json
-{}
+{
+  "project_root": "/repo"
+}
 ```
+
+Input fields:
+
+* `project_root` is optional. If omitted, the MCP server launch directory is used.
 
 Behavior:
 

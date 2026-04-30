@@ -7,14 +7,11 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 
 import { version } from "../generated/version.js";
+import type { AictxMcpContext } from "./context.js";
 import { diffMemoryTool } from "./tools/diff-memory.js";
 import { loadMemoryTool } from "./tools/load-memory.js";
 import { saveMemoryPatchTool } from "./tools/save-memory-patch.js";
 import { searchMemoryTool } from "./tools/search-memory.js";
-
-export interface AictxMcpContext {
-  cwd: string;
-}
 
 export interface AictxMcpServer {
   context: AictxMcpContext;

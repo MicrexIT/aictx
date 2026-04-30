@@ -741,9 +741,12 @@ Rules:
 
 Project resolution:
 
-* The MCP server resolves projects from the server process `cwd`.
-* V1 MCP tools must not accept arbitrary `projectRoot`, `aictxRoot`, or filesystem root parameters.
-* Users should configure one MCP server instance per project directory when using clients that need multiple projects.
+* MCP tools resolve projects from optional `project_root` input when provided.
+* When `project_root` is omitted, MCP tools resolve projects from the server process `cwd` for backward compatibility.
+* `project_root` must be treated only as a project selection input; the storage boundary remains the resolved `<projectRoot>/.aictx` directory.
+* MCP tools must not accept `aictxRoot`, arbitrary filesystem root, or low-level file path parameters.
+* Users may configure one globally installed MCP server instance and target multiple initialized projects by passing `project_root` per tool call.
+* Project memory remains isolated by default; cross-project or shared memory behavior requires an explicit future design and must not happen implicitly.
 
 Concurrency rule:
 

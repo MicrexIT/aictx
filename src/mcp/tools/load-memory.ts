@@ -9,10 +9,12 @@ import {
 import type { LoadMemoryData, LoadMemorySource } from "../../context/compile.js";
 import type { LoadMemoryMode } from "../../context/modes.js";
 import type { ObjectId } from "../../core/types.js";
-
-interface AictxMcpContext {
-  cwd: string;
-}
+import {
+  PROJECT_ROOT_ARGUMENT_DESCRIPTION,
+  resolveMcpProjectCwd,
+  type AictxMcpContext,
+  type ProjectScopedMcpArgs
+} from "../context.js";
 
 type CliBudgetStatus = "not_requested" | "within_target" | "over_target";
 
@@ -41,11 +43,15 @@ const LOAD_MEMORY_INPUT_SCHEMA = z
     mode: z
       .string()
       .optional()
-      .describe("Optional context compiler mode. Defaults to coding.")
+      .describe("Optional context compiler mode. Defaults to coding."),
+    project_root: z
+      .string()
+      .optional()
+      .describe(PROJECT_ROOT_ARGUMENT_DESCRIPTION)
   })
   .strict();
 
-type LoadMemoryArgs = z.infer<typeof LOAD_MEMORY_INPUT_SCHEMA>;
+type LoadMemoryArgs = z.infer<typeof LOAD_MEMORY_INPUT_SCHEMA> & ProjectScopedMcpArgs;
 
 const READ_ONLY_TOOL_ANNOTATIONS: ToolAnnotations = {
   readOnlyHint: true,
@@ -81,7 +87,7 @@ function parseLoadMemoryArgs(
   hasExplicitTokenBudget: boolean;
 } {
   const options: LoadMemoryOptions = {
-    cwd: context.cwd,
+    cwd: resolveMcpProjectCwd(context, args),
     task: args.task
   };
   const hasExplicitTokenBudget = args.token_budget !== undefined;

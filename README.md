@@ -20,7 +20,13 @@ model API, or network access for core memory commands.
 
 Aictx requires Node.js `>=22`.
 
-Install it in a project:
+Install it globally for the best MCP experience:
+
+```bash
+npm install -g aictx
+```
+
+Or install it in a project:
 
 ```bash
 pnpm add -D aictx
@@ -37,7 +43,8 @@ The package provides two binaries:
 * `aictx`: the command-line interface
 * `aictx-mcp`: the MCP stdio server for AI coding clients
 
-If the package is installed locally, run commands through your package manager:
+If the package is installed locally instead of globally, run commands through
+your package manager:
 
 ```bash
 pnpm exec aictx init
@@ -477,9 +484,15 @@ interrupted.
 ## MCP Setup
 
 `aictx init` does not start the MCP server. Configure your MCP client to start
-`aictx-mcp` from the project root. The MCP server resolves the project from its
-current working directory, so use one MCP server instance per project directory
-when a client needs multiple projects.
+`aictx-mcp`. A globally installed `aictx-mcp` can be started once and reused
+across projects by passing `project_root` to routine MCP tools. When
+`project_root` is omitted, tools keep the legacy behavior and resolve the
+project from the MCP server process current working directory.
+
+Memory remains isolated by default. Each project keeps its own `.aictx/`
+directory, generated index, lock file, and Git-aware provenance. A global MCP
+server switches projects only for the specific tool call that names a
+`project_root`.
 
 `aictx-mcp` is an MCP stdio server: the MCP client must launch it and connect to
 its stdin/stdout. An agent generally cannot start `aictx-mcp` in a shell and
@@ -490,9 +503,17 @@ Example command configuration:
 
 ```json
 {
-  "command": "aictx-mcp",
-  "cwd": "/path/to/your/project"
+  "command": "aictx-mcp"
 }
+```
+
+Then target a project in MCP calls:
+
+```text
+load_memory({
+  project_root: "/path/to/your/project",
+  task: "fix Stripe webhook retries"
+})
 ```
 
 When installed as a local dev dependency, configure the client to run through
@@ -551,6 +572,7 @@ Inputs:
 * `task`: task description to compile context for
 * `token_budget`: optional advisory token target
 * `mode`: optional compiler mode, defaulting to coding behavior
+* `project_root`: optional project root for globally launched MCP servers
 
 Use this before non-trivial agent work.
 
@@ -562,6 +584,7 @@ Inputs:
 
 * `query`: search query
 * `limit`: optional maximum number of matches
+* `project_root`: optional project root for globally launched MCP servers
 
 Use this when an agent needs targeted memory results without a full context
 pack.
@@ -573,6 +596,7 @@ Validates and applies a structured Aictx memory patch.
 Inputs:
 
 * `patch`: structured memory patch object
+* `project_root`: optional project root for globally launched MCP servers
 
 Use this after meaningful work to save durable facts, decisions, constraints,
 or stale-memory updates. This is the preferred routine write path for agents.
@@ -582,6 +606,10 @@ or stale-memory updates. This is the preferred routine write path for agents.
 Returns Git diff output scoped to Aictx memory files.
 
 Inputs: none.
+
+Optional input:
+
+* `project_root`: optional project root for globally launched MCP servers
 
 Use this when an agent or user needs to review pending `.aictx/` changes through
 MCP.

@@ -2,21 +2,29 @@ import type { CallToolResult, ToolAnnotations } from "@modelcontextprotocol/sdk/
 import { z } from "zod";
 
 import { saveMemoryPatch } from "../../app/operations.js";
-
-interface AictxMcpContext {
-  cwd: string;
-}
+import { resolveProjectPaths } from "../../core/paths.js";
+import {
+  PROJECT_ROOT_ARGUMENT_DESCRIPTION,
+  resolveMcpProjectCwd,
+  type AictxMcpContext,
+  type ProjectScopedMcpArgs
+} from "../context.js";
 
 const SAVE_MEMORY_PATCH_INPUT_SCHEMA = z
   .object({
     patch: z
       .object({})
       .passthrough()
-      .describe("Structured Aictx memory patch to validate and apply.")
+      .describe("Structured Aictx memory patch to validate and apply."),
+    project_root: z
+      .string()
+      .optional()
+      .describe(PROJECT_ROOT_ARGUMENT_DESCRIPTION)
   })
   .strict();
 
-type SaveMemoryPatchArgs = z.infer<typeof SAVE_MEMORY_PATCH_INPUT_SCHEMA>;
+type SaveMemoryPatchArgs = z.infer<typeof SAVE_MEMORY_PATCH_INPUT_SCHEMA> &
+  ProjectScopedMcpArgs;
 
 const WRITE_TOOL_ANNOTATIONS: ToolAnnotations = {
   readOnlyHint: false,
@@ -40,14 +48,26 @@ async function callSaveMemoryPatchTool(
   context: AictxMcpContext,
   args: SaveMemoryPatchArgs
 ): Promise<CallToolResult> {
-  return serializeProjectWrite(context.cwd, async () => {
+  const cwd = resolveMcpProjectCwd(context, args);
+  const projectKey = await resolveWriteQueueKey(cwd);
+
+  return serializeProjectWrite(projectKey, async () => {
     const result = await saveMemoryPatch({
-      cwd: context.cwd,
+      cwd,
       patch: args.patch
     });
 
     return toToolResult(result);
   });
+}
+
+async function resolveWriteQueueKey(cwd: string): Promise<string> {
+  const paths = await resolveProjectPaths({
+    cwd,
+    mode: "require-initialized"
+  });
+
+  return paths.ok ? paths.data.projectRoot : cwd;
 }
 
 async function serializeProjectWrite<T>(

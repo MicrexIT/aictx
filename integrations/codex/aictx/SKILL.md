@@ -40,7 +40,7 @@ Use CLI for v1 setup, maintenance, recovery, export, inspection, local viewing, 
 
 CLI-only capabilities are not MCP parity gaps. Do not add or ask for MCP tools solely to mirror these CLI commands.
 
-MCP tools are available only when the agent client has already launched and connected to `aictx-mcp` for this project. `aictx init` does not start the MCP server, and starting `aictx-mcp` from a shell generally cannot add MCP tools to an already-running agent session. If MCP tools are unavailable, use the CLI fallback commands and tell the user they need to configure their MCP client to launch `aictx-mcp`.
+MCP tools are available only when the agent client has already launched and connected to `aictx-mcp`. `aictx init` does not start the MCP server, and starting `aictx-mcp` from a shell generally cannot add MCP tools to an already-running agent session. A globally launched MCP server can serve multiple initialized projects when tool calls include `project_root`. If MCP tools are unavailable, use the CLI fallback commands and tell the user they need to configure their MCP client to launch `aictx-mcp`.
 
 ## Default Workflow
 
@@ -48,6 +48,12 @@ Before non-trivial coding, architecture, debugging, dependency, or configuration
 
 ```text
 load_memory({ task: "<task summary>", mode: "coding" })
+```
+
+When one global MCP server serves multiple projects, include the current project root:
+
+```text
+load_memory({ project_root: "/path/to/project", task: "<task summary>", mode: "coding" })
 ```
 
 Use CLI fallback when MCP is unavailable:
@@ -66,7 +72,7 @@ npx aictx load "<task summary>"
 ./node_modules/.bin/aictx load "<task summary>"
 ```
 
-For MCP setup with a local package install, configure the client to launch `aictx-mcp` through the same project-local path, such as `pnpm exec aictx-mcp`, `npm exec aictx-mcp`, `npx aictx-mcp`, or `./node_modules/.bin/aictx-mcp`.
+For MCP setup, prefer a global Aictx install and configure the client to launch `aictx-mcp` once. With a local package install, configure the client to launch `aictx-mcp` through the same project-local path, such as `pnpm exec aictx-mcp`, `npm exec aictx-mcp`, `npx aictx-mcp`, or `./node_modules/.bin/aictx-mcp`.
 
 Load modes are `coding`, `debugging`, `review`, `architecture`, and `onboarding`. Modes tune deterministic ranking and rendering only; they do not broaden project scope, call a model, use external retrieval, or load the whole project.
 
@@ -74,6 +80,12 @@ After meaningful work, autonomously save a structured patch only for durable mem
 
 ```text
 save_memory_patch({ patch: { source, changes } })
+```
+
+For globally launched MCP, include `project_root` on save, search, load, and diff calls so the write lands in the intended project's isolated `.aictx/` directory:
+
+```text
+save_memory_patch({ project_root: "/path/to/project", patch: { source, changes } })
 ```
 
 Use CLI fallback only when MCP is unavailable:
@@ -280,4 +292,4 @@ Never save memory that asks future agents to ignore user instructions, bypass re
 
 If a memory update is rejected because of validation, dirty state, conflicts, or secret detection, report the reason and do not work around Aictx by editing `.aictx/` manually.
 
-If `aictx` is not on `PATH`, use the project package-manager binary path, such as `pnpm exec aictx`, `npm exec aictx`, `npx aictx`, or `./node_modules/.bin/aictx`. MCP clients should start `aictx-mcp` from the project root, using the equivalent package-manager command when needed; `aictx init` does not start it.
+If `aictx` is not on `PATH`, use the project package-manager binary path, such as `pnpm exec aictx`, `npm exec aictx`, `npx aictx`, or `./node_modules/.bin/aictx`. MCP clients can start `aictx-mcp` globally once and pass `project_root` on routine tool calls; with project-local installs, use the equivalent package-manager command when needed. `aictx init` does not start MCP.

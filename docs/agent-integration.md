@@ -20,6 +20,13 @@ Use MCP first when the client has Aictx MCP configured and connected:
 load_memory({ task: "<task summary>", mode: "coding" })
 ```
 
+If the MCP server was launched globally rather than from the project root, pass
+the target root explicitly:
+
+```text
+load_memory({ project_root: "/path/to/project", task: "<task summary>", mode: "coding" })
+```
+
 After meaningful work:
 
 ```text
@@ -57,6 +64,12 @@ aictx diff
 Aictx writes local files and never commits automatically. The user decides whether to edit, commit, or revert memory changes.
 
 `aictx-mcp` is an MCP stdio server. The MCP client must launch it and connect to its stdin/stdout; an agent generally cannot start `aictx-mcp` in a shell and then use it as MCP tools in an already-running session. If MCP tools are not available, use the CLI fallback commands.
+
+For the smoothest MCP setup, install Aictx globally and configure the client to
+launch `aictx-mcp` once. The routine MCP tools accept `project_root` so one
+server can serve multiple initialized projects while keeping each project's
+`.aictx/` memory isolated. When `project_root` is omitted, tools use the server
+launch directory for backward compatibility.
 
 When `aictx-mcp` is not on `PATH`, configure the MCP client to launch it through the project package manager or local binary path, such as `pnpm exec aictx-mcp`, `npm exec aictx-mcp`, `npx aictx-mcp`, or `./node_modules/.bin/aictx-mcp`.
 
@@ -279,7 +292,7 @@ Use whichever target fits the agent client:
 
 Codex users can enable a skill folder through `skills.config[].path` in Codex configuration. Claude Code supports project skills under `.claude/skills/<skill-name>/SKILL.md`; for Aictx, use the shared skill name `aictx-memory`.
 
-If `aictx` is not on `PATH`, use the package manager binary path for the project, such as `pnpm exec aictx`, `npm exec aictx`, `npx aictx`, or `./node_modules/.bin/aictx`. MCP clients should be configured to start `aictx-mcp` from the project root with the equivalent package-manager command when needed; `aictx init` does not start it.
+If `aictx` is not on `PATH`, use the package manager binary path for the project, such as `pnpm exec aictx`, `npm exec aictx`, `npx aictx`, or `./node_modules/.bin/aictx`. MCP clients can start `aictx-mcp` globally once and pass `project_root` on routine tool calls; with project-local installs, use the equivalent package-manager command when needed. `aictx init` does not start MCP.
 
 Generated guidance is not canonical memory. It is a setup aid for instructing agents how to use Aictx in projects that have opted into it.
 

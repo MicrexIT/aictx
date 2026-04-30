@@ -5,10 +5,12 @@ import {
   searchMemory,
   type SearchMemoryOptions
 } from "../../app/operations.js";
-
-interface AictxMcpContext {
-  cwd: string;
-}
+import {
+  PROJECT_ROOT_ARGUMENT_DESCRIPTION,
+  resolveMcpProjectCwd,
+  type AictxMcpContext,
+  type ProjectScopedMcpArgs
+} from "../context.js";
 
 const SEARCH_MEMORY_INPUT_SCHEMA = z
   .object({
@@ -16,11 +18,15 @@ const SEARCH_MEMORY_INPUT_SCHEMA = z
     limit: z
       .number()
       .optional()
-      .describe("Optional maximum number of matches to return.")
+      .describe("Optional maximum number of matches to return."),
+    project_root: z
+      .string()
+      .optional()
+      .describe(PROJECT_ROOT_ARGUMENT_DESCRIPTION)
   })
   .strict();
 
-type SearchMemoryArgs = z.infer<typeof SEARCH_MEMORY_INPUT_SCHEMA>;
+type SearchMemoryArgs = z.infer<typeof SEARCH_MEMORY_INPUT_SCHEMA> & ProjectScopedMcpArgs;
 
 const READ_ONLY_TOOL_ANNOTATIONS: ToolAnnotations = {
   readOnlyHint: true,
@@ -52,7 +58,7 @@ function parseSearchMemoryArgs(
   args: SearchMemoryArgs
 ): SearchMemoryOptions {
   const options: SearchMemoryOptions = {
-    cwd: context.cwd,
+    cwd: resolveMcpProjectCwd(context, args),
     query: args.query
   };
 
