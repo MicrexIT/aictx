@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Readable } from "node:stream";
 
+import fg from "fast-glob";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { main, type CliOutputWriter } from "../../../src/cli/main.js";
@@ -122,6 +123,25 @@ interface RebuildData {
   relations_indexed: number;
   events_indexed: number;
   event_appended: boolean;
+}
+
+interface SuggestData {
+  mode: "from_diff" | "bootstrap";
+  changed_files: string[];
+  related_memory_ids: string[];
+  possible_stale_ids: string[];
+  recommended_memory: string[];
+  agent_checklist: string[];
+}
+
+interface AuditData {
+  findings: Array<{
+    severity: "warning" | "info";
+    rule: string;
+    memory_id: string;
+    message: string;
+    evidence: unknown[];
+  }>;
 }
 
 afterEach(async () => {
@@ -301,6 +321,26 @@ describe("aictx full CLI workflow", () => {
       }
     });
 
+    const beforeBootstrap = await readCanonicalSnapshot(projectRoot);
+    const bootstrap = parseSuccessEnvelope<SuggestData>(
+      (
+        await expectSuccessfulCli([
+          "node",
+          "aictx",
+          "suggest",
+          "--bootstrap",
+          "--json"
+        ], projectRoot)
+      ).stdout
+    );
+    expect(bootstrap.data.mode).toBe("bootstrap");
+    expect(bootstrap.data.recommended_memory).toEqual(
+      expect.arrayContaining(["project", "architecture", "workflow", "constraint", "gotcha"])
+    );
+    expect(bootstrap.meta.git.available).toBe(false);
+    expect(bootstrap.meta.git.dirty).toBeNull();
+    await expect(readCanonicalSnapshot(projectRoot)).resolves.toEqual(beforeBootstrap);
+
     const save = parseSuccessEnvelope<SaveData>(
       (
         await expectSuccessfulCli(
@@ -355,6 +395,13 @@ describe("aictx full CLI workflow", () => {
     expect(rebuilt.data.index_rebuilt).toBe(true);
     expect(rebuilt.data.objects_indexed).toBeGreaterThan(0);
     expect(rebuilt.data.event_appended).toBe(false);
+
+    const audit = parseSuccessEnvelope<AuditData>(
+      (await expectSuccessfulCli(["node", "aictx", "audit", "--json"], projectRoot)).stdout
+    );
+    expect(Array.isArray(audit.data.findings)).toBe(true);
+    expect(audit.meta.git.available).toBe(false);
+    expect(audit.meta.git.dirty).toBeNull();
 
     for (const argv of gitOnlyCommands()) {
       const output = await runCli(argv, projectRoot);
@@ -448,6 +495,7 @@ function createNonGitWorkflowPatch() {
 
 function gitOnlyCommands(): string[][] {
   return [
+    ["node", "aictx", "suggest", "--from-diff", "--json"],
     ["node", "aictx", "diff", "--json"],
     ["node", "aictx", "history", "--json"],
     ["node", "aictx", "restore", "HEAD", "--json"],
@@ -497,6 +545,30 @@ function parseErrorEnvelope(stdout: string): ErrorEnvelope {
 
 function searchIds(envelope: SuccessEnvelope<SearchData>): string[] {
   return envelope.data.matches.map((match) => match.id);
+}
+
+async function readCanonicalSnapshot(projectRoot: string): Promise<Record<string, string>> {
+  const paths = await fg(
+    [
+      ".aictx/config.json",
+      ".aictx/events.jsonl",
+      ".aictx/memory/**",
+      ".aictx/relations/**"
+    ],
+    {
+      cwd: projectRoot,
+      dot: true,
+      onlyFiles: true,
+      unique: true
+    }
+  );
+  const snapshot: Record<string, string> = {};
+
+  for (const path of paths.sort()) {
+    snapshot[path] = (await readFile(join(projectRoot, path))).toString("base64");
+  }
+
+  return snapshot;
 }
 
 function createCapturedOutput(): {

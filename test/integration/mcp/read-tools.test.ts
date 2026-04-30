@@ -133,14 +133,27 @@ describe("aictx MCP read tools", () => {
           "rewind",
           "inspect",
           "stale",
+          "suggest",
+          "audit",
           "graph",
           "export",
+          "export_obsidian",
+          "view",
+          "local_viewer",
+          "load_mode",
+          "set_mode",
           "shell",
           "run_shell",
           "execute_command",
           "read_file",
           "write_file",
-          "filesystem"
+          "filesystem",
+          "create_object",
+          "update_object",
+          "delete_object",
+          "create_relation",
+          "update_relation",
+          "delete_relation"
         ])
       );
     } finally {

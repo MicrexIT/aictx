@@ -1,5 +1,5 @@
 import { spawn, type ChildProcessByStdio } from "node:child_process";
-import { mkdtemp, readFile, realpath, rm } from "node:fs/promises";
+import { mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -139,7 +139,9 @@ describe("release package", () => {
       expect(packedPathSet.has(requiredPath)).toBe(true);
     }
 
+    await writeOfflineInstallPackageJson(installRoot, packageJson);
     await expectSuccessfulCommand("pnpm", ["add", "--offline", pack.filename], installRoot);
+    await expectInstalledMemoryDisciplineDocs(installRoot);
 
     const viewerProjectRoot = await createTempRoot("aictx-release-viewer-project-");
     const init = await expectSuccessfulCommand(
@@ -205,6 +207,14 @@ const requiredPackedPaths = [
   "integrations/generic/aictx-agent-instructions.md"
 ];
 
+const generatedGuidancePaths = [
+  "integrations/templates/agent-guidance.md",
+  "integrations/codex/aictx/SKILL.md",
+  "integrations/claude/aictx/SKILL.md",
+  "integrations/claude/aictx.md",
+  "integrations/generic/aictx-agent-instructions.md"
+] as const;
+
 async function ensureBuiltPackageOutput(): Promise<void> {
   try {
     await Promise.all([
@@ -266,6 +276,79 @@ function parsePackageJson(contents: string): PackageJson {
   }
 
   return parsed as PackageJson;
+}
+
+async function writeOfflineInstallPackageJson(
+  installRoot: string,
+  packageJson: PackageJson
+): Promise<void> {
+  const zodVersion = packageJson.dependencies?.zod;
+
+  if (zodVersion === undefined) {
+    throw new Error("package.json must declare zod for the offline install fixture.");
+  }
+
+  await writeFile(
+    join(installRoot, "package.json"),
+    `${JSON.stringify(
+      {
+        private: true,
+        pnpm: {
+          overrides: {
+            zod: exactDependencyVersion(zodVersion)
+          }
+        }
+      },
+      null,
+      2
+    )}\n`,
+    "utf8"
+  );
+}
+
+function exactDependencyVersion(version: string): string {
+  return version.replace(/^[~^]/u, "");
+}
+
+async function expectInstalledMemoryDisciplineDocs(installRoot: string): Promise<void> {
+  const agentIntegration = await readInstalledPackageFile(
+    installRoot,
+    "docs/agent-integration.md"
+  );
+
+  expectMemoryDisciplineContent(agentIntegration);
+  expect(agentIntegration).toContain("The v1 agent model is MCP-first and CLI-complete");
+
+  for (const relativePath of generatedGuidancePaths) {
+    const content = await readInstalledPackageFile(installRoot, relativePath);
+
+    expectMemoryDisciplineContent(content);
+    expect(content).toContain(
+      "MCP exposes exactly `load_memory`, `search_memory`, `save_memory_patch`, and `diff_memory`"
+    );
+    expect(content).toContain("Use CLI for v1 setup");
+  }
+}
+
+function expectMemoryDisciplineContent(content: string): void {
+  expect(content).toContain("aictx suggest --bootstrap --json");
+  expect(content).toContain("aictx audit --json");
+  expect(content).toContain("`gotcha`");
+  expect(content).toContain("`workflow`");
+  expect(content).toContain("`mark_stale`");
+  expect(content).toContain("`supersede_object`");
+  expect(
+    content.includes("review diffs") ||
+      content.includes("review memory diffs") ||
+      content.includes("reviewing `.aictx/` changes")
+  ).toBe(true);
+}
+
+async function readInstalledPackageFile(
+  installRoot: string,
+  relativePath: string
+): Promise<string> {
+  return readFile(join(installRoot, "node_modules", "aictx", relativePath), "utf8");
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
