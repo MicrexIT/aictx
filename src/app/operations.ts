@@ -4,6 +4,7 @@ import { readUtf8FileInsideRoot } from "../core/fs.js";
 import {
   getAictxDiff,
   getAictxDirtyState,
+  getChangedProjectFiles,
   getGitState,
   showAictxFileAtCommit,
   type GitWrapperOptions
@@ -34,6 +35,12 @@ import {
   type LoadMemoryData,
   type LoadMemoryInput
 } from "../context/compile.js";
+import {
+  buildSuggestBootstrapPacket,
+  buildSuggestFromDiffPacket,
+  type SuggestMode,
+  type SuggestReviewPacket
+} from "../discipline/suggest.js";
 import {
   exportObsidianProjection as writeObsidianProjectionExport,
   type ObsidianProjectionExportData
@@ -126,6 +133,12 @@ export interface DiffMemoryOptions extends GitWrapperOptions {
   cwd: string;
 }
 
+export interface SuggestMemoryOptions extends GitWrapperOptions {
+  cwd: string;
+  fromDiff?: boolean;
+  bootstrap?: boolean;
+}
+
 export interface ListMemoryHistoryOptions extends GitWrapperOptions {
   cwd: string;
   limit?: number;
@@ -176,6 +189,8 @@ export interface DiffMemoryData {
   changed_memory_ids: ObjectId[];
   changed_relation_ids: RelationId[];
 }
+
+export type SuggestMemoryData = SuggestReviewPacket;
 
 export interface MemoryHistoryCommit {
   commit: string;
@@ -952,6 +967,95 @@ export async function diffMemory(
   };
 }
 
+export async function suggestMemory(
+  options: SuggestMemoryOptions
+): Promise<AppResult<SuggestMemoryData>> {
+  const mode = suggestMode(options);
+
+  if (!mode.ok) {
+    return {
+      ok: false,
+      error: mode.error,
+      warnings: [],
+      meta: await buildBestEffortMeta(options)
+    };
+  }
+
+  const paths = await resolveProjectPaths({
+    cwd: options.cwd,
+    mode: "require-initialized",
+    runner: options.runner
+  });
+
+  if (!paths.ok) {
+    return {
+      ok: false,
+      error: paths.error,
+      warnings: paths.warnings,
+      meta: await buildBestEffortMeta(options)
+    };
+  }
+
+  const meta = await buildMeta(paths.data, options);
+
+  if (!meta.ok) {
+    return meta;
+  }
+
+  if (mode.data === "from_diff" && !meta.meta.git.available) {
+    return {
+      ok: false,
+      error: aictxError("AICtxGitRequired", "Git is required for this operation."),
+      warnings: [],
+      meta: meta.meta
+    };
+  }
+
+  const storage = await readCanonicalStorage(paths.data.projectRoot);
+
+  if (!storage.ok) {
+    return {
+      ok: false,
+      error: storage.error,
+      warnings: storage.warnings,
+      meta: meta.meta
+    };
+  }
+
+  if (mode.data === "from_diff") {
+    const changed = await getChangedProjectFiles(paths.data.projectRoot, options);
+
+    if (!changed.ok) {
+      return {
+        ok: false,
+        error: changed.error,
+        warnings: [...storage.warnings, ...changed.warnings],
+        meta: meta.meta
+      };
+    }
+
+    return {
+      ok: true,
+      data: buildSuggestFromDiffPacket({
+        changedFiles: changed.data.changedFiles,
+        storage: storage.data
+      }),
+      warnings: [...storage.warnings, ...changed.warnings],
+      meta: meta.meta
+    };
+  }
+
+  return {
+    ok: true,
+    data: await buildSuggestBootstrapPacket({
+      projectRoot: paths.data.projectRoot,
+      storage: storage.data
+    }),
+    warnings: storage.warnings,
+    meta: meta.meta
+  };
+}
+
 export async function listMemoryHistory(
   options: ListMemoryHistoryOptions
 ): Promise<AppResult<MemoryHistoryData>> {
@@ -1237,7 +1341,8 @@ export const applicationOperations = {
   restoreMemory,
   rewindMemory,
   saveMemoryPatch,
-  searchMemory
+  searchMemory,
+  suggestMemory
 };
 
 const STALE_MEMORY_STATUSES = new Set<ObjectStatus>([
@@ -1592,6 +1697,21 @@ function objectNotFound(id: ObjectId): AictxError {
   return aictxError("AICtxObjectNotFound", "Memory object was not found.", {
     id
   });
+}
+
+function suggestMode(options: SuggestMemoryOptions): Result<SuggestMode> {
+  const selected = [options.fromDiff === true, options.bootstrap === true].filter(Boolean);
+
+  if (selected.length !== 1) {
+    return err(
+      aictxError(
+        "AICtxValidationFailed",
+        "Suggest requires exactly one of --from-diff or --bootstrap."
+      )
+    );
+  }
+
+  return ok(options.fromDiff === true ? "from_diff" : "bootstrap");
 }
 
 type MetaBuildResult =

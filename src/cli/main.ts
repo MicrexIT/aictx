@@ -17,6 +17,7 @@ import { registerRewindCommand } from "./commands/rewind.js";
 import { registerSaveCommand } from "./commands/save.js";
 import { registerSearchCommand } from "./commands/search.js";
 import { registerStaleCommand } from "./commands/stale.js";
+import { registerSuggestCommand } from "./commands/suggest.js";
 import {
   registerViewCommand,
   type ViewerUrlOpener
@@ -93,6 +94,11 @@ export function createCliProgram(options: CliMainOptions = {}): Command {
     stderr: writeErr
   });
   registerStaleCommand(program, {
+    cwd: options.cwd ?? process.cwd(),
+    stdout: writeOut,
+    stderr: writeErr
+  });
+  registerSuggestCommand(program, {
     cwd: options.cwd ?? process.cwd(),
     stdout: writeOut,
     stderr: writeErr

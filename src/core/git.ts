@@ -16,6 +16,24 @@ const IGNORED_DIRTY_PATHS = [
   ".aictx/exports/"
 ] as const;
 const IGNORED_DIRTY_FILES = [".aictx/.lock"] as const;
+const IGNORED_PROJECT_CHANGE_PREFIXES = [
+  ".aictx/",
+  ".cache/",
+  ".next/",
+  ".svelte-kit/",
+  ".turbo/",
+  ".vite/",
+  "build/",
+  "coverage/",
+  "dist/",
+  "dist-types/",
+  "node_modules/",
+  "out/",
+  "target/",
+  "temp/",
+  "tmp/"
+] as const;
+const IGNORED_PROJECT_CHANGE_FILES = [".aictx"] as const;
 const LOG_FIELD_SEPARATOR = "\u001f";
 
 export interface GitWrapperOptions {
@@ -35,6 +53,10 @@ export interface AictxDirtyState {
 
 export interface AictxDiff {
   diff: string;
+  changedFiles: string[];
+}
+
+export interface ProjectChangedFiles {
   changedFiles: string[];
 }
 
@@ -174,6 +196,35 @@ export async function getAictxDiff(
   return ok({
     diff: result.data.stdout,
     changedFiles: parseDiffChangedFiles(result.data.stdout)
+  });
+}
+
+export async function getChangedProjectFiles(
+  projectRoot: string,
+  options: GitWrapperOptions = {}
+): Promise<Result<ProjectChangedFiles>> {
+  const result = await runGit(
+    ["status", "--porcelain=v1", "--untracked-files=all", "--", "."],
+    projectRoot,
+    options
+  );
+
+  if (!result.ok) {
+    return result;
+  }
+
+  if (result.data.exitCode !== 0) {
+    return gitCommandFailed("Git project status failed.", result.data);
+  }
+
+  const changedFiles = result.data.stdout
+    .split("\n")
+    .map(parseStatusChangedPath)
+    .filter((file): file is string => file !== null)
+    .filter((file) => !isIgnoredProjectChangePath(file));
+
+  return ok({
+    changedFiles: uniqueSorted(changedFiles)
   });
 }
 
@@ -347,21 +398,25 @@ interface PorcelainStatusEntry {
 }
 
 function parsePorcelainStatusLine(line: string): PorcelainStatusEntry | null {
-  if (line.length < 4) {
-    return null;
-  }
-
   const status = line.slice(0, 2);
-  const rawPath = line.slice(3);
-  const path = unquoteGitPath(
-    rawPath.includes(" -> ") ? rawPath.split(" -> ").at(-1) ?? rawPath : rawPath
-  );
+  const path = parseStatusChangedPath(line);
 
-  if (!path.startsWith(".aictx/") && path !== ".aictx") {
+  if (path === null || (!path.startsWith(".aictx/") && path !== ".aictx")) {
     return null;
   }
 
   return { status, path };
+}
+
+function parseStatusChangedPath(line: string): string | null {
+  if (line.length < 4) {
+    return null;
+  }
+
+  const rawPath = line.slice(3);
+  return unquoteGitPath(
+    rawPath.includes(" -> ") ? rawPath.split(" -> ").at(-1) ?? rawPath : rawPath
+  );
 }
 
 function isUnmergedStatus(status: string): boolean {
@@ -372,6 +427,14 @@ function isIgnoredDirtyPath(filePath: string): boolean {
   return (
     IGNORED_DIRTY_FILES.includes(filePath as (typeof IGNORED_DIRTY_FILES)[number]) ||
     IGNORED_DIRTY_PATHS.some((ignoredPath) => filePath.startsWith(ignoredPath))
+  );
+}
+
+function isIgnoredProjectChangePath(filePath: string): boolean {
+  return (
+    IGNORED_PROJECT_CHANGE_FILES.includes(
+      filePath as (typeof IGNORED_PROJECT_CHANGE_FILES)[number]
+    ) || IGNORED_PROJECT_CHANGE_PREFIXES.some((ignoredPath) => filePath.startsWith(ignoredPath))
   );
 }
 
