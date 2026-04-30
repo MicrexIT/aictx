@@ -266,12 +266,24 @@ Defaults:
 
 * If `token_budget` is omitted, do not apply a token target.
 * `config.memory.defaultTokenBudget` is retained for compatibility and future user preference work, but v1 must not silently use it as a truncation target.
+* Allowed modes are `coding`, `debugging`, `review`, `architecture`, and `onboarding`.
 
 Validation:
 
 * `task` must be non-empty after trimming.
 * `token_budget` must be greater than `500`.
 * `token_budget` values above `50000` must be treated as `50000` in v1.
+* `mode` must be one of the allowed modes.
+
+Mode profiles:
+
+* `coding`: balanced default; prefer constraints, decisions, architecture, gotchas, workflows, facts, and open questions.
+* `debugging`: boost gotchas, constraints, facts, stale/superseded warnings, and related decisions.
+* `review`: boost constraints, decisions, gotchas, stale/superseded warnings, and changed-file-related memory.
+* `architecture`: boost architecture, decisions, constraints, concepts, and open questions.
+* `onboarding`: boost project, architecture, concepts, workflows, constraints, and a small number of gotchas.
+
+Modes must tune deterministic ranking and rendering only. They must not broaden project scope, call a model, use embeddings, or load the whole project.
 
 ## 9. Retrieval Pipeline
 
@@ -341,9 +353,11 @@ decision:        +18
 architecture:    +12
 question:        +10
 fact:             +8
+gotcha:          +14
+workflow:        +10
 concept:          +6
-note:             +0
 project:          +8
+note:             +0
 ```
 
 Status modifiers:
@@ -373,7 +387,7 @@ related_to:       +1
 Tie-breakers:
 
 1. Higher score.
-2. More specific type priority: constraint, decision, architecture, question, fact, concept, project, note.
+2. More specific type priority: constraint, decision, gotcha, architecture, workflow, question, fact, concept, project, note.
 3. Newer `updated_at`.
 4. Lexicographic ID.
 
@@ -397,10 +411,12 @@ Inclusion priority:
 3. `Do not do`.
 4. Relevant constraints.
 5. Relevant decisions.
-6. Open questions.
-7. Relevant facts.
-8. Relevant files.
-9. Stale or superseded memory to avoid.
+6. Relevant gotchas.
+7. Relevant workflows.
+8. Open questions.
+9. Relevant facts.
+10. Relevant files.
+11. Stale or superseded memory to avoid.
 
 Packaging rules:
 
@@ -429,6 +445,10 @@ Generated from: <project id>[, <branch>@<commit> when Git is available]
 ## Relevant decisions
 
 ## Relevant constraints
+
+## Relevant gotchas
+
+## Relevant workflows
 
 ## Relevant facts
 

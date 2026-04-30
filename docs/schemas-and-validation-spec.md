@@ -214,7 +214,7 @@ Schema:
       "pattern": "^[a-z][a-z0-9_]*\\.[a-z0-9][a-z0-9-]*$"
     },
     "type": {
-      "enum": ["project", "architecture", "decision", "constraint", "question", "fact", "note", "concept"]
+      "enum": ["project", "architecture", "decision", "constraint", "question", "fact", "gotcha", "workflow", "note", "concept"]
     },
     "status": {
       "enum": ["active", "draft", "stale", "superseded", "rejected", "open", "closed"]
@@ -649,7 +649,7 @@ Schema:
           "$ref": "#/$defs/objectId"
         },
         "type": {
-          "enum": ["project", "architecture", "decision", "constraint", "question", "fact", "note", "concept"]
+          "enum": ["project", "architecture", "decision", "constraint", "question", "fact", "gotcha", "workflow", "note", "concept"]
         },
         "status": {
           "enum": ["active", "draft", "stale", "superseded", "rejected", "open", "closed"]

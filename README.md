@@ -89,7 +89,8 @@ validates the patch, checks safety rules, writes canonical files, appends
 events, and updates generated indexes.
 
 MCP is the preferred path for routine agent memory work. The CLI is the
-complete path for setup, maintenance, inspection, recovery, and export workflows.
+complete path for setup, maintenance, inspection, recovery, suggestion, audit,
+local viewing, and export workflows.
 CLI-only commands are intentional; they are not MCP parity gaps.
 
 ## Quickstart
@@ -109,6 +110,7 @@ Before a task, load relevant memory:
 
 ```bash
 aictx load "fix Stripe webhook retries"
+aictx load "fix Stripe webhook retries" --mode debugging
 ```
 
 After meaningful work, save durable project memory with a structured patch:
@@ -226,6 +228,35 @@ aictx load "fix Stripe webhook retries" --token-budget 6000
 `--token-budget` is optional and advisory. It gives Aictx a packaging target,
 not a hard limit. If you omit it, Aictx does not compress context because of a
 missing budget.
+
+`--mode` is optional and defaults to `coding`. Planned modes are `coding`,
+`debugging`, `review`, `architecture`, and `onboarding`; modes tune deterministic
+ranking and rendering without loading the whole project.
+
+#### `aictx suggest`
+
+Builds a deterministic memory review packet without writing memory.
+
+```bash
+aictx suggest --from-diff --json
+aictx suggest --bootstrap --json
+```
+
+`--from-diff` is Git-required and packages changed files, related memory, stale
+candidates, and an agent checklist. `--bootstrap` lists likely source files and
+seed memory classes for a first-run project memory pass.
+
+#### `aictx audit`
+
+Reports deterministic memory hygiene findings without writing memory.
+
+```bash
+aictx audit --json
+```
+
+Audit findings include severity, rule, memory ID, message, and evidence. Agents
+can turn findings into structured memory patches through `aictx save` or
+`save_memory_patch`.
 
 #### `aictx save --stdin`
 
@@ -499,6 +530,8 @@ MCP or CLI. It does not mean MCP and CLI expose identical command lists.
 | Show graph neighborhood | none | `aictx graph` | Debug inspection remains CLI-only in v1. |
 | Export Obsidian projection | none | `aictx export obsidian` | Generated projection remains CLI-only in v1. |
 | View local memory | none | `aictx view` | Local read-only viewer remains CLI-only in v1. |
+| Suggest memory review packet | none | `aictx suggest` | Agent assistance remains CLI-only in v1. |
+| Audit memory hygiene | none | `aictx audit` | Deterministic hygiene review remains CLI-only in v1. |
 
 CLI-only capabilities are not MCP parity gaps and should not be added to MCP
 solely to mirror CLI commands. Agents should use supported MCP tools or CLI

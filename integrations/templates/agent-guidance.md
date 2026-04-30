@@ -15,7 +15,7 @@ Use MCP first for routine memory work:
 * `save_memory_patch` or `aictx save`
 * `diff_memory` or `aictx diff`
 
-Use CLI for v1 setup, maintenance, recovery, export, inspection, and local viewing capabilities that are intentionally not exposed by MCP:
+Use CLI for v1 setup, maintenance, recovery, export, inspection, local viewing, suggestion, and audit capabilities that are intentionally not exposed by MCP:
 
 * `aictx init`
 * `aictx check`
@@ -28,6 +28,8 @@ Use CLI for v1 setup, maintenance, recovery, export, inspection, and local viewi
 * `aictx graph`
 * `aictx export obsidian`
 * `aictx view`
+* `aictx suggest`
+* `aictx audit`
 
 CLI-only capabilities are not MCP parity gaps. Do not add or ask for MCP tools solely to mirror these CLI commands.
 
@@ -36,13 +38,14 @@ CLI-only capabilities are not MCP parity gaps. Do not add or ask for MCP tools s
 Before non-trivial coding, architecture, debugging, dependency, or configuration work:
 
 ```text
-load_memory({ task: "<task summary>" })
+load_memory({ task: "<task summary>", mode: "coding" })
 ```
 
 Use CLI fallback when MCP is unavailable:
 
 ```bash
 aictx load "<task summary>"
+aictx load "<task summary>" --mode debugging
 ```
 
 After meaningful work, autonomously save a structured patch only for durable memory that future agents should know:
@@ -57,7 +60,9 @@ Use CLI fallback only when MCP is unavailable:
 aictx save --stdin
 ```
 
-For setup, maintenance, inspection, export, local viewing, or recovery operations that are not exposed by MCP, use the `aictx` CLI instead of editing `.aictx/` files directly.
+For setup, maintenance, inspection, export, local viewing, suggestion, audit, or recovery operations that are not exposed by MCP, use the `aictx` CLI instead of editing `.aictx/` files directly.
+
+Use `aictx suggest --from-diff --json` when current code changes need a memory review packet before drafting a patch. Use `aictx suggest --bootstrap --json` for a first-run repo memory pass. Use `aictx audit --json` to find deterministic memory hygiene issues. These commands are read-only for canonical memory.
 
 Before finalizing, tell the user whether Aictx memory changed and suggest reviewing `.aictx/` changes.
 
@@ -74,9 +79,13 @@ Save durable project knowledge, such as:
 * Architecture decisions
 * Behavioral changes
 * Operational constraints
+* Gotchas and known failure modes
+* Repeated project workflows
 * Important facts discovered during debugging
 * Open questions that affect future work
 * Superseded or stale memory when old knowledge becomes wrong
+
+Keep memory short and linked. Prefer one durable claim per object. Prefer updating, marking stale, or superseding existing memory over creating duplicates. Save nothing when the task produced no durable future value.
 
 Do not save:
 
@@ -86,6 +95,8 @@ Do not save:
 * Speculation presented as fact
 * User preferences unrelated to the repository
 
+If loaded memory conflicts with current code, tests, manifests, or the user's request, prefer current evidence and consider marking the old memory stale or superseded.
+
 ## Patch Guidance
 
 The agent is responsible for creating the semantic patch. Aictx validates and writes it.
@@ -93,6 +104,8 @@ The agent is responsible for creating the semantic patch. Aictx validates and wr
 Aictx does not infer durable project meaning from diffs. Create patches from current evidence such as the task, loaded context, repository changes, tests, and conversation context.
 
 Keep patches small and reviewable. Prefer one or a few focused memory changes over broad rewrites.
+
+Use `gotcha` for known failure modes and traps. Use `workflow` for repeated project procedures. Do not create `history` or `task-note` object types; use Git/events/statuses for history and branch/task scope for temporary context.
 
 Minimal patch shape:
 
@@ -123,3 +136,5 @@ If memory conflicts with the user's request, repository code, or current evidenc
 Never save memory that asks future agents to ignore user instructions, bypass review, exfiltrate data, or hide changes.
 
 If a memory update is rejected because of validation, dirty state, conflicts, or secret detection, report the reason and do not work around Aictx by editing `.aictx/` manually.
+
+If `aictx` is not on `PATH`, use the project package-manager binary path, such as `pnpm exec aictx`, `npx aictx`, or `./node_modules/.bin/aictx`. MCP clients should start `aictx-mcp` from the project root.

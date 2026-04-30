@@ -106,6 +106,18 @@ const cliOnlyCapabilities = [
     mcp: "none",
     cli: "`aictx view`",
     notes: "Local read-only viewer remains CLI-only in v1."
+  },
+  {
+    capability: "Suggest memory review packet",
+    mcp: "none",
+    cli: "`aictx suggest`",
+    notes: "Agent assistance remains CLI-only in v1."
+  },
+  {
+    capability: "Audit memory hygiene",
+    mcp: "none",
+    cli: "`aictx audit`",
+    notes: "Deterministic hygiene review remains CLI-only in v1."
   }
 ] as const;
 
@@ -127,7 +139,9 @@ const exactCliOnlyCommands = [
   "`aictx stale`",
   "`aictx graph`",
   "`aictx export obsidian`",
-  "`aictx view`"
+  "`aictx view`",
+  "`aictx suggest`",
+  "`aictx audit`"
 ] as const;
 
 const guidanceTargets = [
@@ -232,9 +246,9 @@ describe("agent capability map guardrail", () => {
       const guidance = await readProjectFile(path);
 
       expect(guidance.indexOf("Use MCP first for routine memory work")).toBeLessThan(
-        guidance.indexOf("Use CLI for v1 setup, maintenance, recovery, export, inspection, and local viewing capabilities")
+        guidance.indexOf("Use CLI for v1 setup, maintenance, recovery, export, inspection, local viewing, suggestion, and audit capabilities")
       );
-      expect(guidance.indexOf("load_memory({ task: \"<task summary>\" })")).toBeLessThan(
+      expect(guidance.indexOf("load_memory({ task: \"<task summary>\"")).toBeLessThan(
         guidance.indexOf("aictx load \"<task summary>\"")
       );
       expect(guidance).toContain("autonomously save a structured patch");
@@ -295,7 +309,7 @@ describe("agent capability map guardrail", () => {
     }
 
     expect(prd).toContain(
-      "Setup, maintenance, recovery, export, inspection, and local viewing capabilities remain CLI-only in v1"
+      "Setup, maintenance, recovery, export, inspection, local viewing, suggestion, and audit capabilities remain CLI-only in v1"
     );
     expect(apiSpec).toContain("Do not expose an MCP tool for local viewing.");
     expect(localViewerSpec).toContain("Do not add `aictx view` to MCP.");

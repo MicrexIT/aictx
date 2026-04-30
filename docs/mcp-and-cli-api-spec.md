@@ -37,13 +37,13 @@ V1 API behavior must follow these rules:
 * CLI and MCP must share the same core implementation path.
 * AI agents must be able to reach every supported Aictx capability through either MCP or CLI.
 * MCP is the preferred agent path for routine memory load, search, save, and diff workflows.
-* CLI is the supported fallback and advanced path for setup, maintenance, recovery, export, inspection, and local viewing workflows.
+* CLI is the supported fallback and advanced path for setup, maintenance, recovery, export, inspection, local viewing, suggestion, and audit workflows.
 * The API must be usable without a cloud account, external API, embeddings, or hosted service.
 
 ### 2.1 Agent Capability Map
 
 V1 parity means agent reachability through MCP or CLI, not identical command lists.
-CLI-only capabilities are intentionally not MCP parity gaps; do not add setup, maintenance, recovery, export, inspection, or local viewing tools to MCP just to mirror CLI commands.
+CLI-only capabilities are intentionally not MCP parity gaps; do not add setup, maintenance, recovery, export, inspection, local viewing, suggestion, or audit tools to MCP just to mirror CLI commands.
 When a supported MCP or CLI entrypoint exists, agents must use that entrypoint instead of editing `.aictx/` files directly.
 
 | Capability | MCP | CLI | Notes |
@@ -63,6 +63,8 @@ When a supported MCP or CLI entrypoint exists, agents must use that entrypoint i
 | Show graph neighborhood | none | `aictx graph` | Debug inspection remains CLI-only in v1. |
 | Export Obsidian projection | none | `aictx export obsidian` | Generated projection remains CLI-only in v1. |
 | View local memory | none | `aictx view` | Local read-only viewer remains CLI-only in v1. |
+| Suggest memory review packet | none | `aictx suggest` | Agent assistance remains CLI-only in v1. |
+| Audit memory hygiene | none | `aictx audit` | Deterministic hygiene review remains CLI-only in v1. |
 
 ## 3. Runtime Preconditions
 
@@ -230,7 +232,7 @@ Compile task-specific memory into a context pack.
 Syntax:
 
 ```bash
-aictx load "<task>" [--token-budget <number>] [--json]
+aictx load "<task>" [--mode <mode>] [--token-budget <number>] [--json]
 ```
 
 Behavior:
@@ -242,14 +244,17 @@ Behavior:
 * Include Git provenance in the context pack when Git is available.
 * If Git is unavailable, include local project provenance and mark Git provenance as unavailable.
 * Exclude stale, superseded, rejected, and conflicted memory from `Must know` by default.
+* Use `--mode` to tune deterministic ranking and rendering.
 * Treat `--token-budget` as an advisory target only when explicitly provided.
 * Keep token target/status metadata out of the Markdown context pack and expose it in JSON output.
+* Allowed modes are `coding`, `debugging`, `review`, `architecture`, and `onboarding`; default is `coding`.
 
 JSON success data:
 
 ```json
 {
   "task": "Fix Stripe webhook retries",
+  "mode": "debugging",
   "token_budget": 6000,
   "context_pack": "# AI Context Pack\n...",
   "token_target": 6000,
@@ -536,6 +541,8 @@ aictx inspect <id> [--json]
 aictx graph <id> [--json]
 aictx export obsidian [--out <dir>] [--json]
 aictx view [--port <number>] [--open] [--json]
+aictx suggest (--from-diff | --bootstrap) [--json]
+aictx audit [--json]
 ```
 
 These commands must not mutate canonical storage. `aictx export obsidian` and the explicit viewer Obsidian export action may write generated projection files only.
@@ -548,8 +555,85 @@ Minimum behavior:
 * `aictx graph <id>` shows relation neighborhoods for debugging only.
 * `aictx export obsidian` writes a one-way generated Obsidian projection from canonical memory.
 * `aictx view` starts a loopback-only read-only web viewer for human memory inspection.
+* `aictx suggest --from-diff` returns a Git-backed deterministic memory review packet for the current diff and does not write memory.
+* `aictx suggest --bootstrap` returns a deterministic first-run memory review packet and does not write memory.
+* `aictx audit` returns deterministic memory hygiene findings and does not write memory.
 
-### 5.11 `aictx export obsidian`
+### 5.11 `aictx suggest`
+
+Purpose:
+
+Create deterministic evidence packets that help an agent draft memory patches.
+
+Syntax:
+
+```bash
+aictx suggest --from-diff [--json]
+aictx suggest --bootstrap [--json]
+```
+
+Behavior:
+
+* Require exactly one of `--from-diff` or `--bootstrap`.
+* `--from-diff` requires Git and returns `AICtxGitRequired` outside a Git worktree.
+* `--from-diff` reads the current non-generated project diff and related Aictx memory but does not create memory patches.
+* `--bootstrap` works with or without Git and lists likely files for the agent to inspect before creating seed memory.
+* Both modes must be deterministic, local-only, and read-only for canonical memory.
+* Do not expose an MCP tool for suggestion packets in v1.
+
+JSON success data:
+
+```json
+{
+  "mode": "from_diff",
+  "changed_files": ["src/billing/webhook.ts"],
+  "related_memory_ids": ["constraint.webhook-idempotency"],
+  "possible_stale_ids": ["decision.old-webhook-retries"],
+  "recommended_memory": ["decision", "constraint", "gotcha"],
+  "agent_checklist": [
+    "Create memory only for durable future value.",
+    "Prefer updating or marking stale existing memory over creating duplicates."
+  ]
+}
+```
+
+### 5.12 `aictx audit`
+
+Purpose:
+
+Report deterministic memory hygiene findings.
+
+Syntax:
+
+```bash
+aictx audit [--json]
+```
+
+Behavior:
+
+* Require initialized `.aictx/`.
+* Read canonical memory and generated index data where useful.
+* Must not mutate canonical memory, generated indexes, events, or exports.
+* Report local deterministic findings only; do not call a model or infer semantic truth from code.
+* Do not expose an MCP tool for audit in v1.
+
+JSON success data:
+
+```json
+{
+  "findings": [
+    {
+      "severity": "warning",
+      "rule": "referenced_file_missing",
+      "memory_id": "gotcha.webhook-duplicates",
+      "message": "Memory references a file that does not exist.",
+      "evidence": [{ "kind": "file", "id": "src/old-webhook.ts" }]
+    }
+  ]
+}
+```
+
+### 5.13 `aictx export obsidian`
 
 Purpose:
 
@@ -589,7 +673,7 @@ Success data:
 }
 ```
 
-### 5.12 `aictx view`
+### 5.14 `aictx view`
 
 Purpose:
 
@@ -656,11 +740,13 @@ Input fields:
 * `task` is required.
 * `token_budget` is optional. If omitted, no token target is applied.
 * `mode` is optional and defaults to `coding`.
+* Allowed modes are `coding`, `debugging`, `review`, `architecture`, and `onboarding`.
 
 Behavior:
 
 * Same core behavior as `aictx load`.
 * Must return Markdown context pack plus structured references.
+* Must use the same deterministic mode-aware ranking and rendering as CLI `aictx load --mode`.
 * Must preserve high-priority task memory even when an explicit token budget target is exceeded.
 
 Output data:

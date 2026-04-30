@@ -412,6 +412,8 @@ MemoryPatch
 PatchChange
 SearchResult
 ContextPack
+SuggestPacket
+AuditFinding
 ```
 
 `GitState` must include:
@@ -447,6 +449,8 @@ loadMemory(input): Promise<Result<LoadData>>
 searchMemory(input): Promise<Result<SearchData>>
 saveMemoryPatch(input): Promise<Result<SaveData>>
 diffMemory(input): Promise<Result<DiffData>>
+suggestMemory(input): Promise<Result<SuggestData>>
+auditMemory(input): Promise<Result<AuditData>>
 checkProject(input): Promise<Result<CheckData>>
 rebuildIndex(input): Promise<Result<RebuildData>>
 history(input): Promise<Result<HistoryData>>
@@ -611,6 +615,7 @@ Rules:
 Responsibilities:
 
 * Normalize task input.
+* Validate and apply load modes: `coding`, `debugging`, `review`, `architecture`, and `onboarding`.
 * Retrieve candidate memory through the index module.
 * Rank candidates according to `indexing-and-context-compiler-spec.md`.
 * Apply precision-first token target packaging when explicitly requested.
@@ -624,7 +629,26 @@ Rules:
 * The context module must not call Git directly except through core metadata passed into it.
 * Ranking logic must be deterministic for the same inputs.
 
-### 15.1 Projection Export Module Responsibilities
+## 16. Memory Discipline Module Responsibilities
+
+`src/discipline/*` owns deterministic memory discipline helpers.
+
+Responsibilities:
+
+* Build `aictx suggest --from-diff` review packets from Git diff summaries, changed files, related memory, and possible stale candidates.
+* Build `aictx suggest --bootstrap` review packets from local project files that are useful for first-run memory creation.
+* Build `aictx audit` findings for deterministic memory hygiene rules.
+* Keep suggestion and audit outputs read-only and local-only.
+* Return stable JSON shapes suitable for agents.
+
+Rules:
+
+* The discipline module must not call a model, embeddings service, network API, or hosted service.
+* The discipline module must not create or edit memory patches.
+* The discipline module must not mutate canonical files, generated indexes, events, exports, or Git state.
+* Agents use discipline outputs as evidence and draft structured patches through `save_memory_patch` or `aictx save`.
+
+## 17. Projection Export Module Responsibilities
 
 `src/export/*` owns generated projections for external viewers.
 
@@ -643,7 +667,7 @@ Rules:
 * The export module must reject project root, canonical `.aictx` directories, symlinks, paths outside the project root, invalid manifests, and non-empty unmanifested directories.
 * The export module must not import from CLI, MCP, or app adapters.
 
-## 16. CLI Architecture
+## 18. CLI Architecture
 
 `src/cli/main.ts` owns process startup for the CLI.
 
@@ -664,7 +688,7 @@ Command module pattern:
 parse argv -> build service input -> call application service -> render result -> set exit code
 ```
 
-## 17. MCP Architecture
+## 19. MCP Architecture
 
 `src/mcp/server.ts` owns MCP startup.
 
@@ -687,7 +711,7 @@ Agent capability split:
 
 ```text
 MCP + CLI: load, search, save, diff
-CLI-only in v1: init, check, rebuild, history, restore, rewind, inspect, stale, graph, export obsidian
+CLI-only in v1: init, check, rebuild, history, restore, rewind, inspect, stale, graph, export obsidian, view, suggest, audit
 ```
 
 Rules:
@@ -718,7 +742,7 @@ For a given projectRoot, only one write operation may run at a time.
 Read operations may run concurrently unless an index rebuild is in progress.
 ```
 
-## 18. Write Locking
+## 20. Write Locking
 
 Aictx must guard canonical writes against concurrent local processes.
 
@@ -751,7 +775,7 @@ API requirement:
 
 * Lock contention returns `AICtxLockBusy`.
 
-## 19. Error Model
+## 21. Error Model
 
 Application services return `Result<T>`.
 
@@ -776,7 +800,7 @@ API requirement:
 
 * Uncaught entry-point failures return `AICtxInternalError`.
 
-## 20. Logging
+## 22. Logging
 
 Logging must be quiet by default.
 
@@ -790,7 +814,7 @@ Rules:
 * Logs must not print secret values.
 * Logs should include project root and operation name when useful.
 
-## 21. Build Output
+## 23. Build Output
 
 Build command:
 
@@ -884,7 +908,7 @@ Rules:
 * The script must be deterministic.
 * A unit test should fail if running the generator would change checked-in generated files.
 
-## 22. Testing Strategy
+## 24. Testing Strategy
 
 V1 requires unit and integration tests.
 
@@ -922,7 +946,7 @@ Test rules:
 * Tests must use deterministic timestamps by injecting a clock.
 * Tests must use deterministic Git commits by setting test-local Git author metadata.
 
-## 23. Runtime Configuration
+## 25. Runtime Configuration
 
 Environment variables:
 
@@ -938,7 +962,7 @@ Rules:
 * No telemetry is sent in v1.
 * No update checks run in v1.
 
-## 24. Security Boundaries
+## 26. Security Boundaries
 
 Security rules:
 
@@ -958,7 +982,7 @@ Prompt-injection handling:
 * Context packs should label memory as project memory, not system instructions.
 * Rejected, stale, superseded, and conflicted memory must not enter high-priority context sections by default.
 
-## 25. Release and Distribution
+## 27. Release and Distribution
 
 Primary distribution:
 
@@ -983,7 +1007,7 @@ Rules:
 * Package should support macOS and Linux first.
 * Windows support is desirable but not a blocking v1 requirement unless path handling tests pass.
 
-## 26. Deferred Architecture
+## 28. Deferred Architecture
 
 Deferred from v1:
 
@@ -1009,7 +1033,7 @@ Allowed extension points:
 * Add hosted sync behind explicit user configuration.
 * Add team workflow tools without changing the local canonical storage contract.
 
-## 27. Acceptance Criteria
+## 29. Acceptance Criteria
 
 Runtime architecture is implementation-ready when:
 

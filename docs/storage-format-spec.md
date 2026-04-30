@@ -68,6 +68,12 @@ V1 uses this layout:
       retry-backoff.md
       retry-backoff.json
     facts/
+    gotchas/
+      webhook-duplicates.md
+      webhook-duplicates.json
+    workflows/
+      release-checklist.md
+      release-checklist.json
     notes/
       stripe-webhook-behavior.md
       stripe-webhook-behavior.json
@@ -188,6 +194,8 @@ V1 object types:
 * `constraint`
 * `question`
 * `fact`
+* `gotcha`
+* `workflow`
 * `note`
 * `concept`
 
@@ -200,9 +208,13 @@ decision       -> .aictx/memory/decisions/
 constraint     -> .aictx/memory/constraints/
 question       -> .aictx/memory/questions/
 fact           -> .aictx/memory/facts/
+gotcha         -> .aictx/memory/gotchas/
+workflow       -> .aictx/memory/workflows/
 note           -> .aictx/memory/notes/
 concept        -> .aictx/memory/concepts/
 ```
+
+`gotcha` captures known failure modes, traps, recurring bugs, and behavior future agents should avoid. `workflow` captures repeated project procedures such as release steps, debugging paths, migrations, local setup, or recurring maintenance. Do not add `history` or `task-note` as object types in v1; use Git/events/statuses for history and branch/task scope for temporary context.
 
 ### 5.2 Object Statuses
 

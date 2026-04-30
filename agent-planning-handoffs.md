@@ -2017,3 +2017,234 @@ Run:
 - pnpm typecheck
 - pnpm vitest run test/integration/cli/ test/integration/release/ test/integration/viewer/ test/unit/agent-capability-map.test.ts
 ```
+
+## T061: Spec Memory Discipline, Lifecycle Rules, and Taxonomy
+
+```text
+Plan roadmap task T061: Spec Memory Discipline, Lifecycle Rules, and Taxonomy.
+
+Read these files first:
+- implementation-roadmap.md
+- prd.md
+- storage-format-spec.md
+- schemas-and-validation-spec.md
+- indexing-and-context-compiler-spec.md
+- mcp-and-cli-api-spec.md
+- runtime-and-project-architecture-spec.md
+
+Write scope:
+- Product/spec docs and docs mirrors
+- README.md
+- docs/agent-integration.md
+- integrations/templates/agent-guidance.md
+- generated integration guidance files
+- test/unit/agent-capability-map.test.ts
+- test/unit/agent-guidance/
+
+Do not modify:
+- Runtime source implementation files, except tests that guard docs/guidance contracts.
+- MCP tool implementation.
+
+Acceptance:
+- Specs define memory discipline lifecycle rules.
+- Specs add `gotcha` and `workflow`, and explicitly exclude `history` and `task-note` object types.
+- Specs define load modes, CLI-only suggest, and CLI-only audit.
+- Generated guidance is template-derived.
+- MCP remains limited to `load_memory`, `search_memory`, `save_memory_patch`, and `diff_memory`.
+
+Run:
+- pnpm build:guidance
+- pnpm vitest run test/unit/agent-guidance test/unit/agent-capability-map.test.ts test/unit/scaffold.test.ts
+```
+
+## T062: Implement Schema and Storage Support for Gotcha and Workflow
+
+```text
+Plan roadmap task T062: Implement Schema and Storage Support for Gotcha and Workflow.
+
+Read these files first:
+- implementation-roadmap.md
+- storage-format-spec.md
+- schemas-and-validation-spec.md
+- runtime-and-project-architecture-spec.md
+
+Write scope:
+- src/core/types.ts
+- src/schemas/
+- src/storage/
+- src/validation/
+- test/unit/core/
+- test/unit/validation/
+- test/integration/init/
+
+Do not modify:
+- Context ranking, CLI load mode behavior, suggest, or audit implementation.
+
+Acceptance:
+- Schema validation accepts `gotcha` and `workflow`.
+- Save, load, search, check, export, and viewer summaries accept the new types.
+- Existing types remain valid.
+
+Run:
+- pnpm typecheck
+- pnpm vitest run test/unit/core/ test/unit/validation/ test/integration/init/
+```
+
+## T063: Implement Mode-Aware Load Ranking and CLI Mode
+
+```text
+Plan roadmap task T063: Implement Mode-Aware Load Ranking and CLI Mode.
+
+Read these files first:
+- implementation-roadmap.md
+- indexing-and-context-compiler-spec.md
+- mcp-and-cli-api-spec.md
+
+Write scope:
+- src/cli/commands/load.ts
+- src/mcp/tools/load-memory.ts
+- src/context/
+- src/index/
+- test/unit/context/
+- test/integration/context/
+- test/integration/cli/load-search.test.ts
+- test/integration/mcp/read-tools.test.ts
+
+Do not modify:
+- MCP tool list.
+- Suggest or audit commands.
+
+Acceptance:
+- CLI `load --mode` and MCP `load_memory({ mode })` share core behavior.
+- Modes rank/render different priorities deterministically.
+- Invalid modes return validation errors.
+
+Run:
+- pnpm typecheck
+- pnpm vitest run test/unit/context/ test/integration/context/ test/integration/cli/load-search.test.ts test/integration/mcp/read-tools.test.ts
+```
+
+## T064: Add Aictx Suggest Review Packets
+
+```text
+Plan roadmap task T064: Add Aictx Suggest Review Packets.
+
+Read these files first:
+- implementation-roadmap.md
+- mcp-and-cli-api-spec.md
+- runtime-and-project-architecture-spec.md
+
+Write scope:
+- src/cli/commands/suggest.ts
+- src/app/operations.ts
+- src/discipline/
+- src/core/git.ts
+- test/unit/discipline/
+- test/integration/cli/suggest.test.ts
+
+Do not modify:
+- MCP tool list.
+- Audit implementation except shared discipline helpers.
+
+Acceptance:
+- `suggest --from-diff` is Git-required and read-only.
+- `suggest --bootstrap` works outside Git and is read-only.
+- Outputs include changed files, related memory, possible stale IDs, recommended memory types, and checklist.
+
+Run:
+- pnpm typecheck
+- pnpm vitest run test/unit/discipline/ test/integration/cli/suggest.test.ts
+```
+
+## T065: Add Deterministic Aictx Audit
+
+```text
+Plan roadmap task T065: Add Deterministic Aictx Audit.
+
+Read these files first:
+- implementation-roadmap.md
+- mcp-and-cli-api-spec.md
+- runtime-and-project-architecture-spec.md
+
+Write scope:
+- src/cli/commands/audit.ts
+- src/app/operations.ts
+- src/discipline/
+- test/unit/discipline/
+- test/integration/cli/audit.test.ts
+
+Do not modify:
+- MCP tool list.
+- Canonical write path.
+
+Acceptance:
+- `aictx audit` reports deterministic findings.
+- Findings include severity, rule, memory_id, message, and evidence.
+- Audit does not write memory, events, indexes, exports, or Git state.
+
+Run:
+- pnpm typecheck
+- pnpm vitest run test/unit/discipline/ test/integration/cli/audit.test.ts
+```
+
+## T066: Upgrade Autonomous Agent Guidance and Setup Docs
+
+```text
+Plan roadmap task T066: Upgrade Autonomous Agent Guidance and Setup Docs.
+
+Read these files first:
+- implementation-roadmap.md
+- docs/agent-integration.md
+- integrations/templates/agent-guidance.md
+- README.md
+
+Write scope:
+- README.md
+- docs/agent-integration.md
+- integrations/templates/agent-guidance.md
+- generated integration guidance files
+- scripts/generate-agent-guidance.mjs
+- test/unit/agent-guidance/
+- test/unit/agent-capability-map.test.ts
+
+Do not modify:
+- Source implementation except guidance generation if required.
+
+Acceptance:
+- Guidance explains short linked memory, update-before-create, stale/supersede, and save-nothing-is-valid.
+- Docs explain package-manager fallback when `aictx` is not on PATH.
+- Generated guidance drift tests pass.
+
+Run:
+- pnpm build:guidance
+- pnpm vitest run test/unit/agent-guidance/ test/unit/agent-capability-map.test.ts test/unit/scaffold.test.ts
+```
+
+## T067: Add End-to-End Memory Discipline Workflow Tests
+
+```text
+Plan roadmap task T067: Add End-to-End Memory Discipline Workflow Tests.
+
+Read these files first:
+- implementation-roadmap.md
+- mcp-and-cli-api-spec.md
+- indexing-and-context-compiler-spec.md
+
+Write scope:
+- test/integration/e2e/
+- test/integration/cli/
+- test/integration/mcp/
+- test/integration/release/
+
+Do not modify:
+- Product source unless a tested bug is discovered and separately planned.
+
+Acceptance:
+- E2E tests cover bootstrap suggestion, gotcha/workflow saves, mode-aware load, diff suggestion, audit, stale/supersede, and final diff review.
+- MCP remains limited to the four v1 tools.
+- Non-Git core workflows still pass.
+
+Run:
+- pnpm typecheck
+- pnpm vitest run test/integration/e2e/ test/integration/cli/ test/integration/mcp/ test/integration/release/
+```

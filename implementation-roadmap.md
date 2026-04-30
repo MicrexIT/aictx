@@ -1671,7 +1671,7 @@ Acceptance:
 
 Phase invariant:
 
-MCP is routine-agent-primary, not MCP-only. Keep the MCP contract lean with the normalized v1 tool set, and keep every other supported Aictx capability reachable to agents through the CLI. Do not add setup, maintenance, recovery, export, or inspection tools to MCP just to mirror CLI commands.
+MCP is routine-agent-primary, not MCP-only. Keep the MCP contract lean with the normalized v1 tool set, and keep every other supported Aictx capability reachable to agents through the CLI. Do not add setup, maintenance, recovery, export, inspection, local viewing, suggestion, or audit tools to MCP just to mirror CLI commands.
 
 ### T041: Implement MCP Server Bootstrap
 
@@ -1701,7 +1701,7 @@ Implementation:
 * Ensure logs go to stderr only.
 * Resolve project from server process `cwd`.
 * Do not expose arbitrary filesystem or shell tools.
-* Do not expose CLI-only setup, maintenance, recovery, export, or inspection commands as MCP tools.
+* Do not expose CLI-only setup, maintenance, recovery, export, inspection, local viewing, suggestion, or audit commands as MCP tools.
 
 Acceptance:
 
@@ -1940,7 +1940,7 @@ Implementation:
   * `load`, `search`, `save`, and `diff` are available through both MCP and CLI.
   * `init`, `check`, `rebuild`, `history`, `restore`, `rewind`, `inspect`, `stale`, `graph`, and `export obsidian` are CLI-only in v1.
 * Document that agents should use MCP for routine memory load, search, save, and diff when available.
-* Document that agents may use CLI for setup, maintenance, recovery, export, and inspection workflows.
+* Document that agents may use CLI for setup, maintenance, recovery, export, inspection, local viewing, suggestion, and audit workflows.
 * Regenerate generated agent guidance from the shared template.
 * Keep root-level spec mirrors in sync with their `docs/` copies while both exist.
 * Add a unit test that fails if the capability-map docs or generated guidance drift from the MCP-first, CLI-complete model.
@@ -2128,7 +2128,7 @@ Acceptance:
 * Guide does not imply CLI-only commands should be exposed as MCP tools.
 * Guide does not mention embeddings as v1 behavior.
 * Generated guidance tells agents to load memory before non-trivial work and save structured patches after meaningful changes.
-* Generated guidance tells agents they may use the CLI for supported setup, maintenance, recovery, export, and inspection operations.
+* Generated guidance tells agents they may use the CLI for supported setup, maintenance, recovery, export, inspection, local viewing, suggestion, and audit operations.
 * Generated guidance tells agents not to edit `.aictx/` files directly or save secrets.
 * Generated guidance remains optional and copyable.
 * `pnpm build` regenerates guidance from the shared template.
@@ -2558,6 +2558,279 @@ Acceptance:
 * Package tests prove viewer assets are present and serveable from the packed package.
 * Capability guardrails still prove MCP exposes only `load_memory`, `search_memory`, `save_memory_patch`, and `diff_memory`.
 
+### T061: Spec Memory Discipline, Lifecycle Rules, and Taxonomy
+
+Goal:
+
+Lock the product/spec contracts for memory discipline before implementation.
+
+Write scope:
+
+```text
+prd.md
+docs/prd.md
+storage-format-spec.md
+docs/storage-format-spec.md
+schemas-and-validation-spec.md
+docs/schemas-and-validation-spec.md
+indexing-and-context-compiler-spec.md
+docs/indexing-and-context-compiler-spec.md
+mcp-and-cli-api-spec.md
+docs/mcp-and-cli-api-spec.md
+runtime-and-project-architecture-spec.md
+docs/runtime-and-project-architecture-spec.md
+docs/agent-integration.md
+README.md
+integrations/templates/agent-guidance.md
+integrations/codex/aictx/SKILL.md
+integrations/claude/aictx/SKILL.md
+integrations/claude/aictx.md
+integrations/generic/aictx-agent-instructions.md
+test/unit/agent-capability-map.test.ts
+test/unit/agent-guidance/
+```
+
+Depends on:
+
+```text
+T060
+```
+
+Implementation:
+
+* Define Aictx as a memory discipline system: narrow loads, durable saves, update-before-create, stale/supersede behavior, current-code precedence, diff review, and save-nothing-is-valid.
+* Add first-class `gotcha` and `workflow` object types to specs.
+* Keep `history` and `task-note` out of object types; use Git/events/statuses and branch/task scope instead.
+* Specify mode-aware load modes: `coding`, `debugging`, `review`, `architecture`, and `onboarding`.
+* Specify CLI-only `aictx suggest` and `aictx audit` as deterministic read-only agent support surfaces.
+* Preserve the exact MCP tool set.
+
+Acceptance:
+
+* Root specs and `docs/` mirrors are in sync.
+* Generated guidance is template-derived and includes memory discipline rules.
+* Capability guardrails include `aictx suggest` and `aictx audit` as CLI-only.
+* No source implementation is added in this task.
+
+### T062: Implement Schema and Storage Support for Gotcha and Workflow
+
+Goal:
+
+Make `gotcha` and `workflow` first-class memory object types.
+
+Write scope:
+
+```text
+src/core/types.ts
+src/schemas/object.schema.json
+src/schemas/patch.schema.json
+src/storage/
+src/validation/
+test/unit/core/
+test/unit/validation/
+test/integration/init/
+```
+
+Depends on:
+
+```text
+T061
+```
+
+Implementation:
+
+* Add `gotcha` and `workflow` to domain type unions and bundled schemas.
+* Add recommended storage directories `.aictx/memory/gotchas/` and `.aictx/memory/workflows/`.
+* Ensure ID prefix, path generation, validation, init/check, save, search indexing, viewer summaries, and export projections accept the new types.
+
+Acceptance:
+
+* Schema validation accepts `gotcha` and `workflow` objects and patch creates/updates.
+* Save/load/search/check/export/viewer paths handle the new types.
+* Existing memory types remain valid.
+
+### T063: Implement Mode-Aware Load Ranking and CLI Mode
+
+Goal:
+
+Make load modes affect deterministic context retrieval and rendering.
+
+Write scope:
+
+```text
+src/cli/commands/load.ts
+src/mcp/tools/load-memory.ts
+src/context/
+src/index/
+test/unit/context/
+test/integration/context/
+test/integration/cli/load-search.test.ts
+test/integration/mcp/read-tools.test.ts
+```
+
+Depends on:
+
+```text
+T062
+```
+
+Implementation:
+
+* Add CLI `aictx load "<task>" --mode <mode>`.
+* Validate load modes consistently for CLI and MCP.
+* Apply mode-specific type boosts and section rendering for coding, debugging, review, architecture, and onboarding.
+* Preserve explicit token-budget semantics and precision-first packaging.
+
+Acceptance:
+
+* CLI `load --mode` and MCP `load_memory({ mode })` share core behavior.
+* Different modes rank/render different memory priorities deterministically.
+* Invalid modes return validation errors.
+
+### T064: Add Aictx Suggest Review Packets
+
+Goal:
+
+Add deterministic, read-only memory review packets for agents.
+
+Write scope:
+
+```text
+src/cli/commands/suggest.ts
+src/app/operations.ts
+src/discipline/
+src/core/git.ts
+test/unit/discipline/
+test/integration/cli/suggest.test.ts
+```
+
+Depends on:
+
+```text
+T063
+```
+
+Implementation:
+
+* Add `aictx suggest --from-diff [--json]` as a Git-required read-only review packet.
+* Add `aictx suggest --bootstrap [--json]` as a Git-optional first-run review packet.
+* Return changed files, related memory IDs, possible stale IDs, recommended memory types, and an agent checklist.
+* Do not generate final semantic patches or write memory.
+
+Acceptance:
+
+* `suggest --from-diff` returns `AICtxGitRequired` outside Git and does not mutate files.
+* `suggest --bootstrap` works outside Git and does not mutate files.
+* Outputs are deterministic and usable by agents.
+
+### T065: Add Deterministic Aictx Audit
+
+Goal:
+
+Add local memory hygiene checks.
+
+Write scope:
+
+```text
+src/cli/commands/audit.ts
+src/app/operations.ts
+src/discipline/
+test/unit/discipline/
+test/integration/cli/audit.test.ts
+```
+
+Depends on:
+
+```text
+T064
+```
+
+Implementation:
+
+* Add `aictx audit [--json]`.
+* Report findings with `severity`, `rule`, `memory_id`, `message`, and `evidence`.
+* Cover deterministic rules for vague memory, duplicate-like titles/tags, stale/superseded cleanup, missing referenced files, missing tags, missing evidence where expected, and obvious manifest/version contradictions.
+* Do not mutate canonical memory or generated state.
+
+Acceptance:
+
+* Audit findings are deterministic.
+* Audit never writes memory, events, indexes, exports, or Git state.
+* Tests cover each v1 audit rule.
+
+### T066: Upgrade Autonomous Agent Guidance and Setup Docs
+
+Goal:
+
+Teach agents how to use memory discipline without user prompting.
+
+Write scope:
+
+```text
+README.md
+docs/agent-integration.md
+integrations/templates/agent-guidance.md
+integrations/codex/aictx/SKILL.md
+integrations/claude/aictx/SKILL.md
+integrations/claude/aictx.md
+integrations/generic/aictx-agent-instructions.md
+scripts/generate-agent-guidance.mjs
+test/unit/agent-guidance/
+test/unit/agent-capability-map.test.ts
+```
+
+Depends on:
+
+```text
+T065
+```
+
+Implementation:
+
+* Add good/bad memory examples, update-vs-create guidance, stale/supersede guidance, and save-nothing-is-valid guidance.
+* Document package-manager fallback commands when `aictx` is not on `PATH`.
+* Document bootstrap and audit workflows for agents.
+* Keep generated guidance template-derived.
+
+Acceptance:
+
+* Guidance includes lifecycle rules and short linked memory policy.
+* README and agent docs explain PATH/package-manager fallback.
+* Generated guidance drift tests pass.
+
+### T067: Add End-to-End Memory Discipline Workflow Tests
+
+Goal:
+
+Verify the complete autonomous memory discipline flow.
+
+Write scope:
+
+```text
+test/integration/e2e/
+test/integration/cli/
+test/integration/mcp/
+test/integration/release/
+```
+
+Depends on:
+
+```text
+T066
+```
+
+Implementation:
+
+* Cover bootstrap suggestion, saving gotcha/workflow memory, mode-aware load, diff suggestion, audit findings, stale/supersede patching, and final diff review.
+* Prove MCP remains limited to `load_memory`, `search_memory`, `save_memory_patch`, and `diff_memory`.
+* Prove core workflows still work outside Git except Git-required suggestion/diff/history/restore commands.
+
+Acceptance:
+
+* End-to-end tests pass in Git and non-Git fixtures.
+* Memory discipline commands remain local-only and deterministic.
+* Release packaging includes updated docs and generated guidance.
+
 ## 18. Parallelization Guidance
 
 Safe to parallelize after T001:
@@ -2580,6 +2853,8 @@ T041 through T043 if they edit MCP server registration
 T046B with T049 or T050 if they edit shared documentation or generated guidance
 T053 with any earlier MCP task, because T053 is a final cleanup over the complete MCP adapter
 T056 through T059 if they edit the viewer API contract or shared viewer state
+T061 with any documentation/spec task because it changes public contracts and guidance
+T062 through T065 if they edit shared object types, context ranking, or discipline service contracts
 ```
 
 Reasoning:
@@ -2611,6 +2886,10 @@ PR 14: T053
 PR 15: T054
 PR 16: T055-T056
 PR 17: T057-T060
+PR 18: T061
+PR 19: T062-T063
+PR 20: T064-T065
+PR 21: T066-T067
 ```
 
 Rules:
@@ -2636,6 +2915,11 @@ V1 implementation is complete when:
 * MCP declares and uses `zod` directly for transport-level tool input shape validation only.
 * Every supported Aictx capability is reachable to AI agents through MCP or CLI.
 * Docs and generated guidance describe the MCP-first, CLI-complete model.
+* Memory discipline guidance teaches agents short linked memories, update-before-create, stale/supersede behavior, diff review, and save-nothing-is-valid.
+* `gotcha` and `workflow` are first-class memory object types.
+* `aictx load` and `load_memory` support deterministic mode-aware retrieval for coding, debugging, review, architecture, and onboarding.
+* `aictx suggest` returns deterministic read-only review packets for diffs and bootstrap memory creation.
+* `aictx audit` returns deterministic read-only memory hygiene findings.
 * `aictx export obsidian` creates a generated Obsidian projection without changing canonical memory.
 * `aictx view` serves a loopback-only read-only viewer for search, document inspection, direct relation graph context, and generated Obsidian export.
 * No core command requires network access, API keys, embeddings, or hosted services.

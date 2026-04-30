@@ -17,7 +17,7 @@ The normal agent loop should be one load call before work and one save call afte
 Use MCP first when the client has Aictx MCP configured:
 
 ```text
-load_memory({ task: "<task summary>" })
+load_memory({ task: "<task summary>", mode: "coding" })
 ```
 
 After meaningful work:
@@ -30,6 +30,7 @@ Use CLI fallback when MCP is unavailable:
 
 ```bash
 aictx load "<task summary>"
+aictx load "<task summary>" --mode debugging
 aictx save --stdin
 ```
 
@@ -41,9 +42,11 @@ aictx diff
 
 Aictx writes local files and never commits automatically. The user decides whether to edit, commit, or revert memory changes.
 
+Use `aictx suggest --from-diff --json` when the agent needs a deterministic review packet for current code changes before drafting memory. Use `aictx suggest --bootstrap --json` for a first-run repo memory pass. Use `aictx audit --json` to find deterministic memory hygiene issues. These commands do not write memory.
+
 ## Capability Map
 
-The v1 agent model is MCP-first and CLI-complete. MCP handles routine memory work; the CLI remains the supported path for setup, maintenance, recovery, export, and inspection operations.
+The v1 agent model is MCP-first and CLI-complete. MCP handles routine memory work; the CLI remains the supported path for setup, maintenance, recovery, export, inspection, local viewing, suggestion, and audit operations.
 
 | Capability | MCP | CLI |
 | --- | --- | --- |
@@ -62,10 +65,12 @@ The v1 agent model is MCP-first and CLI-complete. MCP handles routine memory wor
 | Show graph neighborhood | none | `aictx graph` |
 | Export Obsidian projection | none | `aictx export obsidian` |
 | View local memory | none | `aictx view` |
+| Suggest memory review packet | none | `aictx suggest` |
+| Audit memory hygiene | none | `aictx audit` |
 
-CLI-only capabilities are not MCP parity gaps. Do not expose setup, maintenance, recovery, export, inspection, or local viewing commands as MCP tools solely to mirror the CLI command list.
+CLI-only capabilities are not MCP parity gaps. Do not expose setup, maintenance, recovery, export, inspection, local viewing, suggestion, or audit commands as MCP tools solely to mirror the CLI command list.
 
-Agents may use the CLI for supported setup, maintenance, recovery, export, inspection, and local viewing operations. They should use supported MCP or CLI entrypoints instead of editing `.aictx/` files directly when a supported command exists.
+Agents may use the CLI for supported setup, maintenance, recovery, export, inspection, local viewing, suggestion, and audit operations. They should use supported MCP or CLI entrypoints instead of editing `.aictx/` files directly when a supported command exists.
 
 ## Local Viewer
 
@@ -112,9 +117,13 @@ Save only durable information future agents should know:
 * Architecture decisions
 * Behavioral changes
 * Operational constraints
+* Gotchas and known failure modes
+* Repeated project workflows
 * Important facts found during debugging
 * Open questions that affect future work
 * Stale or superseded memory when old knowledge becomes wrong
+
+Keep memory short and linked. Prefer one durable claim per object and create relations when a decision depends on a constraint, a gotcha affects a workflow, or a new object supersedes old memory. Prefer updating existing memory, marking it stale, or superseding it over creating duplicates. Saving nothing is correct when the task produced no durable future value.
 
 Do not save secrets, tokens, credentials, private keys, sensitive logs, unverified speculation, or short-lived implementation notes.
 
@@ -130,6 +139,8 @@ Use whichever target fits the agent client:
 * `integrations/generic/aictx-agent-instructions.md`
 
 Codex users can enable a skill folder through `skills.config[].path` in Codex configuration. Claude Code supports project skills under `.claude/skills/<skill-name>/SKILL.md`; for Aictx, use the shared skill name `aictx-memory`.
+
+If `aictx` is not on `PATH`, use the package manager binary path for the project, such as `pnpm exec aictx`, `npx aictx`, or `./node_modules/.bin/aictx`. MCP clients should be configured to start `aictx-mcp` from the project root.
 
 Generated guidance is not canonical memory. It is a setup aid for instructing agents how to use Aictx in projects that have opted into it.
 

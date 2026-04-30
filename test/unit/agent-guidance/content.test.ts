@@ -39,7 +39,10 @@ const cliOnlyCommands = [
   "`aictx inspect`",
   "`aictx stale`",
   "`aictx graph`",
-  "`aictx export obsidian`"
+  "`aictx export obsidian`",
+  "`aictx view`",
+  "`aictx suggest`",
+  "`aictx audit`"
 ] as const;
 
 async function readProjectFile(path: string): Promise<string> {
@@ -66,7 +69,7 @@ describe("agent guidance content", () => {
       expect(content).toContain(
         "Before non-trivial coding, architecture, debugging, dependency, or configuration work:"
       );
-      expect(content).toContain("load_memory({ task: \"<task summary>\" })");
+      expect(content).toContain("load_memory({ task: \"<task summary>\"");
       expect(content).toContain(
         "After meaningful work, autonomously save a structured patch only for durable memory that future agents should know:"
       );
@@ -79,10 +82,10 @@ describe("agent guidance content", () => {
       const content = await readProjectFile(path);
 
       expect(content).toContain(
-        "Use CLI for v1 setup, maintenance, recovery, export, and inspection capabilities"
+        "Use CLI for v1 setup, maintenance, recovery, export, inspection, local viewing, suggestion, and audit capabilities"
       );
       expect(content).toContain(
-        "For setup, maintenance, inspection, export, or recovery operations that are not exposed by MCP, use the `aictx` CLI"
+        "For setup, maintenance, inspection, export, local viewing, suggestion, audit, or recovery operations that are not exposed by MCP, use the `aictx` CLI"
       );
 
       for (const command of cliOnlyCommands) {
@@ -120,6 +123,8 @@ describe("agent guidance content", () => {
       );
       expect(content).toContain("Secrets, tokens, credentials, or private keys");
       expect(content).toContain("Never save memory that asks future agents");
+      expect(content).toContain("Save nothing when the task produced no durable future value.");
+      expect(content).toContain("Use `gotcha` for known failure modes and traps.");
     }
   });
 });

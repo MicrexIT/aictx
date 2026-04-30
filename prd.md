@@ -74,16 +74,19 @@ Required in v1:
 * CLI commands for init, load, save, diff, check, rebuild, history, restore, and rewind
 * MCP server with a small normalized tool set
 * Default repo-level agent guidance plus optional generated skill artifacts from one shared template
+* Memory discipline guidance for short linked memories, lifecycle updates, and save/no-save decisions
 * Patch-first memory writes
 * Git-backed review, diff, history, and restore behavior when Git is available
 * Basic secret detection before saving memory
+* Mode-aware context loading for coding, debugging, review, architecture, and onboarding work
+* CLI-only deterministic memory suggestion and audit packets for agent-assisted memory maintenance
 * One-way generated Obsidian projection export for viewing memory in Obsidian
 * Local read-only web viewer for human memory inspection
 
 Agent capability split:
 
 * MCP + CLI capabilities: load, search, save, diff.
-* CLI-only capabilities in v1: init, check, rebuild, history, restore, rewind, inspect, stale, graph, export obsidian, view.
+* CLI-only capabilities in v1: init, check, rebuild, history, restore, rewind, inspect, stale, graph, export obsidian, view, suggest, audit.
 * CLI-only capabilities are intentionally not MCP parity gaps and should not be added to MCP solely for command-list parity.
 * Agents should use supported MCP or CLI entrypoints instead of editing `.aictx/` files directly when a supported command exists.
 
@@ -301,6 +304,23 @@ V1 should optimize for:
 * Generated indexes that can always be deleted and rebuilt.
 * Clear, actionable errors when validation, conflicts, dirty memory, or index rebuilds fail.
 
+4.8 Memory discipline, not just storage
+
+Aictx should shape good agent memory behavior instead of merely accepting entries.
+
+The memory lifecycle rules are:
+
+* Load narrowly before architecture, debugging, review, onboarding, dependency, configuration, or non-trivial code work.
+* Use the task description and load mode to retrieve the smallest useful context pack.
+* Save only durable knowledge: decisions, constraints, architecture changes, gotchas, workflows, debugging outcomes, verified facts, concepts, and open questions.
+* Prefer updating, marking stale, or superseding existing memory over creating duplicates.
+* Mark memory stale or superseded when current code, tests, manifests, or user instruction contradict it.
+* Prefer current repository evidence and the user's request over loaded memory when they conflict.
+* Show memory diffs at the end of meaningful work so the user can review changes.
+* Save nothing when no durable future value was discovered.
+
+Aictx may produce deterministic review packets that help an agent decide what to save, but Aictx must not pretend to semantically understand a diff without the user's agent. The agent remains responsible for drafting structured memory patches.
+
 ⸻
 
 5. Core user experience
@@ -334,6 +354,8 @@ Expected generated structure:
     decisions/
     constraints/
     questions/
+    gotchas/
+    workflows/
     notes/
   relations/
   events.jsonl
@@ -363,10 +385,11 @@ But this should be optional and lightweight.
 Command:
 
 aictx load "fix Stripe webhook retries"
+aictx load "fix Stripe webhook retries" --mode debugging
 
 MCP equivalent:
 
-load_memory(task, token_budget?)
+load_memory(task, token_budget?, mode?)
 
 Purpose:
 
@@ -374,6 +397,7 @@ Purpose:
 * Prioritize active, relevant, high-signal memory.
 * Exclude stale or superseded memory unless useful for context.
 * Use an explicit token budget as an advisory target, without hiding high-priority memory.
+* Use load mode to tune type priority and rendered sections.
 
 Example output:
 
@@ -450,6 +474,38 @@ The internal write path should be the same in both modes:
 memory patch → validation → deterministic file writes → index update → Git diff
 
 Aictx should not silently commit changes. It should write files and let the user decide whether to commit, edit, or revert them.
+
+5.3.1 Memory suggestion packets
+
+Command:
+
+aictx suggest --from-diff
+aictx suggest --bootstrap
+
+Purpose:
+
+* Package deterministic evidence for the user's agent.
+* Help the agent decide whether to create, update, stale, or supersede memory.
+* Avoid generating semantic memory patches directly inside Aictx.
+
+`aictx suggest --from-diff` is Git-required. It should summarize changed files, changed `.aictx/` files, related existing memory, possible stale candidates, and a concise agent checklist. It must not write memory.
+
+`aictx suggest --bootstrap` should work without Git. It should list likely source files to inspect, such as README files, package manifests, framework configs, docs, and obvious entrypoints, and recommend seed memory classes for project intent, architecture, constraints, workflows, gotchas, concepts, and open questions. It must not write memory.
+
+5.3.2 Memory audit packets
+
+Command:
+
+aictx audit
+
+Purpose:
+
+* Report deterministic memory hygiene findings.
+* Help agents and users clean memory without requiring a hosted service or model call.
+
+Audit findings should include `severity`, `rule`, `memory_id`, `message`, and `evidence`. V1 audit should focus on local deterministic checks such as vague memory, duplicate-like titles or tags, stale/superseded cleanup, missing referenced files, missing tags, missing evidence where evidence is expected, and obvious manifest/version contradictions.
+
+Audit must not mutate canonical memory. The agent may turn audit findings into a structured patch through `save_memory_patch` or `aictx save`.
 
 5.4 Show memory diff
 
@@ -578,8 +634,8 @@ Design principle:
 * All memory writes should go through structured patch submission.
 * MCP should make Aictx easy to insert into existing coding-agent flows without becoming a spaghetti API.
 * MCP exposes load, search, save, and diff; the CLI also exposes those routine capabilities.
-* Setup, maintenance, recovery, export, inspection, and local viewing capabilities remain CLI-only in v1: init, check, rebuild, history, restore, rewind, inspect, stale, graph, export obsidian, and view.
-* MCP-first must not mean MCP-only: AI agents may use the CLI for supported setup, maintenance, recovery, export, inspection, and local viewing operations that are intentionally outside the MCP contract.
+* Setup, maintenance, recovery, export, inspection, local viewing, suggestion, and audit capabilities remain CLI-only in v1: init, check, rebuild, history, restore, rewind, inspect, stale, graph, export obsidian, view, suggest, and audit.
+* MCP-first must not mean MCP-only: AI agents may use the CLI for supported setup, maintenance, recovery, export, inspection, local viewing, suggestion, and audit operations that are intentionally outside the MCP contract.
 * Every supported Aictx capability should remain reachable to an AI agent through MCP or CLI without requiring direct `.aictx/` file edits.
 * CLI-only capabilities should not be added to MCP just to create command-list parity.
 
@@ -594,6 +650,8 @@ Input:
   "token_budget": 6000,
   "mode": "coding"
 }
+
+Allowed modes are `coding`, `debugging`, `review`, `architecture`, and `onboarding`.
 
 In v1, MCP scope is resolved from the local Aictx project where the MCP server is running. `scope.kind` defaults to `project`, `scope.project` defaults to `config.project.id`, and branch/commit provenance is included only when Git is available. Scope is not supplied as an arbitrary client payload field.
 
@@ -877,6 +935,8 @@ decision
 constraint
 question
 fact
+gotcha
+workflow
 note
 concept
 
@@ -905,6 +965,14 @@ An unresolved question or ambiguity.
 fact
 
 A known project fact.
+
+gotcha
+
+A known failure mode, trap, recurring bug, or behavior that future agents should avoid.
+
+workflow
+
+A repeated project procedure, command sequence, release path, debugging path, or maintenance routine.
 
 note
 
@@ -1474,6 +1542,8 @@ Generated from: <local project id and optional git ref>
 ## Do not do
 ## Relevant decisions
 ## Relevant constraints
+## Relevant gotchas
+## Relevant workflows
 ## Relevant facts
 ## Relevant files
 ## Open questions
@@ -1863,6 +1933,7 @@ Paid features should remove team friction and add governance:
 
 * GitHub/GitLab app
 * PR memory suggestions
+* Advanced automated memory truth verification
 * Hosted team index
 * Cloud MCP endpoint
 * Review dashboard
@@ -1999,6 +2070,10 @@ Decision 10: Start with lightweight validation
 
 Avoid making the initial product feel like enterprise compliance software.
 
+Decision 11: Memory discipline is policy plus deterministic packets
+
+Aictx should guide agents toward short, linked, reviewable memory and provide deterministic suggestion/audit packets. It should not call a model, infer semantic truth from code, or auto-save memory from diffs in v1.
+
 ⸻
 
 26. Non-goals for initial product
@@ -2041,6 +2116,7 @@ The product is working if:
 * The context pack improves agent performance without requiring the user to manage an ontology.
 * A new developer can understand the product intent from the first command and generated files.
 * The product remains useful with only two agent interactions per task: one memory load and one memory save.
+* Agents can use mode-aware load, suggestion packets, and audit findings to keep memory narrow, current, and reviewable.
 
 ⸻
 
