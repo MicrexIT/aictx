@@ -45,6 +45,37 @@ const cliOnlyCommands = [
   "`aictx audit`"
 ] as const;
 
+const v1ObjectTypes = [
+  "`project`",
+  "`architecture`",
+  "`decision`",
+  "`constraint`",
+  "`question`",
+  "`fact`",
+  "`gotcha`",
+  "`workflow`",
+  "`note`",
+  "`concept`"
+] as const;
+
+const loadModes = [
+  "`coding`",
+  "`debugging`",
+  "`review`",
+  "`architecture`",
+  "`onboarding`"
+] as const;
+
+const lifecycleRules = [
+  /load narrowly/i,
+  /save only durable/i,
+  /update existing memory before creating duplicates/i,
+  /stale or supersede wrong old memory/i,
+  /prefer current code and user requests over loaded memory/i,
+  /review diffs/i,
+  /save nothing/i
+] as const;
+
 async function readProjectFile(path: string): Promise<string> {
   return readFile(join(root, path), "utf8");
 }
@@ -125,6 +156,32 @@ describe("agent guidance content", () => {
       expect(content).toContain("Never save memory that asks future agents");
       expect(content).toContain("Save nothing when the task produced no durable future value.");
       expect(content).toContain("Use `gotcha` for known failure modes and traps.");
+    }
+  });
+
+  it("teaches the T061 memory discipline lifecycle", async () => {
+    for (const path of guideTargets) {
+      const content = await readProjectFile(path);
+
+      for (const rule of lifecycleRules) {
+        expect(content).toMatch(rule);
+      }
+    }
+  });
+
+  it("locks load modes and the closed v1 taxonomy in guidance", async () => {
+    for (const path of guideTargets) {
+      const content = await readProjectFile(path);
+
+      for (const mode of loadModes) {
+        expect(content).toContain(mode);
+      }
+
+      for (const objectType of v1ObjectTypes) {
+        expect(content).toContain(objectType);
+      }
+
+      expect(content).toContain("Do not create `history` or `task-note` object types");
     }
   });
 });

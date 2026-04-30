@@ -92,6 +92,20 @@ MCP is the preferred path for routine agent memory work. The CLI is the
 complete path for setup, maintenance, inspection, recovery, suggestion, audit,
 local viewing, and export workflows.
 CLI-only commands are intentional; they are not MCP parity gaps.
+MCP exposes exactly `load_memory`, `search_memory`, `save_memory_patch`, and
+`diff_memory` in v1.
+
+Aictx is a memory discipline system, not just storage. Load narrowly before
+non-trivial work, save only durable knowledge, prefer updating or
+stale/supersede changes over duplicate creation, prefer current code and user
+requests over loaded memory when they conflict, review memory diffs, and save
+nothing when the task produced no durable future value.
+
+V1 object types are `project`, `architecture`, `decision`, `constraint`,
+`question`, `fact`, `gotcha`, `workflow`, `note`, and `concept`. Use `gotcha`
+for known failure modes and `workflow` for repeated project procedures. Do not
+create `history` or `task-note` object types; use Git/events/statuses for
+history and branch/task scope for temporary task context.
 
 ## Quickstart
 

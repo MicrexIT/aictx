@@ -38,6 +38,8 @@ Rules:
 * Runtime validation should use the project-local schemas for project data validation.
 * Unknown top-level fields are invalid unless a schema explicitly allows them.
 * Schema `$id` values use `https://aictx.dev/schemas/v1/<name>.schema.json`.
+* Object type enums are closed to the v1 taxonomy from `storage-format-spec.md`: `project`, `architecture`, `decision`, `constraint`, `question`, `fact`, `gotcha`, `workflow`, `note`, and `concept`.
+* `history` and `task-note` are intentionally invalid object types in v1; use Git/events/statuses for history and branch/task scope for temporary task context.
 
 ## 3. Shared Definitions
 

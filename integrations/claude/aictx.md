@@ -50,6 +50,8 @@ aictx load "<task summary>"
 aictx load "<task summary>" --mode debugging
 ```
 
+Load modes are `coding`, `debugging`, `review`, `architecture`, and `onboarding`. Modes tune deterministic ranking and rendering only; they do not broaden project scope, call a model, use external retrieval, or load the whole project.
+
 After meaningful work, autonomously save a structured patch only for durable memory that future agents should know:
 
 ```text
@@ -66,6 +68,8 @@ For setup, maintenance, inspection, export, local viewing, suggestion, audit, or
 
 Use `aictx suggest --from-diff --json` when current code changes need a memory review packet before drafting a patch. Use `aictx suggest --bootstrap --json` for a first-run repo memory pass. Use `aictx audit --json` to find deterministic memory hygiene issues. These commands are read-only for canonical memory.
 
+MCP exposes exactly `load_memory`, `search_memory`, `save_memory_patch`, and `diff_memory` in v1.
+
 Before finalizing, tell the user whether Aictx memory changed and suggest reviewing `.aictx/` changes.
 
 In Git projects, suggest:
@@ -75,6 +79,8 @@ aictx diff
 ```
 
 ## What To Save
+
+Apply the memory discipline lifecycle: load narrowly before non-trivial work, save only durable knowledge, update existing memory before creating duplicates, stale or supersede wrong old memory, prefer current code and user requests over loaded memory, review diffs, and save nothing when there is no durable future value.
 
 Save durable project knowledge, such as:
 
@@ -106,6 +112,8 @@ The agent is responsible for creating the semantic patch. Aictx validates and wr
 Aictx does not infer durable project meaning from diffs. Create patches from current evidence such as the task, loaded context, repository changes, tests, and conversation context.
 
 Keep patches small and reviewable. Prefer one or a few focused memory changes over broad rewrites.
+
+V1 object types are `project`, `architecture`, `decision`, `constraint`, `question`, `fact`, `gotcha`, `workflow`, `note`, and `concept`.
 
 Use `gotcha` for known failure modes and traps. Use `workflow` for repeated project procedures. Do not create `history` or `task-note` object types; use Git/events/statuses for history and branch/task scope for temporary context.
 

@@ -625,6 +625,7 @@ Responsibilities:
 Rules:
 
 * Context compilation must not mutate canonical files.
+* Load modes must tune deterministic ranking and rendering only.
 * Saved context packs are generated files unless config says they are tracked.
 * The context module must not call Git directly except through core metadata passed into it.
 * Ranking logic must be deterministic for the same inputs.
@@ -632,6 +633,15 @@ Rules:
 ## 16. Memory Discipline Module Responsibilities
 
 `src/discipline/*` owns deterministic memory discipline helpers.
+
+Memory discipline is policy plus deterministic packets. The lifecycle rules are:
+
+* Load narrowly before non-trivial work using the task and load mode.
+* Save only durable knowledge and keep entries short, linked, and reviewable.
+* Prefer updating existing memory, marking it stale, or superseding it before creating duplicates.
+* Prefer current code, tests, manifests, and user instruction over loaded memory when they conflict.
+* Review memory diffs after meaningful work.
+* Save nothing when no durable future value was discovered.
 
 Responsibilities:
 

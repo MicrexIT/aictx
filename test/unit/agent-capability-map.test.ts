@@ -7,10 +7,44 @@ const root = process.cwd();
 const generatedNotice = "<!-- Generated from integrations/templates/agent-guidance.md. Do not edit directly. -->";
 
 const mirroredSpecs = [
+  "implementation-roadmap.md",
+  "indexing-and-context-compiler-spec.md",
   "local-viewer-spec.md",
   "mcp-and-cli-api-spec.md",
   "prd.md",
-  "runtime-and-project-architecture-spec.md"
+  "runtime-and-project-architecture-spec.md",
+  "schemas-and-validation-spec.md",
+  "storage-format-spec.md"
+] as const;
+
+const v1ObjectTypes = [
+  "project",
+  "architecture",
+  "decision",
+  "constraint",
+  "question",
+  "fact",
+  "gotcha",
+  "workflow",
+  "note",
+  "concept"
+] as const;
+
+const loadModes = [
+  "coding",
+  "debugging",
+  "review",
+  "architecture",
+  "onboarding"
+] as const;
+
+const lifecycleRules = [
+  /load narrowly/i,
+  /save only durable/i,
+  /updat(?:e|ing)[\s\S]*stale[\s\S]*supersed/i,
+  /current code[\s\S]*user/i,
+  /review[\s\S]*diff/i,
+  /save[\s\S]*nothing/i
 ] as const;
 
 const mcpAndCliCapabilities = [
@@ -163,6 +197,14 @@ async function readProjectFile(path: string): Promise<string> {
   return readFile(join(root, path), "utf8");
 }
 
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function expectMentioned(content: string, value: string): void {
+  expect(content).toMatch(new RegExp(`(^|[\\s\`"*,])${escapeRegExp(value)}([\\s\`"*,.]|$)`));
+}
+
 function parseCapabilityTable(markdown: string): CapabilityRow[] {
   const section = markdown.match(
     /### 2\.1 Agent Capability Map\n(?<body>[\s\S]*?)\n## 3\. Runtime Preconditions/
@@ -209,6 +251,70 @@ describe("agent capability map guardrail", () => {
       await expect(readProjectFile(spec)).resolves.toBe(
         await readProjectFile(`docs/${spec}`)
       );
+    }
+  });
+
+  it("locks the T061 object taxonomy and exclusions in specs and agent docs", async () => {
+    const taxonomyDocs = [
+      "prd.md",
+      "storage-format-spec.md",
+      "schemas-and-validation-spec.md",
+      "README.md",
+      "docs/agent-integration.md",
+      "integrations/templates/agent-guidance.md"
+    ] as const;
+
+    for (const path of taxonomyDocs) {
+      const content = await readProjectFile(path);
+
+      for (const objectType of v1ObjectTypes) {
+        expectMentioned(content, objectType);
+      }
+
+      expect(content).toMatch(/gotcha/i);
+      expect(content).toMatch(/workflow/i);
+      expect(content).toMatch(/history/i);
+      expect(content).toMatch(/task-note/i);
+      expect(content).toMatch(/not|invalid|Do not/i);
+    }
+  });
+
+  it("locks memory discipline lifecycle rules in specs and guidance", async () => {
+    const lifecycleDocs = [
+      "prd.md",
+      "runtime-and-project-architecture-spec.md",
+      "README.md",
+      "docs/agent-integration.md",
+      "integrations/templates/agent-guidance.md"
+    ] as const;
+
+    for (const path of lifecycleDocs) {
+      const content = await readProjectFile(path);
+
+      for (const rule of lifecycleRules) {
+        expect(content).toMatch(rule);
+      }
+    }
+  });
+
+  it("locks the load mode contract across specs and guidance", async () => {
+    const modeDocs = [
+      "indexing-and-context-compiler-spec.md",
+      "mcp-and-cli-api-spec.md",
+      "runtime-and-project-architecture-spec.md",
+      "README.md",
+      "docs/agent-integration.md",
+      "integrations/templates/agent-guidance.md"
+    ] as const;
+
+    for (const path of modeDocs) {
+      const content = await readProjectFile(path);
+
+      for (const mode of loadModes) {
+        expectMentioned(content, mode);
+      }
+
+      expect(content).toMatch(/deterministic[\s\S]*ranking and rendering/i);
     }
   });
 
@@ -271,7 +377,10 @@ describe("agent capability map guardrail", () => {
 
   it("keeps docs explicit about MCP parity and direct-edit guardrails", async () => {
     const docsAndGuidance = [
-      ...mirroredSpecs,
+      "local-viewer-spec.md",
+      "mcp-and-cli-api-spec.md",
+      "prd.md",
+      "runtime-and-project-architecture-spec.md",
       "README.md",
       "docs/agent-integration.md",
       "integrations/templates/agent-guidance.md"

@@ -34,6 +34,11 @@ aictx load "<task summary>" --mode debugging
 aictx save --stdin
 ```
 
+Load modes are `coding`, `debugging`, `review`, `architecture`, and
+`onboarding`. Modes tune deterministic ranking and rendering only; they do not
+broaden the project scope, call a model, use external retrieval, or load the whole
+project.
+
 In Git projects, review memory changes before finalizing:
 
 ```bash
@@ -72,6 +77,8 @@ CLI-only capabilities are not MCP parity gaps. Do not expose setup, maintenance,
 
 Agents may use the CLI for supported setup, maintenance, recovery, export, inspection, local viewing, suggestion, and audit operations. They should use supported MCP or CLI entrypoints instead of editing `.aictx/` files directly when a supported command exists.
 
+MCP exposes exactly `load_memory`, `search_memory`, `save_memory_patch`, and `diff_memory` in v1.
+
 ## Local Viewer
 
 `aictx view` starts a local, read-only browser viewer for human inspection. It is
@@ -91,6 +98,8 @@ writes generated projection files through the same service as
 The agent creates the structured patch. Aictx validates it, writes canonical Markdown and JSON files, appends events, updates generated local indexes, and leaves the result reviewable.
 
 Aictx does not infer durable project meaning from diffs. The agent should draft memory updates from current evidence, such as the task, loaded context, repository changes, tests, and conversation context.
+
+Apply the memory discipline lifecycle: load narrowly before non-trivial work, save only durable knowledge, update existing memory before creating duplicates, stale or supersede wrong old memory, prefer current code and user requests over loaded memory, review diffs, and save nothing when there is no durable future value.
 
 Minimal patch:
 
@@ -124,6 +133,8 @@ Save only durable information future agents should know:
 * Stale or superseded memory when old knowledge becomes wrong
 
 Keep memory short and linked. Prefer one durable claim per object and create relations when a decision depends on a constraint, a gotcha affects a workflow, or a new object supersedes old memory. Prefer updating existing memory, marking it stale, or superseding it over creating duplicates. Saving nothing is correct when the task produced no durable future value.
+
+The v1 object types are `project`, `architecture`, `decision`, `constraint`, `question`, `fact`, `gotcha`, `workflow`, `note`, and `concept`. Use `gotcha` for known failure modes and traps. Use `workflow` for repeated project procedures. Do not create `history` or `task-note` object types; use Git/events/statuses for history and branch/task scope for temporary context.
 
 Do not save secrets, tokens, credentials, private keys, sensitive logs, unverified speculation, or short-lived implementation notes.
 

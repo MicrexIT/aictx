@@ -315,8 +315,8 @@ The memory lifecycle rules are:
 * Save only durable knowledge: decisions, constraints, architecture changes, gotchas, workflows, debugging outcomes, verified facts, concepts, and open questions.
 * Prefer updating, marking stale, or superseding existing memory over creating duplicates.
 * Mark memory stale or superseded when current code, tests, manifests, or user instruction contradict it.
-* Prefer current repository evidence and the user's request over loaded memory when they conflict.
-* Show memory diffs at the end of meaningful work so the user can review changes.
+* Prefer current code, tests, manifests, and the user's request over loaded memory when they conflict.
+* Review memory diffs at the end of meaningful work so the user can approve, edit, or revert changes.
 * Save nothing when no durable future value was discovered.
 
 Aictx may produce deterministic review packets that help an agent decide what to save, but Aictx must not pretend to semantically understand a diff without the user's agent. The agent remains responsible for drafting structured memory patches.
@@ -981,6 +981,10 @@ General memory entry that does not fit another type.
 concept
 
 Named project/domain concept used for linking and retrieval.
+
+Only these ten values are object types in v1. Do not add `history` or `task-note`
+as object types: use Git/events/statuses for history and use branch/task scope
+for temporary task context.
 
 9.2 Object status values
 

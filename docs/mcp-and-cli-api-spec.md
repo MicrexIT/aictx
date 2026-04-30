@@ -722,6 +722,7 @@ V1 MCP must expose only these required tools:
 * `diff_memory`
 
 The MCP server must not expose arbitrary shell access, arbitrary filesystem writes, or low-level graph mutation tools.
+Do not add MCP tools for load-mode management, suggestion packets, audits, setup, maintenance, recovery, export, inspection, or local viewing. `aictx suggest` and `aictx audit` remain CLI-only read-only support surfaces in v1.
 
 ### 6.1 `load_memory`
 
