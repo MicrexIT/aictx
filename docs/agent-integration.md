@@ -34,6 +34,15 @@ aictx load "<task summary>" --mode debugging
 aictx save --stdin
 ```
 
+If `aictx` is not on `PATH`, run the same commands through the project package manager or local binary path:
+
+```bash
+pnpm exec aictx load "<task summary>"
+npm exec aictx load "<task summary>"
+npx aictx load "<task summary>"
+./node_modules/.bin/aictx load "<task summary>"
+```
+
 Load modes are `coding`, `debugging`, `review`, `architecture`, and
 `onboarding`. Modes tune deterministic ranking and rendering only; they do not
 broaden the project scope, call a model, use external retrieval, or load the whole
@@ -48,6 +57,8 @@ aictx diff
 Aictx writes local files and never commits automatically. The user decides whether to edit, commit, or revert memory changes.
 
 `aictx-mcp` is an MCP stdio server. The MCP client must launch it and connect to its stdin/stdout; an agent generally cannot start `aictx-mcp` in a shell and then use it as MCP tools in an already-running session. If MCP tools are not available, use the CLI fallback commands.
+
+When `aictx-mcp` is not on `PATH`, configure the MCP client to launch it through the project package manager or local binary path, such as `pnpm exec aictx-mcp`, `npm exec aictx-mcp`, `npx aictx-mcp`, or `./node_modules/.bin/aictx-mcp`.
 
 Use `aictx suggest --from-diff --json` when the agent needs a deterministic review packet for current code changes before drafting memory. Use `aictx suggest --bootstrap --json` for a first-run repo memory pass. Use `aictx audit --json` to find deterministic memory hygiene issues. These commands do not write memory.
 
@@ -136,6 +147,121 @@ Save only durable information future agents should know:
 
 Keep memory short and linked. Prefer one durable claim per object and create relations when a decision depends on a constraint, a gotcha affects a workflow, or a new object supersedes old memory. Prefer updating existing memory, marking it stale, or superseding it over creating duplicates. Saving nothing is correct when the task produced no durable future value.
 
+Short linked memory means:
+
+* One durable claim per object.
+* Concise body text that states the current fact, decision, constraint, gotcha, or workflow.
+* Specific tags that help future retrieval.
+* Durable relations only when the connection matters. Use predicates such as `requires`, `depends_on`, `affects`, or `supersedes` to connect decisions, constraints, workflows, gotchas, and replacements.
+
+Use update-before-create behavior:
+
+* Check loaded memory and targeted search results for an existing object about the same durable claim.
+* Use `update_object` when the existing object is still correct but needs fresher wording, tags, status, or body content.
+* Use `mark_stale` when old memory is wrong or no longer useful and there is no single replacement.
+* Use `supersede_object` when a newer object replaces an older one.
+* Create a new object only when no existing memory should be updated, marked stale, or superseded.
+
+Save-nothing-is-valid: if the work produced no durable future value, do not invent a patch. Tell the user that no Aictx memory was saved.
+
+Good memory examples:
+
+* Good durable fact: a `fact` titled "Webhook retries run in the worker" with one sentence naming the current retry location.
+* Good linked decision: `decision.billing-retries` plus a `requires` relation to `constraint.webhook-idempotency` when the decision depends on that constraint.
+* Good gotcha: `gotcha.viewer-export-overwrites-manifest-files` when a repeated failure mode affects future work.
+* Good workflow: `workflow.release-smoke-test` for a repeated project procedure.
+
+Bad memory examples:
+
+* Bad duplicate creation: creating "Webhook retry note" when `decision.billing-retries` already exists and should be updated.
+* Bad task diary: saving "I changed three files and tests passed" with no durable project knowledge.
+* Bad speculation: saving "Redis probably handles retries" without current evidence.
+* Bad no-value save: creating memory just because a task finished, even though nothing reusable changed.
+
+Update an existing object when the durable memory already exists:
+
+```json
+{
+  "source": {
+    "kind": "agent",
+    "task": "Refresh billing retry memory"
+  },
+  "changes": [
+    {
+      "op": "update_object",
+      "id": "decision.billing-retries",
+      "body": "Billing retries run in the queue worker. HTTP webhook handlers only enqueue retry work.",
+      "tags": ["billing", "stripe", "webhooks", "retries"]
+    }
+  ]
+}
+```
+
+Mark old memory stale when it is wrong and there is no single replacement:
+
+```json
+{
+  "source": {
+    "kind": "agent",
+    "task": "Remove stale retry guidance"
+  },
+  "changes": [
+    {
+      "op": "mark_stale",
+      "id": "note.retry-handler-location",
+      "reason": "Retries no longer run in the HTTP handler."
+    }
+  ]
+}
+```
+
+Supersede old memory when a newer object replaces it:
+
+```json
+{
+  "source": {
+    "kind": "agent",
+    "task": "Replace retry architecture memory"
+  },
+  "changes": [
+    {
+      "op": "create_object",
+      "id": "decision.billing-retries-worker",
+      "type": "decision",
+      "title": "Billing retries run in the worker",
+      "body": "Billing retry execution happens in the queue worker, not inside the HTTP webhook handler.",
+      "tags": ["billing", "stripe", "webhooks", "retries"]
+    },
+    {
+      "op": "supersede_object",
+      "id": "decision.billing-retries-handler",
+      "superseded_by": "decision.billing-retries-worker",
+      "reason": "The retry execution location moved to the queue worker."
+    }
+  ]
+}
+```
+
+Create a relation with `create_relation` when the connection is durable and useful:
+
+```json
+{
+  "source": {
+    "kind": "agent",
+    "task": "Link retry decision to idempotency constraint"
+  },
+  "changes": [
+    {
+      "op": "create_relation",
+      "from": "decision.billing-retries-worker",
+      "predicate": "requires",
+      "to": "constraint.webhook-idempotency",
+      "confidence": "high"
+    }
+  ]
+}
+```
+
 The v1 object types are `project`, `architecture`, `decision`, `constraint`, `question`, `fact`, `gotcha`, `workflow`, `note`, and `concept`. Use `gotcha` for known failure modes and traps. Use `workflow` for repeated project procedures. Do not create `history` or `task-note` object types; use Git/events/statuses for history and branch/task scope for temporary context.
 
 Do not save secrets, tokens, credentials, private keys, sensitive logs, unverified speculation, or short-lived implementation notes.
@@ -153,7 +279,7 @@ Use whichever target fits the agent client:
 
 Codex users can enable a skill folder through `skills.config[].path` in Codex configuration. Claude Code supports project skills under `.claude/skills/<skill-name>/SKILL.md`; for Aictx, use the shared skill name `aictx-memory`.
 
-If `aictx` is not on `PATH`, use the package manager binary path for the project, such as `pnpm exec aictx`, `npx aictx`, or `./node_modules/.bin/aictx`. MCP clients should be configured to start `aictx-mcp` from the project root; `aictx init` does not start it.
+If `aictx` is not on `PATH`, use the package manager binary path for the project, such as `pnpm exec aictx`, `npm exec aictx`, `npx aictx`, or `./node_modules/.bin/aictx`. MCP clients should be configured to start `aictx-mcp` from the project root with the equivalent package-manager command when needed; `aictx init` does not start it.
 
 Generated guidance is not canonical memory. It is a setup aid for instructing agents how to use Aictx in projects that have opted into it.
 

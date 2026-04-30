@@ -42,9 +42,14 @@ If the package is installed locally, run commands through your package manager:
 ```bash
 pnpm exec aictx init
 pnpm exec aictx load "fix Stripe webhook retries"
+npm exec aictx init
+npx aictx init
+./node_modules/.bin/aictx init
 ```
 
-The examples below use `aictx` directly for readability.
+The examples below use `aictx` directly for readability. If `aictx` is not on
+`PATH`, use the project package-manager form, such as `pnpm exec aictx`,
+`npm exec aictx`, `npx aictx`, or `./node_modules/.bin/aictx`.
 
 ## Local Package Testing
 
@@ -101,6 +106,14 @@ stale/supersede changes over duplicate creation, prefer current code and user
 requests over loaded memory when they conflict, review memory diffs, and save
 nothing when the task produced no durable future value.
 
+Short linked memory works best: keep one durable claim per object, use concise
+body text and useful tags, and add relations such as `requires`, `depends_on`,
+`affects`, or `supersedes` only when the link helps future agents. Prefer
+`update_object` for existing memory, `mark_stale` for wrong memory with no
+single replacement, and `supersede_object` when a new object replaces an old
+one. Save-nothing-is-valid: if a task produced no reusable project knowledge,
+do not create a memory patch.
+
 V1 object types are `project`, `architecture`, `decision`, `constraint`,
 `question`, `fact`, `gotcha`, `workflow`, `note`, and `concept`. Use `gotcha`
 for known failure modes and `workflow` for repeated project procedures. Do not
@@ -113,6 +126,15 @@ Initialize memory storage inside an existing project:
 
 ```bash
 aictx init
+```
+
+If `aictx` is not on `PATH`, use a project-local command instead:
+
+```bash
+pnpm exec aictx init
+npm exec aictx init
+npx aictx init
+./node_modules/.bin/aictx init
 ```
 
 By default, init also creates or updates marked Aictx sections in `AGENTS.md`
@@ -494,6 +516,30 @@ With pnpm:
 }
 ```
 
+Other local-install options are equivalent when the client supports command
+arguments:
+
+```json
+{
+  "command": "npx",
+  "args": ["aictx-mcp"],
+  "cwd": "/path/to/your/project"
+}
+```
+
+Or use the local binary path directly:
+
+```json
+{
+  "command": "./node_modules/.bin/aictx-mcp",
+  "cwd": "/path/to/your/project"
+}
+```
+
+In command-line form, the local MCP launch commands are
+`pnpm exec aictx-mcp`, `npm exec aictx-mcp`, `npx aictx-mcp`, or
+`./node_modules/.bin/aictx-mcp`.
+
 ### MCP Tools
 
 #### `load_memory`
@@ -606,6 +652,10 @@ Codex users can enable a skill folder with `skills.config[].path` in Codex
 configuration. Claude Code users can use a project skill under
 `.claude/skills/aictx-memory/SKILL.md`. Aictx does not install client-specific
 skills or edit user-global agent configuration by default.
+
+Generated guidance tells agents to use package-manager fallbacks when `aictx`
+or `aictx-mcp` is not on `PATH`, including `pnpm exec`, `npm exec`, `npx`, and
+`./node_modules/.bin/` commands.
 
 ## Development
 

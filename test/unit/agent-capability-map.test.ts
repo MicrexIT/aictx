@@ -186,6 +186,17 @@ const guidanceTargets = [
   "integrations/generic/aictx-agent-instructions.md"
 ] as const;
 
+const packageManagerFallbacks = [
+  "pnpm exec aictx",
+  "npm exec aictx",
+  "npx aictx",
+  "./node_modules/.bin/aictx",
+  "pnpm exec aictx-mcp",
+  "npm exec aictx-mcp",
+  "npx aictx-mcp",
+  "./node_modules/.bin/aictx-mcp"
+] as const;
+
 interface CapabilityRow {
   capability: string;
   mcp: string;
@@ -293,6 +304,24 @@ describe("agent capability map guardrail", () => {
 
       for (const rule of lifecycleRules) {
         expect(content).toMatch(rule);
+      }
+    }
+  });
+
+  it("keeps setup docs explicit about package-manager fallback commands", async () => {
+    const fallbackDocs = [
+      "README.md",
+      "docs/agent-integration.md",
+      "integrations/templates/agent-guidance.md"
+    ] as const;
+
+    for (const path of fallbackDocs) {
+      const content = await readProjectFile(path);
+
+      expect(content).toContain("If `aictx` is not on `PATH`");
+
+      for (const fallback of packageManagerFallbacks) {
+        expect(content).toContain(fallback);
       }
     }
   });

@@ -76,6 +76,24 @@ const lifecycleRules = [
   /save nothing/i
 ] as const;
 
+const packageManagerFallbacks = [
+  "pnpm exec aictx",
+  "npm exec aictx",
+  "npx aictx",
+  "./node_modules/.bin/aictx",
+  "pnpm exec aictx-mcp",
+  "npm exec aictx-mcp",
+  "npx aictx-mcp",
+  "./node_modules/.bin/aictx-mcp"
+] as const;
+
+const memoryPatchOperations = [
+  "`update_object`",
+  "`mark_stale`",
+  "`supersede_object`",
+  "`create_relation`"
+] as const;
+
 async function readProjectFile(path: string): Promise<string> {
   return readFile(join(root, path), "utf8");
 }
@@ -165,6 +183,52 @@ describe("agent guidance content", () => {
 
       for (const rule of lifecycleRules) {
         expect(content).toMatch(rule);
+      }
+    }
+  });
+
+  it("teaches short linked memory, update-before-create, stale/supersede, and no-op saves", async () => {
+    for (const path of guideTargets) {
+      const content = await readProjectFile(path);
+
+      expect(content).toMatch(/Short linked memory (?:policy|means)/i);
+      expect(content).toContain("One durable claim per object.");
+      expect(content).toMatch(/relations? only when the (?:link|connection) matters/i);
+      expect(content).toMatch(/Update-before-create/i);
+      expect(content).toMatch(/Create a new object only when no existing memory should be updated, marked stale, or superseded/i);
+      expect(content).toMatch(/Save-nothing-is-valid/i);
+
+      for (const operation of memoryPatchOperations) {
+        expect(content).toContain(operation);
+      }
+    }
+  });
+
+  it("includes concrete good and bad memory examples", async () => {
+    for (const path of guideTargets) {
+      const content = await readProjectFile(path);
+
+      expect(content).toMatch(/Good memory examples/i);
+      expect(content).toMatch(/Good durable fact/i);
+      expect(content).toMatch(/Good linked decision/i);
+      expect(content).toMatch(/Bad memory examples/i);
+      expect(content).toMatch(/Bad duplicate creation/i);
+      expect(content).toMatch(/Bad task diary/i);
+      expect(content).toMatch(/Bad speculation/i);
+      expect(content).toMatch(/Bad no-value save/i);
+    }
+  });
+
+  it("documents bootstrap, diff suggestion, audit, and package-manager fallback workflows", async () => {
+    for (const path of guideTargets) {
+      const content = await readProjectFile(path);
+
+      expect(content).toContain("aictx suggest --from-diff --json");
+      expect(content).toContain("aictx suggest --bootstrap --json");
+      expect(content).toContain("aictx audit --json");
+
+      for (const fallback of packageManagerFallbacks) {
+        expect(content).toContain(fallback);
       }
     }
   });
