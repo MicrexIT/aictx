@@ -42,6 +42,12 @@ import {
   type SuggestReviewPacket
 } from "../discipline/suggest.js";
 import {
+  buildAuditFindings,
+  type AuditFinding,
+  type AuditRule,
+  type AuditSeverity
+} from "../discipline/audit.js";
+import {
   exportObsidianProjection as writeObsidianProjectionExport,
   type ObsidianProjectionExportData
 } from "../export/obsidian.js";
@@ -139,6 +145,10 @@ export interface SuggestMemoryOptions extends GitWrapperOptions {
   bootstrap?: boolean;
 }
 
+export interface AuditMemoryOptions extends GitWrapperOptions {
+  cwd: string;
+}
+
 export interface ListMemoryHistoryOptions extends GitWrapperOptions {
   cwd: string;
   limit?: number;
@@ -191,6 +201,12 @@ export interface DiffMemoryData {
 }
 
 export type SuggestMemoryData = SuggestReviewPacket;
+
+export type { AuditFinding, AuditRule, AuditSeverity };
+
+export interface AuditMemoryData {
+  findings: AuditFinding[];
+}
 
 export interface MemoryHistoryCommit {
   commit: string;
@@ -1056,6 +1072,28 @@ export async function suggestMemory(
   };
 }
 
+export async function auditMemory(
+  options: AuditMemoryOptions
+): Promise<AppResult<AuditMemoryData>> {
+  const prepared = await readOnlyCanonicalStorage(options);
+
+  if (!prepared.ok) {
+    return prepared;
+  }
+
+  return {
+    ok: true,
+    data: {
+      findings: await buildAuditFindings({
+        projectRoot: prepared.storage.projectRoot,
+        storage: prepared.storage
+      })
+    },
+    warnings: prepared.storageWarnings,
+    meta: prepared.meta
+  };
+}
+
 export async function listMemoryHistory(
   options: ListMemoryHistoryOptions
 ): Promise<AppResult<MemoryHistoryData>> {
@@ -1327,6 +1365,7 @@ export async function saveMemoryPatch(
 }
 
 export const applicationOperations = {
+  auditMemory,
   checkProject,
   diffMemory,
   exportObsidianProjection,

@@ -3,6 +3,7 @@
 import type { Readable } from "node:stream";
 import { Command, CommanderError } from "commander";
 import { version } from "../generated/version.js";
+import { registerAuditCommand } from "./commands/audit.js";
 import { registerCheckCommand } from "./commands/check.js";
 import { registerDiffCommand } from "./commands/diff.js";
 import { registerExportCommand } from "./commands/export.js";
@@ -99,6 +100,11 @@ export function createCliProgram(options: CliMainOptions = {}): Command {
     stderr: writeErr
   });
   registerSuggestCommand(program, {
+    cwd: options.cwd ?? process.cwd(),
+    stdout: writeOut,
+    stderr: writeErr
+  });
+  registerAuditCommand(program, {
     cwd: options.cwd ?? process.cwd(),
     stdout: writeOut,
     stderr: writeErr

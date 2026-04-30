@@ -193,7 +193,9 @@ aictx init
 
 This creates the canonical storage layout, copies the JSON schemas Aictx uses
 for validation, builds the generated index when available, and may update
-`.gitignore` for rebuildable state. Run this once per project.
+`.gitignore` for rebuildable state. It does not start the MCP server. Run this
+once per project, then configure your MCP client separately if you want MCP
+tools.
 
 #### `aictx check`
 
@@ -452,9 +454,15 @@ interrupted.
 
 ## MCP Setup
 
-Configure your MCP client to start `aictx-mcp` from the project root. The MCP
-server resolves the project from its current working directory, so use one MCP
-server instance per project directory when a client needs multiple projects.
+`aictx init` does not start the MCP server. Configure your MCP client to start
+`aictx-mcp` from the project root. The MCP server resolves the project from its
+current working directory, so use one MCP server instance per project directory
+when a client needs multiple projects.
+
+`aictx-mcp` is an MCP stdio server: the MCP client must launch it and connect to
+its stdin/stdout. An agent generally cannot start `aictx-mcp` in a shell and
+then use it as MCP tools in an already-running session. When MCP is not
+configured, agents should use the CLI fallback commands.
 
 Example command configuration:
 
@@ -467,6 +475,16 @@ Example command configuration:
 
 When installed as a local dev dependency, configure the client to run through
 your package manager if the client supports command arguments:
+
+```json
+{
+  "command": "npm",
+  "args": ["exec", "aictx-mcp"],
+  "cwd": "/path/to/your/project"
+}
+```
+
+With pnpm:
 
 ```json
 {

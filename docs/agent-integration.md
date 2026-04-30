@@ -10,11 +10,11 @@ Aictx gives coding agents a local project-memory workflow:
 
 The normal agent loop should be one load call before work and one save call after meaningful work.
 
-`aictx init` installs concise repo-level guidance in `AGENTS.md` and `CLAUDE.md` by default, so agents that read those files are instructed to use this loop without the user steering every task. Use `aictx init --no-agent-guidance` when a project does not want those instruction files updated.
+`aictx init` installs concise repo-level guidance in `AGENTS.md` and `CLAUDE.md` by default, so agents that read those files are instructed to use this loop without the user steering every task. It does not start the MCP server. Use `aictx init --no-agent-guidance` when a project does not want those instruction files updated.
 
 ## Routine Workflow
 
-Use MCP first when the client has Aictx MCP configured:
+Use MCP first when the client has Aictx MCP configured and connected:
 
 ```text
 load_memory({ task: "<task summary>", mode: "coding" })
@@ -46,6 +46,8 @@ aictx diff
 ```
 
 Aictx writes local files and never commits automatically. The user decides whether to edit, commit, or revert memory changes.
+
+`aictx-mcp` is an MCP stdio server. The MCP client must launch it and connect to its stdin/stdout; an agent generally cannot start `aictx-mcp` in a shell and then use it as MCP tools in an already-running session. If MCP tools are not available, use the CLI fallback commands.
 
 Use `aictx suggest --from-diff --json` when the agent needs a deterministic review packet for current code changes before drafting memory. Use `aictx suggest --bootstrap --json` for a first-run repo memory pass. Use `aictx audit --json` to find deterministic memory hygiene issues. These commands do not write memory.
 
@@ -151,7 +153,7 @@ Use whichever target fits the agent client:
 
 Codex users can enable a skill folder through `skills.config[].path` in Codex configuration. Claude Code supports project skills under `.claude/skills/<skill-name>/SKILL.md`; for Aictx, use the shared skill name `aictx-memory`.
 
-If `aictx` is not on `PATH`, use the package manager binary path for the project, such as `pnpm exec aictx`, `npx aictx`, or `./node_modules/.bin/aictx`. MCP clients should be configured to start `aictx-mcp` from the project root.
+If `aictx` is not on `PATH`, use the package manager binary path for the project, such as `pnpm exec aictx`, `npx aictx`, or `./node_modules/.bin/aictx`. MCP clients should be configured to start `aictx-mcp` from the project root; `aictx init` does not start it.
 
 Generated guidance is not canonical memory. It is a setup aid for instructing agents how to use Aictx in projects that have opted into it.
 

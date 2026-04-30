@@ -48,6 +48,8 @@ const AGENT_GUIDANCE_BLOCK = `${[
   "",
   "This repo uses Aictx as local project memory for AI coding agents.",
   "",
+  "`aictx init` does not start the MCP server. MCP tools are available only when the agent client has launched and connected to `aictx-mcp`; otherwise use the CLI fallback commands.",
+  "",
   "Before non-trivial coding, architecture, debugging, dependency, or configuration work, load memory:",
   '- Prefer MCP: `load_memory({ task: "<task summary>" })`',
   '- Fallback CLI: `aictx load "<task summary>"`',
@@ -726,7 +728,7 @@ function countOccurrences(value: string, search: string): number {
 function nextSteps(agentGuidance: AgentGuidanceData): string[] {
   return [
     agentGuidanceNextStep(agentGuidance),
-    "Configure the `aictx-mcp` server in agent clients that support MCP so agents can use `load_memory` and `save_memory_patch`; agents can fall back to `aictx load` and `aictx save --stdin`.",
+    "`aictx init` does not start MCP; configure agent clients that support MCP to launch `aictx-mcp` from this project root so agents can use `load_memory` and `save_memory_patch`. Agents can fall back to `aictx load` and `aictx save --stdin` when MCP is unavailable.",
     "Review memory changes in `.aictx/`; in Git projects, use `aictx diff` before committing.",
     "Optional bundled skills are available under `integrations/codex/` and `integrations/claude/`."
   ];

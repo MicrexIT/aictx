@@ -174,6 +174,7 @@ Behavior:
 * Create generated directories.
 * If Git is available, add or recommend `.gitignore` entries for `.aictx/index/`, `.aictx/context/`, `.aictx/exports/`, and `.aictx/.lock`.
 * Create or update marked Aictx guidance sections in `AGENTS.md` and `CLAUDE.md` unless `--no-agent-guidance` is provided.
+* Do not start the MCP server; users must configure their MCP client to launch `aictx-mcp`.
 * Do not install user-global skills or edit client-specific config such as `~/.codex`, `~/.claude`, `.codex/config.toml`, or `.claude/skills/`.
 * Build the initial local index if possible.
 * Do not create a Git commit.
@@ -216,7 +217,7 @@ Success data:
   },
   "next_steps": [
     "Agents are now instructed through `AGENTS.md` and `CLAUDE.md` to load and save Aictx memory.",
-    "Configure the `aictx-mcp` server in agent clients that support MCP so agents can use `load_memory` and `save_memory_patch`; agents can fall back to `aictx load` and `aictx save --stdin`.",
+    "`aictx init` does not start MCP; configure agent clients that support MCP to launch `aictx-mcp` from this project root so agents can use `load_memory` and `save_memory_patch`. Agents can fall back to `aictx load` and `aictx save --stdin` when MCP is unavailable.",
     "Review memory changes in `.aictx/`; in Git projects, use `aictx diff` before committing.",
     "Optional bundled skills are available under `integrations/codex/` and `integrations/claude/`."
   ]

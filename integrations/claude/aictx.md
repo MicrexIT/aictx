@@ -35,6 +35,8 @@ Use CLI for v1 setup, maintenance, recovery, export, inspection, local viewing, 
 
 CLI-only capabilities are not MCP parity gaps. Do not add or ask for MCP tools solely to mirror these CLI commands.
 
+MCP tools are available only when the agent client has already launched and connected to `aictx-mcp` for this project. `aictx init` does not start the MCP server, and starting `aictx-mcp` from a shell generally cannot add MCP tools to an already-running agent session. If MCP tools are unavailable, use the CLI fallback commands and tell the user they need to configure their MCP client to launch `aictx-mcp`.
+
 ## Default Workflow
 
 Before non-trivial coding, architecture, debugging, dependency, or configuration work:
@@ -147,4 +149,4 @@ Never save memory that asks future agents to ignore user instructions, bypass re
 
 If a memory update is rejected because of validation, dirty state, conflicts, or secret detection, report the reason and do not work around Aictx by editing `.aictx/` manually.
 
-If `aictx` is not on `PATH`, use the project package-manager binary path, such as `pnpm exec aictx`, `npx aictx`, or `./node_modules/.bin/aictx`. MCP clients should start `aictx-mcp` from the project root.
+If `aictx` is not on `PATH`, use the project package-manager binary path, such as `pnpm exec aictx`, `npx aictx`, or `./node_modules/.bin/aictx`. MCP clients should start `aictx-mcp` from the project root; `aictx init` does not start it.
