@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
+import { access, mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
@@ -70,6 +70,8 @@ describe("initProject", () => {
       ".aictx/exports/"
     );
     await expect(readFile(join(repo, ".gitignore"), "utf8")).resolves.toContain(".aictx/.lock");
+    await expect(access(join(repo, ".aictx", "memory", "gotchas"))).resolves.toBeUndefined();
+    await expect(access(join(repo, ".aictx", "memory", "workflows"))).resolves.toBeUndefined();
     await expect(readFile(join(repo, "AGENTS.md"), "utf8")).resolves.toContain(
       "After meaningful work, autonomously save durable project knowledge:"
     );
@@ -155,6 +157,8 @@ describe("initProject", () => {
         "architecture.current",
         storage.data.config.project.id
       ].sort());
+      await expect(access(join(projectRoot, ".aictx", "memory", "gotchas"))).resolves.toBeUndefined();
+      await expect(access(join(projectRoot, ".aictx", "memory", "workflows"))).resolves.toBeUndefined();
       expect(storage.data.events).toEqual([]);
       expect(storage.data.objects[0]?.sidecar.created_at).toBe(FIXED_TIMESTAMP);
     }

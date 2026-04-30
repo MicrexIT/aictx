@@ -341,6 +341,8 @@ async function createStorageDirectories(projectRoot: string): Promise<Result<voi
     ".aictx/memory/constraints",
     ".aictx/memory/questions",
     ".aictx/memory/facts",
+    ".aictx/memory/gotchas",
+    ".aictx/memory/workflows",
     ".aictx/memory/notes",
     ".aictx/memory/concepts",
     ".aictx/relations",

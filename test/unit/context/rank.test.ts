@@ -106,6 +106,36 @@ describe("context memory ranking", () => {
     });
   });
 
+  it("accepts gotcha and workflow candidates with neutral type modifiers", () => {
+    const result = rankMemoryCandidates({
+      task: "webhook release",
+      projectId: PROJECT_ID,
+      git: GIT_MAIN,
+      candidates: [
+        memory({
+          id: "gotcha.webhook-duplicates",
+          type: "gotcha",
+          title: "Webhook duplicates",
+          body: "Never assume webhook delivery is unique.",
+          body_path: "memory/gotchas/webhook-duplicates.md"
+        }),
+        memory({
+          id: "workflow.release-checklist",
+          type: "workflow",
+          title: "Release checklist",
+          body: "Run the release checklist before publishing.",
+          body_path: "memory/workflows/release-checklist.md"
+        })
+      ]
+    });
+
+    expect(result.items.map((item) => item.id)).toEqual([
+      "gotcha.webhook-duplicates",
+      "workflow.release-checklist"
+    ]);
+    expect(result.items.map((item) => item.scoreBreakdown.typeModifier)).toEqual([0, 0]);
+  });
+
   it("excludes rejected memory from default output", () => {
     const result = rankMemoryCandidates({
       task: "webhook",

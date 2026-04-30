@@ -177,6 +177,55 @@ describe("search index", () => {
     }
   });
 
+  it("returns gotcha and workflow search matches", async () => {
+    const connection = await openMigratedConnection();
+
+    try {
+      insertObject(connection, {
+        id: "gotcha.webhook-duplicates",
+        type: "gotcha",
+        title: "Webhook duplicates",
+        bodyPath: ".aictx/memory/gotchas/webhook-duplicates.md",
+        body: "Never assume webhook delivery is unique.",
+        tags: ["webhook"]
+      });
+      insertObject(connection, {
+        id: "workflow.release-checklist",
+        type: "workflow",
+        title: "Release checklist",
+        bodyPath: ".aictx/memory/workflows/release-checklist.md",
+        body: "Run the release checklist before publishing.",
+        tags: ["release"]
+      });
+
+      const result = await searchIndex({
+        aictxRoot: connection.aictxRoot,
+        query: "webhook release",
+        limit: 10
+      });
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.data.matches).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({
+              id: "gotcha.webhook-duplicates",
+              type: "gotcha",
+              body_path: ".aictx/memory/gotchas/webhook-duplicates.md"
+            }),
+            expect.objectContaining({
+              id: "workflow.release-checklist",
+              type: "workflow",
+              body_path: ".aictx/memory/workflows/release-checklist.md"
+            })
+          ])
+        );
+      }
+    } finally {
+      connection.close();
+    }
+  });
+
   it("ranks deterministic ties by recency and then lexicographic ID", async () => {
     const connection = await openMigratedConnection();
 

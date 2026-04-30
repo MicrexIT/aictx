@@ -18,6 +18,8 @@ describe("core domain type constants", () => {
       "constraint",
       "question",
       "fact",
+      "gotcha",
+      "workflow",
       "note",
       "concept"
     ]);

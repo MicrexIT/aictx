@@ -81,13 +81,18 @@ describe("read-only viewer shell", () => {
       await page.goto(started.data.url, { waitUntil: "domcontentloaded" });
       await page.locator('[data-testid="viewer-search"]').waitFor();
       await expectText(page, '[aria-label="Project memory counts"]', "Objects");
-      await expectText(page, '[aria-label="Project memory counts"]', "8");
+      await expectText(page, '[aria-label="Project memory counts"]', "10");
       await expectText(page, '[aria-label="Project memory counts"]', "Relations");
       await expectText(page, '[aria-label="Project memory counts"]', "2");
 
       await page.selectOption('[data-testid="viewer-type-filter"]', "decision");
       await expectCount(page, '[data-testid="object-row-decision.viewer-shell"]', 1);
       await expectCount(page, '[data-testid="object-row-constraint.viewer-markdown"]', 0);
+
+      await page.selectOption('[data-testid="viewer-type-filter"]', "gotcha");
+      await expectCount(page, '[data-testid="object-row-gotcha.webhook-duplicates"]', 1);
+      await page.selectOption('[data-testid="viewer-type-filter"]', "workflow");
+      await expectCount(page, '[data-testid="object-row-workflow.release-checklist"]', 1);
 
       await page.selectOption('[data-testid="viewer-type-filter"]', "all");
       await page.selectOption('[data-testid="viewer-status-filter"]', "stale");
@@ -301,6 +306,26 @@ async function writeViewerFixtures(projectRoot: string): Promise<void> {
     bodyPath: "memory/notes/viewer-empty.md",
     body: "# Viewer Empty Neighborhood\n\nThis fixture has no direct relation neighborhood.\n",
     tags: ["viewer", "empty"],
+    updatedAt: FIXED_TIMESTAMP
+  });
+  await writeMemoryObject(projectRoot, {
+    id: "gotcha.webhook-duplicates",
+    type: "gotcha",
+    status: "active",
+    title: "Webhook Duplicates",
+    bodyPath: "memory/gotchas/webhook-duplicates.md",
+    body: "# Webhook Duplicates\n\nNever assume webhook delivery is unique.\n",
+    tags: ["viewer", "webhook"],
+    updatedAt: FIXED_TIMESTAMP
+  });
+  await writeMemoryObject(projectRoot, {
+    id: "workflow.release-checklist",
+    type: "workflow",
+    status: "active",
+    title: "Release Checklist",
+    bodyPath: "memory/workflows/release-checklist.md",
+    body: "# Release Checklist\n\nRun the release checklist before publishing.\n",
+    tags: ["viewer", "release"],
     updatedAt: FIXED_TIMESTAMP
   });
   await writeMemoryObject(projectRoot, {

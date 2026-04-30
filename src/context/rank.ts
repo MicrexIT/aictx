@@ -24,6 +24,8 @@ const TYPE_MODIFIERS = {
   architecture: 12,
   question: 10,
   fact: 8,
+  gotcha: 0,
+  workflow: 0,
   concept: 6,
   project: 8,
   note: 0
@@ -58,7 +60,9 @@ const TYPE_PRIORITY = {
   fact: 4,
   concept: 5,
   project: 6,
-  note: 7
+  note: 7,
+  gotcha: 8,
+  workflow: 9
 } as const satisfies Record<ObjectType, number>;
 
 const TASK_STOP_WORDS = new Set([

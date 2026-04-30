@@ -251,6 +251,87 @@ describe("schema validators", () => {
     expect(validatePatch(validators, createObjectPatch).valid).toBe(true);
   });
 
+  it("accepts gotcha and workflow objects and create patches", async () => {
+    const validators = await compileFixtureProject();
+
+    const gotchaObject = {
+      ...validObject,
+      id: "gotcha.webhook-duplicates",
+      type: "gotcha",
+      title: "Webhook duplicates",
+      body_path: "memory/gotchas/webhook-duplicates.md"
+    };
+    const workflowObject = {
+      ...validObject,
+      id: "workflow.release-checklist",
+      type: "workflow",
+      title: "Release checklist",
+      body_path: "memory/workflows/release-checklist.md"
+    };
+    const patch = {
+      source: {
+        kind: "agent"
+      },
+      changes: [
+        {
+          op: "create_object",
+          type: "gotcha",
+          title: "Webhook duplicates",
+          body: "Never assume webhook delivery is unique."
+        },
+        {
+          op: "create_object",
+          id: "workflow.release-checklist",
+          type: "workflow",
+          status: "active",
+          title: "Release checklist",
+          body: "Run the release checklist before publishing."
+        }
+      ]
+    };
+
+    expect(validateObject(validators, gotchaObject, ".aictx/memory/gotchas/webhook-duplicates.json").valid).toBe(true);
+    expect(validateObject(validators, workflowObject, ".aictx/memory/workflows/release-checklist.json").valid).toBe(true);
+    expect(validatePatch(validators, patch).valid).toBe(true);
+  });
+
+  it("keeps history and task-note invalid object types", async () => {
+    const validators = await compileFixtureProject();
+
+    for (const invalidType of ["history", "task-note"]) {
+      expect(
+        issueCodes(
+          validateObject(
+            validators,
+            {
+              ...validObject,
+              id: `${invalidType}.example`,
+              type: invalidType,
+              body_path: `memory/notes/${invalidType}.md`
+            },
+            `.aictx/memory/notes/${invalidType}.json`
+          )
+        )
+      ).toContain("SchemaEnum");
+
+      expect(
+        issueCodes(
+          validatePatch(validators, {
+            source: { kind: "agent" },
+            changes: [
+              {
+                op: "create_object",
+                type: invalidType,
+                title: "Invalid type",
+                body: "Invalid type body."
+              }
+            ]
+          })
+        )
+      ).toContain("SchemaOneOf");
+    }
+  });
+
   it("returns stable issue codes for invalid examples", async () => {
     const validators = await compileFixtureProject();
 

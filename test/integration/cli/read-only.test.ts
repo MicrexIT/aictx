@@ -517,6 +517,10 @@ function memoryDirectory(type: ObjectType): string {
       return "questions";
     case "fact":
       return "facts";
+    case "gotcha":
+      return "gotchas";
+    case "workflow":
+      return "workflows";
     case "note":
       return "notes";
     case "concept":

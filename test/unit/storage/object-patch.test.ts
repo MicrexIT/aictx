@@ -224,6 +224,83 @@ describe("applyMemoryPatch object operations", () => {
     );
   });
 
+  it("creates gotcha and workflow objects in their storage directories with active status", async () => {
+    const projectRoot = await createObjectPatchProject();
+
+    const result = await applyMemoryPatch({
+      projectRoot,
+      patch: {
+        source: {
+          kind: "agent"
+        },
+        changes: [
+          {
+            op: "create_object",
+            type: "gotcha",
+            title: "Webhook duplicates",
+            body: "# Webhook duplicates\n\nNever assume webhook delivery is unique.\n"
+          },
+          {
+            op: "create_object",
+            type: "workflow",
+            title: "Release checklist",
+            body: "# Release checklist\n\nRun the release checklist before publishing.\n"
+          }
+        ]
+      },
+      git: noGit,
+      clock: createFixedTestClock(FIXED_TIMESTAMP)
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+
+    expect(result.data.memory_created).toEqual([
+      "gotcha.webhook-duplicates",
+      "workflow.release-checklist"
+    ]);
+    expect(result.data.files_changed).toEqual(
+      expect.arrayContaining([
+        ".aictx/memory/gotchas/webhook-duplicates.json",
+        ".aictx/memory/gotchas/webhook-duplicates.md",
+        ".aictx/memory/workflows/release-checklist.json",
+        ".aictx/memory/workflows/release-checklist.md"
+      ])
+    );
+
+    const gotchaSidecar = await readJsonProjectFile(
+      projectRoot,
+      ".aictx/memory/gotchas/webhook-duplicates.json"
+    );
+    const workflowSidecar = await readJsonProjectFile(
+      projectRoot,
+      ".aictx/memory/workflows/release-checklist.json"
+    );
+
+    expect(gotchaSidecar).toMatchObject({
+      id: "gotcha.webhook-duplicates",
+      type: "gotcha",
+      status: "active",
+      body_path: "memory/gotchas/webhook-duplicates.md"
+    });
+    expect(workflowSidecar).toMatchObject({
+      id: "workflow.release-checklist",
+      type: "workflow",
+      status: "active",
+      body_path: "memory/workflows/release-checklist.md"
+    });
+    expectObjectHash(
+      gotchaSidecar,
+      await readProjectFile(projectRoot, ".aictx/memory/gotchas/webhook-duplicates.md")
+    );
+    expectObjectHash(
+      workflowSidecar,
+      await readProjectFile(projectRoot, ".aictx/memory/workflows/release-checklist.md")
+    );
+  });
+
   it.each([
     {
       name: "create",

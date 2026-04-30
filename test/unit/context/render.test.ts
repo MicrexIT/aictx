@@ -105,6 +105,38 @@ describe("context pack rendering", () => {
     expect(result.markdown).not.toContain("@abc123");
   });
 
+  it("renders gotcha and workflow memory in load output", () => {
+    const result = renderContextPack(
+      input({
+        ranked: ranked({
+          mustKnow: [
+            item({
+              id: "gotcha.webhook-duplicates",
+              type: "gotcha",
+              title: "Webhook duplicates",
+              body_path: "memory/gotchas/webhook-duplicates.md",
+              body: "Never assume webhook delivery is unique."
+            }),
+            item({
+              id: "workflow.release-checklist",
+              type: "workflow",
+              title: "Release checklist",
+              body_path: "memory/workflows/release-checklist.md",
+              body: "Run the release checklist before publishing."
+            })
+          ]
+        })
+      })
+    );
+
+    expect(result.includedIds).toEqual([
+      "gotcha.webhook-duplicates",
+      "workflow.release-checklist"
+    ]);
+    expect(result.markdown).toContain("(gotcha.webhook-duplicates)");
+    expect(result.markdown).toContain("(workflow.release-checklist)");
+  });
+
   it("renders non-empty sections in the required order", () => {
     const result = renderContextPack(
       input({

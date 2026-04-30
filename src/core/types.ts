@@ -14,6 +14,8 @@ export const OBJECT_TYPES = [
   "constraint",
   "question",
   "fact",
+  "gotcha",
+  "workflow",
   "note",
   "concept"
 ] as const;

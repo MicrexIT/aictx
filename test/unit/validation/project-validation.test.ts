@@ -50,6 +50,32 @@ describe("project validation", () => {
     });
   });
 
+  it("accepts gotcha and workflow memory objects", async () => {
+    const projectRoot = await createValidProject();
+    await writeMemoryObject(projectRoot, {
+      path: "memory/gotchas/webhook-duplicates.md",
+      id: "gotcha.webhook-duplicates",
+      type: "gotcha",
+      title: "Webhook duplicates",
+      body: "# Webhook duplicates\n\nNever assume webhook delivery is unique.\n"
+    });
+    await writeMemoryObject(projectRoot, {
+      path: "memory/workflows/release-checklist.md",
+      id: "workflow.release-checklist",
+      type: "workflow",
+      title: "Release checklist",
+      body: "# Release checklist\n\nRun the release checklist before publishing.\n"
+    });
+
+    const result = await validateProject(projectRoot);
+
+    expect(result).toEqual({
+      valid: true,
+      errors: [],
+      warnings: []
+    });
+  });
+
   it("reports missing required canonical files and directories", async () => {
     const projectRoot = await mkdirTempRoot();
     await mkdir(join(projectRoot, ".aictx"), { recursive: true });

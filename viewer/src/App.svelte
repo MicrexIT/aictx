@@ -11,6 +11,8 @@
     | "constraint"
     | "question"
     | "fact"
+    | "gotcha"
+    | "workflow"
     | "note"
     | "concept";
   type RelationStatus = "active" | "stale" | "rejected";

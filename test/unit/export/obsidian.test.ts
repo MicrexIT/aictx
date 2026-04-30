@@ -85,6 +85,67 @@ describe("exportObsidianProjection", () => {
     );
   });
 
+  it("exports gotcha and workflow objects", async () => {
+    const projectRoot = await createTempRoot("aictx-export-obsidian-types-");
+    const baseStorage = fixtureStorage(projectRoot);
+    const storage = {
+      ...baseStorage,
+      objects: [
+        ...baseStorage.objects,
+        memoryObject({
+          id: "gotcha.webhook-duplicates",
+          type: "gotcha",
+          status: "active",
+          title: "Webhook duplicates",
+          bodyPath: "memory/gotchas/webhook-duplicates.md",
+          body: "# Webhook duplicates\n\nNever assume webhook delivery is unique.\n",
+          tags: ["webhook"]
+        }),
+        memoryObject({
+          id: "workflow.release-checklist",
+          type: "workflow",
+          status: "active",
+          title: "Release checklist",
+          bodyPath: "memory/workflows/release-checklist.md",
+          body: "# Release checklist\n\nRun the release checklist before publishing.\n",
+          tags: ["release"]
+        })
+      ]
+    };
+
+    const result = await exportObsidianProjection({ projectRoot, storage });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+
+    expect(result.data.files_written).toEqual(
+      expect.arrayContaining([
+        ".aictx/exports/obsidian/memory/gotcha.webhook-duplicates.md",
+        ".aictx/exports/obsidian/memory/workflow.release-checklist.md"
+      ])
+    );
+
+    const gotchaNote = await readProjectFile(
+      projectRoot,
+      ".aictx/exports/obsidian/memory/gotcha.webhook-duplicates.md"
+    );
+    const workflowNote = await readProjectFile(
+      projectRoot,
+      ".aictx/exports/obsidian/memory/workflow.release-checklist.md"
+    );
+
+    expect(parseJsonFrontmatter(gotchaNote)).toMatchObject({
+      aictx_id: "gotcha.webhook-duplicates",
+      aictx_type: "gotcha"
+    });
+    expect(parseJsonFrontmatter(workflowNote)).toMatchObject({
+      aictx_id: "workflow.release-checklist",
+      aictx_type: "workflow"
+    });
+  });
+
   it("rejects unsafe output targets", async () => {
     const projectRoot = await createTempRoot("aictx-export-obsidian-unsafe-");
     const storage = fixtureStorage(projectRoot);
