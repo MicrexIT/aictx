@@ -66,10 +66,11 @@ Aictx writes local files and never commits automatically. The user decides wheth
 `aictx-mcp` is an MCP stdio server. The MCP client must launch it and connect to its stdin/stdout; an agent generally cannot start `aictx-mcp` in a shell and then use it as MCP tools in an already-running session. If MCP tools are not available, use the CLI fallback commands.
 
 For the smoothest MCP setup, install Aictx globally and configure the client to
-launch `aictx-mcp` once. The routine MCP tools accept `project_root` so one
-server can serve multiple initialized projects while keeping each project's
-`.aictx/` memory isolated. When `project_root` is omitted, tools use the server
-launch directory for backward compatibility.
+launch `aictx-mcp` once. A project-local dev dependency is optional; use it only
+when a project should pin its own Aictx version. The routine MCP tools accept
+`project_root` so one server can serve multiple initialized projects while
+keeping each project's `.aictx/` memory isolated. When `project_root` is omitted,
+tools use the server launch directory for backward compatibility.
 
 When `aictx-mcp` is not on `PATH`, configure the MCP client to launch it through the project package manager or local binary path, such as `pnpm exec aictx-mcp`, `npm exec aictx-mcp`, `npx aictx-mcp`, or `./node_modules/.bin/aictx-mcp`.
 

@@ -72,7 +72,7 @@ npx aictx load "<task summary>"
 ./node_modules/.bin/aictx load "<task summary>"
 ```
 
-For MCP setup, prefer a global Aictx install and configure the client to launch `aictx-mcp` once. With a local package install, configure the client to launch `aictx-mcp` through the same project-local path, such as `pnpm exec aictx-mcp`, `npm exec aictx-mcp`, `npx aictx-mcp`, or `./node_modules/.bin/aictx-mcp`.
+For MCP setup, prefer a global Aictx install and configure the client to launch `aictx-mcp` once. A project-local dev dependency is optional; use it only when a project should pin its own Aictx version. With a local package install, configure the client to launch `aictx-mcp` through the same project-local path, such as `pnpm exec aictx-mcp`, `npm exec aictx-mcp`, `npx aictx-mcp`, or `./node_modules/.bin/aictx-mcp`.
 
 Load modes are `coding`, `debugging`, `review`, `architecture`, and `onboarding`. Modes tune deterministic ranking and rendering only; they do not broaden project scope, call a model, use external retrieval, or load the whole project.
 

@@ -26,7 +26,11 @@ Install it globally for the best MCP experience:
 npm install -g aictx
 ```
 
-Or install it in a project:
+Global install is the recommended default for regular CLI and MCP use. You do
+not need to add Aictx to each project's `package.json` unless you want that
+project to pin its own Aictx version.
+
+For project-local version pinning, install Aictx as a dev dependency:
 
 ```bash
 pnpm add -D aictx
@@ -35,6 +39,8 @@ pnpm add -D aictx
 Or with npm:
 
 ```bash
+npm install -D aictx
+# equivalent long form:
 npm install --save-dev aictx
 ```
 
