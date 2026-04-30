@@ -7,6 +7,7 @@ import type {
   Scope
 } from "../core/types.js";
 import type { MemoryRelation } from "../storage/relations.js";
+import { DEFAULT_LOAD_MODE, type LoadMemoryMode } from "./modes.js";
 
 const SCORE = {
   exactId: 100,
@@ -24,8 +25,8 @@ const TYPE_MODIFIERS = {
   architecture: 12,
   question: 10,
   fact: 8,
-  gotcha: 0,
-  workflow: 0,
+  gotcha: 14,
+  workflow: 10,
   concept: 6,
   project: 8,
   note: 0
@@ -55,15 +56,140 @@ const PREDICATE_MODIFIERS = {
 const TYPE_PRIORITY = {
   constraint: 0,
   decision: 1,
-  architecture: 2,
-  question: 3,
-  fact: 4,
-  concept: 5,
-  project: 6,
-  note: 7,
-  gotcha: 8,
-  workflow: 9
+  gotcha: 2,
+  architecture: 3,
+  workflow: 4,
+  question: 5,
+  fact: 6,
+  concept: 7,
+  project: 8,
+  note: 9
 } as const satisfies Record<ObjectType, number>;
+
+const MODE_TYPE_MODIFIERS = {
+  coding: {
+    constraint: 4,
+    decision: 3,
+    architecture: 2,
+    gotcha: 2,
+    workflow: 1,
+    question: 1,
+    fact: 1,
+    project: 0,
+    concept: 0,
+    note: 0
+  },
+  debugging: {
+    gotcha: 18,
+    constraint: 10,
+    fact: 8,
+    decision: 6,
+    architecture: 0,
+    workflow: 0,
+    question: 0,
+    project: 0,
+    concept: 0,
+    note: 0
+  },
+  review: {
+    constraint: 16,
+    decision: 14,
+    gotcha: 12,
+    architecture: 0,
+    workflow: 0,
+    question: 0,
+    fact: 0,
+    project: 0,
+    concept: 0,
+    note: 0
+  },
+  architecture: {
+    architecture: 20,
+    decision: 14,
+    constraint: 10,
+    concept: 10,
+    question: 6,
+    project: 4,
+    gotcha: 0,
+    workflow: 0,
+    fact: 0,
+    note: 0
+  },
+  onboarding: {
+    project: 20,
+    architecture: 16,
+    concept: 14,
+    workflow: 12,
+    constraint: 6,
+    decision: 0,
+    gotcha: 0,
+    question: 0,
+    fact: 0,
+    note: 0
+  }
+} as const satisfies Record<LoadMemoryMode, Record<ObjectType, number>>;
+
+const MODE_STATUS_MODIFIERS = {
+  coding: 0,
+  debugging: 25,
+  review: 20,
+  architecture: 0,
+  onboarding: 0
+} as const satisfies Record<LoadMemoryMode, number>;
+
+const REVIEW_FILE_REFERENCE_BOOST = 25;
+
+const MODE_TYPE_PRIORITIES = {
+  coding: TYPE_PRIORITY,
+  debugging: priorityMap([
+    "gotcha",
+    "constraint",
+    "fact",
+    "decision",
+    "architecture",
+    "workflow",
+    "question",
+    "concept",
+    "project",
+    "note"
+  ]),
+  review: priorityMap([
+    "constraint",
+    "decision",
+    "gotcha",
+    "architecture",
+    "workflow",
+    "question",
+    "fact",
+    "concept",
+    "project",
+    "note"
+  ]),
+  architecture: priorityMap([
+    "architecture",
+    "decision",
+    "constraint",
+    "concept",
+    "question",
+    "project",
+    "workflow",
+    "gotcha",
+    "fact",
+    "note"
+  ]),
+  onboarding: priorityMap([
+    "project",
+    "architecture",
+    "concept",
+    "workflow",
+    "constraint",
+    "decision",
+    "gotcha",
+    "question",
+    "fact",
+    "note"
+  ])
+} as const satisfies Record<LoadMemoryMode, Record<ObjectType, number>>;
 
 const TASK_STOP_WORDS = new Set([
   "a",
@@ -109,6 +235,7 @@ export interface RankMemoryCandidate {
 
 export interface RankMemoryCandidatesInput {
   task: string;
+  mode?: LoadMemoryMode;
   projectId: string;
   git: GitState;
   candidates: readonly RankMemoryCandidate[];
@@ -127,6 +254,7 @@ export interface RankScoreBreakdown {
   recentMemoryBoost: number;
   typeModifier: number;
   statusModifier: number;
+  modeModifier: number;
 }
 
 export interface RankedMemoryItem {
@@ -192,10 +320,12 @@ interface ScopeMatch {
 export function rankMemoryCandidates(
   input: RankMemoryCandidatesInput
 ): RankedMemoryCandidates {
+  const mode = input.mode ?? DEFAULT_LOAD_MODE;
   const normalizedTaskText = input.task.toLowerCase();
   const normalizedTask = normalizePhrase(input.task);
   const taskTerms = extractTerms(input.task);
   const significantTaskTerms = new Set(extractSignificantTerms(input.task));
+  const taskFileReferences = extractFileReferences(input.task);
   const conflictedIds = new Set(input.conflictedIds ?? []);
   const excluded: RankExcludedCandidate[] = [];
   const rankable: RankableCandidate[] = [];
@@ -243,10 +373,12 @@ export function rankMemoryCandidates(
         entry,
         relationScores: relationScores.get(entry.candidate.id),
         recentBoosted: recentBoostIds.has(entry.candidate.id),
-        conflicted: conflictedIds.has(entry.candidate.id)
+        conflicted: conflictedIds.has(entry.candidate.id),
+        mode,
+        taskFileReferences
       })
     )
-    .sort(compareRankedItems);
+    .sort((left, right) => compareRankedItems(left, right, mode));
 
   for (const item of items) {
     if (item.conflicted) {
@@ -408,23 +540,31 @@ function rankedItemFromCandidate(input: {
   relationScores: RelationScoreBreakdown | undefined;
   recentBoosted: boolean;
   conflicted: boolean;
+  mode: LoadMemoryMode;
+  taskFileReferences: readonly string[];
 }): RankedMemoryItem {
   const relationScores = input.relationScores ?? {
     relationNeighborhood: 0,
     relationPredicate: 0
-  };
-  const scoreBreakdown: RankScoreBreakdown = {
-    ...input.entry.directScores,
-    ...relationScores,
-    recentMemoryBoost: input.recentBoosted ? SCORE.recentMemoryBoost : 0,
-    typeModifier: TYPE_MODIFIERS[input.entry.candidate.type],
-    statusModifier: STATUS_MODIFIERS[input.entry.candidate.status]
   };
   const matched =
     directScoreTotal(input.entry.directScores) +
       relationScores.relationNeighborhood +
       relationScores.relationPredicate >
     0;
+  const scoreBreakdown: RankScoreBreakdown = {
+    ...input.entry.directScores,
+    ...relationScores,
+    recentMemoryBoost: input.recentBoosted ? SCORE.recentMemoryBoost : 0,
+    typeModifier: TYPE_MODIFIERS[input.entry.candidate.type],
+    statusModifier: STATUS_MODIFIERS[input.entry.candidate.status],
+    modeModifier: modeModifier({
+      candidate: input.entry.candidate,
+      mode: input.mode,
+      matched,
+      taskFileReferences: input.taskFileReferences
+    })
+  };
 
   return {
     id: input.entry.candidate.id,
@@ -464,8 +604,52 @@ function totalScore(scores: RankScoreBreakdown): number {
     scores.relationPredicate +
     scores.recentMemoryBoost +
     scores.typeModifier +
-    scores.statusModifier
+    scores.statusModifier +
+    scores.modeModifier
   );
+}
+
+function modeModifier(input: {
+  candidate: RankMemoryCandidate;
+  mode: LoadMemoryMode;
+  matched: boolean;
+  taskFileReferences: readonly string[];
+}): number {
+  return (
+    MODE_TYPE_MODIFIERS[input.mode][input.candidate.type] +
+    staleOrSupersededModeModifier(input.candidate.status, input.mode, input.matched) +
+    reviewFileReferenceModifier(input.candidate, input.mode, input.taskFileReferences)
+  );
+}
+
+function staleOrSupersededModeModifier(
+  status: ObjectStatus,
+  mode: LoadMemoryMode,
+  matched: boolean
+): number {
+  if (!matched || (status !== "stale" && status !== "superseded")) {
+    return 0;
+  }
+
+  return MODE_STATUS_MODIFIERS[mode];
+}
+
+function reviewFileReferenceModifier(
+  candidate: RankMemoryCandidate,
+  mode: LoadMemoryMode,
+  taskFileReferences: readonly string[]
+): number {
+  if (mode !== "review" || taskFileReferences.length === 0) {
+    return 0;
+  }
+
+  const searchableText = `${candidate.body_path}\n${candidate.body}`.toLowerCase();
+
+  return taskFileReferences.some((reference) =>
+    searchableText.includes(reference.toLowerCase())
+  )
+    ? REVIEW_FILE_REFERENCE_BOOST
+    : 0;
 }
 
 function hasTagMatch(tags: readonly string[], taskTerms: readonly string[]): boolean {
@@ -497,14 +681,19 @@ function shouldApplyRecentBoost(status: ObjectStatus): boolean {
   return status !== "stale" && status !== "superseded" && status !== "rejected";
 }
 
-function compareRankedItems(left: RankedMemoryItem, right: RankedMemoryItem): number {
+function compareRankedItems(
+  left: RankedMemoryItem,
+  right: RankedMemoryItem,
+  mode: LoadMemoryMode
+): number {
   const scoreDifference = right.score - left.score;
 
   if (scoreDifference !== 0) {
     return scoreDifference;
   }
 
-  const typeDifference = TYPE_PRIORITY[left.type] - TYPE_PRIORITY[right.type];
+  const typePriority = MODE_TYPE_PRIORITIES[mode];
+  const typeDifference = typePriority[left.type] - typePriority[right.type];
 
   if (typeDifference !== 0) {
     return typeDifference;
@@ -585,4 +774,33 @@ function extractTerms(value: string): string[] {
       .filter((term) => term.length > 0) ?? [];
 
   return [...new Set(terms)];
+}
+
+function extractFileReferences(value: string): string[] {
+  const matches =
+    value.match(
+      /(?:\.{1,2}\/)?(?:[A-Za-z0-9_@.-]+\/)+[A-Za-z0-9_@.-]+(?:\.[A-Za-z0-9]+)?/g
+    ) ?? [];
+  const paths = new Set<string>();
+
+  for (const match of matches) {
+    const path = trimPathPunctuation(match);
+
+    if (path !== "") {
+      paths.add(path);
+    }
+  }
+
+  return [...paths];
+}
+
+function trimPathPunctuation(value: string): string {
+  return value.replace(/[),.;:!?]+$/u, "");
+}
+
+function priorityMap(types: readonly ObjectType[]): Record<ObjectType, number> {
+  return Object.fromEntries(types.map((type, index) => [type, index])) as Record<
+    ObjectType,
+    number
+  >;
 }

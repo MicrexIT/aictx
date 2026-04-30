@@ -26,6 +26,7 @@ interface LoadEnvelope {
   ok: true;
   data: {
     task: string;
+    mode: string;
     token_budget: number | null;
     context_pack: string;
     token_target: number | null;
@@ -114,6 +115,7 @@ describe("aictx load and search CLI", () => {
     expect(envelope.ok).toBe(true);
     expect(envelope.data).toMatchObject({
       task: "Stripe webhook idempotency",
+      mode: "coding",
       token_budget: null,
       token_target: null,
       budget_status: "not_requested",
@@ -157,6 +159,49 @@ describe("aictx load and search CLI", () => {
     expect(["within_target", "over_target"]).toContain(envelope.data.budget_status);
     expect(envelope.data.truncated).toBe(true);
     expect(envelope.data.omitted_ids.length).toBeGreaterThan(0);
+  });
+
+  it("accepts --mode and prints the normalized mode in JSON output", async () => {
+    const projectRoot = await createInitializedProject("aictx-cli-load-mode-");
+    await writeModeFixtures(projectRoot);
+    await rebuildProject(projectRoot);
+
+    const output = await runCli(
+      ["node", "aictx", "load", "Mode service overview", "--mode", "debugging", "--json"],
+      projectRoot
+    );
+
+    expect(output.exitCode).toBe(0);
+    expect(output.stderr).toBe("");
+    const envelope = JSON.parse(output.stdout) as LoadEnvelope;
+
+    expect(envelope.ok).toBe(true);
+    expect(envelope.data.mode).toBe("debugging");
+    expect(envelope.data.context_pack).toContain("## Relevant gotchas");
+    expect(envelope.data.included_ids[0]).toBe("gotcha.mode-service");
+  });
+
+  it("returns a validation envelope for invalid --mode values in JSON output", async () => {
+    const projectRoot = await createInitializedProject("aictx-cli-load-invalid-mode-");
+
+    const output = await runCli(
+      ["node", "aictx", "load", "Architecture", "--mode", "triage", "--json"],
+      projectRoot
+    );
+
+    expect(output.exitCode).toBe(1);
+    expect(output.stderr).toBe("");
+    const envelope = JSON.parse(output.stdout) as {
+      ok: false;
+      error: { code: string; details?: Record<string, unknown> };
+    };
+
+    expect(envelope.ok).toBe(false);
+    expect(envelope.error.code).toBe("AICtxValidationFailed");
+    expect(envelope.error.details).toMatchObject({
+      field: "mode",
+      actual: "triage"
+    });
   });
 
   it("returns SQLite FTS search results in JSON mode", async () => {
@@ -311,6 +356,44 @@ async function writeLoadSearchFixtures(projectRoot: string): Promise<void> {
     body: "# Rejected webhook\n\nStripe webhook details in this memory should be excluded.\n",
     tags: ["stripe", "webhooks", "idempotency"],
     updatedAt: FIXED_TIMESTAMP_NEXT_MINUTE
+  });
+}
+
+async function writeModeFixtures(projectRoot: string): Promise<void> {
+  const shared = {
+    status: "active" as const,
+    title: "Mode service overview",
+    tags: ["mode", "service", "overview"],
+    updatedAt: FIXED_TIMESTAMP_NEXT_MINUTE
+  };
+
+  await writeMemoryObject(projectRoot, {
+    ...shared,
+    id: "project.mode-service",
+    type: "project",
+    bodyPath: "memory/project-mode-service.md",
+    body: "# Mode service overview\n\nMode service overview project orientation.\n"
+  });
+  await writeMemoryObject(projectRoot, {
+    ...shared,
+    id: "constraint.mode-service",
+    type: "constraint",
+    bodyPath: "memory/constraints/mode-service.md",
+    body: "# Mode service overview\n\nMode service overview constraint.\n"
+  });
+  await writeMemoryObject(projectRoot, {
+    ...shared,
+    id: "gotcha.mode-service",
+    type: "gotcha",
+    bodyPath: "memory/gotchas/mode-service.md",
+    body: "# Mode service overview\n\nMode service overview gotcha for debugging.\n"
+  });
+  await writeMemoryObject(projectRoot, {
+    ...shared,
+    id: "workflow.mode-service",
+    type: "workflow",
+    bodyPath: "memory/workflows/mode-service.md",
+    body: "# Mode service overview\n\nMode service overview workflow for onboarding.\n"
   });
 }
 

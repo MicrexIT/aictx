@@ -45,7 +45,8 @@ const EMPTY_SCORE_BREAKDOWN: RankScoreBreakdown = {
   relationPredicate: 0,
   recentMemoryBoost: 0,
   typeModifier: 0,
-  statusModifier: 0
+  statusModifier: 0,
+  modeModifier: 0
 };
 
 describe("context pack rendering", () => {
@@ -135,6 +136,8 @@ describe("context pack rendering", () => {
     ]);
     expect(result.markdown).toContain("(gotcha.webhook-duplicates)");
     expect(result.markdown).toContain("(workflow.release-checklist)");
+    expect(result.markdown).toContain("## Relevant gotchas");
+    expect(result.markdown).toContain("## Relevant workflows");
   });
 
   it("renders non-empty sections in the required order", () => {
@@ -163,6 +166,18 @@ describe("context pack rendering", () => {
               body: "Never assume a Stripe event arrives only once."
             }),
             item({
+              id: "gotcha.webhook-duplicates",
+              type: "gotcha",
+              title: "Webhook duplicates",
+              body: "Never assume webhook delivery is unique."
+            }),
+            item({
+              id: "workflow.release-checklist",
+              type: "workflow",
+              title: "Release checklist",
+              body: "Run the release checklist before publishing."
+            }),
+            item({
               id: "question.retry-backoff",
               type: "question",
               status: "open",
@@ -184,6 +199,12 @@ describe("context pack rendering", () => {
       sectionIndex(result.markdown, "Relevant constraints")
     );
     expect(sectionIndex(result.markdown, "Relevant constraints")).toBeLessThan(
+      sectionIndex(result.markdown, "Relevant gotchas")
+    );
+    expect(sectionIndex(result.markdown, "Relevant gotchas")).toBeLessThan(
+      sectionIndex(result.markdown, "Relevant workflows")
+    );
+    expect(sectionIndex(result.markdown, "Relevant workflows")).toBeLessThan(
       sectionIndex(result.markdown, "Relevant facts")
     );
     expect(sectionIndex(result.markdown, "Relevant facts")).toBeLessThan(
@@ -369,6 +390,73 @@ describe("context pack rendering", () => {
     expect(result.markdown).not.toContain("Section truncated due to token budget");
   });
 
+  it("uses mode-specific required sections with explicit token targets", () => {
+    const mustKnow = [
+      item({
+        id: "constraint.webhook-idempotency",
+        type: "constraint",
+        title: "Webhook processing must be idempotent",
+        body: "Webhook processing must remain idempotent across retries."
+      }),
+      item({
+        id: "gotcha.webhook-duplicates",
+        type: "gotcha",
+        title: "Webhook duplicates",
+        body: "Duplicate deliveries happen during retry storms."
+      })
+    ];
+    const coding = renderContextPack(
+      input({
+        mode: "coding",
+        tokenTarget: 80,
+        ranked: ranked({ mustKnow })
+      })
+    );
+    const debugging = renderContextPack(
+      input({
+        mode: "debugging",
+        tokenTarget: 80,
+        ranked: ranked({ mustKnow })
+      })
+    );
+
+    expect(coding.markdown).not.toContain("## Relevant gotchas");
+    expect(debugging.markdown).toContain("## Relevant gotchas");
+    expect(debugging.truncated).toBe(false);
+  });
+
+  it("caps onboarding gotcha detail to a small number", () => {
+    const result = renderContextPack(
+      input({
+        mode: "onboarding",
+        ranked: ranked({
+          mustKnow: [
+            item({
+              id: "gotcha.onboarding-one",
+              type: "gotcha",
+              title: "Onboarding gotcha one"
+            }),
+            item({
+              id: "gotcha.onboarding-two",
+              type: "gotcha",
+              title: "Onboarding gotcha two"
+            }),
+            item({
+              id: "gotcha.onboarding-three",
+              type: "gotcha",
+              title: "Onboarding gotcha three"
+            })
+          ]
+        })
+      })
+    );
+
+    expect(result.markdown).toContain("gotcha.onboarding-one");
+    expect(result.markdown).toContain("gotcha.onboarding-two");
+    expect(result.markdown).not.toContain("gotcha.onboarding-three");
+    expect(result.includedIds).toEqual(["gotcha.onboarding-one", "gotcha.onboarding-two"]);
+  });
+
   it("reports over-target core content without omitting Must know", () => {
     const mustKnow = [
       item({
@@ -429,6 +517,10 @@ function input(overrides: Partial<RenderContextPackInput> = {}): RenderContextPa
 
   if (overrides.tokenTarget !== undefined) {
     result.tokenTarget = overrides.tokenTarget;
+  }
+
+  if (overrides.mode !== undefined) {
+    result.mode = overrides.mode;
   }
 
   return result;

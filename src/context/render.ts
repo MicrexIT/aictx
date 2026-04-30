@@ -3,17 +3,21 @@ import type {
   RankedMemoryCandidates,
   RankedMemoryItem
 } from "./rank.js";
+import { DEFAULT_LOAD_MODE, type LoadMemoryMode } from "./modes.js";
 import { estimateTokenCount } from "./tokens.js";
 
 const MAX_BODY_SNIPPET_LENGTH = 180;
 const MAX_DIRECTIVES_PER_ITEM = 2;
 const MAX_RELEVANT_FILES = 25;
+const MAX_ONBOARDING_GOTCHAS = 2;
 
 type ContextSectionTitle =
   | "Must know"
   | "Do not do"
   | "Relevant decisions"
   | "Relevant constraints"
+  | "Relevant gotchas"
+  | "Relevant workflows"
   | "Relevant facts"
   | "Relevant files"
   | "Open questions"
@@ -26,6 +30,7 @@ export interface RenderContextPackInput {
   tokenTarget?: number;
   projectId: ProjectId;
   git: GitState;
+  mode?: LoadMemoryMode;
   ranked: RankedMemoryCandidates;
 }
 
@@ -72,7 +77,8 @@ export function renderContextPack(
   input: RenderContextPackInput
 ): RenderContextPackOutput {
   const headerLines = buildHeaderLines(input);
-  const sections = buildSectionCandidates(input.ranked);
+  const mode = input.mode ?? DEFAULT_LOAD_MODE;
+  const sections = buildSectionCandidates(input.ranked, mode);
   const fit =
     input.tokenTarget === undefined
       ? renderAllSections(sections)
@@ -119,31 +125,95 @@ function formatProvenance(projectId: ProjectId, git: GitState): string {
   return `${projectId}, ${branch}@${commit}`;
 }
 
-function buildSectionCandidates(ranked: RankedMemoryCandidates): SectionCandidate[] {
-  const primaryItems = ranked.mustKnow;
+function buildSectionCandidates(
+  ranked: RankedMemoryCandidates,
+  mode: LoadMemoryMode
+): SectionCandidate[] {
+  const primaryItems = primaryItemsForMode(ranked.mustKnow, mode);
 
   return [
-    memorySection("Must know", primaryItems),
+    memorySection("Must know", primaryItems, sectionRequired("Must know", mode)),
     doNotDoSection(primaryItems),
     memorySection(
       "Relevant decisions",
-      primaryItems.filter((item) => item.type === "decision")
+      primaryItems.filter((item) => item.type === "decision"),
+      sectionRequired("Relevant decisions", mode)
     ),
     memorySection(
       "Relevant constraints",
-      primaryItems.filter((item) => item.type === "constraint")
+      primaryItems.filter((item) => item.type === "constraint"),
+      sectionRequired("Relevant constraints", mode)
+    ),
+    memorySection(
+      "Relevant gotchas",
+      primaryItems.filter((item) => item.type === "gotcha"),
+      sectionRequired("Relevant gotchas", mode)
+    ),
+    memorySection(
+      "Relevant workflows",
+      primaryItems.filter((item) => item.type === "workflow"),
+      sectionRequired("Relevant workflows", mode)
     ),
     memorySection(
       "Relevant facts",
-      primaryItems.filter((item) => item.type === "fact")
+      primaryItems.filter((item) => item.type === "fact"),
+      sectionRequired("Relevant facts", mode)
     ),
     relevantFilesSection(primaryItems),
     memorySection(
       "Open questions",
-      primaryItems.filter((item) => item.type === "question")
+      primaryItems.filter((item) => item.type === "question"),
+      sectionRequired("Open questions", mode)
     ),
     memorySection("Stale or superseded memory to avoid", ranked.staleOrSuperseded)
   ].filter((section) => section.bullets.length > 0);
+}
+
+function primaryItemsForMode(
+  items: readonly RankedMemoryItem[],
+  mode: LoadMemoryMode
+): RankedMemoryItem[] {
+  if (mode !== "onboarding") {
+    return [...items];
+  }
+
+  let gotchas = 0;
+
+  return items.filter((item) => {
+    if (item.type !== "gotcha") {
+      return true;
+    }
+
+    gotchas += 1;
+    return gotchas <= MAX_ONBOARDING_GOTCHAS;
+  });
+}
+
+function sectionRequired(title: ContextSectionTitle, mode: LoadMemoryMode): boolean {
+  if (title === "Must know" || title === "Do not do") {
+    return true;
+  }
+
+  switch (mode) {
+    case "coding":
+      return false;
+    case "debugging":
+      return title === "Relevant gotchas" || title === "Relevant constraints";
+    case "review":
+      return (
+        title === "Relevant constraints" ||
+        title === "Relevant decisions" ||
+        title === "Relevant gotchas"
+      );
+    case "architecture":
+      return (
+        title === "Relevant decisions" ||
+        title === "Relevant constraints" ||
+        title === "Open questions"
+      );
+    case "onboarding":
+      return title === "Relevant workflows";
+  }
 }
 
 function memorySection(

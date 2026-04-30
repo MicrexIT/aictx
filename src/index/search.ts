@@ -40,8 +40,8 @@ const TYPE_MODIFIERS = {
   architecture: 12,
   question: 10,
   fact: 8,
-  gotcha: 0,
-  workflow: 0,
+  gotcha: 14,
+  workflow: 10,
   concept: 6,
   project: 8,
   note: 0
@@ -60,14 +60,14 @@ const STATUS_MODIFIERS = {
 const TYPE_PRIORITY = {
   constraint: 0,
   decision: 1,
-  architecture: 2,
-  question: 3,
-  fact: 4,
-  concept: 5,
-  project: 6,
-  note: 7,
-  gotcha: 8,
-  workflow: 9
+  gotcha: 2,
+  architecture: 3,
+  workflow: 4,
+  question: 5,
+  fact: 6,
+  concept: 7,
+  project: 8,
+  note: 9
 } as const satisfies Record<ObjectType, number>;
 
 export interface SearchMemoryInput {

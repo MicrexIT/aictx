@@ -15,22 +15,25 @@ import {
   type RankedMemoryCandidates,
   type RankMemoryCandidate
 } from "./rank.js";
+import {
+  normalizeLoadMemoryMode,
+  type LoadMemoryMode
+} from "./modes.js";
 import { renderContextPack } from "./render.js";
 import { MAX_TOKEN_BUDGET, normalizeTokenBudget } from "./tokens.js";
 
 const SEARCH_SEED_LIMIT = 50;
 const RECENT_CANDIDATE_LIMIT = 5;
-const DEFAULT_LOAD_MODE = "coding";
 const FALLBACK_TOKEN_TARGET = 6000;
 
-export type LoadMemoryMode = string;
+export type { LoadMemoryMode } from "./modes.js";
 export type TokenTargetSource = "explicit" | "config_default" | "fallback_default";
 export type BudgetStatus = "within_target" | "over_target";
 
 export interface LoadMemoryInput {
   task: string;
   token_budget?: number;
-  mode?: LoadMemoryMode;
+  mode?: string;
 }
 
 export interface CompileContextPackOptions extends LoadMemoryInput {
@@ -108,9 +111,14 @@ export async function compileContextPack(
   options: CompileContextPackOptions
 ): Promise<Result<LoadMemoryData>> {
   const task = normalizeTask(options.task);
+  const mode = normalizeLoadMemoryMode(options.mode);
 
   if (!task.ok) {
     return task;
+  }
+
+  if (!mode.ok) {
+    return mode;
   }
 
   const storage = await readCanonicalStorage(options.paths.projectRoot);
@@ -151,6 +159,7 @@ export async function compileContextPack(
   });
   const ranked = rankMemoryCandidates({
     task: task.data,
+    mode: mode.data,
     projectId: storage.data.config.project.id,
     git: options.git,
     candidates,
@@ -161,6 +170,7 @@ export async function compileContextPack(
     ...(tokenTarget.data.enforced ? { tokenTarget: tokenTarget.data.value } : {}),
     projectId: storage.data.config.project.id,
     git: options.git,
+    mode: mode.data,
     ranked
   });
   const contextPack = rendered.markdown;
@@ -188,7 +198,7 @@ export async function compileContextPack(
     {
       task: task.data,
       token_budget: tokenTarget.data.value,
-      mode: options.mode ?? DEFAULT_LOAD_MODE,
+      mode: mode.data,
       context_pack: contextPack,
       source: {
         project: storage.data.config.project.id,

@@ -92,7 +92,7 @@ describe("context memory ranking", () => {
 
     expect(result.items[0]).toMatchObject({
       id: "constraint.webhook-idempotency",
-      score: 310,
+      score: 314,
       scoreBreakdown: {
         exactId: 100,
         exactBodyPath: 80,
@@ -101,12 +101,13 @@ describe("context memory ranking", () => {
         bodyFtsMatch: 15,
         recentMemoryBoost: 5,
         typeModifier: 20,
-        statusModifier: 20
+        statusModifier: 20,
+        modeModifier: 4
       }
     });
   });
 
-  it("accepts gotcha and workflow candidates with neutral type modifiers", () => {
+  it("accepts gotcha and workflow candidates with base type modifiers", () => {
     const result = rankMemoryCandidates({
       task: "webhook release",
       projectId: PROJECT_ID,
@@ -133,7 +134,7 @@ describe("context memory ranking", () => {
       "gotcha.webhook-duplicates",
       "workflow.release-checklist"
     ]);
-    expect(result.items.map((item) => item.scoreBreakdown.typeModifier)).toEqual([0, 0]);
+    expect(result.items.map((item) => item.scoreBreakdown.typeModifier)).toEqual([14, 10]);
   });
 
   it("excludes rejected memory from default output", () => {
@@ -385,6 +386,136 @@ describe("context memory ranking", () => {
     });
     expect(result.items.find((item) => item.id === "note.recent-0")?.scoreBreakdown).toMatchObject({
       recentMemoryBoost: 0
+    });
+  });
+
+  it("uses debugging mode to prioritize gotchas and matched stale warnings", () => {
+    const result = rankMemoryCandidates({
+      task: "incident webhook",
+      mode: "debugging",
+      projectId: PROJECT_ID,
+      git: GIT_MAIN,
+      candidates: [
+        memory({
+          id: "constraint.incident-webhook",
+          type: "constraint",
+          title: "Incident webhook",
+          body: "Incident webhook behavior."
+        }),
+        memory({
+          id: "gotcha.incident-webhook",
+          type: "gotcha",
+          title: "Incident webhook",
+          body: "Never assume incident webhook retries are unique."
+        }),
+        memory({
+          id: "fact.old-incident-webhook",
+          type: "fact",
+          status: "stale",
+          title: "Incident webhook",
+          body: "Incident webhook behavior used an older queue."
+        })
+      ]
+    });
+
+    expect(result.items[0]?.id).toBe("gotcha.incident-webhook");
+    expect(result.items.find((item) => item.id === "gotcha.incident-webhook")?.scoreBreakdown).toMatchObject({
+      modeModifier: 18
+    });
+    expect(result.items.find((item) => item.id === "fact.old-incident-webhook")?.scoreBreakdown).toMatchObject({
+      modeModifier: 33
+    });
+  });
+
+  it("uses architecture mode to prioritize architecture and concept memory", () => {
+    const result = rankMemoryCandidates({
+      task: "service boundary",
+      mode: "architecture",
+      projectId: PROJECT_ID,
+      git: GIT_MAIN,
+      candidates: [
+        memory({
+          id: "constraint.service-boundary",
+          type: "constraint",
+          title: "Service boundary",
+          body: "Service boundary behavior."
+        }),
+        memory({
+          id: "architecture.service-boundary",
+          type: "architecture",
+          title: "Service boundary",
+          body: "Service boundary architecture."
+        }),
+        memory({
+          id: "concept.service-boundary",
+          type: "concept",
+          title: "Service boundary",
+          body: "Service boundary concept."
+        })
+      ]
+    });
+
+    expect(result.items.map((item) => item.id)).toEqual([
+      "architecture.service-boundary",
+      "constraint.service-boundary",
+      "concept.service-boundary"
+    ]);
+  });
+
+  it("uses onboarding mode to prioritize project-level orientation memory", () => {
+    const result = rankMemoryCandidates({
+      task: "platform overview",
+      mode: "onboarding",
+      projectId: PROJECT_ID,
+      git: GIT_MAIN,
+      candidates: [
+        memory({
+          id: "architecture.platform-overview",
+          type: "architecture",
+          title: "Platform overview",
+          body: "Platform overview architecture."
+        }),
+        memory({
+          id: "project.platform-overview",
+          type: "project",
+          title: "Platform overview",
+          body: "Platform overview project."
+        }),
+        memory({
+          id: "workflow.platform-overview",
+          type: "workflow",
+          title: "Platform overview",
+          body: "Platform overview workflow."
+        })
+      ]
+    });
+
+    expect(result.items[0]?.id).toBe("project.platform-overview");
+  });
+
+  it("uses review mode to boost task-mentioned file references", () => {
+    const result = rankMemoryCandidates({
+      task: "Review services/billing/src/webhooks/handler.ts",
+      mode: "review",
+      projectId: PROJECT_ID,
+      git: GIT_MAIN,
+      candidates: [
+        memory({
+          id: "note.unrelated-review",
+          title: "Review",
+          body: "Review unrelated behavior."
+        }),
+        memory({
+          id: "note.webhook-handler-review",
+          title: "Review",
+          body: "Review services/billing/src/webhooks/handler.ts carefully."
+        })
+      ]
+    });
+
+    expect(result.items[0]?.id).toBe("note.webhook-handler-review");
+    expect(result.items[0]?.scoreBreakdown).toMatchObject({
+      modeModifier: 25
     });
   });
 

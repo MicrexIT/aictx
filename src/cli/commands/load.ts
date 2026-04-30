@@ -6,6 +6,7 @@ import {
   type LoadMemoryOptions
 } from "../../app/operations.js";
 import type { LoadMemoryData, LoadMemorySource } from "../../context/compile.js";
+import type { LoadMemoryMode } from "../../context/modes.js";
 import type { ObjectId } from "../../core/types.js";
 import { CLI_EXIT_SUCCESS } from "../exit.js";
 import { renderAppResult } from "../render.js";
@@ -21,11 +22,13 @@ export interface RegisterLoadCommandOptions {
 }
 
 interface LoadCommandFlags {
+  mode?: string;
   tokenBudget?: string;
 }
 
 interface CliLoadMemoryData {
   task: string;
+  mode: LoadMemoryMode;
   token_budget: number | null;
   context_pack: string;
   token_target: number | null;
@@ -46,6 +49,7 @@ export function registerLoadCommand(
     .command("load")
     .description("Compile task-specific Aictx memory into a context pack.")
     .argument("<task>", "Task description to compile context for.")
+    .option("--mode <mode>", "Context compiler mode.")
     .option("--token-budget <number>", "Advisory token target for context packaging.")
     .action(async (task: string, commandOptions: LoadCommandFlags, command: Command) => {
       const hasExplicitTokenBudget = commandOptions.tokenBudget !== undefined;
@@ -81,6 +85,7 @@ function loadMemoryOptions(
   return {
     cwd: options.cwd,
     task,
+    ...(flags.mode === undefined ? {} : { mode: flags.mode }),
     ...(flags.tokenBudget === undefined
       ? {}
       : { token_budget: Number(flags.tokenBudget) })
@@ -99,6 +104,7 @@ function cliLoadResult(
     ok: true,
     data: {
       task: result.data.task,
+      mode: result.data.mode,
       token_budget: hasExplicitTokenBudget ? result.data.token_budget : null,
       context_pack: result.data.context_pack,
       token_target: hasExplicitTokenBudget ? result.data.token_target.value : null,

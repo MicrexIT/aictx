@@ -92,6 +92,64 @@ describe("loadMemory integration", () => {
     expect(result.data.excluded_ids).toContain("note.rejected-webhook");
   });
 
+  it("applies mode-aware ranking and rendering through loadMemory", async () => {
+    const projectRoot = await createInitializedProject("aictx-load-mode-");
+    await writeModeFixtures(projectRoot);
+    const rebuilt = await rebuildIndex({
+      cwd: projectRoot,
+      clock: createFixedTestClock(FIXED_TIMESTAMP_NEXT_MINUTE)
+    });
+
+    expect(rebuilt.ok).toBe(true);
+
+    const debugging = await loadMemory({
+      cwd: projectRoot,
+      task: "Mode service overview",
+      mode: "debugging",
+      clock: createFixedTestClock(FIXED_TIMESTAMP_NEXT_MINUTE)
+    });
+    const onboarding = await loadMemory({
+      cwd: projectRoot,
+      task: "Mode service overview",
+      mode: "onboarding",
+      clock: createFixedTestClock(FIXED_TIMESTAMP_NEXT_MINUTE)
+    });
+
+    expect(debugging.ok).toBe(true);
+    expect(onboarding.ok).toBe(true);
+    if (!debugging.ok || !onboarding.ok) {
+      return;
+    }
+
+    expect(debugging.data.mode).toBe("debugging");
+    expect(onboarding.data.mode).toBe("onboarding");
+    expect(debugging.data.context_pack).toContain("## Relevant gotchas");
+    expect(onboarding.data.context_pack).toContain("## Relevant workflows");
+    expect(debugging.data.included_ids[0]).toBe("gotcha.mode-service");
+    expect(onboarding.data.included_ids[0]).toBe("project.mode-service");
+  });
+
+  it("rejects invalid modes before index behavior matters", async () => {
+    const projectRoot = await createInitializedProject("aictx-load-invalid-mode-");
+    await rm(join(projectRoot, ".aictx", "index"), { recursive: true, force: true });
+
+    const result = await loadMemory({
+      cwd: projectRoot,
+      task: "Architecture",
+      mode: "triage",
+      clock: createFixedTestClock(FIXED_TIMESTAMP_NEXT_MINUTE)
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.code).toBe("AICtxValidationFailed");
+      expect(result.error.details).toMatchObject({
+        field: "mode",
+        actual: "triage"
+      });
+    }
+  });
+
   it("does not truncate to config defaultTokenBudget when token_budget is omitted", async () => {
     const projectRoot = await createInitializedProject("aictx-load-relaxed-budget-");
     await updateConfig(projectRoot, (config) => {
@@ -304,6 +362,51 @@ async function writeLoadFixtures(projectRoot: string): Promise<void> {
     body: "# Rejected webhook\n\nStripe webhook details in this memory should be excluded.\n",
     tags: ["stripe", "webhooks"],
     updatedAt: FIXED_TIMESTAMP_NEXT_MINUTE
+  });
+}
+
+async function writeModeFixtures(projectRoot: string): Promise<void> {
+  const shared = {
+    status: "active" as const,
+    title: "Mode service overview",
+    tags: ["mode", "service", "overview"],
+    updatedAt: FIXED_TIMESTAMP_NEXT_MINUTE
+  };
+
+  await writeMemoryObject(projectRoot, {
+    ...shared,
+    id: "project.mode-service",
+    type: "project",
+    bodyPath: "memory/project-mode-service.md",
+    body: "# Mode service overview\n\nMode service overview project orientation.\n"
+  });
+  await writeMemoryObject(projectRoot, {
+    ...shared,
+    id: "architecture.mode-service",
+    type: "architecture",
+    bodyPath: "memory/architecture/mode-service.md",
+    body: "# Mode service overview\n\nMode service overview architecture boundary.\n"
+  });
+  await writeMemoryObject(projectRoot, {
+    ...shared,
+    id: "constraint.mode-service",
+    type: "constraint",
+    bodyPath: "memory/constraints/mode-service.md",
+    body: "# Mode service overview\n\nMode service overview constraint.\n"
+  });
+  await writeMemoryObject(projectRoot, {
+    ...shared,
+    id: "gotcha.mode-service",
+    type: "gotcha",
+    bodyPath: "memory/gotchas/mode-service.md",
+    body: "# Mode service overview\n\nMode service overview gotcha for debugging.\n"
+  });
+  await writeMemoryObject(projectRoot, {
+    ...shared,
+    id: "workflow.mode-service",
+    type: "workflow",
+    bodyPath: "memory/workflows/mode-service.md",
+    body: "# Mode service overview\n\nMode service overview workflow for onboarding.\n"
   });
 }
 

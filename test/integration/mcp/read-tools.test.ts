@@ -42,6 +42,7 @@ interface LoadEnvelope {
   ok: true;
   data: {
     task: string;
+    mode: string;
     token_budget: number | null;
     context_pack: string;
     token_target: number | null;
@@ -171,6 +172,7 @@ describe("aictx MCP read tools", () => {
 
       expect(mcpEnvelope).toEqual(cliEnvelope);
       expect(mcpEnvelope.data).toMatchObject({
+        mode: "coding",
         token_budget: null,
         token_target: null,
         budget_status: "not_requested",
@@ -179,6 +181,76 @@ describe("aictx MCP read tools", () => {
       expect(mcpEnvelope.data.included_ids).toContain("constraint.webhook-idempotency");
       expect(mcpEnvelope.data.excluded_ids).toContain("note.rejected-webhook");
       expect(mcpEnvelope.data.omitted_ids).toEqual([]);
+    } finally {
+      await started.close();
+    }
+
+    expect(started.stderr()).toBe("");
+  });
+
+  it("returns load_memory mode data matching CLI load --mode JSON", async () => {
+    const projectRoot = await createInitializedProject("aictx-mcp-load-mode-");
+    await writeModeFixtures(projectRoot);
+    await rebuildProject(projectRoot);
+    const started = await startMcpClient(projectRoot);
+
+    try {
+      const cli = await runCli(
+        [
+          "node",
+          "aictx",
+          "load",
+          "Mode service overview",
+          "--mode",
+          "debugging",
+          "--json"
+        ],
+        projectRoot
+      );
+      const mcp = await started.client.callTool({
+        name: "load_memory",
+        arguments: {
+          task: "Mode service overview",
+          mode: "debugging"
+        }
+      });
+      const cliEnvelope = parseCliEnvelope<LoadEnvelope>(cli);
+      const mcpEnvelope = parseToolEnvelope<LoadEnvelope>(mcp);
+
+      expect(mcpEnvelope).toEqual(cliEnvelope);
+      expect(mcpEnvelope.data.mode).toBe("debugging");
+      expect(mcpEnvelope.data.context_pack).toContain("## Relevant gotchas");
+      expect(mcpEnvelope.data.included_ids[0]).toBe("gotcha.mode-service");
+    } finally {
+      await started.close();
+    }
+
+    expect(started.stderr()).toBe("");
+  });
+
+  it("returns the shared validation envelope for invalid load_memory modes", async () => {
+    const projectRoot = await createInitializedProject("aictx-mcp-load-invalid-mode-");
+    const started = await startMcpClient(projectRoot);
+
+    try {
+      const mcp = await started.client.callTool({
+        name: "load_memory",
+        arguments: {
+          task: "Architecture",
+          mode: "triage"
+        }
+      });
+      const envelope = parseToolEnvelope<{
+        ok: false;
+        error: { code: string; details?: Record<string, unknown> };
+      }>(mcp);
+
+      expect(envelope.ok).toBe(false);
+      expect(envelope.error.code).toBe("AICtxValidationFailed");
+      expect(envelope.error.details).toMatchObject({
+        field: "mode",
+        actual: "triage"
+      });
     } finally {
       await started.close();
     }
@@ -456,6 +528,44 @@ async function writeLoadSearchFixtures(projectRoot: string): Promise<void> {
     body: "# Rejected webhook\n\nStripe webhook details in this memory should be excluded.\n",
     tags: ["stripe", "webhooks", "idempotency"],
     updatedAt: FIXED_TIMESTAMP_NEXT_MINUTE
+  });
+}
+
+async function writeModeFixtures(projectRoot: string): Promise<void> {
+  const shared = {
+    status: "active" as const,
+    title: "Mode service overview",
+    tags: ["mode", "service", "overview"],
+    updatedAt: FIXED_TIMESTAMP_NEXT_MINUTE
+  };
+
+  await writeMemoryObject(projectRoot, {
+    ...shared,
+    id: "project.mode-service",
+    type: "project",
+    bodyPath: "memory/project-mode-service.md",
+    body: "# Mode service overview\n\nMode service overview project orientation.\n"
+  });
+  await writeMemoryObject(projectRoot, {
+    ...shared,
+    id: "constraint.mode-service",
+    type: "constraint",
+    bodyPath: "memory/constraints/mode-service.md",
+    body: "# Mode service overview\n\nMode service overview constraint.\n"
+  });
+  await writeMemoryObject(projectRoot, {
+    ...shared,
+    id: "gotcha.mode-service",
+    type: "gotcha",
+    bodyPath: "memory/gotchas/mode-service.md",
+    body: "# Mode service overview\n\nMode service overview gotcha for debugging.\n"
+  });
+  await writeMemoryObject(projectRoot, {
+    ...shared,
+    id: "workflow.mode-service",
+    type: "workflow",
+    bodyPath: "memory/workflows/mode-service.md",
+    body: "# Mode service overview\n\nMode service overview workflow for onboarding.\n"
   });
 }
 

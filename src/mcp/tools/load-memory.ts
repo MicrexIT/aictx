@@ -7,6 +7,7 @@ import {
   type LoadMemoryOptions
 } from "../../app/operations.js";
 import type { LoadMemoryData, LoadMemorySource } from "../../context/compile.js";
+import type { LoadMemoryMode } from "../../context/modes.js";
 import type { ObjectId } from "../../core/types.js";
 
 interface AictxMcpContext {
@@ -17,6 +18,7 @@ type CliBudgetStatus = "not_requested" | "within_target" | "over_target";
 
 interface CliLoadMemoryData {
   task: string;
+  mode: LoadMemoryMode;
   token_budget: number | null;
   context_pack: string;
   token_target: number | null;
@@ -110,6 +112,7 @@ function cliLoadResult(
     ok: true,
     data: {
       task: result.data.task,
+      mode: result.data.mode,
       token_budget: hasExplicitTokenBudget ? result.data.token_budget : null,
       context_pack: result.data.context_pack,
       token_target: hasExplicitTokenBudget ? result.data.token_target.value : null,
