@@ -62,6 +62,7 @@ const AGENT_GUIDANCE_BLOCK = `${[
   "- Prefer MCP: `save_memory_patch({ patch: { source, changes } })`",
   "- Fallback CLI: `aictx save --stdin`",
   "  If `aictx` is not on `PATH`, use `pnpm exec aictx save --stdin`, `npm exec aictx save --stdin`, `./node_modules/.bin/aictx save --stdin`, or `npx --package @aictx/memory -- aictx save --stdin`.",
+  "  Dirty or untracked `.aictx/` files are not by themselves a reason to skip saving durable memory. Attempt the supported MCP/CLI save when there is durable future value, and stop only if Aictx rejects the update.",
   "",
   "Save decisions, architecture changes, behavior changes, operational constraints, important debugging facts, open questions, and stale or superseded memory updates. Do not save secrets, sensitive logs, unverified speculation, or temporary implementation notes.",
   "",

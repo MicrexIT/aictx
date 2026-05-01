@@ -128,6 +128,9 @@ describe("aictx init CLI", () => {
     expect(agentGuidance).toContain("npm exec aictx");
     expect(agentGuidance).toContain("./node_modules/.bin/aictx");
     expect(agentGuidance).toContain("npx --package @aictx/memory -- aictx");
+    expect(agentGuidance).toContain(
+      "Dirty or untracked `.aictx/` files are not by themselves a reason to skip saving durable memory"
+    );
   });
 
   it("skips repo agent guidance when requested", async () => {

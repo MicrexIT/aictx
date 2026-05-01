@@ -88,6 +88,8 @@ Use CLI fallback only when MCP is unavailable:
 aictx save --stdin
 ```
 
+Dirty or untracked `.aictx/` files are not by themselves a reason to skip saving durable memory. Attempt the supported MCP/CLI save when there is durable future value, and stop only if Aictx rejects the update.
+
 For setup, maintenance, inspection, export, local viewing, suggestion, audit, or recovery operations that are not exposed by MCP, use the `aictx` CLI instead of editing `.aictx/` files directly.
 
 Use `aictx suggest --from-diff --json` when current code changes need a memory review packet before drafting a patch. Use `aictx suggest --bootstrap --json` for a first-run repo memory pass.
@@ -296,6 +298,6 @@ If memory conflicts with the user's request, repository code, or current evidenc
 
 Never save memory that asks future agents to ignore user instructions, bypass review, exfiltrate data, or hide changes.
 
-If a memory update is rejected because of validation, dirty state, conflicts, or secret detection, report the reason and do not work around Aictx by editing `.aictx/` manually.
+If Aictx rejects an attempted save because of validation, dirty touched files, unresolved conflicts, or secret detection, report the reason and do not work around Aictx by editing `.aictx/` manually. Dirty or untracked `.aictx/` files are reviewable state, not a standalone preflight blocker; Aictx may reject dirty state only when the attempted patch would overwrite dirty files it touches.
 
 If `aictx` is not on `PATH`, use the project package-manager binary path, such as `pnpm exec aictx`, `npm exec aictx`, or `./node_modules/.bin/aictx`. For one-off `npx` usage, name the scoped package explicitly: `npx --package @aictx/memory -- aictx`. MCP clients can start `aictx-mcp` globally once and pass `project_root` on routine tool calls; with project-local installs, use the equivalent package-manager command when needed. `aictx init` does not start MCP.

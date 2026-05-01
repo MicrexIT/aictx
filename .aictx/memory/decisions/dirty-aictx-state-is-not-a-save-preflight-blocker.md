@@ -1,0 +1,1 @@
+Agent guidance now says dirty or untracked `.aictx/` files are reviewable state, not a standalone reason to skip saving durable memory. Agents should attempt the supported MCP or CLI save when durable knowledge exists, and only stop when Aictx rejects the attempted update because of validation, dirty touched files, unresolved conflicts, or secret detection.

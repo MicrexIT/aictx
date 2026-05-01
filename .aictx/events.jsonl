@@ -8,3 +8,4 @@
 {"actor":"agent","event":"memory.updated","id":"decision.proactive-bootstrap-onboarding","timestamp":"2026-05-01T17:33:27+02:00"}
 {"actor":"agent","event":"memory.updated","id":"gotcha.init-viewer-placeholders","timestamp":"2026-05-01T17:33:27+02:00"}
 {"actor":"agent","event":"memory.created","id":"decision.init-guidance-documents-project-local-cli-fallbacks","timestamp":"2026-05-01T17:45:17+02:00"}
+{"actor":"agent","event":"memory.created","id":"decision.dirty-aictx-state-is-not-a-save-preflight-blocker","timestamp":"2026-05-01T17:54:54+02:00"}

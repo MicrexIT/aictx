@@ -76,6 +76,9 @@ const lifecycleRules = [
   /save nothing/i
 ] as const;
 
+const nonBlockingDirtySaveGuidance =
+  "Dirty or untracked `.aictx/` files are not by themselves a reason to skip saving durable memory";
+
 const packageManagerFallbacks = [
   "pnpm exec aictx",
   "npm exec aictx",
@@ -108,6 +111,11 @@ describe("agent guidance content", () => {
       expect(content).toMatch(/CLI-only capabilities are not MCP parity gaps/i);
       expect(content).toMatch(/Do not .*MCP .*solely to mirror/i);
       expect(content).toMatch(/edit(?:ing)? `\.aictx\/` files directly/i);
+      expect(content).toContain(nonBlockingDirtySaveGuidance);
+      expect(content).toContain("not a standalone preflight blocker");
+      expect(content).not.toContain(
+        "If a memory update is rejected because of validation, dirty state"
+      );
     }
   });
 
@@ -123,6 +131,7 @@ describe("agent guidance content", () => {
         "After meaningful work, autonomously save a structured patch only for durable memory that future agents should know:"
       );
       expect(content).toContain("save_memory_patch({ patch: { source, changes } })");
+      expect(content).toContain(nonBlockingDirtySaveGuidance);
     }
   });
 
