@@ -1,4 +1,4 @@
-import { access, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
+import { access, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -122,6 +122,12 @@ describe("aictx init CLI", () => {
     expect(output.stdout()).toContain("aictx load");
     expect(output.stdout()).toContain("aictx suggest --bootstrap --patch");
     expect(output.stdout()).toContain("aictx save --file bootstrap-memory.json");
+
+    const agentGuidance = await readFile(join(projectRoot, "AGENTS.md"), "utf8");
+    expect(agentGuidance).toContain("pnpm exec aictx");
+    expect(agentGuidance).toContain("npm exec aictx");
+    expect(agentGuidance).toContain("./node_modules/.bin/aictx");
+    expect(agentGuidance).toContain("npx --package @aictx/memory -- aictx");
   });
 
   it("skips repo agent guidance when requested", async () => {

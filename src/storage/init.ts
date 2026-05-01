@@ -54,12 +54,14 @@ const AGENT_GUIDANCE_BLOCK = `${[
   "Before non-trivial coding, architecture, debugging, dependency, or configuration work, load memory:",
   '- Prefer MCP: `load_memory({ task: "<task summary>" })`',
   '- Fallback CLI: `aictx load "<task summary>"`',
+  '  If `aictx` is not on `PATH`, use the project-local binary through `pnpm exec aictx load "<task summary>"`, `npm exec aictx load "<task summary>"`, `./node_modules/.bin/aictx load "<task summary>"`, or `npx --package @aictx/memory -- aictx load "<task summary>"`.',
   "",
   "If loaded memory only contains the init-created project and architecture placeholders, treat Aictx as needing first-run seeding. For setup, onboarding, or \"why is memory empty?\" requests, run `aictx suggest --bootstrap --patch > bootstrap-memory.json`, review the patch for deterministic non-sensitive facts, apply it with `aictx save --file bootstrap-memory.json` when appropriate, then run `aictx check` and `aictx diff`.",
   "",
   "After meaningful work, autonomously save durable project knowledge:",
   "- Prefer MCP: `save_memory_patch({ patch: { source, changes } })`",
   "- Fallback CLI: `aictx save --stdin`",
+  "  If `aictx` is not on `PATH`, use `pnpm exec aictx save --stdin`, `npm exec aictx save --stdin`, `./node_modules/.bin/aictx save --stdin`, or `npx --package @aictx/memory -- aictx save --stdin`.",
   "",
   "Save decisions, architecture changes, behavior changes, operational constraints, important debugging facts, open questions, and stale or superseded memory updates. Do not save secrets, sensitive logs, unverified speculation, or temporary implementation notes.",
   "",
@@ -845,7 +847,7 @@ function nextSteps(agentGuidance: AgentGuidanceData): string[] {
   return [
     agentGuidanceNextStep(agentGuidance),
     "`aictx init` creates linked starter placeholders only. To seed useful first-run memory, run `aictx suggest --bootstrap --patch > bootstrap-memory.json`, review it, then run `aictx save --file bootstrap-memory.json`, `aictx check`, and `aictx diff`.",
-    "`aictx init` does not start MCP; configure agent clients that support MCP to launch `aictx-mcp` so agents can use `load_memory` and `save_memory_patch`. A globally launched MCP server can serve this project when tool calls include this project root as `project_root`. Agents can fall back to `aictx load` and `aictx save --stdin` when MCP is unavailable.",
+    "`aictx init` does not start MCP; configure agent clients that support MCP to launch `aictx-mcp` so agents can use `load_memory` and `save_memory_patch`. A globally launched MCP server can serve this project when tool calls include this project root as `project_root`. Agents can fall back to `aictx load` and `aictx save --stdin` when MCP is unavailable; if `aictx` is not on `PATH`, use the project package-manager form such as `pnpm exec aictx`, `npm exec aictx`, or `./node_modules/.bin/aictx`.",
     "Review memory changes in `.aictx/`; in Git projects, use `aictx diff` before committing.",
     "Optional bundled skills are available under `integrations/codex/` and `integrations/claude/`."
   ];

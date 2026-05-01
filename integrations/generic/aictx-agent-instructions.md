@@ -58,7 +58,7 @@ aictx load "<task summary>"
 aictx load "<task summary>" --mode debugging
 ```
 
-If `aictx` is not on `PATH`, run the same CLI commands through the project package manager or local binary path:
+If `aictx` is not on `PATH`, which is common for project-local npm/pnpm installs, run the same CLI commands through the project package manager or local binary path:
 
 ```bash
 pnpm exec aictx load "<task summary>"
