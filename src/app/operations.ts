@@ -36,8 +36,10 @@ import {
   type LoadMemoryInput
 } from "../context/compile.js";
 import {
+  buildSuggestBootstrapPatchProposal,
   buildSuggestBootstrapPacket,
   buildSuggestFromDiffPacket,
+  type SuggestBootstrapPatchProposal,
   type SuggestMode,
   type SuggestReviewPacket
 } from "../discipline/suggest.js";
@@ -143,6 +145,7 @@ export interface SuggestMemoryOptions extends GitWrapperOptions {
   cwd: string;
   fromDiff?: boolean;
   bootstrap?: boolean;
+  patch?: boolean;
 }
 
 export interface AuditMemoryOptions extends GitWrapperOptions {
@@ -200,7 +203,7 @@ export interface DiffMemoryData {
   changed_relation_ids: RelationId[];
 }
 
-export type SuggestMemoryData = SuggestReviewPacket;
+export type SuggestMemoryData = SuggestReviewPacket | SuggestBootstrapPatchProposal;
 
 export type { AuditFinding, AuditRule, AuditSeverity };
 
@@ -997,6 +1000,18 @@ export async function suggestMemory(
     };
   }
 
+  if (options.patch === true && mode.data !== "bootstrap") {
+    return {
+      ok: false,
+      error: aictxError(
+        "AICtxValidationFailed",
+        "Suggest --patch requires --bootstrap."
+      ),
+      warnings: [],
+      meta: await buildBestEffortMeta(options)
+    };
+  }
+
   const paths = await resolveProjectPaths({
     cwd: options.cwd,
     mode: "require-initialized",
@@ -1063,10 +1078,16 @@ export async function suggestMemory(
 
   return {
     ok: true,
-    data: await buildSuggestBootstrapPacket({
-      projectRoot: paths.data.projectRoot,
-      storage: storage.data
-    }),
+    data:
+      options.patch === true
+        ? await buildSuggestBootstrapPatchProposal({
+            projectRoot: paths.data.projectRoot,
+            storage: storage.data
+          })
+        : await buildSuggestBootstrapPacket({
+            projectRoot: paths.data.projectRoot,
+            storage: storage.data
+          }),
     warnings: storage.warnings,
     meta: meta.meta
   };

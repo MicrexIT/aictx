@@ -248,7 +248,8 @@ describe("planMemoryPatch", () => {
           " M .aictx/memory/decisions/billing-retries.json",
           " M .aictx/memory/facts/unrelated.json",
           ""
-        ].join("\n")
+        ].join("\n"),
+        new Set([".aictx/memory/decisions/billing-retries.json"])
       )
     });
 
@@ -262,6 +263,34 @@ describe("planMemoryPatch", () => {
         ".aictx/memory/facts/unrelated.json"
       );
     }
+  });
+
+  it("allows untracked first-run Aictx files to be updated before the initial memory commit", async () => {
+    const projectRoot = await createPatchProject();
+
+    const result = await planMemoryPatch({
+      projectRoot,
+      patch: {
+        source: {
+          kind: "agent"
+        },
+        changes: [
+          {
+            op: "update_object",
+            id: "decision.billing-retries",
+            title: "Billing retries run in the worker"
+          }
+        ]
+      },
+      git: dirtyGit,
+      clock: createFixedTestClock(),
+      runner: createGitStatusRunner(
+        ["?? .aictx/memory/decisions/billing-retries.json", ""].join("\n"),
+        new Set()
+      )
+    });
+
+    expect(result.ok).toBe(true);
   });
 });
 
@@ -409,12 +438,21 @@ async function writeProjectFile(projectRoot: string, path: string, contents: str
   await writeFile(absolutePath, contents, "utf8");
 }
 
-function createGitStatusRunner(stdout: string): SubprocessRunner {
+function createGitStatusRunner(stdout: string, trackedFiles = new Set<string>()): SubprocessRunner {
   return async (command, args, options) => {
     expect(command).toBe("git");
-    expect(args).toEqual(["status", "--porcelain=v1", "--", ".aictx"]);
 
-    return subprocessResult(command, args, options, stdout);
+    if (args[0] === "status") {
+      expect(args).toEqual(["status", "--porcelain=v1", "--", ".aictx"]);
+      return subprocessResult(command, args, options, stdout, 0);
+    }
+
+    if (args[0] === "ls-files") {
+      const file = args.at(-1) ?? "";
+      return subprocessResult(command, args, options, "", trackedFiles.has(file) ? 0 : 1);
+    }
+
+    throw new Error(`Unexpected git command: ${args.join(" ")}`);
   };
 }
 
@@ -422,13 +460,14 @@ function subprocessResult(
   command: string,
   args: readonly string[],
   options: SubprocessRunnerOptions,
-  stdout: string
+  stdout: string,
+  exitCode: number
 ): SubprocessResult {
   return {
     command,
     args,
     cwd: options.cwd ?? null,
-    exitCode: 0,
+    exitCode,
     signal: null,
     stdout,
     stderr: ""

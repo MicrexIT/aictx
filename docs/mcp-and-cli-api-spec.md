@@ -542,7 +542,7 @@ aictx inspect <id> [--json]
 aictx graph <id> [--json]
 aictx export obsidian [--out <dir>] [--json]
 aictx view [--port <number>] [--open] [--json]
-aictx suggest (--from-diff | --bootstrap) [--json]
+aictx suggest (--from-diff | --bootstrap) [--patch] [--json]
 aictx audit [--json]
 ```
 
@@ -558,6 +558,7 @@ Minimum behavior:
 * `aictx view` starts a loopback-only read-only web viewer for human memory inspection.
 * `aictx suggest --from-diff` returns a Git-backed deterministic memory review packet for the current diff and does not write memory.
 * `aictx suggest --bootstrap` returns a deterministic first-run memory review packet and does not write memory.
+* `aictx suggest --bootstrap --patch` returns a proposed structured memory patch and does not write canonical memory.
 * `aictx audit` returns deterministic memory hygiene findings and does not write memory.
 
 ### 5.11 `aictx suggest`
@@ -571,6 +572,7 @@ Syntax:
 ```bash
 aictx suggest --from-diff [--json]
 aictx suggest --bootstrap [--json]
+aictx suggest --bootstrap --patch [--json]
 ```
 
 Behavior:
@@ -579,6 +581,8 @@ Behavior:
 * `--from-diff` requires Git and returns `AICtxGitRequired` outside a Git worktree.
 * `--from-diff` reads the current non-generated project diff and related Aictx memory but does not create memory patches.
 * `--bootstrap` works with or without Git and lists likely files for the agent to inspect before creating seed memory.
+* `--patch` is valid only with `--bootstrap`; it emits a conservative proposed patch suitable for review and `aictx save --file`.
+* `--bootstrap --patch` updates init-created project and architecture placeholders when deterministic evidence is strong, creates small workflow or constraint memories from package metadata, and emits no patch when confidence is low.
 * Both modes must be deterministic, local-only, and read-only for canonical memory.
 * Do not expose an MCP tool for suggestion packets in v1.
 
@@ -597,6 +601,39 @@ JSON success data:
   ]
 }
 ```
+
+Bootstrap patch JSON success data with `--json`:
+
+```json
+{
+  "proposed": true,
+  "patch": {
+    "source": {
+      "kind": "cli",
+      "task": "Proposed bootstrap memory patch from deterministic repository analysis"
+    },
+    "changes": [
+      {
+        "op": "update_object",
+        "id": "architecture.current",
+        "body": "# Current Architecture\n\n- Primary source files are under `src/`.\n- The codebase uses TypeScript.\n"
+      }
+    ]
+  },
+  "packet": {
+    "mode": "bootstrap",
+    "changed_files": ["README.md", "package.json"],
+    "related_memory_ids": [],
+    "possible_stale_ids": [],
+    "recommended_memory": ["project", "architecture", "workflow"],
+    "agent_checklist": []
+  },
+  "reason": null
+}
+```
+
+Without `--json`, `--bootstrap --patch` prints the patch object directly so it
+can be redirected to a file and reviewed before `aictx save --file`.
 
 ### 5.12 `aictx audit`
 

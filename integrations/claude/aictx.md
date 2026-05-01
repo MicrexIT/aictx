@@ -92,7 +92,17 @@ aictx save --stdin
 
 For setup, maintenance, inspection, export, local viewing, suggestion, audit, or recovery operations that are not exposed by MCP, use the `aictx` CLI instead of editing `.aictx/` files directly.
 
-Use `aictx suggest --from-diff --json` when current code changes need a memory review packet before drafting a patch. Use `aictx suggest --bootstrap --json` for a first-run repo memory pass. Use `aictx audit --json` to find deterministic memory hygiene issues. These commands are read-only for canonical memory.
+Use `aictx suggest --from-diff --json` when current code changes need a memory review packet before drafting a patch. Use `aictx suggest --bootstrap --json` for a first-run repo memory pass. When asked to bootstrap project memory, run:
+
+```bash
+aictx suggest --bootstrap --patch > bootstrap-memory.json
+# review or edit bootstrap-memory.json
+aictx save --file bootstrap-memory.json
+aictx check
+aictx diff
+```
+
+The bootstrap patch command is read-only for canonical memory and only writes the redirected draft file. Review the proposed patch yourself and apply it through `aictx save`; users should not have to hand-write bootstrap JSON. Use `aictx audit --json` to find deterministic memory hygiene issues.
 
 MCP exposes exactly `load_memory`, `search_memory`, `save_memory_patch`, and `diff_memory` in v1.
 

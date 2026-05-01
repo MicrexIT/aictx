@@ -58,6 +58,36 @@ interface SuggestErrorEnvelope {
   };
 }
 
+interface SuggestPatchEnvelope {
+  ok: true;
+  data: {
+    proposed: boolean;
+    patch: {
+      source: {
+        kind: string;
+      };
+      changes: Array<{ op: string; id?: string }>;
+    } | null;
+    packet: SuggestSuccessEnvelope["data"];
+    reason: string | null;
+  };
+}
+
+interface SaveSuccessEnvelope {
+  ok: true;
+  data: {
+    memory_created: string[];
+    memory_updated: string[];
+  };
+}
+
+interface CheckSuccessEnvelope {
+  ok: true;
+  data: {
+    valid: boolean;
+  };
+}
+
 interface MemoryFixture {
   id: ObjectId;
   type: ObjectType;
@@ -184,6 +214,73 @@ describe("aictx suggest CLI", () => {
     await expect(readCanonicalSnapshot(projectRoot)).resolves.toEqual(before);
   });
 
+  it("prints a raw bootstrap patch that can be reviewed, saved, checked, and diffed before the first Aictx commit", async () => {
+    const repo = await createBootstrapPatchGitProject("aictx-cli-suggest-bootstrap-patch-");
+
+    const patchOutput = await runCli(
+      ["node", "aictx", "suggest", "--bootstrap", "--patch"],
+      repo
+    );
+
+    expect(patchOutput.exitCode).toBe(0);
+    expect(patchOutput.stderr).toBe("");
+    const patch = JSON.parse(patchOutput.stdout) as {
+      source: { kind: string };
+      changes: Array<{ op: string; id?: string }>;
+    };
+    expect(patch.source.kind).toBe("cli");
+    expect(patch.changes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ op: "update_object" }),
+        expect.objectContaining({ op: "create_object", id: "workflow.package-scripts" })
+      ])
+    );
+
+    await writeProjectFile(repo, "bootstrap-memory.json", JSON.stringify(patch));
+    const saveOutput = await runCli(
+      ["node", "aictx", "save", "--file", "bootstrap-memory.json", "--json"],
+      repo
+    );
+    const saveEnvelope = JSON.parse(saveOutput.stdout) as SaveSuccessEnvelope;
+
+    expect(saveOutput.exitCode).toBe(0);
+    expect(saveOutput.stderr).toBe("");
+    expect(saveEnvelope.ok).toBe(true);
+    expect(saveEnvelope.data.memory_updated).toContain("architecture.current");
+    expect(saveEnvelope.data.memory_created).toEqual(
+      expect.arrayContaining(["workflow.package-scripts", "constraint.node-engine"])
+    );
+
+    const checkOutput = await runCli(["node", "aictx", "check", "--json"], repo);
+    const checkEnvelope = JSON.parse(checkOutput.stdout) as CheckSuccessEnvelope;
+
+    expect(checkOutput.exitCode).toBe(0);
+    expect(checkOutput.stderr).toBe("");
+    expect(checkEnvelope.data.valid).toBe(true);
+
+    const diffOutput = await runCli(["node", "aictx", "diff", "--json"], repo);
+    expect(diffOutput.exitCode).toBe(0);
+    expect(diffOutput.stderr).toBe("");
+  });
+
+  it("prints bootstrap patch proposals in the standard JSON envelope", async () => {
+    const repo = await createBootstrapPatchGitProject("aictx-cli-suggest-bootstrap-json-patch-");
+
+    const output = await runCli(
+      ["node", "aictx", "suggest", "--bootstrap", "--patch", "--json"],
+      repo
+    );
+
+    expect(output.exitCode).toBe(0);
+    expect(output.stderr).toBe("");
+    const envelope = JSON.parse(output.stdout) as SuggestPatchEnvelope;
+    expect(envelope.ok).toBe(true);
+    expect(envelope.data.proposed).toBe(true);
+    expect(envelope.data.patch?.source.kind).toBe("cli");
+    expect(envelope.data.packet.mode).toBe("bootstrap");
+    expect(envelope.data.reason).toBeNull();
+  });
+
   it("returns validation errors when mode selection is invalid", async () => {
     const projectRoot = await createInitializedLocalProject("aictx-cli-suggest-invalid-");
 
@@ -192,13 +289,21 @@ describe("aictx suggest CLI", () => {
       ["node", "aictx", "suggest", "--from-diff", "--bootstrap", "--json"],
       projectRoot
     );
+    const fromDiffPatch = await runCli(
+      ["node", "aictx", "suggest", "--from-diff", "--patch", "--json"],
+      projectRoot
+    );
 
     expect(missingMode.exitCode).toBe(1);
     expect(duplicateMode.exitCode).toBe(1);
+    expect(fromDiffPatch.exitCode).toBe(1);
     expect((JSON.parse(missingMode.stdout) as SuggestErrorEnvelope).error.code).toBe(
       "AICtxValidationFailed"
     );
     expect((JSON.parse(duplicateMode.stdout) as SuggestErrorEnvelope).error.code).toBe(
+      "AICtxValidationFailed"
+    );
+    expect((JSON.parse(fromDiffPatch.stdout) as SuggestErrorEnvelope).error.code).toBe(
       "AICtxValidationFailed"
     );
   });
@@ -262,6 +367,46 @@ async function createInitializedLocalProject(prefix: string): Promise<string> {
   expect(output.stderr).toBe("");
 
   return projectRoot;
+}
+
+async function createBootstrapPatchGitProject(prefix: string): Promise<string> {
+  const repo = await createTempRoot(prefix);
+  await git(repo, ["init", "--initial-branch=main"]);
+  await git(repo, ["config", "user.email", "test@example.com"]);
+  await git(repo, ["config", "user.name", "Aictx Test"]);
+  await writeProjectFile(
+    repo,
+    "README.md",
+    "# Billing API\n\nHandles recurring billing and webhook processing for Stripe.\n"
+  );
+  await writeJsonProjectFile(repo, "package.json", {
+    name: "@example/billing-api",
+    description: "Billing API for Stripe webhook processing.",
+    type: "module",
+    packageManager: "pnpm@10.0.0",
+    engines: {
+      node: ">=22"
+    },
+    scripts: {
+      build: "tsc --noEmit",
+      test: "vitest run"
+    },
+    devDependencies: {
+      vitest: "^4.0.0"
+    }
+  });
+  await writeProjectFile(repo, "tsconfig.json", "{}\n");
+  await writeProjectFile(repo, "src/index.ts", "export const value = 1;\n");
+  await writeProjectFile(repo, "test/index.test.ts", "import { it } from 'vitest';\n");
+  await git(repo, ["add", "."]);
+  await git(repo, ["commit", "-m", "Initial project files"]);
+
+  const output = await runCli(["node", "aictx", "init", "--json"], repo);
+
+  expect(output.exitCode).toBe(0);
+  expect(output.stderr).toBe("");
+
+  return repo;
 }
 
 async function createLocalProjectWithFiles(prefix: string): Promise<string> {

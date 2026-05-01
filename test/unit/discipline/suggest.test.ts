@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import {
   bootstrapCandidateFiles,
+  buildSuggestBootstrapPatchProposal,
   buildSuggestBootstrapPacket,
   buildSuggestFromDiffPacket
 } from "../../../src/discipline/suggest.js";
@@ -13,6 +14,8 @@ import type { ObjectId, ObjectStatus, ObjectType } from "../../../src/core/types
 import type { MemoryObjectSidecar, StoredMemoryObject } from "../../../src/storage/objects.js";
 import type { CanonicalStorageSnapshot } from "../../../src/storage/read.js";
 import type { MemoryRelation, StoredMemoryRelation } from "../../../src/storage/relations.js";
+import { SCHEMA_FILES, compileProjectSchemas } from "../../../src/validation/schemas.js";
+import { validatePatch } from "../../../src/validation/validate.js";
 
 const tempRoots: string[] = [];
 const TIMESTAMP = "2026-04-25T14:00:00+02:00";
@@ -163,11 +166,169 @@ describe("suggest discipline packets", () => {
     ]);
     expect(packet.agent_checklist).toHaveLength(5);
   });
+
+  it("builds a conservative schema-valid bootstrap patch from deterministic evidence", async () => {
+    const projectRoot = await createTempRoot("aictx-discipline-bootstrap-patch-");
+    await writeProjectFile(
+      projectRoot,
+      "README.md",
+      "# Billing API\n\nHandles recurring billing and webhook processing for Stripe.\n"
+    );
+    await writeJsonProjectFile(projectRoot, "package.json", {
+      name: "@example/billing-api",
+      description: "Billing API for Stripe webhook processing.",
+      type: "module",
+      packageManager: "pnpm@10.0.0",
+      engines: {
+        node: ">=22"
+      },
+      scripts: {
+        build: "tsc --noEmit",
+        test: "vitest run"
+      },
+      devDependencies: {
+        vitest: "^4.0.0"
+      }
+    });
+    await writeProjectFile(projectRoot, "tsconfig.json", "{}\n");
+    await writeProjectFile(projectRoot, "src/index.ts", "export const value = 1;\n");
+    await writeProjectFile(projectRoot, "test/index.test.ts", "import { it } from 'vitest';\n");
+    await writeBundledSchemas(projectRoot);
+    const storage = storageSnapshot({
+      objects: [
+        initialProjectObject("project.billing-api", "Billing API"),
+        initialArchitectureObject("project.billing-api")
+      ],
+      relations: [],
+      projectId: "project.billing-api",
+      projectName: "Billing API"
+    });
+
+    const proposal = await buildSuggestBootstrapPatchProposal({
+      projectRoot,
+      storage
+    });
+
+    expect(proposal.proposed).toBe(true);
+    expect(proposal.patch).not.toBeNull();
+    expect(proposal.reason).toBeNull();
+    expect(proposal.packet.mode).toBe("bootstrap");
+    expect(proposal.patch?.changes.map((change) => change.op)).toEqual([
+      "update_object",
+      "update_object",
+      "create_object",
+      "create_object",
+      "create_object"
+    ]);
+    expect(proposal.patch?.changes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ op: "update_object", id: "project.billing-api" }),
+        expect.objectContaining({ op: "update_object", id: "architecture.current" }),
+        expect.objectContaining({ op: "create_object", id: "workflow.package-scripts" }),
+        expect.objectContaining({ op: "create_object", id: "constraint.node-engine" }),
+        expect.objectContaining({ op: "create_object", id: "constraint.package-manager" })
+      ])
+    );
+    const validators = await compileProjectSchemas(projectRoot);
+    expect(validators.ok).toBe(true);
+    if (validators.ok && proposal.patch !== null) {
+      expect(validatePatch(validators.data, proposal.patch).valid).toBe(true);
+    }
+  });
+
+  it("avoids duplicate bootstrap memories when deterministic objects already exist", async () => {
+    const projectRoot = await createTempRoot("aictx-discipline-bootstrap-duplicates-");
+    await writeJsonProjectFile(projectRoot, "package.json", {
+      description: "Billing API for Stripe webhook processing.",
+      packageManager: "pnpm@10.0.0",
+      engines: {
+        node: ">=22"
+      },
+      scripts: {
+        build: "tsc --noEmit"
+      }
+    });
+    await writeProjectFile(projectRoot, "src/index.ts", "export const value = 1;\n");
+    const storage = storageSnapshot({
+      objects: [
+        initialProjectObject("project.billing-api", "Billing API"),
+        initialArchitectureObject("project.billing-api"),
+        memoryObject({
+          id: "workflow.package-scripts",
+          type: "workflow",
+          status: "active",
+          title: "Package scripts",
+          body: "Existing package script workflow."
+        }),
+        memoryObject({
+          id: "constraint.node-engine",
+          type: "constraint",
+          status: "active",
+          title: "Node engine requirement",
+          body: "Existing Node constraint."
+        }),
+        memoryObject({
+          id: "constraint.package-manager",
+          type: "constraint",
+          status: "active",
+          title: "Package manager",
+          body: "Existing package manager constraint."
+        })
+      ],
+      relations: [],
+      projectId: "project.billing-api",
+      projectName: "Billing API"
+    });
+
+    const proposal = await buildSuggestBootstrapPatchProposal({
+      projectRoot,
+      storage
+    });
+
+    expect(proposal.patch?.changes).toEqual([
+      expect.objectContaining({ op: "update_object", id: "project.billing-api" })
+    ]);
+  });
+
+  it("returns a clear no-patch proposal for small repos without confident evidence", async () => {
+    const projectRoot = await createTempRoot("aictx-discipline-bootstrap-minimal-");
+    await writeProjectFile(projectRoot, "README.md", "# Tiny\n");
+    await writeJsonProjectFile(projectRoot, "package.json", {});
+    await writeProjectFile(projectRoot, "src/index.ts", "export const value = 1;\n");
+    const storage = storageSnapshot({
+      objects: [
+        initialProjectObject("project.tiny", "Tiny"),
+        initialArchitectureObject("project.tiny")
+      ],
+      relations: [],
+      projectId: "project.tiny",
+      projectName: "Tiny"
+    });
+
+    const proposal = await buildSuggestBootstrapPatchProposal({
+      projectRoot,
+      storage
+    });
+
+    expect(proposal).toEqual(
+      expect.objectContaining({
+        proposed: false,
+        patch: null,
+        reason:
+          "No high-confidence bootstrap memory patch could be generated from deterministic repository evidence."
+      })
+    );
+    expect(proposal.packet.changed_files).toEqual(
+      expect.arrayContaining(["README.md", "package.json", "src/index.ts"])
+    );
+  });
 });
 
 function storageSnapshot(options: {
   objects: StoredMemoryObject[];
   relations: StoredMemoryRelation[];
+  projectId?: string;
+  projectName?: string;
 }): CanonicalStorageSnapshot {
   return {
     projectRoot: "/repo",
@@ -175,8 +336,8 @@ function storageSnapshot(options: {
     config: {
       version: 1,
       project: {
-        id: "proj.test",
-        name: "Test"
+        id: options.projectId ?? "project.test",
+        name: options.projectName ?? "Test"
       },
       memory: {
         defaultTokenBudget: 6000,
@@ -190,6 +351,66 @@ function storageSnapshot(options: {
     objects: options.objects,
     relations: options.relations,
     events: []
+  };
+}
+
+function initialProjectObject(projectId: ObjectId, title: string): StoredMemoryObject {
+  const body = `# ${title}\n\nProject-level memory for ${title}.\n`;
+
+  return {
+    path: ".aictx/memory/project.json",
+    bodyPath: ".aictx/memory/project.md",
+    sidecar: {
+      id: projectId,
+      type: "project",
+      status: "active",
+      title,
+      body_path: "memory/project.md",
+      scope: {
+        kind: "project",
+        project: projectId,
+        branch: null,
+        task: null
+      },
+      tags: [],
+      source: {
+        kind: "system"
+      },
+      superseded_by: null,
+      content_hash: "sha256:test",
+      created_at: TIMESTAMP,
+      updated_at: TIMESTAMP
+    },
+    body
+  };
+}
+
+function initialArchitectureObject(projectId: ObjectId): StoredMemoryObject {
+  return {
+    path: ".aictx/memory/architecture.json",
+    bodyPath: ".aictx/memory/architecture.md",
+    sidecar: {
+      id: "architecture.current",
+      type: "architecture",
+      status: "active",
+      title: "Current Architecture",
+      body_path: "memory/architecture.md",
+      scope: {
+        kind: "project",
+        project: projectId,
+        branch: null,
+        task: null
+      },
+      tags: [],
+      source: {
+        kind: "system"
+      },
+      superseded_by: null,
+      content_hash: "sha256:test",
+      created_at: TIMESTAMP,
+      updated_at: TIMESTAMP
+    },
+    body: "# Current Architecture\n\nArchitecture memory starts here.\n"
   };
 }
 
@@ -277,4 +498,19 @@ async function writeProjectFile(
   const target = join(projectRoot, relativePath);
   await mkdir(dirname(target), { recursive: true });
   await writeFile(target, contents, "utf8");
+}
+
+async function writeJsonProjectFile(
+  projectRoot: string,
+  relativePath: string,
+  value: unknown
+): Promise<void> {
+  await writeProjectFile(projectRoot, relativePath, `${JSON.stringify(value, null, 2)}\n`);
+}
+
+async function writeBundledSchemas(projectRoot: string): Promise<void> {
+  for (const schemaFile of Object.values(SCHEMA_FILES)) {
+    const schema = await readFile(join(process.cwd(), "src", "schemas", schemaFile), "utf8");
+    await writeProjectFile(projectRoot, `.aictx/schema/${schemaFile}`, schema);
+  }
 }

@@ -13,6 +13,7 @@ import {
   slugify
 } from "../core/ids.js";
 import { err, ok, type Result } from "../core/result.js";
+import { runSubprocess } from "../core/subprocess.js";
 import type {
   Actor,
   Evidence,
@@ -1136,10 +1137,73 @@ async function rejectDirtyTouchedFiles(
     return ok(undefined);
   }
 
+  const trackedDirtyTouchedFiles = await trackedFiles(projectRoot, dirtyTouchedFiles, options);
+
+  if (!trackedDirtyTouchedFiles.ok) {
+    return trackedDirtyTouchedFiles;
+  }
+
+  if (trackedDirtyTouchedFiles.data.length === 0) {
+    return ok(undefined);
+  }
+
   return err(
     aictxError("AICtxDirtyMemory", "Patch would overwrite dirty Aictx memory files.", {
-      dirty_files: dirtyTouchedFiles,
+      dirty_files: trackedDirtyTouchedFiles.data,
       touched_files: sortedValues(state.touchedFiles)
+    })
+  );
+}
+
+async function trackedFiles(
+  projectRoot: string,
+  files: readonly string[],
+  options: GitWrapperOptions
+): Promise<Result<string[]>> {
+  const tracked: string[] = [];
+
+  for (const file of files) {
+    const trackedFile = await isTrackedFile(projectRoot, file, options);
+
+    if (!trackedFile.ok) {
+      return trackedFile;
+    }
+
+    if (trackedFile.data) {
+      tracked.push(file);
+    }
+  }
+
+  return ok(tracked);
+}
+
+async function isTrackedFile(
+  projectRoot: string,
+  file: string,
+  options: GitWrapperOptions
+): Promise<Result<boolean>> {
+  const result = await runSubprocess("git", ["ls-files", "--error-unmatch", "--", file], {
+    cwd: projectRoot,
+    ...(options.runner === undefined ? {} : { runner: options.runner })
+  });
+
+  if (!result.ok) {
+    return err(result.error);
+  }
+
+  if (result.data.exitCode === 0) {
+    return ok(true);
+  }
+
+  if (result.data.exitCode === 1) {
+    return ok(false);
+  }
+
+  return err(
+    aictxError("AICtxGitOperationFailed", "Git tracked-file detection failed.", {
+      file,
+      exit_code: result.data.exitCode,
+      stderr: result.data.stderr
     })
   );
 }

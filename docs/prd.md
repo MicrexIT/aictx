@@ -486,11 +486,11 @@ Purpose:
 
 * Package deterministic evidence for the user's agent.
 * Help the agent decide whether to create, update, stale, or supersede memory.
-* Avoid generating semantic memory patches directly inside Aictx.
+* Generate bootstrap patch drafts only when deterministic evidence is strong, and never save them implicitly.
 
 `aictx suggest --from-diff` is Git-required. It should summarize changed files, changed `.aictx/` files, related existing memory, possible stale candidates, and a concise agent checklist. It must not write memory.
 
-`aictx suggest --bootstrap` should work without Git. It should list likely source files to inspect, such as README files, package manifests, framework configs, docs, and obvious entrypoints, and recommend seed memory classes for project intent, architecture, constraints, workflows, gotchas, concepts, and open questions. It must not write memory.
+`aictx suggest --bootstrap` should work without Git. It should list likely source files to inspect, such as README files, package manifests, framework configs, docs, and obvious entrypoints, and recommend seed memory classes for project intent, architecture, constraints, workflows, gotchas, concepts, and open questions. `aictx suggest --bootstrap --patch` may emit a conservative structured patch for review and `aictx save`, but it must not write memory.
 
 5.3.2 Memory audit packets
 

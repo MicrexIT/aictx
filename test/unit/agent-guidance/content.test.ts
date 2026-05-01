@@ -225,6 +225,8 @@ describe("agent guidance content", () => {
 
       expect(content).toContain("aictx suggest --from-diff --json");
       expect(content).toContain("aictx suggest --bootstrap --json");
+      expect(content).toContain("aictx suggest --bootstrap --patch > bootstrap-memory.json");
+      expect(content).toContain("aictx save --file bootstrap-memory.json");
       expect(content).toContain("aictx audit --json");
 
       for (const fallback of packageManagerFallbacks) {

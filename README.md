@@ -168,6 +168,21 @@ and `CLAUDE.md` so coding agents are told to load memory before non-trivial
 work and save durable memory after meaningful work. Use
 `aictx init --no-agent-guidance` to skip those repo instruction files.
 
+For first-run onboarding, ask Aictx for a proposed seed-memory patch, review it,
+then save it explicitly:
+
+```bash
+aictx suggest --bootstrap --patch > bootstrap-memory.json
+# review or edit bootstrap-memory.json
+aictx save --file bootstrap-memory.json
+aictx check
+aictx diff
+```
+
+`aictx init` does not infer rich semantic memory from the repository. The
+bootstrap patch remains reviewable and is not saved until `aictx save` applies
+it.
+
 Before a task, load relevant memory:
 
 ```bash
@@ -304,11 +319,14 @@ Builds a deterministic memory review packet without writing memory.
 ```bash
 aictx suggest --from-diff --json
 aictx suggest --bootstrap --json
+aictx suggest --bootstrap --patch > bootstrap-memory.json
 ```
 
 `--from-diff` is Git-required and packages changed files, related memory, stale
 candidates, and an agent checklist. `--bootstrap` lists likely source files and
-seed memory classes for a first-run project memory pass.
+seed memory classes for a first-run project memory pass. Add `--patch` with
+`--bootstrap` to generate a proposed structured patch suitable for review and
+`aictx save --file`; it remains read-only until saved explicitly.
 
 #### `aictx audit`
 

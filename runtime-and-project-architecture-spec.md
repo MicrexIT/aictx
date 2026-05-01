@@ -661,6 +661,7 @@ Responsibilities:
 
 * Build `aictx suggest --from-diff` review packets from Git diff summaries, changed files, related memory, and possible stale candidates.
 * Build `aictx suggest --bootstrap` review packets from local project files that are useful for first-run memory creation.
+* Build `aictx suggest --bootstrap --patch` draft patches from deterministic high-confidence repository evidence without saving them.
 * Build `aictx audit` findings for deterministic memory hygiene rules.
 * Keep suggestion and audit outputs read-only and local-only.
 * Return stable JSON shapes suitable for agents.
@@ -668,7 +669,7 @@ Responsibilities:
 Rules:
 
 * The discipline module must not call a model, embeddings service, network API, or hosted service.
-* The discipline module must not create or edit memory patches.
+* The discipline module must not apply memory patches or mutate storage.
 * The discipline module must not mutate canonical files, generated indexes, events, exports, or Git state.
 * Agents use discipline outputs as evidence and draft structured patches through `save_memory_patch` or `aictx save`.
 

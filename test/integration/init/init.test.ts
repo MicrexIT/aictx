@@ -164,6 +164,46 @@ describe("initProject", () => {
     }
   });
 
+  it("does not derive semantic project memory during init", async () => {
+    const projectRoot = await createTempRoot("aictx-init-no-semantic-bootstrap-");
+    await writeProjectFile(
+      projectRoot,
+      "README.md",
+      "# Billing API\n\nHandles recurring billing and webhook processing for Stripe.\n"
+    );
+    await writeProjectFile(
+      projectRoot,
+      "package.json",
+      `${JSON.stringify({
+        description: "Billing API for Stripe webhook processing.",
+        scripts: {
+          build: "tsc --noEmit"
+        }
+      })}\n`
+    );
+
+    const result = await initProject({
+      cwd: projectRoot,
+      clock: createFixedTestClock()
+    });
+
+    expect(result.ok).toBe(true);
+    await expect(readFile(join(projectRoot, ".aictx", "memory", "project.md"), "utf8")).resolves.not.toContain(
+      "Stripe webhook processing"
+    );
+    await expect(readFile(join(projectRoot, ".aictx", "memory", "architecture.md"), "utf8")).resolves.toBe(
+      "# Current Architecture\n\nArchitecture memory starts here.\n"
+    );
+    const storage = await readCanonicalStorage(projectRoot);
+    expect(storage.ok).toBe(true);
+    if (storage.ok) {
+      expect(storage.data.objects.map((object) => object.sidecar.id).sort()).toEqual([
+        "architecture.current",
+        storage.data.config.project.id
+      ].sort());
+    }
+  });
+
   it("returns success with a warning when valid storage already exists", async () => {
     const projectRoot = await createTempRoot("aictx-init-rerun-");
     const first = await initProject({
