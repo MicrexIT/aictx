@@ -1,0 +1,7 @@
+{"actor":"agent","event":"memory.created","id":"gotcha.init-viewer-placeholders","timestamp":"2026-05-01T16:33:34+02:00"}
+{"actor":"cli","event":"memory.updated","id":"project.aictx","timestamp":"2026-05-01T16:46:18+02:00"}
+{"actor":"cli","event":"memory.updated","id":"architecture.current","timestamp":"2026-05-01T16:46:18+02:00"}
+{"actor":"cli","event":"memory.created","id":"workflow.package-scripts","timestamp":"2026-05-01T16:46:18+02:00"}
+{"actor":"cli","event":"memory.created","id":"constraint.node-engine","timestamp":"2026-05-01T16:46:18+02:00"}
+{"actor":"cli","event":"memory.created","id":"constraint.package-manager","timestamp":"2026-05-01T16:46:18+02:00"}
+{"actor":"agent","event":"memory.created","id":"decision.proactive-bootstrap-onboarding","timestamp":"2026-05-01T16:59:18+02:00"}

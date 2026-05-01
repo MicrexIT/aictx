@@ -156,6 +156,46 @@ describe("read-only viewer shell", () => {
       await started.data.close();
     }
   });
+
+  it("explains the bootstrap workflow when only starter memory exists", async () => {
+    const assets = await stat(join(viewerAssetsDir, "index.html"));
+
+    expect(assets.isFile()).toBe(true);
+
+    const projectRoot = await createInitializedProject("aictx-viewer-starter-project-");
+    const started = await startViewerServer({
+      cwd: projectRoot,
+      assetsDir: viewerAssetsDir,
+      token: "viewer-starter-token"
+    });
+
+    expect(started.ok).toBe(true);
+    if (!started.ok) {
+      throw new Error(started.error.message);
+    }
+
+    let browser: Browser | null = null;
+
+    try {
+      browser = await chromium.launch();
+      const page = await browser.newPage();
+      const consoleErrors = collectPageErrors(page);
+
+      await page.goto(started.data.url, { waitUntil: "domcontentloaded" });
+      await page.locator('[data-testid="viewer-search"]').waitFor();
+
+      await expectText(page, '[data-testid="starter-memory-notice"]', "Starter memory only.");
+      await expectText(page, '[data-testid="starter-memory-notice"]', "aictx suggest --bootstrap --patch > bootstrap-memory.json");
+      await expectText(page, '[data-testid="starter-memory-notice"]', "aictx save --file bootstrap-memory.json");
+      await expectText(page, '[aria-label="Project memory counts"]', "Objects");
+      await expectText(page, '[aria-label="Project memory counts"]', "2");
+
+      expect(consoleErrors()).toEqual([]);
+    } finally {
+      await browser?.close();
+      await started.data.close();
+    }
+  });
 });
 
 async function assertSelectedObject(page: Page, title: string, id: string): Promise<void> {

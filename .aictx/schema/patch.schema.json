@@ -1,0 +1,443 @@
+{
+  "$defs": {
+    "createObject": {
+      "additionalProperties": false,
+      "properties": {
+        "body": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "id": {
+          "$ref": "#/$defs/objectId"
+        },
+        "op": {
+          "const": "create_object"
+        },
+        "scope": {
+          "$ref": "#/$defs/scope"
+        },
+        "source": {
+          "$ref": "#/$defs/source"
+        },
+        "status": {
+          "enum": [
+            "active",
+            "draft",
+            "stale",
+            "superseded",
+            "rejected",
+            "open",
+            "closed"
+          ]
+        },
+        "tags": {
+          "$ref": "#/$defs/tags"
+        },
+        "title": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "project",
+            "architecture",
+            "decision",
+            "constraint",
+            "question",
+            "fact",
+            "gotcha",
+            "workflow",
+            "note",
+            "concept"
+          ]
+        }
+      },
+      "required": [
+        "op",
+        "type",
+        "title",
+        "body"
+      ],
+      "type": "object"
+    },
+    "createRelation": {
+      "additionalProperties": false,
+      "properties": {
+        "confidence": {
+          "enum": [
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "evidence": {
+          "$ref": "#/$defs/evidence"
+        },
+        "from": {
+          "$ref": "#/$defs/objectId"
+        },
+        "id": {
+          "$ref": "#/$defs/relationId"
+        },
+        "op": {
+          "const": "create_relation"
+        },
+        "predicate": {
+          "enum": [
+            "affects",
+            "requires",
+            "depends_on",
+            "supersedes",
+            "conflicts_with",
+            "mentions",
+            "implements",
+            "related_to"
+          ]
+        },
+        "status": {
+          "enum": [
+            "active",
+            "stale",
+            "rejected"
+          ]
+        },
+        "to": {
+          "$ref": "#/$defs/objectId"
+        }
+      },
+      "required": [
+        "op",
+        "from",
+        "predicate",
+        "to"
+      ],
+      "type": "object"
+    },
+    "deleteObject": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/objectId"
+        },
+        "op": {
+          "const": "delete_object"
+        }
+      },
+      "required": [
+        "op",
+        "id"
+      ],
+      "type": "object"
+    },
+    "deleteRelation": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/relationId"
+        },
+        "op": {
+          "const": "delete_relation"
+        }
+      },
+      "required": [
+        "op",
+        "id"
+      ],
+      "type": "object"
+    },
+    "evidence": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "memory",
+              "relation",
+              "file",
+              "commit"
+            ]
+          }
+        },
+        "required": [
+          "kind",
+          "id"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "markStale": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/objectId"
+        },
+        "op": {
+          "const": "mark_stale"
+        },
+        "reason": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "op",
+        "id",
+        "reason"
+      ],
+      "type": "object"
+    },
+    "objectId": {
+      "pattern": "^[a-z][a-z0-9_]*\\.[a-z0-9][a-z0-9-]*$",
+      "type": "string"
+    },
+    "relationId": {
+      "pattern": "^rel\\.[a-z0-9][a-z0-9-]*$",
+      "type": "string"
+    },
+    "scope": {
+      "additionalProperties": false,
+      "properties": {
+        "branch": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "kind": {
+          "enum": [
+            "project",
+            "branch",
+            "task"
+          ]
+        },
+        "project": {
+          "pattern": "^project\\.[a-z0-9][a-z0-9-]*$",
+          "type": "string"
+        },
+        "task": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "kind",
+        "project",
+        "branch",
+        "task"
+      ],
+      "type": "object"
+    },
+    "source": {
+      "additionalProperties": false,
+      "properties": {
+        "commit": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "agent",
+            "user",
+            "cli",
+            "mcp",
+            "system"
+          ]
+        },
+        "task": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "type": "object"
+    },
+    "supersedeObject": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/objectId"
+        },
+        "op": {
+          "const": "supersede_object"
+        },
+        "reason": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "superseded_by": {
+          "$ref": "#/$defs/objectId"
+        }
+      },
+      "required": [
+        "op",
+        "id",
+        "superseded_by",
+        "reason"
+      ],
+      "type": "object"
+    },
+    "tags": {
+      "items": {
+        "pattern": "^[a-z0-9][a-z0-9-]*$",
+        "type": "string"
+      },
+      "type": "array",
+      "uniqueItems": true
+    },
+    "updateObject": {
+      "additionalProperties": false,
+      "properties": {
+        "body": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "id": {
+          "$ref": "#/$defs/objectId"
+        },
+        "op": {
+          "const": "update_object"
+        },
+        "scope": {
+          "$ref": "#/$defs/scope"
+        },
+        "source": {
+          "$ref": "#/$defs/source"
+        },
+        "status": {
+          "enum": [
+            "active",
+            "draft",
+            "stale",
+            "superseded",
+            "rejected",
+            "open",
+            "closed"
+          ]
+        },
+        "superseded_by": {
+          "$ref": "#/$defs/objectId"
+        },
+        "tags": {
+          "$ref": "#/$defs/tags"
+        },
+        "title": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "op",
+        "id"
+      ],
+      "type": "object"
+    },
+    "updateRelation": {
+      "additionalProperties": false,
+      "properties": {
+        "confidence": {
+          "enum": [
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "evidence": {
+          "$ref": "#/$defs/evidence"
+        },
+        "id": {
+          "$ref": "#/$defs/relationId"
+        },
+        "op": {
+          "const": "update_relation"
+        },
+        "status": {
+          "enum": [
+            "active",
+            "stale",
+            "rejected"
+          ]
+        }
+      },
+      "required": [
+        "op",
+        "id"
+      ],
+      "type": "object"
+    }
+  },
+  "$id": "https://aictx.dev/schemas/v1/patch.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "changes": {
+      "items": {
+        "oneOf": [
+          {
+            "$ref": "#/$defs/createObject"
+          },
+          {
+            "$ref": "#/$defs/updateObject"
+          },
+          {
+            "$ref": "#/$defs/markStale"
+          },
+          {
+            "$ref": "#/$defs/supersedeObject"
+          },
+          {
+            "$ref": "#/$defs/deleteObject"
+          },
+          {
+            "$ref": "#/$defs/createRelation"
+          },
+          {
+            "$ref": "#/$defs/updateRelation"
+          },
+          {
+            "$ref": "#/$defs/deleteRelation"
+          }
+        ]
+      },
+      "minItems": 1,
+      "type": "array"
+    },
+    "source": {
+      "additionalProperties": false,
+      "properties": {
+        "commit": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "agent",
+            "user",
+            "cli",
+            "mcp",
+            "system"
+          ]
+        },
+        "task": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "type": "object"
+    }
+  },
+  "required": [
+    "source",
+    "changes"
+  ],
+  "type": "object"
+}

@@ -138,6 +138,8 @@ describe("initProject", () => {
     expect(result.data.gitignore_updated).toBe(false);
     expect(result.data.index_built).toBe(true);
     expect(result.data.next_steps.join("\n")).toContain("aictx load");
+    expect(result.data.next_steps.join("\n")).toContain("aictx suggest --bootstrap --patch");
+    expect(result.data.next_steps.join("\n")).toContain("aictx save --file bootstrap-memory.json");
     expect(result.data.next_steps.join("\n")).toContain("save_memory_patch");
     expect(result.data.next_steps.join("\n")).toContain("aictx diff");
     expect(result.data.next_steps.join("\n")).toContain("integrations/codex");

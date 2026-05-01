@@ -223,6 +223,7 @@
   );
   const graphNodeById = $derived(new Map(graphNodes.map((node) => [node.id, node])));
   const visibleWarnings = $derived(uniqueSorted([...(bootstrap?.storage_warnings ?? []), ...warnings]));
+  const hasStarterMemoryOnly = $derived.by(() => isStarterMemoryOnly(objects));
 
   onMount(() => {
     void loadBootstrap();
@@ -344,6 +345,35 @@
 
   function normalizeText(value: string): string {
     return value.trim().toLowerCase();
+  }
+
+  function isStarterMemoryOnly(memoryObjects: readonly MemoryObjectSummary[]): boolean {
+    if (memoryObjects.length !== 2) {
+      return false;
+    }
+
+    const projectObject = memoryObjects.find(
+      (object) => object.type === "project" && object.source?.kind === "system"
+    );
+    const architectureObject = memoryObjects.find(
+      (object) => object.id === "architecture.current" && object.source?.kind === "system"
+    );
+
+    return (
+      projectObject !== undefined &&
+      architectureObject !== undefined &&
+      isInitialProjectBody(projectObject.body) &&
+      normalizeBody(architectureObject.body) ===
+        "# Current Architecture\n\nArchitecture memory starts here."
+    );
+  }
+
+  function isInitialProjectBody(body: string): boolean {
+    return /^# .+\n\nProject-level memory for .+\.$/.test(normalizeBody(body));
+  }
+
+  function normalizeBody(body: string): string {
+    return body.replace(/\r\n?/g, "\n").trim();
   }
 
   function selectObject(id: string): void {
@@ -812,6 +842,21 @@
           </section>
         {/if}
 
+        {#if hasStarterMemoryOnly}
+          <section
+            class="onboarding-callout"
+            aria-label="Starter memory notice"
+            data-testid="starter-memory-notice"
+          >
+            <p>
+              <strong>Starter memory only.</strong>
+              Seed useful repo memory with a bootstrap patch, then reopen or refresh the viewer.
+            </p>
+            <code>aictx suggest --bootstrap --patch &gt; bootstrap-memory.json</code>
+            <code>aictx save --file bootstrap-memory.json</code>
+          </section>
+        {/if}
+
         <section class="list-header" aria-live="polite">
           <span>{filteredObjects.length} shown</span>
           <span>{objects.length} total</span>
@@ -1256,6 +1301,7 @@
   .graph-panel,
   .relations-panel,
   .warnings,
+  .onboarding-callout,
   .list-header {
     border-bottom: 1px solid #e1e4e2;
     padding: 14px;
@@ -1413,6 +1459,28 @@
     margin: 0;
     color: #6f4c00;
     font-size: 0.85rem;
+    line-height: 1.4;
+  }
+
+  .onboarding-callout {
+    display: grid;
+    gap: 8px;
+    background: #eef7f4;
+  }
+
+  .onboarding-callout p {
+    margin: 0;
+    color: #1e4f4a;
+    font-size: 0.85rem;
+    line-height: 1.4;
+  }
+
+  .onboarding-callout code {
+    display: block;
+    overflow-wrap: anywhere;
+    color: #123532;
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+    font-size: 0.75rem;
     line-height: 1.4;
   }
 

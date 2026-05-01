@@ -54,6 +54,8 @@ const AGENT_GUIDANCE_BLOCK = `${[
   '- Prefer MCP: `load_memory({ task: "<task summary>" })`',
   '- Fallback CLI: `aictx load "<task summary>"`',
   "",
+  "If loaded memory only contains the init-created project and architecture placeholders, treat Aictx as needing first-run seeding. For setup, onboarding, or \"why is memory empty?\" requests, run `aictx suggest --bootstrap --patch > bootstrap-memory.json`, review the patch for deterministic non-sensitive facts, apply it with `aictx save --file bootstrap-memory.json` when appropriate, then run `aictx check` and `aictx diff`.",
+  "",
   "After meaningful work, autonomously save durable project knowledge:",
   "- Prefer MCP: `save_memory_patch({ patch: { source, changes } })`",
   "- Fallback CLI: `aictx save --stdin`",
@@ -728,6 +730,7 @@ function countOccurrences(value: string, search: string): number {
 function nextSteps(agentGuidance: AgentGuidanceData): string[] {
   return [
     agentGuidanceNextStep(agentGuidance),
+    "`aictx init` creates starter placeholders only. To seed useful first-run memory, run `aictx suggest --bootstrap --patch > bootstrap-memory.json`, review it, then run `aictx save --file bootstrap-memory.json`, `aictx check`, and `aictx diff`.",
     "`aictx init` does not start MCP; configure agent clients that support MCP to launch `aictx-mcp` so agents can use `load_memory` and `save_memory_patch`. A globally launched MCP server can serve this project when tool calls include this project root as `project_root`. Agents can fall back to `aictx load` and `aictx save --stdin` when MCP is unavailable.",
     "Review memory changes in `.aictx/`; in Git projects, use `aictx diff` before committing.",
     "Optional bundled skills are available under `integrations/codex/` and `integrations/claude/`."

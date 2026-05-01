@@ -27,6 +27,9 @@ importers:
         specifier: ^4.3.6
         version: 4.3.6
     devDependencies:
+      '@aictx/memory':
+        specifier: ^0.1.5
+        version: 0.1.5
       '@sveltejs/vite-plugin-svelte':
         specifier: ^5.1.1
         version: 5.1.1(svelte@5.55.5)(vite@6.4.2(@types/node@25.6.0)(lightningcss@1.32.0)(tsx@4.21.0))
@@ -59,6 +62,11 @@ importers:
         version: 4.1.5(@types/node@25.6.0)(vite@6.4.2(@types/node@25.6.0)(lightningcss@1.32.0)(tsx@4.21.0))
 
 packages:
+
+  '@aictx/memory@0.1.5':
+    resolution: {integrity: sha512-3bFKdAdsfsyIhFC9ROga2dB1ktwaTlGvjQSuc7x90ejNUzH+fsGk3fpHqtcjmwup14/HAx1JqI41B1ovSZJd6g==}
+    engines: {node: '>=22'}
+    hasBin: true
 
   '@esbuild/aix-ppc64@0.25.12':
     resolution: {integrity: sha512-Hhmwd6CInZ3dwpuGTF8fJG6yoWmsToE+vYgD4nytZVxcu1ulHpUQRAB1UJ8+N1Am3Mz4+xOByoQoSZf4D+CpkA==}
@@ -1530,6 +1538,18 @@ packages:
     resolution: {integrity: sha512-rftlrkhHZOcjDwkGlnUtZZkvaPHCsDATp4pGpuOOMDaTdDDXF91wuVDJoWoPsKX/3YPQ5fHuF3STjcYyKr+Qhg==}
 
 snapshots:
+
+  '@aictx/memory@0.1.5':
+    dependencies:
+      '@modelcontextprotocol/sdk': 1.29.0(zod@4.3.6)
+      '@sqlite.org/sqlite-wasm': 3.53.0-build1
+      ajv: 8.20.0
+      commander: 14.0.3
+      fast-glob: 3.3.3
+      zod: 4.3.6
+    transitivePeerDependencies:
+      - '@cfworker/json-schema'
+      - supports-color
 
   '@esbuild/aix-ppc64@0.25.12':
     optional: true

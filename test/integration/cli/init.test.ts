@@ -120,6 +120,8 @@ describe("aictx init CLI", () => {
     expect(output.stdout()).toContain("Optional bundled skills:");
     expect(output.stdout()).toContain("Next steps:");
     expect(output.stdout()).toContain("aictx load");
+    expect(output.stdout()).toContain("aictx suggest --bootstrap --patch");
+    expect(output.stdout()).toContain("aictx save --file bootstrap-memory.json");
   });
 
   it("skips repo agent guidance when requested", async () => {

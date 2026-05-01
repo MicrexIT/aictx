@@ -1,0 +1,65 @@
+{
+  "source": {
+    "kind": "cli",
+    "task": "Proposed bootstrap memory patch from deterministic repository analysis"
+  },
+  "changes": [
+    {
+      "op": "update_object",
+      "id": "project.aictx",
+      "body": "# Aictx\n\nAictx is local-first project memory for AI coding agents.\n\nPackage: `@aictx/memory`.\n",
+      "tags": [
+        "project"
+      ],
+      "source": {
+        "kind": "cli",
+        "task": "Proposed bootstrap memory patch from deterministic repository analysis"
+      }
+    },
+    {
+      "op": "update_object",
+      "id": "architecture.current",
+      "body": "# Current Architecture\n\n- Primary source files are under `src/`.\n- The codebase uses TypeScript.\n- The package is configured as an ESM package with `type: module`.\n- Vitest is the configured test runner.\n",
+      "tags": [
+        "architecture"
+      ],
+      "source": {
+        "kind": "cli",
+        "task": "Proposed bootstrap memory patch from deterministic repository analysis"
+      }
+    },
+    {
+      "op": "create_object",
+      "id": "workflow.package-scripts",
+      "type": "workflow",
+      "title": "Package scripts",
+      "body": "# Package scripts\n\nUse the package scripts in `package.json` for repeated project workflows:\n- `build`: `pnpm build:guidance && pnpm build:version && pnpm build:code && pnpm build:schemas && pnpm build:viewer`\n- `build:code`: `tsup`\n- `build:guidance`: `node scripts/generate-agent-guidance.mjs`\n- `build:schemas`: `node scripts/copy-schemas.mjs`\n- `build:version`: `node scripts/generate-version.mjs`\n- `build:viewer`: `vite build --config viewer/vite.config.ts`\n- `dev`: `tsx src/cli/main.ts`\n- `dev:mcp`: `tsx src/mcp/server.ts`\n",
+      "tags": [
+        "package",
+        "workflow"
+      ]
+    },
+    {
+      "op": "create_object",
+      "id": "constraint.node-engine",
+      "type": "constraint",
+      "title": "Node engine requirement",
+      "body": "# Node engine requirement\n\nThe package declares Node.js `>=22` in `package.json` engines.\n",
+      "tags": [
+        "node",
+        "runtime"
+      ]
+    },
+    {
+      "op": "create_object",
+      "id": "constraint.package-manager",
+      "type": "constraint",
+      "title": "Package manager",
+      "body": "# Package manager\n\nUse pnpm for dependency workflows; this is inferred from `pnpm-lock.yaml`.\n",
+      "tags": [
+        "pnpm",
+        "dependencies"
+      ]
+    }
+  ]
+}

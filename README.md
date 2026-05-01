@@ -168,6 +168,9 @@ and `CLAUDE.md` so coding agents are told to load memory before non-trivial
 work and save durable memory after meaningful work. Use
 `aictx init --no-agent-guidance` to skip those repo instruction files.
 
+After init, the viewer will show only starter project and architecture
+placeholders until memory is seeded.
+
 For first-run onboarding, ask Aictx for a proposed seed-memory patch, review it,
 then save it explicitly:
 
@@ -181,7 +184,8 @@ aictx diff
 
 `aictx init` does not infer rich semantic memory from the repository. The
 bootstrap patch remains reviewable and is not saved until `aictx save` applies
-it.
+it. Agent guidance treats setup, onboarding, and "why is memory empty?" requests
+as enough context to run this bootstrap workflow proactively.
 
 Before a task, load relevant memory:
 

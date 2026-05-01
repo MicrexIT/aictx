@@ -173,6 +173,7 @@ Required test coverage:
 * Startup fails clearly for an unavailable explicit port.
 * API requests without the per-run token fail.
 * `GET /api/bootstrap` reads canonical storage and does not mutate canonical files.
+* Init-created starter project and architecture placeholders render with a first-run bootstrap notice.
 * Client-side search/filter returns expected visible objects.
 * Markdown rendering does not execute raw HTML.
 * Selected-node graph contains only the selected object, direct neighbors, and direct relations.

@@ -92,7 +92,9 @@ aictx save --stdin
 
 For setup, maintenance, inspection, export, local viewing, suggestion, audit, or recovery operations that are not exposed by MCP, use the `aictx` CLI instead of editing `.aictx/` files directly.
 
-Use `aictx suggest --from-diff --json` when current code changes need a memory review packet before drafting a patch. Use `aictx suggest --bootstrap --json` for a first-run repo memory pass. When asked to bootstrap project memory, run:
+Use `aictx suggest --from-diff --json` when current code changes need a memory review packet before drafting a patch. Use `aictx suggest --bootstrap --json` for a first-run repo memory pass.
+
+If loaded memory only contains the init-created project and architecture placeholders, treat Aictx as needing first-run seeding. For setup, onboarding, or "why is memory empty?" requests, run the bootstrap workflow proactively instead of waiting for the user to know the `bootstrap` term:
 
 ```bash
 aictx suggest --bootstrap --patch > bootstrap-memory.json
