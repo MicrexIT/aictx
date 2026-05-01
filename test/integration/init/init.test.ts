@@ -6,7 +6,10 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { initProject } from "../../../src/app/operations.js";
 import { runSubprocess } from "../../../src/core/subprocess.js";
-import { computeObjectContentHash } from "../../../src/storage/hashes.js";
+import {
+  computeObjectContentHash,
+  computeRelationContentHash
+} from "../../../src/storage/hashes.js";
 import { readCanonicalStorage } from "../../../src/storage/read.js";
 import { validateProject } from "../../../src/validation/validate.js";
 import { createFixedTestClock, FIXED_TIMESTAMP } from "../../fixtures/time.js";
@@ -56,6 +59,9 @@ describe("initProject", () => {
         ".aictx/memory/project.json",
         ".aictx/memory/architecture.md",
         ".aictx/memory/architecture.json",
+        expect.stringMatching(
+          /^\.aictx\/relations\/project-aictx-init-billing-api-.+-related-to-architecture-current\.json$/
+        ),
         ".aictx/schema/config.schema.json"
       ])
     );
@@ -159,6 +165,35 @@ describe("initProject", () => {
         "architecture.current",
         storage.data.config.project.id
       ].sort());
+      expect(storage.data.relations).toHaveLength(1);
+      const relation = storage.data.relations[0]?.relation;
+      expect(relation).toEqual(
+        expect.objectContaining({
+          id: expect.stringMatching(/^rel\.project-aictx-init-local-project-.+-related-to-architecture-current$/),
+          from: storage.data.config.project.id,
+          predicate: "related_to",
+          to: "architecture.current",
+          status: "active",
+          confidence: "high",
+          created_at: FIXED_TIMESTAMP,
+          updated_at: FIXED_TIMESTAMP
+        })
+      );
+      if (relation === undefined) {
+        return;
+      }
+      expect(relation?.content_hash).toBe(
+        computeRelationContentHash({
+          id: relation.id,
+          from: relation.from,
+          predicate: relation.predicate,
+          to: relation.to,
+          status: relation.status,
+          confidence: relation.confidence,
+          created_at: relation.created_at,
+          updated_at: relation.updated_at
+        })
+      );
       await expect(access(join(projectRoot, ".aictx", "memory", "gotchas"))).resolves.toBeUndefined();
       await expect(access(join(projectRoot, ".aictx", "memory", "workflows"))).resolves.toBeUndefined();
       expect(storage.data.events).toEqual([]);

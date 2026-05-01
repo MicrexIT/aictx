@@ -3,7 +3,17 @@ import { join } from "node:path";
 
 import fg from "fast-glob";
 
-import type { ObjectId, ObjectStatus, ObjectType, Source } from "../core/types.js";
+import { generateRelationId } from "../core/ids.js";
+import type {
+  ObjectId,
+  ObjectStatus,
+  ObjectType,
+  Predicate,
+  RelationConfidence,
+  RelationId,
+  RelationStatus,
+  Source
+} from "../core/types.js";
 import type { CanonicalStorageSnapshot } from "../storage/read.js";
 import type { StoredMemoryObject } from "../storage/objects.js";
 import type { StoredMemoryRelation } from "../storage/relations.js";
@@ -45,6 +55,15 @@ export type BootstrapPatchChange =
       body: string;
       tags?: string[];
       source?: Source;
+    }
+  | {
+      op: "create_relation";
+      id?: RelationId;
+      from: ObjectId;
+      predicate: Predicate;
+      to: ObjectId;
+      status?: RelationStatus;
+      confidence?: RelationConfidence;
     };
 
 export interface BootstrapMemoryPatch {
@@ -164,6 +183,8 @@ const LOCK_FILE_MANAGERS = [
   { file: "bun.lockb", manager: "bun" }
 ] as const;
 const PACKAGE_MANAGERS = new Set(["npm", "pnpm", "yarn", "bun"]);
+const CURRENT_ARCHITECTURE_ID: ObjectId = "architecture.current";
+const PROJECT_ARCHITECTURE_PREDICATE: Predicate = "related_to";
 
 export function buildSuggestFromDiffPacket(
   options: BuildSuggestFromDiffPacketOptions
@@ -317,6 +338,12 @@ function buildBootstrapPatchChanges(
     }
   }
 
+  const projectArchitectureRelation = projectArchitectureRelationChange(storage);
+
+  if (projectArchitectureRelation !== null) {
+    changes.push(projectArchitectureRelation);
+  }
+
   const workflow = packageScriptsWorkflow(storage, analysis);
 
   if (workflow !== null) {
@@ -416,6 +443,57 @@ function architectureSignals(analysis: BootstrapAnalysis): string[] {
   }
 
   return signals;
+}
+
+function projectArchitectureRelationChange(
+  storage: CanonicalStorageSnapshot
+): BootstrapPatchChange | null {
+  const projectObject = objectById(storage, storage.config.project.id);
+  const architectureObject = objectById(storage, CURRENT_ARCHITECTURE_ID);
+
+  if (projectObject === null || architectureObject === null) {
+    return null;
+  }
+
+  if (
+    hasEquivalentRelation(
+      storage,
+      projectObject.sidecar.id,
+      PROJECT_ARCHITECTURE_PREDICATE,
+      architectureObject.sidecar.id
+    )
+  ) {
+    return null;
+  }
+
+  return {
+    op: "create_relation",
+    id: generateRelationId({
+      from: projectObject.sidecar.id,
+      predicate: PROJECT_ARCHITECTURE_PREDICATE,
+      to: architectureObject.sidecar.id,
+      existingIds: storage.relations.map((relation) => relation.relation.id)
+    }),
+    from: projectObject.sidecar.id,
+    predicate: PROJECT_ARCHITECTURE_PREDICATE,
+    to: architectureObject.sidecar.id,
+    status: "active",
+    confidence: "high"
+  };
+}
+
+function hasEquivalentRelation(
+  storage: CanonicalStorageSnapshot,
+  from: ObjectId,
+  predicate: Predicate,
+  to: ObjectId
+): boolean {
+  return storage.relations.some(
+    (relation) =>
+      relation.relation.from === from &&
+      relation.relation.predicate === predicate &&
+      relation.relation.to === to
+  );
 }
 
 function packageScriptsWorkflow(

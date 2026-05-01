@@ -217,7 +217,7 @@ Success data:
   },
   "next_steps": [
     "Agents are now instructed through `AGENTS.md` and `CLAUDE.md` to load and save Aictx memory.",
-    "`aictx init` creates starter placeholders only. To seed useful first-run memory, run `aictx suggest --bootstrap --patch > bootstrap-memory.json`, review it, then run `aictx save --file bootstrap-memory.json`, `aictx check`, and `aictx diff`.",
+    "`aictx init` creates linked starter placeholders only. To seed useful first-run memory, run `aictx suggest --bootstrap --patch > bootstrap-memory.json`, review it, then run `aictx save --file bootstrap-memory.json`, `aictx check`, and `aictx diff`.",
     "`aictx init` does not start MCP; configure agent clients that support MCP to launch `aictx-mcp` so agents can use `load_memory` and `save_memory_patch`. A globally launched MCP server can serve this project when tool calls include this project root as `project_root`. Agents can fall back to `aictx load` and `aictx save --stdin` when MCP is unavailable.",
     "Review memory changes in `.aictx/`; in Git projects, use `aictx diff` before committing.",
     "Optional bundled skills are available under `integrations/codex/` and `integrations/claude/`."
@@ -583,7 +583,7 @@ Behavior:
 * `--from-diff` reads the current non-generated project diff and related Aictx memory but does not create memory patches.
 * `--bootstrap` works with or without Git and lists likely files for the agent to inspect before creating seed memory.
 * `--patch` is valid only with `--bootstrap`; it emits a conservative proposed patch suitable for review and `aictx save --file`.
-* `--bootstrap --patch` updates init-created project and architecture placeholders when deterministic evidence is strong, creates small workflow or constraint memories from package metadata, and emits no patch when confidence is low.
+* `--bootstrap --patch` updates init-created project and architecture placeholders when deterministic evidence is strong, creates small workflow or constraint memories from package metadata, proposes the starter project-to-architecture relation when it is missing, and otherwise emits no patch when confidence is low.
 * Both modes must be deterministic, local-only, and read-only for canonical memory.
 * Do not expose an MCP tool for suggestion packets in v1.
 

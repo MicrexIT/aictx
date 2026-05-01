@@ -108,6 +108,10 @@ describe("secret text detection", () => {
     ["file path", `See docs/${"A1b2C3d4E5f6G7h8I9j0K1l2M3n4O5p6Q7r8S9t0"}/index.md`],
     ["object ID", `decision.${"a".repeat(40)}`],
     ["relation ID", `rel.${"a".repeat(40)}`],
+    [
+      "generated relation ID",
+      `"id": "rel.project-aictx-cli-init-human-s9ugyz-related-to-architecture-current"`
+    ],
     ["Markdown heading", `# ${"bD82Mfs9GQ+FTuPZ7HGtrjUPRpZ5FmEZG32XLmpNKW=="}`],
     ["prose sentence", `This generated identifier ${"bD82Mfs9GQ+FTuPZ7HGtrjUPRpZ5FmEZG32XLmpNKW=="} is documented here.`]
   ])("ignores high-entropy candidates that look like %s", (_label, contents) => {

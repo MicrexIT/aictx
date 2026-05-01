@@ -216,6 +216,7 @@ describe("suggest discipline packets", () => {
     expect(proposal.patch?.changes.map((change) => change.op)).toEqual([
       "update_object",
       "update_object",
+      "create_relation",
       "create_object",
       "create_object",
       "create_object"
@@ -224,6 +225,15 @@ describe("suggest discipline packets", () => {
       expect.arrayContaining([
         expect.objectContaining({ op: "update_object", id: "project.billing-api" }),
         expect.objectContaining({ op: "update_object", id: "architecture.current" }),
+        expect.objectContaining({
+          op: "create_relation",
+          id: "rel.project-billing-api-related-to-architecture-current",
+          from: "project.billing-api",
+          predicate: "related_to",
+          to: "architecture.current",
+          status: "active",
+          confidence: "high"
+        }),
         expect.objectContaining({ op: "create_object", id: "workflow.package-scripts" }),
         expect.objectContaining({ op: "create_object", id: "constraint.node-engine" }),
         expect.objectContaining({ op: "create_object", id: "constraint.package-manager" })
@@ -275,7 +285,7 @@ describe("suggest discipline packets", () => {
           body: "Existing package manager constraint."
         })
       ],
-      relations: [],
+      relations: [projectArchitectureRelation("project.billing-api")],
       projectId: "project.billing-api",
       projectName: "Billing API"
     });
@@ -290,6 +300,38 @@ describe("suggest discipline packets", () => {
     ]);
   });
 
+  it("proposes the missing starter relation for older initialized projects", async () => {
+    const projectRoot = await createTempRoot("aictx-discipline-bootstrap-starter-relation-");
+    await writeProjectFile(projectRoot, "README.md", "# Tiny\n");
+    const storage = storageSnapshot({
+      objects: [
+        initialProjectObject("project.tiny", "Tiny"),
+        initialArchitectureObject("project.tiny")
+      ],
+      relations: [],
+      projectId: "project.tiny",
+      projectName: "Tiny"
+    });
+
+    const proposal = await buildSuggestBootstrapPatchProposal({
+      projectRoot,
+      storage
+    });
+
+    expect(proposal.proposed).toBe(true);
+    expect(proposal.patch?.changes).toEqual([
+      {
+        op: "create_relation",
+        id: "rel.project-tiny-related-to-architecture-current",
+        from: "project.tiny",
+        predicate: "related_to",
+        to: "architecture.current",
+        status: "active",
+        confidence: "high"
+      }
+    ]);
+  });
+
   it("returns a clear no-patch proposal for small repos without confident evidence", async () => {
     const projectRoot = await createTempRoot("aictx-discipline-bootstrap-minimal-");
     await writeProjectFile(projectRoot, "README.md", "# Tiny\n");
@@ -300,7 +342,7 @@ describe("suggest discipline packets", () => {
         initialProjectObject("project.tiny", "Tiny"),
         initialArchitectureObject("project.tiny")
       ],
-      relations: [],
+      relations: [projectArchitectureRelation("project.tiny")],
       projectId: "project.tiny",
       projectName: "Tiny"
     });
@@ -411,6 +453,26 @@ function initialArchitectureObject(projectId: ObjectId): StoredMemoryObject {
       updated_at: TIMESTAMP
     },
     body: "# Current Architecture\n\nArchitecture memory starts here.\n"
+  };
+}
+
+function projectArchitectureRelation(projectId: ObjectId): StoredMemoryRelation {
+  const id = `rel.${projectId.replace(".", "-")}-related-to-architecture-current`;
+  const relationData: MemoryRelation = {
+    id,
+    from: projectId,
+    predicate: "related_to",
+    to: "architecture.current",
+    status: "active",
+    confidence: "high",
+    content_hash: "sha256:relation",
+    created_at: TIMESTAMP,
+    updated_at: TIMESTAMP
+  };
+
+  return {
+    path: `.aictx/relations/${id.slice("rel.".length)}.json`,
+    relation: relationData
   };
 }
 

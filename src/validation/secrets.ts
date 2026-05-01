@@ -289,7 +289,7 @@ function shouldWarnForHighEntropyCandidate(candidate: string, line: string): boo
     looksLikeFilePath(candidate, line) ||
     looksLikeUrl(candidate, line) ||
     looksLikeObjectId(candidate) ||
-    looksLikeRelationId(candidate) ||
+    looksLikeRelationId(candidate, line) ||
     looksLikeSha256Hash(candidate, line)
   );
 }
@@ -339,8 +339,16 @@ function looksLikeObjectId(candidate: string): boolean {
   return /^[a-z][a-z0-9_]*\.[a-z0-9][a-z0-9-]*$/.test(candidate);
 }
 
-function looksLikeRelationId(candidate: string): boolean {
-  return /^rel\.[a-z0-9][a-z0-9-]*$/.test(candidate);
+function looksLikeRelationId(candidate: string, line: string): boolean {
+  if (/^rel\.[a-z0-9][a-z0-9-]*$/.test(candidate)) {
+    return true;
+  }
+
+  if (!/^[a-z0-9][a-z0-9-]*$/.test(candidate)) {
+    return false;
+  }
+
+  return new RegExp(`\\brel\\.${escapeRegExp(candidate)}\\b`).test(line);
 }
 
 function looksLikeSha256Hash(candidate: string, line: string): boolean {

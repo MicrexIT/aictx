@@ -1,6 +1,6 @@
 {
   "body_path": "memory/decisions/proactive-bootstrap-onboarding.md",
-  "content_hash": "sha256:64379279564920076a065bd3ee1177f0ebf91e110e1bc6c6ba900fb063b2c7cc",
+  "content_hash": "sha256:8ff835269f69c65a641b8c78b955611038e755206b12c26cbfb41bdf268fc7e3",
   "created_at": "2026-05-01T16:59:18+02:00",
   "id": "decision.proactive-bootstrap-onboarding",
   "scope": {
@@ -22,5 +22,5 @@
   ],
   "title": "Proactive bootstrap onboarding",
   "type": "decision",
-  "updated_at": "2026-05-01T16:59:18+02:00"
+  "updated_at": "2026-05-01T17:33:27+02:00"
 }

@@ -620,7 +620,7 @@ Rules:
 
 The storage format is valid when:
 
-* A fresh `aictx init` can create the full `.aictx/` structure inside Git and non-Git project directories.
+* A fresh `aictx init` can create the full `.aictx/` structure inside Git and non-Git project directories, including the starter project-to-architecture relation.
 * Canonical files are readable and reviewable as local files.
 * Canonical files are readable and reviewable in Git when Git is available.
 * `aictx check` can validate all canonical files.

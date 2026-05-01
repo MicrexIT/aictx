@@ -83,7 +83,7 @@ describe("read-only viewer shell", () => {
       await expectText(page, '[aria-label="Project memory counts"]', "Objects");
       await expectText(page, '[aria-label="Project memory counts"]', "10");
       await expectText(page, '[aria-label="Project memory counts"]', "Relations");
-      await expectText(page, '[aria-label="Project memory counts"]', "2");
+      await expectText(page, '[aria-label="Project memory counts"]', "3");
 
       await page.selectOption('[data-testid="viewer-type-filter"]', "decision");
       await expectCount(page, '[data-testid="object-row-decision.viewer-shell"]', 1);
@@ -189,6 +189,11 @@ describe("read-only viewer shell", () => {
       await expectText(page, '[data-testid="starter-memory-notice"]', "aictx save --file bootstrap-memory.json");
       await expectText(page, '[aria-label="Project memory counts"]', "Objects");
       await expectText(page, '[aria-label="Project memory counts"]', "2");
+      await expectText(page, '[aria-label="Project memory counts"]', "Relations");
+      await expectText(page, '[aria-label="Project memory counts"]', "1");
+      await assertSelectedGraphNode(page, "architecture.current");
+      await expectText(page, '[data-testid="relation-graph"]', "related_to");
+      await expectCount(page, '[data-testid="relation-graph-svg"] [data-testid^="relation-graph-edge-"]', 1);
 
       expect(consoleErrors()).toEqual([]);
     } finally {

@@ -42,7 +42,7 @@ describe("full index rebuild", () => {
     expect(result.data).toEqual({
       index_rebuilt: true,
       objects_indexed: 3,
-      relations_indexed: 1,
+      relations_indexed: 2,
       events_indexed: 2,
       event_appended: false
     });
@@ -51,7 +51,7 @@ describe("full index rebuild", () => {
     const connection = await openConnection(projectRoot);
     try {
       expect(countRows(connection.db, "objects")).toBe(3);
-      expect(countRows(connection.db, "relations")).toBe(1);
+      expect(countRows(connection.db, "relations")).toBe(2);
       expect(countRows(connection.db, "events")).toBe(2);
       expect(countRows(connection.db, "objects_fts")).toBe(3);
 
@@ -70,7 +70,7 @@ describe("full index rebuild", () => {
         title: "Webhook idempotency",
         tags: "stripe webhooks"
       });
-      expect(readRelation(connection.db)).toMatchObject({
+      expect(readRelation(connection.db, "rel.architecture-requires-webhook-idempotency")).toMatchObject({
         id: "rel.architecture-requires-webhook-idempotency",
         from_id: "architecture.current",
         predicate: "requires",
@@ -99,7 +99,7 @@ describe("full index rebuild", () => {
         git_available: "false",
         storage_version: "1",
         object_count: "3",
-        relation_count: "1",
+        relation_count: "2",
         event_count: "2"
       });
     } finally {
@@ -136,7 +136,7 @@ describe("full index rebuild", () => {
     const connection = await openConnection(projectRoot);
     try {
       expect(countRows(connection.db, "objects")).toBe(3);
-      expect(countRows(connection.db, "relations")).toBe(1);
+      expect(countRows(connection.db, "relations")).toBe(2);
       expect(countRows(connection.db, "events")).toBe(2);
     } finally {
       connection.close();
@@ -200,7 +200,7 @@ describe("full index rebuild", () => {
       expect(readMeta(connection.db)).toMatchObject({
         built_at: FIXED_TIMESTAMP,
         object_count: "2",
-        relation_count: "0",
+        relation_count: "1",
         event_count: "0"
       });
     } finally {
@@ -404,12 +404,12 @@ function readFts(db: IndexDatabaseConnection["db"], id: string): FtsRow | undefi
     .get(id);
 }
 
-function readRelation(db: IndexDatabaseConnection["db"]): RelationRow | undefined {
+function readRelation(db: IndexDatabaseConnection["db"], id: string): RelationRow | undefined {
   return db
-    .prepare<[], RelationRow>(
-      "SELECT id, from_id, predicate, to_id, status, confidence FROM relations"
+    .prepare<[string], RelationRow>(
+      "SELECT id, from_id, predicate, to_id, status, confidence FROM relations WHERE id = ?"
     )
-    .get();
+    .get(id);
 }
 
 function readEventsRows(db: IndexDatabaseConnection["db"]): EventRow[] {

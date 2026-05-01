@@ -168,8 +168,8 @@ and `CLAUDE.md` so coding agents are told to load memory before non-trivial
 work and save durable memory after meaningful work. Use
 `aictx init --no-agent-guidance` to skip those repo instruction files.
 
-After init, the viewer will show only starter project and architecture
-placeholders until memory is seeded.
+After init, the viewer will show linked starter project and architecture
+placeholders until richer memory is seeded.
 
 For first-run onboarding, ask Aictx for a proposed seed-memory patch, review it,
 then save it explicitly:

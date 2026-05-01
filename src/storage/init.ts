@@ -11,7 +11,7 @@ import {
   writeTextAtomic
 } from "../core/fs.js";
 import { getCurrentGitBranch, type GitWrapperOptions } from "../core/git.js";
-import { slugify } from "../core/ids.js";
+import { generateRelationId, slugify } from "../core/ids.js";
 import { withProjectLock } from "../core/lock.js";
 import { resolveProjectPaths, type ProjectPaths } from "../core/paths.js";
 import { err, ok, type Result } from "../core/result.js";
@@ -22,8 +22,9 @@ import {
   type ValidateProjectOptions
 } from "../validation/validate.js";
 import { SCHEMA_FILES } from "../validation/schemas.js";
-import { computeObjectContentHash } from "./hashes.js";
+import { computeObjectContentHash, computeRelationContentHash } from "./hashes.js";
 import type { AictxConfig, MemoryObjectSidecar } from "./objects.js";
+import type { MemoryRelation } from "./relations.js";
 
 const GENERATED_GITIGNORE_ENTRIES = [
   ".aictx/index/",
@@ -109,6 +110,11 @@ interface InitialMemoryObject {
   sidecar: MemoryObjectSidecar;
 }
 
+interface InitialMemoryRelation {
+  path: string;
+  relation: MemoryRelation;
+}
+
 export async function initializeStorage(
   options: InitStorageOptions
 ): Promise<Result<InitStorageSuccess>> {
@@ -180,6 +186,16 @@ async function initializeStorageWithLock(
     return objectResult;
   }
   filesCreated.push(...objectResult.data);
+
+  const relationResult = await writeInitialRelations(paths.projectRoot, {
+    projectId,
+    timestamp
+  });
+
+  if (!relationResult.ok) {
+    return relationResult;
+  }
+  filesCreated.push(...relationResult.data);
 
   const eventsResult = await writeTextAtomic(paths.projectRoot, ".aictx/events.jsonl", "");
 
@@ -471,6 +487,33 @@ async function writeInitialObjects(
   return ok(created);
 }
 
+async function writeInitialRelations(
+  projectRoot: string,
+  options: {
+    projectId: string;
+    timestamp: IsoDateTime;
+  }
+): Promise<Result<string[]>> {
+  const relations = buildInitialRelations(options);
+  const created: string[] = [];
+
+  for (const relation of relations) {
+    const written = await writeJsonAtomic(
+      projectRoot,
+      `.aictx/${relation.path}`,
+      relationToJson(relation.relation)
+    );
+
+    if (!written.ok) {
+      return written;
+    }
+
+    created.push(`.aictx/${relation.path}`);
+  }
+
+  return ok(created);
+}
+
 function buildInitialObjects(options: {
   projectId: string;
   projectName: string;
@@ -542,6 +585,77 @@ function buildInitialObject(options: {
     body: options.body,
     sidecar
   };
+}
+
+function buildInitialRelations(options: {
+  projectId: string;
+  timestamp: IsoDateTime;
+}): InitialMemoryRelation[] {
+  const id = generateInitialProjectArchitectureRelationId(options.projectId);
+  const relationWithoutHash: Omit<MemoryRelation, "content_hash"> = {
+    id,
+    from: options.projectId,
+    predicate: "related_to",
+    to: "architecture.current",
+    status: "active",
+    confidence: "high",
+    created_at: options.timestamp,
+    updated_at: options.timestamp
+  };
+  const relation: MemoryRelation = {
+    ...relationWithoutHash,
+    content_hash: computeRelationContentHash(relationToJson(relationWithoutHash))
+  };
+
+  return [
+    {
+      path: relationPath(id),
+      relation
+    }
+  ];
+}
+
+function generateInitialProjectArchitectureRelationId(projectId: string): string {
+  return generateRelationId({
+    from: projectId,
+    predicate: "related_to",
+    to: "architecture.current"
+  });
+}
+
+function relationPath(id: string): string {
+  return `relations/${id.slice("rel.".length)}.json`;
+}
+
+function relationToJson(
+  relation: Omit<MemoryRelation, "content_hash"> | MemoryRelation
+): Record<string, JsonValue> {
+  const json: Record<string, JsonValue> = {
+    id: relation.id,
+    from: relation.from,
+    predicate: relation.predicate,
+    to: relation.to,
+    status: relation.status,
+    created_at: relation.created_at,
+    updated_at: relation.updated_at
+  };
+
+  if (relation.confidence !== undefined) {
+    json.confidence = relation.confidence;
+  }
+
+  if (relation.evidence !== undefined) {
+    json.evidence = relation.evidence.map((item) => ({
+      kind: item.kind,
+      id: item.id
+    }));
+  }
+
+  if ("content_hash" in relation) {
+    json.content_hash = relation.content_hash;
+  }
+
+  return json;
 }
 
 async function updateGitignore(
@@ -730,7 +844,7 @@ function countOccurrences(value: string, search: string): number {
 function nextSteps(agentGuidance: AgentGuidanceData): string[] {
   return [
     agentGuidanceNextStep(agentGuidance),
-    "`aictx init` creates starter placeholders only. To seed useful first-run memory, run `aictx suggest --bootstrap --patch > bootstrap-memory.json`, review it, then run `aictx save --file bootstrap-memory.json`, `aictx check`, and `aictx diff`.",
+    "`aictx init` creates linked starter placeholders only. To seed useful first-run memory, run `aictx suggest --bootstrap --patch > bootstrap-memory.json`, review it, then run `aictx save --file bootstrap-memory.json`, `aictx check`, and `aictx diff`.",
     "`aictx init` does not start MCP; configure agent clients that support MCP to launch `aictx-mcp` so agents can use `load_memory` and `save_memory_patch`. A globally launched MCP server can serve this project when tool calls include this project root as `project_root`. Agents can fall back to `aictx load` and `aictx save --stdin` when MCP is unavailable.",
     "Review memory changes in `.aictx/`; in Git projects, use `aictx diff` before committing.",
     "Optional bundled skills are available under `integrations/codex/` and `integrations/claude/`."
