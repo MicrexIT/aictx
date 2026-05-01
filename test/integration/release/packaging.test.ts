@@ -176,6 +176,15 @@ describe("release package", () => {
     expect(aictxHelp.stdout).toContain("Usage: aictx");
     expect(aictxHelp.stdout).toContain("Aictx project memory CLI");
 
+    const initHelp = await expectSuccessfulCommand(
+      installedBin("aictx", installRoot),
+      ["init", "--help"],
+      installRoot
+    );
+
+    expect(initHelp.stderr).toBe("");
+    expect(initHelp.stdout).toContain("--force");
+
     const aictxVersion = await expectSuccessfulCommand(
       installedBin("aictx", installRoot),
       ["--version"],

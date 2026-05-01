@@ -1,7 +1,7 @@
 {
   "body_path": "memory/project.md",
-  "content_hash": "sha256:069e60270ab0fc7d20d2000d1500b3b4c6d357d901a47aca0195d8c0ad43896b",
-  "created_at": "2026-05-01T16:29:56+02:00",
+  "content_hash": "sha256:a4045407e9ee9d5b6c4dcc38e8f59f53a8972f9309d7ac309ea621e4abc15949",
+  "created_at": "2026-05-01T18:44:07+02:00",
   "id": "project.aictx",
   "scope": {
     "branch": null,
@@ -10,14 +10,11 @@
     "task": null
   },
   "source": {
-    "kind": "cli",
-    "task": "Proposed bootstrap memory patch from deterministic repository analysis"
+    "kind": "system"
   },
   "status": "active",
-  "tags": [
-    "project"
-  ],
+  "tags": [],
   "title": "Aictx",
   "type": "project",
-  "updated_at": "2026-05-01T16:46:18+02:00"
+  "updated_at": "2026-05-01T18:44:07+02:00"
 }

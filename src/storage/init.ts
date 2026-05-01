@@ -1,4 +1,4 @@
-import { lstat, mkdir, readFile } from "node:fs/promises";
+import { lstat, mkdir, readdir, readFile, rm } from "node:fs/promises";
 import { basename, join } from "node:path";
 
 import type { Clock } from "../core/clock.js";
@@ -10,7 +10,11 @@ import {
   writeMarkdownAtomic,
   writeTextAtomic
 } from "../core/fs.js";
-import { getCurrentGitBranch, type GitWrapperOptions } from "../core/git.js";
+import {
+  getCurrentGitBranch,
+  getTrackedAictxDirtyFiles,
+  type GitWrapperOptions
+} from "../core/git.js";
 import { generateRelationId, slugify } from "../core/ids.js";
 import { withProjectLock } from "../core/lock.js";
 import { resolveProjectPaths, type ProjectPaths } from "../core/paths.js";
@@ -76,6 +80,7 @@ export interface InitStorageOptions extends GitWrapperOptions {
   cwd: string;
   clock?: Clock;
   agentGuidance?: boolean;
+  force?: boolean;
 }
 
 export type AgentGuidanceTargetStatus = "created" | "updated" | "unchanged" | "skipped";
@@ -149,10 +154,34 @@ async function initializeStorageWithLock(
   clock: Clock,
   options: InitStorageOptions
 ): Promise<Result<InitStorageSuccess>> {
+  if (options.force === true) {
+    const resetResult = await resetAictxRootContentsExceptLock(paths.aictxRoot);
+
+    if (!resetResult.ok) {
+      return resetResult;
+    }
+
+    return createInitialStorage(paths, clock, options);
+  }
+
   if (await isFile(join(paths.aictxRoot, "config.json"))) {
     return existingStorageResult(paths, options);
   }
 
+  const dirtyResult = await rejectTrackedDirtyAictxInit(paths, options);
+
+  if (!dirtyResult.ok) {
+    return dirtyResult;
+  }
+
+  return createInitialStorage(paths, clock, options);
+}
+
+async function createInitialStorage(
+  paths: ProjectPaths,
+  clock: Clock,
+  options: InitStorageOptions
+): Promise<Result<InitStorageSuccess>> {
   const projectSlug = slugify(basename(paths.projectRoot), { fallback: "project" });
   const projectName = humanizeSlug(projectSlug);
   const projectId = `project.${projectSlug}`;
@@ -276,6 +305,12 @@ async function existingStorageResult(
   }
 
   if (!validation.data.valid) {
+    const dirtyResult = await rejectTrackedDirtyAictxInit(paths, options);
+
+    if (!dirtyResult.ok) {
+      return dirtyResult;
+    }
+
     return err(
       aictxError("AICtxAlreadyInitializedInvalid", "Aictx is already initialized but invalid.", {
         issues: validation.data.errors.map((issue) => ({
@@ -316,6 +351,68 @@ async function existingStorageResult(
       INDEX_UNAVAILABLE_WARNING
     ]
   );
+}
+
+async function rejectTrackedDirtyAictxInit(
+  paths: ProjectPaths,
+  options: GitWrapperOptions
+): Promise<Result<void>> {
+  if (!paths.git.available) {
+    return ok(undefined);
+  }
+
+  const dirtyFiles = await getTrackedAictxDirtyFiles(paths.projectRoot, options);
+
+  if (!dirtyFiles.ok) {
+    return dirtyFiles;
+  }
+
+  if (dirtyFiles.data.files.length === 0) {
+    return ok(undefined);
+  }
+
+  return err(
+    aictxError(
+      "AICtxDirtyMemory",
+      "Aictx init would overwrite dirty tracked Aictx memory files. Commit, restore, remove, or rerun with --force to discard existing Aictx state.",
+      {
+        dirty_files: dirtyFiles.data.files,
+        force_hint: "Run `aictx init --force` only if you intend to discard existing Aictx memory state."
+      }
+    )
+  );
+}
+
+async function resetAictxRootContentsExceptLock(aictxRoot: string): Promise<Result<void>> {
+  let entries: string[];
+
+  try {
+    entries = await readdir(aictxRoot);
+  } catch (error) {
+    return err(
+      aictxError("AICtxValidationFailed", "Aictx root could not be read for reset.", {
+        aictxRoot,
+        message: messageFromUnknown(error)
+      })
+    );
+  }
+
+  try {
+    await Promise.all(
+      entries
+        .filter((entry) => entry !== ".lock")
+        .map((entry) => rm(join(aictxRoot, entry), { recursive: true, force: true }))
+    );
+
+    return ok(undefined);
+  } catch (error) {
+    return err(
+      aictxError("AICtxValidationFailed", "Aictx root could not be reset.", {
+        aictxRoot,
+        message: messageFromUnknown(error)
+      })
+    );
+  }
 }
 
 async function validateProjectForInit(

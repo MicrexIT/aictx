@@ -1,1 +1,0 @@
-The concise `aictx init` guidance documents package-manager fallback commands for project-local npm/pnpm installs when `aictx` is not on PATH. Global install remains convenient for CLI and MCP, but local installs are valid when agents use `pnpm exec`, `npm exec`, `./node_modules/.bin/aictx`, or scoped `npx` commands for CLI fallbacks.

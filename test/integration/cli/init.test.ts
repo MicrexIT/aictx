@@ -1,4 +1,4 @@
-import { access, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
+import { access, mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -30,6 +30,30 @@ interface InitSuccessEnvelope {
       commit: string | null;
       dirty: boolean | null;
     };
+  };
+}
+
+interface InitErrorEnvelope {
+  ok: false;
+  error: {
+    code: string;
+    message: string;
+    details?: unknown;
+  };
+}
+
+interface SaveSuccessEnvelope {
+  ok: true;
+  data: {
+    memory_created: string[];
+    memory_updated: string[];
+  };
+}
+
+interface CheckSuccessEnvelope {
+  ok: true;
+  data: {
+    valid: boolean;
   };
 }
 
@@ -168,6 +192,91 @@ describe("aictx init CLI", () => {
     await expect(access(join(projectRoot, "CLAUDE.md"))).rejects.toMatchObject({
       code: "ENOENT"
     });
+  });
+
+  it("requires --force before reinitializing tracked dirty Aictx state", async () => {
+    const repo = await createRepo("force-reset");
+    await writeFile(
+      join(repo, "package.json"),
+      `${JSON.stringify({
+        name: "@example/force-reset",
+        type: "module",
+        packageManager: "pnpm@10.0.0",
+        engines: {
+          node: ">=22"
+        },
+        scripts: {
+          build: "tsc --noEmit",
+          test: "vitest run"
+        },
+        devDependencies: {
+          vitest: "^4.0.0"
+        }
+      })}\n`
+    );
+    await writeFile(join(repo, "tsconfig.json"), "{}\n");
+    await mkdir(join(repo, "src"), { recursive: true });
+    await writeFile(join(repo, "src", "index.ts"), "export const value = 1;\n");
+    await git(repo, ["add", "package.json", "tsconfig.json", "src/index.ts"]);
+    await git(repo, ["commit", "-m", "Add package metadata"]);
+    let output = createCapturedOutput();
+
+    expect(await main(["node", "aictx", "init", "--json"], {
+      ...output.writers,
+      cwd: repo
+    })).toBe(0);
+
+    await git(repo, ["add", ".gitignore", "AGENTS.md", "CLAUDE.md", ".aictx"]);
+    await git(repo, ["commit", "-m", "Initialize Aictx memory"]);
+    await rm(join(repo, ".aictx"), { recursive: true, force: true });
+
+    output = createCapturedOutput();
+    expect(await main(["node", "aictx", "init", "--json"], {
+      ...output.writers,
+      cwd: repo
+    })).not.toBe(0);
+    expect(output.stderr()).toBe("");
+    const errorEnvelope = JSON.parse(output.stdout()) as InitErrorEnvelope;
+    expect(errorEnvelope.error.code).toBe("AICtxDirtyMemory");
+    expect(JSON.stringify(errorEnvelope.error.details)).toContain(".aictx/config.json");
+    expect(errorEnvelope.error.message).toContain("--force");
+
+    output = createCapturedOutput();
+    expect(await main(["node", "aictx", "init", "--force", "--json"], {
+      ...output.writers,
+      cwd: repo
+    })).toBe(0);
+    const forceEnvelope = parseInitSuccessEnvelope(output.stdout());
+    expect(forceEnvelope.data.created).toBe(true);
+    expect(forceEnvelope.data.index_built).toBe(true);
+
+    output = createCapturedOutput();
+    expect(await main(["node", "aictx", "suggest", "--bootstrap", "--patch"], {
+      ...output.writers,
+      cwd: repo
+    })).toBe(0);
+    await writeFile(join(repo, "bootstrap-memory.json"), output.stdout(), "utf8");
+
+    output = createCapturedOutput();
+    expect(await main(["node", "aictx", "save", "--file", "bootstrap-memory.json", "--json"], {
+      ...output.writers,
+      cwd: repo
+    })).toBe(0);
+    const saveEnvelope = JSON.parse(output.stdout()) as SaveSuccessEnvelope;
+    expect(saveEnvelope.data.memory_updated).toEqual(
+      expect.arrayContaining(["architecture.current"])
+    );
+    expect(saveEnvelope.data.memory_created).toEqual(
+      expect.arrayContaining(["workflow.package-scripts", "constraint.node-engine"])
+    );
+
+    output = createCapturedOutput();
+    expect(await main(["node", "aictx", "check", "--json"], {
+      ...output.writers,
+      cwd: repo
+    })).toBe(0);
+    const checkEnvelope = JSON.parse(output.stdout()) as CheckSuccessEnvelope;
+    expect(checkEnvelope.data.valid).toBe(true);
   });
 });
 

@@ -158,7 +158,7 @@ Initialize `.aictx/` inside the current project root.
 Syntax:
 
 ```bash
-aictx init [--no-agent-guidance] [--json]
+aictx init [--no-agent-guidance] [--force] [--json]
 ```
 
 Behavior:
@@ -172,6 +172,8 @@ Behavior:
 * Create JSON schemas.
 * Create empty `events.jsonl`.
 * Create generated directories.
+* If Git is available and tracked `.aictx/` files are dirty while storage is missing or invalid, fail with `AICtxDirtyMemory` unless `--force` is provided.
+* If `--force` is provided, remove existing `.aictx/` contents except the active lock file, then create fresh starter storage.
 * If Git is available, add or recommend `.gitignore` entries for `.aictx/index/`, `.aictx/context/`, `.aictx/exports/`, and `.aictx/.lock`.
 * Create or update marked Aictx guidance sections in `AGENTS.md` and `CLAUDE.md` unless `--no-agent-guidance` is provided.
 * Do not start the MCP server; users must configure their MCP client to launch `aictx-mcp`.
@@ -181,8 +183,10 @@ Behavior:
 
 If `.aictx/` already exists:
 
-* If valid, return success with a warning.
-* If invalid, return `AICtxAlreadyInitializedInvalid`.
+* If valid, return success with a warning unless `--force` is provided.
+* If valid and `--force` is provided, reset `.aictx/` and initialize fresh starter storage.
+* If invalid, return `AICtxAlreadyInitializedInvalid` unless tracked `.aictx/` files are dirty.
+* If invalid and tracked `.aictx/` files are dirty, return `AICtxDirtyMemory` unless `--force` is provided.
 
 Success data:
 

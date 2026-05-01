@@ -60,6 +60,10 @@ export interface ProjectChangedFiles {
   changedFiles: string[];
 }
 
+export interface TrackedAictxDirtyFiles {
+  files: string[];
+}
+
 export interface AictxLogEntry {
   commit: string;
   shortCommit: string;
@@ -177,6 +181,49 @@ export async function getAictxDirtyState(
     files,
     unmergedFiles
   });
+}
+
+export async function getTrackedAictxDirtyFiles(
+  projectRoot: string,
+  options: GitWrapperOptions = {}
+): Promise<Result<TrackedAictxDirtyFiles>> {
+  const dirtyState = await getAictxDirtyState(projectRoot, options);
+
+  if (!dirtyState.ok) {
+    return dirtyState;
+  }
+
+  const trackedFiles = await filterTrackedFiles(projectRoot, dirtyState.data.files, options);
+
+  if (!trackedFiles.ok) {
+    return trackedFiles;
+  }
+
+  return ok({
+    files: trackedFiles.data
+  });
+}
+
+export async function filterTrackedFiles(
+  projectRoot: string,
+  files: readonly string[],
+  options: GitWrapperOptions = {}
+): Promise<Result<string[]>> {
+  const tracked: string[] = [];
+
+  for (const file of files) {
+    const trackedFile = await isTrackedFile(projectRoot, file, options);
+
+    if (!trackedFile.ok) {
+      return trackedFile;
+    }
+
+    if (trackedFile.data) {
+      tracked.push(file);
+    }
+  }
+
+  return ok(tracked);
 }
 
 export async function getAictxDiff(
@@ -471,6 +518,28 @@ function parseLogEntries(stdout: string): AictxLogEntry[] {
         subject
       };
     });
+}
+
+async function isTrackedFile(
+  projectRoot: string,
+  file: string,
+  options: GitWrapperOptions
+): Promise<Result<boolean>> {
+  const result = await runGit(["ls-files", "--error-unmatch", "--", file], projectRoot, options);
+
+  if (!result.ok) {
+    return result;
+  }
+
+  if (result.data.exitCode === 0) {
+    return ok(true);
+  }
+
+  if (result.data.exitCode === 1) {
+    return ok(false);
+  }
+
+  return gitCommandFailed("Git tracked-file detection failed.", result.data);
 }
 
 function normalizeAictxFilePath(filePath: string): Result<string> {

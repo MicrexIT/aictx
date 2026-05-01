@@ -268,6 +268,86 @@ describe("initProject", () => {
     }
   });
 
+  it("resets valid existing storage only when force is true", async () => {
+    const repo = await createRepo("force-valid-reset");
+    const first = await initProject({
+      cwd: repo,
+      clock: createFixedTestClock()
+    });
+
+    expect(first.ok).toBe(true);
+    if (!first.ok) {
+      return;
+    }
+
+    const storage = await readCanonicalStorage(repo);
+    expect(storage.ok).toBe(true);
+    if (!storage.ok) {
+      return;
+    }
+
+    await writeBranchScopedMemory(repo, storage.data.config.project.id, "main");
+
+    const defaultRerun = await initProject({
+      cwd: repo,
+      clock: createFixedTestClock()
+    });
+
+    expect(defaultRerun.ok).toBe(true);
+    if (!defaultRerun.ok) {
+      return;
+    }
+    expect(defaultRerun.data.created).toBe(false);
+    await expect(
+      access(join(repo, ".aictx", "memory", "notes", "branch-note.md"))
+    ).resolves.toBeUndefined();
+
+    const forced = await initProject({
+      cwd: repo,
+      clock: createFixedTestClock(),
+      force: true
+    });
+
+    expect(forced.ok).toBe(true);
+    if (!forced.ok) {
+      return;
+    }
+    expect(forced.data.created).toBe(true);
+    await expect(
+      access(join(repo, ".aictx", "memory", "notes", "branch-note.md"))
+    ).rejects.toMatchObject({
+      code: "ENOENT"
+    });
+
+    const resetStorage = await readCanonicalStorage(repo);
+    expect(resetStorage.ok).toBe(true);
+    if (resetStorage.ok) {
+      expect(resetStorage.data.objects.map((object) => object.sidecar.id).sort()).toEqual([
+        "architecture.current",
+        resetStorage.data.config.project.id
+      ].sort());
+      expect(resetStorage.data.events).toEqual([]);
+    }
+  });
+
+  it("allows untracked first-run Aictx files during init", async () => {
+    const repo = await createRepo("untracked-first-run");
+    await writeProjectFile(repo, ".aictx/scratch.txt", "local scratch\n");
+
+    const result = await initProject({
+      cwd: repo,
+      clock: createFixedTestClock()
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.data.created).toBe(true);
+    }
+    await expect(readFile(join(repo, ".aictx", "scratch.txt"), "utf8")).resolves.toBe(
+      "local scratch\n"
+    );
+  });
+
   it("installs missing agent guidance when valid storage already exists", async () => {
     const projectRoot = await createTempRoot("aictx-init-existing-guidance-");
     const first = await initProject({
@@ -471,6 +551,39 @@ describe("initProject", () => {
       expect(result.error.code).toBe("AICtxAlreadyInitializedInvalid");
       expect(JSON.stringify(result.error.details)).toContain("issues");
     }
+  });
+
+  it("requires force before resetting tracked dirty invalid storage", async () => {
+    const repo = await createRepo("force-invalid-reset");
+    await mkdir(join(repo, ".aictx"), { recursive: true });
+    await writeFile(join(repo, ".aictx", "config.json"), "{bad json");
+    await git(repo, ["add", ".aictx/config.json"]);
+    await git(repo, ["commit", "-m", "Add invalid Aictx storage"]);
+    await writeFile(join(repo, ".aictx", "config.json"), "{still bad json");
+
+    const defaultResult = await initProject({
+      cwd: repo,
+      clock: createFixedTestClock()
+    });
+
+    expect(defaultResult.ok).toBe(false);
+    if (!defaultResult.ok) {
+      expect(defaultResult.error.code).toBe("AICtxDirtyMemory");
+      expect(JSON.stringify(defaultResult.error.details)).toContain(".aictx/config.json");
+    }
+
+    const forced = await initProject({
+      cwd: repo,
+      clock: createFixedTestClock(),
+      force: true
+    });
+
+    expect(forced.ok).toBe(true);
+    if (forced.ok) {
+      expect(forced.data.created).toBe(true);
+    }
+    const validation = await validateProject(repo);
+    expect(validation.valid).toBe(true);
   });
 });
 

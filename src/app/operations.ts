@@ -102,6 +102,7 @@ export interface InitProjectOptions extends GitWrapperOptions {
   cwd: string;
   clock?: Clock;
   agentGuidance?: boolean;
+  force?: boolean;
 }
 
 export interface RebuildIndexOptions extends GitWrapperOptions {
@@ -325,6 +326,7 @@ export async function initProject(
     cwd: options.cwd,
     clock,
     agentGuidance: options.agentGuidance ?? true,
+    force: options.force ?? false,
     runner: options.runner
   });
 

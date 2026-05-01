@@ -20,6 +20,7 @@ export function registerInitCommand(
     .command("init")
     .description("Initialize Aictx memory storage in this project.")
     .option("--no-agent-guidance", "Skip AGENTS.md and CLAUDE.md setup.")
+    .option("--force", "Discard existing Aictx storage and initialize from scratch.")
     .action(async (commandOptions: InitCommandOptions, command: Command) => {
       const result = await initProject(initProjectOptions(options, commandOptions));
       const rendered = renderAppResult(result, {
@@ -42,6 +43,7 @@ export function registerInitCommand(
 
 interface InitCommandOptions {
   agentGuidance?: boolean;
+  force?: boolean;
 }
 
 function initProjectOptions(
@@ -50,7 +52,8 @@ function initProjectOptions(
 ): InitProjectOptions {
   return {
     cwd: options.cwd,
-    agentGuidance: commandOptions.agentGuidance !== false
+    agentGuidance: commandOptions.agentGuidance !== false,
+    force: commandOptions.force === true
   };
 }
 

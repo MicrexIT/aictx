@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 import type { Clock } from "../core/clock.js";
 import { aictxError, type AictxErrorCode } from "../core/errors.js";
 import {
+  filterTrackedFiles,
   getAictxDirtyState,
   type GitWrapperOptions
 } from "../core/git.js";
@@ -13,7 +14,6 @@ import {
   slugify
 } from "../core/ids.js";
 import { err, ok, type Result } from "../core/result.js";
-import { runSubprocess } from "../core/subprocess.js";
 import type {
   Actor,
   Evidence,
@@ -49,6 +49,13 @@ import {
 
 const PATCH_PATH = "<patch>";
 const EVENTS_PATH = ".aictx/events.jsonl";
+const BOOTSTRAP_PATCH_TASK =
+  "Proposed bootstrap memory patch from deterministic repository analysis";
+const BOOTSTRAP_CREATED_OBJECT_IDS = new Set<ObjectId>([
+  "workflow.package-scripts",
+  "constraint.node-engine",
+  "constraint.package-manager"
+]);
 const QUESTION_STATUSES = new Set<ObjectStatus>([
   "active",
   "draft",
@@ -1137,13 +1144,21 @@ async function rejectDirtyTouchedFiles(
     return ok(undefined);
   }
 
-  const trackedDirtyTouchedFiles = await trackedFiles(projectRoot, dirtyTouchedFiles, options);
+  const trackedDirtyTouchedFiles = await filterTrackedFiles(
+    projectRoot,
+    dirtyTouchedFiles,
+    options
+  );
 
   if (!trackedDirtyTouchedFiles.ok) {
     return trackedDirtyTouchedFiles;
   }
 
   if (trackedDirtyTouchedFiles.data.length === 0) {
+    return ok(undefined);
+  }
+
+  if (isStarterBootstrapPatch(state)) {
     return ok(undefined);
   }
 
@@ -1155,56 +1170,57 @@ async function rejectDirtyTouchedFiles(
   );
 }
 
-async function trackedFiles(
-  projectRoot: string,
-  files: readonly string[],
-  options: GitWrapperOptions
-): Promise<Result<string[]>> {
-  const tracked: string[] = [];
-
-  for (const file of files) {
-    const trackedFile = await isTrackedFile(projectRoot, file, options);
-
-    if (!trackedFile.ok) {
-      return trackedFile;
-    }
-
-    if (trackedFile.data) {
-      tracked.push(file);
-    }
+function isStarterBootstrapPatch(state: PlanningState): boolean {
+  if (state.source.kind !== "cli" || state.source.task !== BOOTSTRAP_PATCH_TASK) {
+    return false;
   }
 
-  return ok(tracked);
+  if (!isInitStarterSnapshot(state)) {
+    return false;
+  }
+
+  const projectId = state.snapshot.config.project.id;
+
+  return state.normalizedChanges.every((change) => {
+    switch (change.op) {
+      case "update_object":
+        return change.id === projectId || change.id === "architecture.current";
+      case "create_object":
+        return BOOTSTRAP_CREATED_OBJECT_IDS.has(change.id);
+      case "create_relation":
+        return (
+          change.from === projectId &&
+          change.predicate === "related_to" &&
+          change.to === "architecture.current"
+        );
+      case "mark_stale":
+      case "supersede_object":
+      case "delete_object":
+      case "update_relation":
+      case "delete_relation":
+        return false;
+    }
+  });
 }
 
-async function isTrackedFile(
-  projectRoot: string,
-  file: string,
-  options: GitWrapperOptions
-): Promise<Result<boolean>> {
-  const result = await runSubprocess("git", ["ls-files", "--error-unmatch", "--", file], {
-    cwd: projectRoot,
-    ...(options.runner === undefined ? {} : { runner: options.runner })
-  });
+function isInitStarterSnapshot(state: PlanningState): boolean {
+  const projectId = state.snapshot.config.project.id;
+  const projectName = state.snapshot.config.project.name;
+  const expectedProjectBody = `# ${projectName}\n\nProject-level memory for ${projectName}.\n`;
+  const expectedArchitectureBody = "# Current Architecture\n\nArchitecture memory starts here.\n";
 
-  if (!result.ok) {
-    return err(result.error);
+  if (state.snapshot.events.length !== 0 || state.snapshot.objects.length !== 2) {
+    return false;
   }
 
-  if (result.data.exitCode === 0) {
-    return ok(true);
-  }
+  const projectObject = state.snapshot.objects.find((object) => object.sidecar.id === projectId);
+  const architectureObject = state.snapshot.objects.find(
+    (object) => object.sidecar.id === "architecture.current"
+  );
 
-  if (result.data.exitCode === 1) {
-    return ok(false);
-  }
-
-  return err(
-    aictxError("AICtxGitOperationFailed", "Git tracked-file detection failed.", {
-      file,
-      exit_code: result.data.exitCode,
-      stderr: result.data.stderr
-    })
+  return (
+    projectObject?.body === expectedProjectBody &&
+    architectureObject?.body === expectedArchitectureBody
   );
 }
 

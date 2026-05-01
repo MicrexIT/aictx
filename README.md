@@ -147,6 +147,8 @@ Initialize memory storage inside an existing project:
 
 ```bash
 aictx init
+# only when intentionally discarding existing Aictx storage:
+aictx init --force
 ```
 
 If `aictx` is not on `PATH`, use a project-local command instead:
@@ -167,6 +169,8 @@ By default, init also creates or updates marked Aictx sections in `AGENTS.md`
 and `CLAUDE.md` so coding agents are told to load memory before non-trivial
 work and save durable memory after meaningful work. Use
 `aictx init --no-agent-guidance` to skip those repo instruction files.
+Use `aictx init --force` only when you explicitly want to discard existing
+Aictx storage and start from scratch.
 
 After init, the viewer will show linked starter project and architecture
 placeholders until richer memory is seeded.
@@ -186,6 +190,29 @@ aictx diff
 bootstrap patch remains reviewable and is not saved until `aictx save` applies
 it. Agent guidance treats setup, onboarding, and "why is memory empty?" requests
 as enough context to run this bootstrap workflow proactively.
+
+Copy and paste this prompt into an AI coding agent to set up a repository:
+
+```text
+Set up Aictx memory for this repository.
+
+If `aictx` is not installed globally, install it first with:
+npm install -g @aictx/memory
+
+Then run the initial setup:
+aictx init
+aictx suggest --bootstrap --patch > bootstrap-memory.json
+
+Review `bootstrap-memory.json` for deterministic, non-sensitive facts. If it looks correct, apply it:
+aictx save --file bootstrap-memory.json
+aictx check
+aictx diff
+
+Start the local viewer:
+aictx view --open
+
+If this repository previously had Aictx memory and I explicitly want to discard it and start from scratch, use `aictx init --force` instead of `aictx init`. Do not manually edit `.aictx/`; report any Aictx errors and the viewer URL.
+```
 
 Before a task, load relevant memory:
 
@@ -256,13 +283,16 @@ Initializes `.aictx/` in the current project.
 
 ```bash
 aictx init
+# only when intentionally discarding existing Aictx storage:
+aictx init --force
 ```
 
 This creates the canonical storage layout, copies the JSON schemas Aictx uses
 for validation, builds the generated index when available, and may update
 `.gitignore` for rebuildable state. It does not start the MCP server. Run this
 once per project, then configure your MCP client separately if you want MCP
-tools.
+tools. Use `--force` only to discard existing Aictx storage and initialize a
+fresh starter state.
 
 #### `aictx check`
 
