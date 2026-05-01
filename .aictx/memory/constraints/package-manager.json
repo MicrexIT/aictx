@@ -1,8 +1,8 @@
 {
-  "body_path": "memory/project.md",
-  "content_hash": "sha256:8767a75390593ba606a2decd05ef89d4bbe2442b2336c8ac0194dac31c2476dc",
-  "created_at": "2026-05-01T18:44:07+02:00",
-  "id": "project.aictx",
+  "body_path": "memory/constraints/package-manager.md",
+  "content_hash": "sha256:60849f75417524b13494980fc95da2784587ed503660f2f61ce2e9f0d39a1396",
+  "created_at": "2026-05-01T20:44:56+02:00",
+  "id": "constraint.package-manager",
   "scope": {
     "branch": null,
     "kind": "project",
@@ -15,9 +15,10 @@
   },
   "status": "active",
   "tags": [
-    "project"
+    "pnpm",
+    "dependencies"
   ],
-  "title": "Aictx",
-  "type": "project",
+  "title": "Package manager",
+  "type": "constraint",
   "updated_at": "2026-05-01T20:44:56+02:00"
 }

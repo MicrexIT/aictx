@@ -265,6 +265,38 @@ describe("planMemoryPatch", () => {
     }
   });
 
+  it("allows dirty tracked events history because saves append to it", async () => {
+    const projectRoot = await createPatchProject();
+
+    const result = await planMemoryPatch({
+      projectRoot,
+      patch: {
+        source: {
+          kind: "agent"
+        },
+        changes: [
+          {
+            op: "update_object",
+            id: "decision.billing-retries",
+            title: "Billing retries run in the worker"
+          }
+        ]
+      },
+      git: dirtyGit,
+      clock: createFixedTestClock(),
+      runner: createGitStatusRunner(
+        [" M .aictx/events.jsonl", ""].join("\n"),
+        new Set([".aictx/events.jsonl"])
+      )
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.data.touchedFiles).toContain(".aictx/events.jsonl");
+      expect(result.data.events_appended).toBe(1);
+    }
+  });
+
   it("allows untracked first-run Aictx files to be updated before the initial memory commit", async () => {
     const projectRoot = await createPatchProject();
 

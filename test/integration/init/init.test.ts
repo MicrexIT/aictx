@@ -78,18 +78,24 @@ describe("initProject", () => {
     await expect(readFile(join(repo, ".gitignore"), "utf8")).resolves.toContain(".aictx/.lock");
     await expect(access(join(repo, ".aictx", "memory", "gotchas"))).resolves.toBeUndefined();
     await expect(access(join(repo, ".aictx", "memory", "workflows"))).resolves.toBeUndefined();
-    await expect(readFile(join(repo, "AGENTS.md"), "utf8")).resolves.toContain(
-      "After meaningful work, autonomously save durable project knowledge:"
-    );
-    await expect(readFile(join(repo, "CLAUDE.md"), "utf8")).resolves.toContain(
-      "save_memory_patch({ patch: { source, changes } })"
-    );
-    await expect(readFile(join(repo, "AGENTS.md"), "utf8")).resolves.not.toMatch(
-      /install .*skill/i
-    );
-    await expect(readFile(join(repo, "CLAUDE.md"), "utf8")).resolves.not.toMatch(
-      /install .*skill/i
-    );
+    const agentsGuidance = await readFile(join(repo, "AGENTS.md"), "utf8");
+    const claudeGuidance = await readFile(join(repo, "CLAUDE.md"), "utf8");
+    for (const guidance of [agentsGuidance, claudeGuidance]) {
+      expect(guidance).toContain(
+        "After meaningful work, autonomously save durable project knowledge:"
+      );
+      expect(guidance).toContain("save_memory_patch({ patch: { source, changes } })");
+      expect(guidance).toContain("then run `aictx check`. In Git projects, also run `aictx diff`");
+      expect(guidance).toContain("Save only durable knowledge future agents should know");
+      expect(guidance).toContain("one durable claim per object");
+      expect(guidance).toContain("update, mark stale, or supersede");
+      expect(guidance).toContain("Save nothing when the work produced no durable future value");
+      expect(guidance).toContain("Do not create `history` or `task-note` memory objects");
+      expect(guidance).toContain("Before finalizing, say whether Aictx memory changed");
+      expect(guidance).toContain("If it changed, suggest reviewing `.aictx/` changes");
+      expect(guidance).toContain("use `diff_memory` or `aictx diff`");
+      expect(guidance).not.toMatch(/install .*skill/i);
+    }
     expect(result.data.agent_guidance).toEqual({
       enabled: true,
       targets: [
@@ -143,12 +149,14 @@ describe("initProject", () => {
     expect(result.data.git_available).toBe(false);
     expect(result.data.gitignore_updated).toBe(false);
     expect(result.data.index_built).toBe(true);
-    expect(result.data.next_steps.join("\n")).toContain("aictx load");
-    expect(result.data.next_steps.join("\n")).toContain("aictx suggest --bootstrap --patch");
-    expect(result.data.next_steps.join("\n")).toContain("aictx save --file bootstrap-memory.json");
-    expect(result.data.next_steps.join("\n")).toContain("save_memory_patch");
-    expect(result.data.next_steps.join("\n")).toContain("aictx diff");
-    expect(result.data.next_steps.join("\n")).toContain("integrations/codex");
+    const nextSteps = result.data.next_steps.join("\n");
+    expect(nextSteps).toContain("aictx load");
+    expect(nextSteps).toContain("aictx suggest --bootstrap --patch");
+    expect(nextSteps).toContain("aictx save --file bootstrap-memory.json");
+    expect(nextSteps).toContain("save_memory_patch");
+    expect(nextSteps).toContain("In Git projects, run `aictx diff` before committing memory changes.");
+    expect(nextSteps).not.toContain("`aictx check`, and `aictx diff`");
+    expect(nextSteps).toContain("integrations/codex");
 
     const validation = await validateProject(projectRoot);
     expect(validation).toEqual({

@@ -1,0 +1,25 @@
+{
+  "body_path": "memory/decisions/append-safe-dirty-events-saves.md",
+  "content_hash": "sha256:434cd34e3255a3b4da0e5891492bfd1628c7a633b1593d9a375e54ae36a30918",
+  "created_at": "2026-05-01T22:43:29+02:00",
+  "id": "decision.append-safe-dirty-events-saves",
+  "scope": {
+    "branch": null,
+    "kind": "project",
+    "project": "project.aictx",
+    "task": null
+  },
+  "source": {
+    "kind": "agent",
+    "task": "Allow append-safe saves when events history is dirty"
+  },
+  "status": "active",
+  "tags": [
+    "save",
+    "events",
+    "dirty-memory"
+  ],
+  "title": "Dirty events history does not block saves",
+  "type": "decision",
+  "updated_at": "2026-05-01T22:43:29+02:00"
+}

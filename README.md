@@ -197,7 +197,7 @@ Copy and paste this prompt into an AI coding agent to set up a repository:
 Set up Aictx memory for this repository.
 
 If `aictx` is not installed globally, install it first with:
-npm install -g @aictx/memory
+npm install -g @aictx/memory@latest
 
 Then run the initial setup:
 aictx init

@@ -1,8 +1,8 @@
 {
-  "body_path": "memory/project.md",
-  "content_hash": "sha256:8767a75390593ba606a2decd05ef89d4bbe2442b2336c8ac0194dac31c2476dc",
-  "created_at": "2026-05-01T18:44:07+02:00",
-  "id": "project.aictx",
+  "body_path": "memory/workflows/package-scripts.md",
+  "content_hash": "sha256:4c4696d14f849b40fefd08a9b51b1e9b79a65241b40b4b8d2e37eca218c11cc2",
+  "created_at": "2026-05-01T20:44:56+02:00",
+  "id": "workflow.package-scripts",
   "scope": {
     "branch": null,
     "kind": "project",
@@ -15,9 +15,10 @@
   },
   "status": "active",
   "tags": [
-    "project"
+    "package",
+    "workflow"
   ],
-  "title": "Aictx",
-  "type": "project",
+  "title": "Package scripts",
+  "type": "workflow",
   "updated_at": "2026-05-01T20:44:56+02:00"
 }

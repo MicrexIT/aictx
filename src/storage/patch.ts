@@ -1154,7 +1154,11 @@ async function rejectDirtyTouchedFiles(
     return trackedDirtyTouchedFiles;
   }
 
-  if (trackedDirtyTouchedFiles.data.length === 0) {
+  const trackedDirtyOverwriteFiles = trackedDirtyTouchedFiles.data.filter(
+    (file) => !isAppendOnlyDirtyTouch(state, file)
+  );
+
+  if (trackedDirtyOverwriteFiles.length === 0) {
     return ok(undefined);
   }
 
@@ -1164,9 +1168,18 @@ async function rejectDirtyTouchedFiles(
 
   return err(
     aictxError("AICtxDirtyMemory", "Patch would overwrite dirty Aictx memory files.", {
-      dirty_files: trackedDirtyTouchedFiles.data,
+      dirty_files: trackedDirtyOverwriteFiles,
       touched_files: sortedValues(state.touchedFiles)
     })
+  );
+}
+
+function isAppendOnlyDirtyTouch(state: PlanningState, path: string): boolean {
+  return (
+    path === EVENTS_PATH &&
+    state.eventAppends.some((event) => event.path === path) &&
+    state.fileWrites.every((write) => write.path !== path) &&
+    state.fileDeletes.every((deletion) => deletion.path !== path)
   );
 }
 

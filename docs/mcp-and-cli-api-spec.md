@@ -221,7 +221,7 @@ Success data:
   },
   "next_steps": [
     "Agents are now instructed through `AGENTS.md` and `CLAUDE.md` to load and save Aictx memory.",
-    "`aictx init` creates linked starter placeholders only. To seed useful first-run memory, run `aictx suggest --bootstrap --patch > bootstrap-memory.json`, review it, then run `aictx save --file bootstrap-memory.json`, `aictx check`, and `aictx diff`.",
+    "`aictx init` creates linked starter placeholders only. To seed useful first-run memory, run `aictx suggest --bootstrap --patch > bootstrap-memory.json`, review it, then run `aictx save --file bootstrap-memory.json` and `aictx check`. In Git projects, run `aictx diff` before committing memory changes.",
     "`aictx init` does not start MCP; configure agent clients that support MCP to launch `aictx-mcp` so agents can use `load_memory` and `save_memory_patch`. A globally launched MCP server can serve this project when tool calls include this project root as `project_root`. Agents can fall back to `aictx load` and `aictx save --stdin` when MCP is unavailable.",
     "Review memory changes in `.aictx/`; in Git projects, use `aictx diff` before committing.",
     "Optional bundled skills are available under `integrations/codex/` and `integrations/claude/`."
@@ -321,7 +321,7 @@ Behavior:
 * Validate the patch against `patch.schema.json`.
 * Reject writes if `.aictx/` contains conflict markers.
 * When Git is available, reject writes if `.aictx/` contains unresolved Git conflicts.
-* When Git is available, reject writes if the patch would overwrite modified memory files that are already dirty, unless a future explicit force option is added.
+* When Git is available, reject writes if the patch would overwrite modified memory files that are already dirty; valid dirty `events.jsonl` is allowed because saves append to it.
 * Apply the same write path as MCP `save_memory_patch`.
 * Append semantic events to `events.jsonl`.
 * Update hashes.
@@ -892,7 +892,7 @@ Behavior:
 * Must not commit.
 * Must reject writes on unresolved `.aictx/` conflict markers.
 * When Git is available, must reject writes on unresolved `.aictx/` Git conflicts.
-* When Git is available, must reject writes that would overwrite dirty files touched by the patch.
+* When Git is available, must reject writes that would overwrite dirty files touched by the patch; valid dirty `events.jsonl` is allowed because saves append to it.
 
 Output data:
 
@@ -1246,7 +1246,7 @@ Rules:
 * When Git is available, `load_memory` and `search_memory` may run when `.aictx/` is dirty.
 * `save_memory_patch` must reject writes when `.aictx/` has conflict markers.
 * When Git is available, `save_memory_patch` must reject writes when `.aictx/` has unresolved Git conflicts.
-* When Git is available, `save_memory_patch` must reject writes that would overwrite dirty files touched by the patch.
+* When Git is available, `save_memory_patch` must reject writes that would overwrite dirty files touched by the patch; valid dirty `events.jsonl` is allowed because saves append to it.
 * When Git is available, `diff_memory` must show only `.aictx/` changes.
 * When Git is available, `restore` and `rewind` must refuse to run when `.aictx/` is dirty.
 * No command or MCP tool may run `git commit`.

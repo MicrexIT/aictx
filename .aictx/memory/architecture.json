@@ -1,6 +1,6 @@
 {
   "body_path": "memory/architecture.md",
-  "content_hash": "sha256:5512cfdac569b878ce8210faa97ade5d50e2da8bc1b3f334e3d1fad4eb843ca1",
+  "content_hash": "sha256:19614feb73a5e434d9a0ab4193fb1866aedefdddf83b3f71d5f7acc8e5fcfbdc",
   "created_at": "2026-05-01T18:44:07+02:00",
   "id": "architecture.current",
   "scope": {
@@ -10,11 +10,14 @@
     "task": null
   },
   "source": {
-    "kind": "system"
+    "kind": "cli",
+    "task": "Proposed bootstrap memory patch from deterministic repository analysis"
   },
   "status": "active",
-  "tags": [],
+  "tags": [
+    "architecture"
+  ],
   "title": "Current Architecture",
   "type": "architecture",
-  "updated_at": "2026-05-01T18:44:07+02:00"
+  "updated_at": "2026-05-01T20:44:56+02:00"
 }

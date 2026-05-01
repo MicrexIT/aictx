@@ -108,16 +108,17 @@ aictx suggest --bootstrap --patch > bootstrap-memory.json
 # review or edit bootstrap-memory.json
 aictx save --file bootstrap-memory.json
 aictx check
-aictx diff
 ```
+
+In Git projects, also run `aictx diff` to review the `.aictx/` changes.
 
 The bootstrap patch command is read-only for canonical memory and only writes the redirected draft file. Review the proposed patch yourself and apply it through `aictx save`; users should not have to hand-write bootstrap JSON. Use `aictx audit --json` to find deterministic memory hygiene issues.
 
 MCP exposes exactly `load_memory`, `search_memory`, `save_memory_patch`, and `diff_memory` in v1.
 
-Before finalizing, tell the user whether Aictx memory changed and suggest reviewing `.aictx/` changes.
+Before finalizing, tell the user whether Aictx memory changed. If it changed, suggest reviewing `.aictx/` changes.
 
-In Git projects, suggest:
+When Aictx memory changed in a Git project, suggest:
 
 ```bash
 aictx diff

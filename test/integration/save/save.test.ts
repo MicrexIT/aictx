@@ -152,6 +152,29 @@ describe("saveMemoryPatch", () => {
     await expect(readCanonicalSnapshot(projectRoot)).resolves.toEqual(before);
   });
 
+  it("rejects invalid events history before appending new save events", async () => {
+    const projectRoot = await createInitializedProject("aictx-save-invalid-events-");
+    const invalidEvents = "{bad json\n";
+    await writeFile(join(projectRoot, ".aictx", "events.jsonl"), invalidEvents, "utf8");
+
+    const result = await saveMemoryPatch({
+      cwd: projectRoot,
+      clock: createFixedTestClock(FIXED_TIMESTAMP_NEXT_MINUTE),
+      patch: createNotePatch("Blocked by invalid events", "This should not be written.")
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.code).toBe("AICtxInvalidJsonl");
+    }
+    await expect(
+      access(join(projectRoot, ".aictx", "memory", "notes", "blocked-by-invalid-events.md"))
+    ).rejects.toMatchObject({ code: "ENOENT" });
+    await expect(readFile(join(projectRoot, ".aictx", "events.jsonl"), "utf8")).resolves.toBe(
+      invalidEvents
+    );
+  });
+
   it("rejects block-level secrets in patches without leaking the secret", async () => {
     const projectRoot = await createInitializedProject("aictx-save-secret-");
     const before = await readCanonicalSnapshot(projectRoot);
@@ -205,6 +228,42 @@ describe("saveMemoryPatch", () => {
     expect(status).toContain(".aictx/events.jsonl");
     expect(status).toContain(".aictx/memory/notes/git-save-note.md");
     expect(status).toContain(".aictx/memory/notes/git-save-note.json");
+  });
+
+  it("appends to valid dirty tracked events history during a Git-backed save", async () => {
+    const repo = await createRepo("aictx-save-dirty-events-");
+    const initialized = await initProject({
+      cwd: repo,
+      clock: createFixedTestClock(FIXED_TIMESTAMP)
+    });
+    expect(initialized.ok).toBe(true);
+    await git(repo, ["add", ".gitignore", ".aictx"]);
+    await git(repo, ["commit", "-m", "Initialize aictx"]);
+    const priorEvent =
+      '{"actor":"agent","event":"memory.updated","id":"architecture.current","timestamp":"2026-04-25T14:00:00+02:00"}\n';
+    await writeFile(join(repo, ".aictx", "events.jsonl"), priorEvent, "utf8");
+
+    const result = await saveMemoryPatch({
+      cwd: repo,
+      clock: createFixedTestClock(FIXED_TIMESTAMP_NEXT_MINUTE),
+      patch: createNotePatch("Dirty events save note", "Save should append after prior events.")
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+
+    expect(result.data).toMatchObject({
+      memory_created: ["note.dirty-events-save-note"],
+      events_appended: 1
+    });
+    const events = await readFile(join(repo, ".aictx", "events.jsonl"), "utf8");
+    expect(events).toContain(priorEvent.trim());
+    expect(events).toContain('"id":"note.dirty-events-save-note"');
+    expect(events.indexOf(priorEvent.trim())).toBeLessThan(
+      events.indexOf('"id":"note.dirty-events-save-note"')
+    );
   });
 });
 
