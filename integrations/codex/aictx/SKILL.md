@@ -106,6 +106,8 @@ Use `aictx suggest --from-diff --json` when current code changes need a memory r
 
 Use `aictx suggest --after-task "<task summary>" --json` at the end of meaningful work when you want a save/no-save review packet. The packet is read-only and packages changed files, related memory, possible stale candidates, recommended object types, recommended facets, and a save decision checklist.
 
+During setup or onboarding, inspect explicit product features and capabilities from current repo evidence such as README feature lists, product docs, route/page files, UI entrypoints, commands, or stable workflows. Save supported current features as `concept` memory with `facets.category: "product-feature"`; do not invent features from weak signals.
+
 If loaded memory only contains the init-created project and architecture placeholders, treat Aictx as needing first-run seeding. For setup, onboarding, or "why is memory empty?" requests, run the bootstrap workflow proactively instead of waiting for the user to know the `bootstrap` term:
 
 ```bash
@@ -150,6 +152,7 @@ Save durable project knowledge, such as:
 * Operational constraints
 * Gotchas and known failure modes
 * Repeated project workflows
+* Current product features and capabilities
 * Important facts discovered during debugging
 * Open questions that affect future work
 * Superseded or stale memory when old knowledge becomes wrong
@@ -207,7 +210,7 @@ Keep patches small and reviewable. Prefer one or a few focused memory changes ov
 
 V1 object types are `project`, `architecture`, `decision`, `constraint`, `question`, `fact`, `gotcha`, `workflow`, `note`, and `concept`.
 
-Use `gotcha` for known failure modes and traps. Use `workflow` for repeated project procedures. Do not create `history` or `task-note` object types; use Git/events/statuses for history and branch/task scope for temporary context.
+Use `gotcha` for known failure modes and traps. Use `workflow` for repeated project procedures. Do not create `history`, `task-note`, or `feature` object types; use Git/events/statuses for history, branch/task scope for temporary context, and `concept` with `facets.category: "product-feature"` for product capabilities.
 
 Schema-backed memory can include `facets` and object-level `evidence`.
 
@@ -218,6 +221,7 @@ Use facets to make broad object types retrieval-friendly without inventing new o
 * `stack`
 * `convention`
 * `file-layout`
+* `product-feature`
 * `testing`
 * `decision-rationale`
 * `abandoned-attempt`
@@ -230,6 +234,8 @@ Use facets to make broad object types retrieval-friendly without inventing new o
 Use `facets.applies_to` for relevant files, directories, subsystems, commands, or config names. Use `facets.load_modes` only when a memory is especially relevant to `coding`, `debugging`, `review`, `architecture`, or `onboarding`.
 
 Use object-level `evidence` for the current proof behind durable claims, such as `{ "kind": "file", "id": "src/billing/webhook.ts" }`, `{ "kind": "commit", "id": "abc123" }`, `{ "kind": "memory", "id": "decision.billing-retries" }`, `{ "kind": "relation", "id": "rel.example" }`, or `{ "kind": "task", "id": "Fix Stripe webhook retries" }`.
+
+Represent product features as `type: "concept"` plus `facets.category: "product-feature"`. Use tags such as `feature`, `product`, and domain-specific terms; use `facets.applies_to` for relevant routes, UI modules, commands, docs, or subsystems. Keep current features `active`, use `mark_stale` for removed features, and use `supersede_object` when one feature replaces another.
 
 Represent tried-and-abandoned approaches as active memory with `facets.category: "abandoned-attempt"` when future agents should avoid retrying them. Use `stale` or `superseded` only when the memory itself is no longer valid.
 

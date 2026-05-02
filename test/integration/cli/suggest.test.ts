@@ -39,6 +39,7 @@ interface SuggestSuccessEnvelope {
     related_memory_ids: string[];
     possible_stale_ids: string[];
     recommended_memory: string[];
+    recommended_facets?: string[];
     agent_checklist: string[];
   };
   warnings: string[];
@@ -327,6 +328,41 @@ describe("aictx suggest CLI", () => {
     expect(envelope.data.check.valid).toBe(true);
   });
 
+  it("applies explicit README product features as product-feature concepts during setup", async () => {
+    const repo = await createProductFeatureBootstrapGitProject(
+      "aictx-cli-setup-product-features-"
+    );
+
+    const output = await runCli(["node", "aictx", "setup", "--apply", "--json"], repo);
+
+    expect(output.exitCode).toBe(0);
+    expect(output.stderr).toBe("");
+    const envelope = JSON.parse(output.stdout) as SetupSuccessEnvelope;
+    expect(envelope.ok).toBe(true);
+    expect(envelope.data.bootstrap_patch_applied).toBe(true);
+    expect(envelope.data.save?.memory_created).toEqual(
+      expect.arrayContaining(["concept.feature-customer-dashboard"])
+    );
+
+    const storage = await readCanonicalStorage(repo);
+    expect(storage.ok).toBe(true);
+    if (!storage.ok) {
+      return;
+    }
+
+    const feature = storage.data.objects.find(
+      (object) => object.sidecar.id === "concept.feature-customer-dashboard"
+    );
+    expect(feature?.sidecar.type).toBe("concept");
+    expect(feature?.sidecar.facets).toEqual({
+      category: "product-feature",
+      applies_to: ["README.md"],
+      load_modes: ["coding", "onboarding"]
+    });
+    expect(feature?.sidecar.evidence).toEqual([{ kind: "file", id: "README.md" }]);
+    expect(envelope.data.check.valid).toBe(true);
+  });
+
   it("prints a setup review summary without applying the bootstrap patch", async () => {
     const repo = await createBootstrapPatchGitProject("aictx-cli-setup-review-");
 
@@ -525,6 +561,45 @@ async function createBootstrapPatchGitProject(prefix: string): Promise<string> {
   await writeProjectFile(repo, "tsconfig.json", "{}\n");
   await writeProjectFile(repo, "src/index.ts", "export const value = 1;\n");
   await writeProjectFile(repo, "test/index.test.ts", "import { it } from 'vitest';\n");
+  await git(repo, ["add", "."]);
+  await git(repo, ["commit", "-m", "Initial project files"]);
+
+  const output = await runCli(["node", "aictx", "init", "--json"], repo);
+
+  expect(output.exitCode).toBe(0);
+  expect(output.stderr).toBe("");
+
+  return repo;
+}
+
+async function createProductFeatureBootstrapGitProject(prefix: string): Promise<string> {
+  const repo = await createTempRoot(prefix);
+  await git(repo, ["init", "--initial-branch=main"]);
+  await git(repo, ["config", "user.email", "test@example.com"]);
+  await git(repo, ["config", "user.name", "Aictx Test"]);
+  await writeProjectFile(
+    repo,
+    "README.md",
+    [
+      "# Billing API",
+      "",
+      "Handles recurring billing and webhook processing for Stripe.",
+      "",
+      "## Features",
+      "",
+      "- Customer dashboard: Shows subscription status and invoices.",
+      ""
+    ].join("\n")
+  );
+  await writeJsonProjectFile(repo, "package.json", {
+    name: "@example/billing-api",
+    description: "Billing API for Stripe webhook processing.",
+    type: "module",
+    scripts: {
+      test: "vitest run"
+    }
+  });
+  await writeProjectFile(repo, "src/index.ts", "export const value = 1;\n");
   await git(repo, ["add", "."]);
   await git(repo, ["commit", "-m", "Initial project files"]);
 

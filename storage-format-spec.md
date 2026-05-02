@@ -375,6 +375,7 @@ V2 facet categories:
 * `stack`
 * `convention`
 * `file-layout`
+* `product-feature`
 * `testing`
 * `decision-rationale`
 * `abandoned-attempt`
@@ -387,6 +388,8 @@ V2 facet categories:
 Rules:
 
 * Use facets instead of adding narrower object types.
+* Represent current product capabilities as `concept` objects with `facets.category: "product-feature"`.
+* Use `mark_stale` for removed product features and `supersede_object` when a new feature replaces an older one.
 * Represent tried-and-abandoned approaches as active memory with `facets.category: "abandoned-attempt"`.
 * Use `stale` or `superseded` only when the memory object itself is no longer valid.
 * Leave `evidence` empty during conservative migrations rather than inventing support.

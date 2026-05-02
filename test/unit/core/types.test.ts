@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   ACTORS,
   EVENT_TYPES,
+  FACET_CATEGORIES,
   OBJECT_TYPES,
   PATCH_OPERATIONS,
   PREDICATES,
@@ -22,6 +23,25 @@ describe("core domain type constants", () => {
       "workflow",
       "note",
       "concept"
+    ]);
+  });
+
+  it("exports facet categories from the storage spec", () => {
+    expect(FACET_CATEGORIES).toEqual([
+      "project-description",
+      "architecture",
+      "stack",
+      "convention",
+      "file-layout",
+      "product-feature",
+      "testing",
+      "decision-rationale",
+      "abandoned-attempt",
+      "workflow",
+      "gotcha",
+      "debugging-fact",
+      "concept",
+      "open-question"
     ]);
   });
 

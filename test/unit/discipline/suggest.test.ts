@@ -177,7 +177,9 @@ describe("suggest discipline packets", () => {
       "gotcha",
       "decision"
     ]);
-    expect(packet.agent_checklist).toHaveLength(5);
+    expect(packet.agent_checklist).toContain(
+      "During setup, capture explicit current product features as concept memory with the product-feature facet; mark removed or replaced features stale or superseded."
+    );
   });
 
   it("builds after-task packets with recommended facets and save/no-save checklist", () => {
@@ -217,6 +219,25 @@ describe("suggest discipline packets", () => {
     expect(packet.save_decision_checklist).toContain(
       "Save memory only when the task produced durable future value."
     );
+  });
+
+  it("recommends concept memory and product-feature facets for feature work", () => {
+    const storage = storageSnapshot({
+      objects: [],
+      relations: []
+    });
+
+    const packet = buildSuggestAfterTaskPacket({
+      task: "Add a customer dashboard product feature",
+      changedFiles: ["app/dashboard/page.tsx"],
+      storage
+    });
+
+    expect(packet.recommended_memory).toContain("concept");
+    expect(packet.recommended_facets).toContain("product-feature");
+    expect(packet.recommended_evidence).toEqual([
+      { kind: "file", id: "app/dashboard/page.tsx" }
+    ]);
   });
 
   it("builds a conservative schema-valid bootstrap patch from deterministic evidence", async () => {
@@ -291,6 +312,67 @@ describe("suggest discipline packets", () => {
         expect.objectContaining({ op: "create_object", id: "constraint.package-manager" })
       ])
     );
+    const validators = await compileProjectSchemas(projectRoot);
+    expect(validators.ok).toBe(true);
+    if (validators.ok && proposal.patch !== null) {
+      expect(validatePatch(validators.data, proposal.patch).valid).toBe(true);
+    }
+  });
+
+  it("creates product-feature concept memory from explicit README feature bullets", async () => {
+    const projectRoot = await createTempRoot("aictx-discipline-bootstrap-features-");
+    await writeProjectFile(
+      projectRoot,
+      "README.md",
+      [
+        "# Billing API",
+        "",
+        "Handles recurring billing for Stripe.",
+        "",
+        "## Features",
+        "",
+        "- Customer dashboard: Shows subscription status and invoices.",
+        "- Webhook event log for support teams.",
+        ""
+      ].join("\n")
+    );
+    await writeBundledSchemas(projectRoot);
+    const storage = storageSnapshot({
+      objects: [
+        initialProjectObject("project.billing-api", "Billing API"),
+        initialArchitectureObject("project.billing-api")
+      ],
+      relations: [projectArchitectureRelation("project.billing-api")],
+      projectId: "project.billing-api",
+      projectName: "Billing API"
+    });
+
+    const proposal = await buildSuggestBootstrapPatchProposal({
+      projectRoot,
+      storage
+    });
+
+    expect(proposal.proposed).toBe(true);
+    expect(proposal.packet.recommended_memory).toContain("concept");
+    expect(proposal.packet.recommended_facets).toEqual(["product-feature"]);
+    expect(proposal.patch?.changes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          op: "create_object",
+          id: "concept.feature-customer-dashboard",
+          type: "concept",
+          title: "Feature: Customer dashboard",
+          tags: ["customer", "dashboard", "feature", "product"],
+          facets: {
+            category: "product-feature",
+            applies_to: ["README.md"],
+            load_modes: ["coding", "onboarding"]
+          },
+          evidence: [{ kind: "file", id: "README.md" }]
+        })
+      ])
+    );
+
     const validators = await compileProjectSchemas(projectRoot);
     expect(validators.ok).toBe(true);
     if (validators.ok && proposal.patch !== null) {

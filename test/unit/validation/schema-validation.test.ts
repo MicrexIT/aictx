@@ -376,10 +376,57 @@ describe("schema validators", () => {
     expect(validatePatch(validators, patch).valid).toBe(true);
   });
 
-  it("keeps history and task-note invalid object types", async () => {
+  it("accepts product-feature as a facet for concept memory", async () => {
+    const validators = await compileFixtureProject();
+    const productFeatureObject = {
+      ...validObject,
+      id: "concept.customer-dashboard",
+      type: "concept",
+      title: "Feature: Customer dashboard",
+      body_path: "memory/concepts/customer-dashboard.md",
+      tags: ["feature", "product", "dashboard"],
+      facets: {
+        category: "product-feature",
+        applies_to: ["app/dashboard/page.tsx"],
+        load_modes: ["coding", "onboarding"]
+      }
+    };
+    const patch = {
+      source: {
+        kind: "agent"
+      },
+      changes: [
+        {
+          op: "create_object",
+          id: "concept.customer-dashboard",
+          type: "concept",
+          title: "Feature: Customer dashboard",
+          body: "The app includes a customer dashboard feature.",
+          tags: ["feature", "product", "dashboard"],
+          facets: {
+            category: "product-feature",
+            applies_to: ["app/dashboard/page.tsx"],
+            load_modes: ["coding", "onboarding"]
+          },
+          evidence: [{ kind: "file", id: "app/dashboard/page.tsx" }]
+        }
+      ]
+    };
+
+    expect(
+      validateObject(
+        validators,
+        productFeatureObject,
+        ".aictx/memory/concepts/customer-dashboard.json"
+      ).valid
+    ).toBe(true);
+    expect(validatePatch(validators, patch).valid).toBe(true);
+  });
+
+  it("keeps history, task-note, and feature invalid object types", async () => {
     const validators = await compileFixtureProject();
 
-    for (const invalidType of ["history", "task-note"]) {
+    for (const invalidType of ["history", "task-note", "feature"]) {
       expect(
         issueCodes(
           validateObject(

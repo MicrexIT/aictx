@@ -4,3 +4,4 @@
 {"actor":"cli","event":"memory.created","id":"constraint.node-engine","timestamp":"2026-05-02T21:38:00+02:00"}
 {"actor":"cli","event":"memory.created","id":"constraint.package-manager","timestamp":"2026-05-02T21:38:00+02:00"}
 {"actor":"agent","event":"memory.created","id":"decision.local-viewer-uses-list-first-memory-browsing","timestamp":"2026-05-02T22:36:19+02:00"}
+{"actor":"agent","event":"memory.created","id":"decision.product-feature-memory-facet","timestamp":"2026-05-02T23:21:19+02:00"}

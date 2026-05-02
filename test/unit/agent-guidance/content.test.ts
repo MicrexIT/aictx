@@ -235,6 +235,8 @@ describe("agent guidance content", () => {
 
       expect(content).toContain("aictx suggest --from-diff --json");
       expect(content).toContain("aictx suggest --bootstrap --json");
+      expect(content).toContain("product-feature");
+      expect(content).toContain("Do not create `history`, `task-note`, or `feature` object types");
       expect(content).toContain("why is memory empty?");
       expect(content).toContain("run the bootstrap workflow proactively");
       expect(content).toContain("aictx suggest --bootstrap --patch > bootstrap-memory.json");
@@ -259,7 +261,7 @@ describe("agent guidance content", () => {
         expect(content).toContain(objectType);
       }
 
-      expect(content).toContain("Do not create `history` or `task-note` object types");
+      expect(content).toContain("Do not create `history`, `task-note`, or `feature` object types");
     }
   });
 });

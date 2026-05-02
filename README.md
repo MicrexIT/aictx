@@ -141,6 +141,11 @@ for known failure modes and `workflow` for repeated project procedures. Do not
 create `history` or `task-note` object types; use Git/events/statuses for
 history and branch/task scope for temporary task context.
 
+Track product features as `concept` memory with the `product-feature` facet.
+Use tags such as `feature`, `product`, and domain terms; use `active` for
+present features, `mark_stale` for removed features, and `supersede_object`
+when one feature replaces another.
+
 ## Quickstart
 
 Initialize memory storage inside an existing project:

@@ -142,6 +142,7 @@ describe("aictx MCP save_memory_patch tool", () => {
       expect(schema).toContain("facets");
       expect(schema).toContain("evidence");
       expect(schema).toContain("abandoned-attempt");
+      expect(schema).toContain("product-feature");
       expect(schema).not.toContain("additionalProperties\":{}");
     } finally {
       await started.close();
@@ -216,7 +217,7 @@ describe("aictx MCP save_memory_patch tool", () => {
       const envelope = parseToolEnvelope<SaveEnvelope>(mcp);
 
       expect(envelope.ok).toBe(true);
-      expect(envelope.data.memory_created).toEqual(["decision.mcp-faceted-memory"]);
+      expect(envelope.data.memory_created).toEqual(["concept.mcp-product-feature"]);
 
       const storage = await readCanonicalStorage(projectRoot);
 
@@ -226,13 +227,13 @@ describe("aictx MCP save_memory_patch tool", () => {
       }
 
       const saved = storage.data.objects.find(
-        (object) => object.sidecar.id === "decision.mcp-faceted-memory"
+        (object) => object.sidecar.id === "concept.mcp-product-feature"
       );
 
       expect(saved?.sidecar.facets).toEqual({
-        category: "decision-rationale",
+        category: "product-feature",
         applies_to: ["src/mcp/tools/save-memory-patch.ts"],
-        load_modes: ["coding", "review"]
+        load_modes: ["coding", "onboarding"]
       });
       expect(saved?.sidecar.evidence).toEqual([
         { kind: "file", id: "src/mcp/tools/save-memory-patch.ts" },
@@ -502,15 +503,15 @@ function createFacetedPatch() {
     changes: [
       {
         op: "create_object",
-        id: "decision.mcp-faceted-memory",
-        type: "decision",
-        title: "MCP faceted memory",
-        body: "# MCP faceted memory\n\nMCP save accepts object-level facets and evidence.\n",
-        tags: ["mcp", "facets"],
+        id: "concept.mcp-product-feature",
+        type: "concept",
+        title: "Feature: MCP product feature",
+        body: "# Feature: MCP product feature\n\nMCP save accepts product-feature facets and evidence.\n",
+        tags: ["feature", "mcp", "product"],
         facets: {
-          category: "decision-rationale",
+          category: "product-feature",
           applies_to: ["src/mcp/tools/save-memory-patch.ts"],
-          load_modes: ["coding", "review"]
+          load_modes: ["coding", "onboarding"]
         },
         evidence: [
           { kind: "file", id: "src/mcp/tools/save-memory-patch.ts" },

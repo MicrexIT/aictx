@@ -3,10 +3,11 @@ import { join } from "node:path";
 
 import fg from "fast-glob";
 
-import { generateRelationId } from "../core/ids.js";
+import { generateObjectId, generateRelationId } from "../core/ids.js";
 import type {
   Evidence,
   FacetCategory,
+  ObjectFacets,
   ObjectId,
   ObjectStatus,
   ObjectType,
@@ -74,6 +75,8 @@ export type BootstrapPatchChange =
       title: string;
       body: string;
       tags?: string[];
+      facets?: ObjectFacets;
+      evidence?: Evidence[];
       source?: Source;
     }
   | {
@@ -140,6 +143,8 @@ const AGENT_CHECKLIST = [
   "Keep each memory object short, linked, and reviewable.",
   "Save nothing if the work produced no durable future value."
 ] as const;
+const BOOTSTRAP_PRODUCT_FEATURE_CHECKLIST_ITEM =
+  "During setup, capture explicit current product features as concept memory with the product-feature facet; mark removed or replaced features stale or superseded.";
 const SAVE_DECISION_CHECKLIST = [
   "Save memory only when the task produced durable future value.",
   "Prefer updating, marking stale, or superseding related memory over creating duplicates.",
@@ -263,7 +268,7 @@ export function buildSuggestAfterTaskPacket(
     changed_files: changedFiles,
     related_memory_ids: relatedMemoryIds(options.storage, changedFiles),
     possible_stale_ids: possibleStaleIds(options.storage, changedFiles),
-    recommended_memory: [...AFTER_TASK_RECOMMENDED_MEMORY],
+    recommended_memory: recommendedMemoryForTask(options.task, changedFiles),
     recommended_evidence: recommendedFileEvidence(changedFiles),
     recommended_relations: recommendedRelations(options.storage, changedFiles),
     recommended_facets: recommendedFacetsForTask(options.task, changedFiles),
@@ -276,22 +281,38 @@ export async function buildSuggestBootstrapPacket(
   options: BuildSuggestBootstrapPacketOptions
 ): Promise<SuggestReviewPacket> {
   const changedFiles = await bootstrapCandidateFiles(options.projectRoot);
+  const analysis = await analyzeBootstrapRepository(options.projectRoot, changedFiles);
+
+  return buildBootstrapPacketFromAnalysis(options.storage, changedFiles, analysis);
+}
+
+function buildBootstrapPacketFromAnalysis(
+  storage: CanonicalStorageSnapshot,
+  changedFiles: readonly string[],
+  analysis: BootstrapAnalysis
+): SuggestReviewPacket {
+  const hasProductFeatures = hasProductFeatureBootstrapSignal(analysis);
+  const recommendedFacets = hasProductFeatures
+    ? (["product-feature"] satisfies FacetCategory[])
+    : [];
 
   return {
     mode: "bootstrap",
-    changed_files: changedFiles,
-    related_memory_ids: relatedMemoryIds(options.storage, changedFiles),
-    possible_stale_ids: possibleStaleIds(options.storage, changedFiles),
-    recommended_memory: [...BOOTSTRAP_RECOMMENDED_MEMORY],
-    agent_checklist: [...AGENT_CHECKLIST]
+    changed_files: [...changedFiles],
+    related_memory_ids: relatedMemoryIds(storage, changedFiles),
+    possible_stale_ids: possibleStaleIds(storage, changedFiles),
+    recommended_memory: recommendedBootstrapMemory(hasProductFeatures),
+    ...(recommendedFacets.length === 0 ? {} : { recommended_facets: recommendedFacets }),
+    agent_checklist: [...AGENT_CHECKLIST, BOOTSTRAP_PRODUCT_FEATURE_CHECKLIST_ITEM]
   };
 }
 
 export async function buildSuggestBootstrapPatchProposal(
   options: BuildSuggestBootstrapPacketOptions
 ): Promise<SuggestBootstrapPatchProposal> {
-  const packet = await buildSuggestBootstrapPacket(options);
-  const analysis = await analyzeBootstrapRepository(options.projectRoot, packet.changed_files);
+  const changedFiles = await bootstrapCandidateFiles(options.projectRoot);
+  const analysis = await analyzeBootstrapRepository(options.projectRoot, changedFiles);
+  const packet = buildBootstrapPacketFromAnalysis(options.storage, changedFiles, analysis);
   const changes = buildBootstrapPatchChanges(options.storage, analysis);
 
   if (changes.length === 0) {
@@ -338,6 +359,15 @@ interface BootstrapAnalysis {
 interface ReadmeInfo {
   title: string | null;
   summary: string | null;
+  features: ProductFeatureInfo[];
+}
+
+interface ProductFeatureInfo {
+  title: string;
+  description: string;
+  evidence: Evidence[];
+  appliesTo: string[];
+  tags: string[];
 }
 
 interface PackageJsonInfo {
@@ -431,7 +461,21 @@ function buildBootstrapPatchChanges(
     changes.push(packageManagerChange);
   }
 
+  changes.push(...productFeatureConcepts(storage, analysis));
+
   return changes;
+}
+
+function recommendedBootstrapMemory(hasProductFeatures: boolean): ObjectType[] {
+  return hasProductFeatures
+    ? uniqueObjectTypes([...BOOTSTRAP_RECOMMENDED_MEMORY, "concept"])
+    : [...BOOTSTRAP_RECOMMENDED_MEMORY];
+}
+
+function recommendedMemoryForTask(task: string, changedFiles: readonly string[]): ObjectType[] {
+  return isProductFeatureTask(task, changedFiles)
+    ? uniqueObjectTypes([...AFTER_TASK_RECOMMENDED_MEMORY, "concept"])
+    : [...AFTER_TASK_RECOMMENDED_MEMORY];
 }
 
 function recommendedFacetsForTask(
@@ -455,6 +499,10 @@ function recommendedFacetsForTask(
     recommended.add("decision-rationale");
   }
 
+  if (isProductFeatureTask(task, changedFiles)) {
+    recommended.add("product-feature");
+  }
+
   for (const facet of RECOMMENDED_FACETS) {
     recommended.add(facet);
   }
@@ -474,6 +522,21 @@ function isConfigOrManifestPath(path: string): boolean {
 
 function isDocsOrArchitecturePath(path: string): boolean {
   return path.startsWith("docs/") || /\.mdx?$/u.test(path);
+}
+
+function isProductFeatureTask(task: string, changedFiles: readonly string[]): boolean {
+  const taskText = task.toLowerCase();
+
+  return (
+    /\b(features?|capabilit(?:y|ies)|product|user-facing|ux|ui|routes?|pages?|screens?)\b/u.test(
+      taskText
+    ) ||
+    changedFiles.some((file) =>
+      /(?:^|\/)(app|pages|routes)\/|(?:^|\/)(components|viewer)\/|(?:^|\/)README\.md$/u.test(
+        file
+      )
+    )
+  );
 }
 
 function projectBootstrapBody(
@@ -700,6 +763,67 @@ function packageManagerConstraint(
   };
 }
 
+function productFeatureConcepts(
+  storage: CanonicalStorageSnapshot,
+  analysis: BootstrapAnalysis
+): BootstrapPatchChange[] {
+  const features = analysis.readme?.features ?? [];
+
+  if (features.length === 0) {
+    return [];
+  }
+
+  const existingIds = new Set(storage.objects.map((object) => object.sidecar.id));
+  const changes: BootstrapPatchChange[] = [];
+
+  for (const feature of features.slice(0, 6)) {
+    const title = `Feature: ${feature.title}`;
+    const baseId = generateObjectId({
+      type: "concept",
+      title
+    });
+
+    if (hasSimilarObject(storage, "concept", baseId, title)) {
+      continue;
+    }
+
+    const id = generateObjectId({
+      type: "concept",
+      title,
+      existingIds
+    });
+    existingIds.add(id);
+
+    changes.push({
+      op: "create_object",
+      id,
+      type: "concept",
+      title,
+      body: [`# ${title}`, "", feature.description, ""].join("\n"),
+      tags: feature.tags,
+      facets: {
+        category: "product-feature",
+        applies_to: feature.appliesTo,
+        load_modes: ["coding", "onboarding"]
+      },
+      evidence: feature.evidence
+    });
+  }
+
+  return changes;
+}
+
+function hasProductFeatureBootstrapSignal(analysis: BootstrapAnalysis): boolean {
+  return (
+    (analysis.readme?.features.length ?? 0) > 0 ||
+    [...analysis.files].some((file) =>
+      /(?:^app\/.*\/page\.(?:tsx?|jsx?|svelte)$|^pages\/.*\.(?:tsx?|jsx?|svelte)$|^routes\/)/u.test(
+        file
+      )
+    )
+  );
+}
+
 async function readReadme(projectRoot: string): Promise<ReadmeInfo | null> {
   const contents = await readUtf8IfExists(projectRoot, "README.md");
 
@@ -715,8 +839,83 @@ async function readReadme(projectRoot: string): Promise<ReadmeInfo | null> {
 
   return {
     title: title ?? null,
-    summary
+    summary,
+    features: readmeProductFeatures(lines)
   };
+}
+
+function readmeProductFeatures(lines: readonly string[]): ProductFeatureInfo[] {
+  const features: ProductFeatureInfo[] = [];
+  let inFence = false;
+  let inFeatureSection = false;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+
+    if (trimmed.startsWith("```") || trimmed.startsWith("~~~")) {
+      inFence = !inFence;
+      continue;
+    }
+
+    if (inFence) {
+      continue;
+    }
+
+    const heading = /^#{1,6}\s+(.+?)\s*$/u.exec(trimmed);
+
+    if (heading !== null) {
+      inFeatureSection = isProductFeatureHeading(heading[1] ?? "");
+      continue;
+    }
+
+    if (!inFeatureSection) {
+      continue;
+    }
+
+    const bullet = /^(?:[-*+]\s+|\d+\.\s+)(.+?)\s*$/u.exec(trimmed);
+
+    if (bullet === null) {
+      continue;
+    }
+
+    const description = cleanMarkdownText((bullet[1] ?? "").replace(/^\[[ xX]\]\s+/u, ""));
+
+    if (description === "") {
+      continue;
+    }
+
+    const title = featureTitle(description);
+    features.push({
+      title,
+      description,
+      evidence: [{ kind: "file", id: "README.md" }],
+      appliesTo: ["README.md"],
+      tags: productFeatureTags(title)
+    });
+
+    if (features.length >= 6) {
+      return features;
+    }
+  }
+
+  return features;
+}
+
+function isProductFeatureHeading(value: string): boolean {
+  return /\b(features?|capabilit(?:y|ies)|functionality|what it does)\b/iu.test(
+    cleanMarkdownText(value)
+  );
+}
+
+function featureTitle(description: string): string {
+  const splitTitle = /^(.{1,80}?)(?::\s+| - | -- )/u.exec(description)?.[1]?.trim();
+  const title = splitTitle === undefined ? truncateSentence(description, 80) : splitTitle;
+
+  return title.replace(/[.:;,\s]+$/u, "");
+}
+
+function productFeatureTags(title: string): string[] {
+  return uniqueSorted(["feature", "product", ...[...tokenize(title)].slice(0, 4)]);
 }
 
 async function readPackageJson(projectRoot: string): Promise<PackageJsonInfo | null> {
@@ -1268,4 +1467,8 @@ function normalizePath(value: string): string {
 
 function uniqueSorted(values: readonly string[]): string[] {
   return [...new Set(values)].sort();
+}
+
+function uniqueObjectTypes(values: readonly ObjectType[]): ObjectType[] {
+  return [...new Set(values)];
 }

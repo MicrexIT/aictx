@@ -28,6 +28,7 @@ export const FACET_CATEGORIES = [
   "stack",
   "convention",
   "file-layout",
+  "product-feature",
   "testing",
   "decision-rationale",
   "abandoned-attempt",

@@ -133,7 +133,7 @@ Aictx is not:
 Aictx is:
 
 * A local project-memory layer for AI coding agents
-* A local source of truth for architecture decisions, constraints, facts, open questions, and project concepts
+* A local source of truth for architecture decisions, constraints, facts, open questions, project concepts, and product features
 * A context compiler that gives agents compact relevant context for a task
 * A deterministic persistence layer for agent-generated memory updates
 * Transparent memory files that developers can diff, edit, commit, and revert when Git is available
@@ -312,7 +312,7 @@ The memory lifecycle rules are:
 
 * Load narrowly before architecture, debugging, review, onboarding, dependency, configuration, or non-trivial code work.
 * Use the task description and load mode to retrieve the smallest useful context pack.
-* Save only durable knowledge: decisions, constraints, architecture changes, gotchas, workflows, debugging outcomes, verified facts, concepts, and open questions.
+* Save only durable knowledge: decisions, constraints, architecture changes, gotchas, workflows, debugging outcomes, verified facts, concepts, product features, and open questions.
 * Prefer updating, marking stale, or superseding existing memory over creating duplicates.
 * Mark memory stale or superseded when current code, tests, manifests, or user instruction contradict it.
 * Prefer current code, tests, manifests, and the user's request over loaded memory when they conflict.
@@ -496,7 +496,7 @@ Purpose:
 
 `aictx suggest --from-diff` is Git-required. It should summarize changed files, changed `.aictx/` files, related existing memory, possible stale candidates, and a concise agent checklist. It must not write memory.
 
-`aictx suggest --bootstrap` should work without Git. It should list likely source files to inspect, such as README files, package manifests, framework configs, docs, and obvious entrypoints, and recommend seed memory classes for project intent, architecture, constraints, workflows, gotchas, concepts, and open questions. `aictx suggest --bootstrap --patch` may emit a conservative structured patch for review and `aictx save`, but it must not write memory.
+`aictx suggest --bootstrap` should work without Git. It should list likely source files to inspect, such as README files, package manifests, framework configs, docs, and obvious entrypoints, and recommend seed memory classes for project intent, architecture, constraints, workflows, gotchas, concepts, product features, and open questions. `aictx suggest --bootstrap --patch` may emit a conservative structured patch for review and `aictx save`, but it must not write memory.
 
 5.3.2 Memory audit packets
 
