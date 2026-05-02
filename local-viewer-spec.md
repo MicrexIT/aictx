@@ -114,20 +114,22 @@ The bundled app is a Svelte/Vite app packaged with the CLI.
 
 Required first-screen layout:
 
+* Persistent viewer navigation with Memories and Export sections.
 * Search/filter area.
-* Object list.
-* Selected document view.
-* Metadata and relations area.
+* Centered memory object list.
+* No selected document by default.
 
 Required features:
 
 * Search memory objects client-side by title, id, type, status, tags, and body text.
 * Filter by type, status, and tag.
+* Selecting a memory object opens a focused detail view.
+* Detail view provides a Back action that returns to the filtered object list.
 * Show canonical Markdown body for the selected object.
 * Render Markdown with raw HTML disabled or sanitized.
-* Show sidecar JSON for the selected object.
-* Show incoming and outgoing relations for the selected object.
-* Provide a selected-node graph only: selected object plus direct incoming/outgoing neighbor objects and relations.
+* Show sidecar JSON and raw paths/timestamps for the selected object in collapsed technical details.
+* Show incoming and outgoing related memories before raw relation details.
+* Provide a direct-neighborhood map only: selected object plus direct incoming/outgoing neighbor objects and relations.
 * Let users trigger the Obsidian projection export and see success/failure output.
 
 Non-goals:

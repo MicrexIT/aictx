@@ -23,8 +23,8 @@ import {
 
 const repoRoot = resolve(fileURLToPath(new URL("../../..", import.meta.url)));
 const viewerAssetsDir = join(repoRoot, "dist", "viewer");
-const GRAPH_WIDTH = 640;
-const GRAPH_HEIGHT = 300;
+const GRAPH_WIDTH = 960;
+const GRAPH_HEIGHT = 420;
 const tempRoots: string[] = [];
 
 interface MemoryFixture {
@@ -78,11 +78,14 @@ describe("read-only viewer shell", () => {
       const page = await browser.newPage();
       const consoleErrors = collectPageErrors(page);
 
+      await page.setViewportSize({ width: 1280, height: 900 });
       await page.goto(started.data.url, { waitUntil: "domcontentloaded" });
       await page.locator('[data-testid="viewer-search"]').waitFor();
-      await expectText(page, '[aria-label="Project memory counts"]', "Objects");
+      await expectText(page, '[data-testid="memory-list-view"]', "Memories");
+      await expectCount(page, '[data-testid="selected-object"]', 0);
+      await expectText(page, '[aria-label="Project memory counts"]', "Memories");
       await expectText(page, '[aria-label="Project memory counts"]', "10");
-      await expectText(page, '[aria-label="Project memory counts"]', "Relations");
+      await expectText(page, '[aria-label="Project memory counts"]', "Connections");
       await expectText(page, '[aria-label="Project memory counts"]', "3");
 
       await page.selectOption('[data-testid="viewer-type-filter"]', "decision");
@@ -105,9 +108,11 @@ describe("read-only viewer shell", () => {
       await page.locator('[data-testid="object-row-constraint.viewer-markdown"]').click();
       await assertSelectedObject(page, "Viewer Markdown Safety", "constraint.viewer-markdown");
       await assertMarkdownIsSafe(page);
+      await expectCount(page, '[data-testid="memory-list-view"]', 0);
 
+      await page.locator('[data-testid="selected-object-back"]').click();
       await page.selectOption('[data-testid="viewer-tag-filter"]', "security");
-      await expectText(page, '[data-testid="selected-object"]', "Viewer Markdown Safety");
+      await expectText(page, '[data-testid="memory-list-view"]', "Viewer Markdown Safety");
       await expectCount(page, '[data-testid="object-row-decision.viewer-shell"]', 0);
 
       await page.selectOption('[data-testid="viewer-tag-filter"]', "all");
@@ -128,7 +133,7 @@ describe("read-only viewer shell", () => {
       await assertGraphNodeWithinViewBox(page, "constraint.viewer-markdown");
       await assertGraphEdgeWithinViewBox(page, "rel.viewer-shell-requires-markdown");
 
-      await page.getByRole("button", { name: /to Viewer Markdown Safety/ }).click();
+      await page.getByRole("button", { name: "Viewer Markdown Safety" }).click();
       await assertSelectedObject(page, "Viewer Markdown Safety", "constraint.viewer-markdown");
       await assertGraphSurfaceNonblank(page);
       await assertSelectedGraphNode(page, "constraint.viewer-markdown");
@@ -136,10 +141,14 @@ describe("read-only viewer shell", () => {
       await expectText(page, '[data-testid="relation-graph"]', "requires");
       await expectNoText(page, '[data-testid="relation-graph"]', "Unrelated Source");
 
-      await page.locator('[data-testid="json-tab"]').click();
+      await page.locator('[data-testid="technical-details"] summary').click();
       await expectText(page, '[data-testid="json-view"]', '"id": "constraint.viewer-markdown"');
       await expectText(page, '[data-testid="json-view"]', '"body_path": ".aictx/memory/constraints/viewer-markdown.md"');
       await expectText(page, '[data-testid="incoming-relations"]', "Viewer Shell Layout");
+
+      await page.locator('[data-testid="selected-object-back"]').click();
+      await expectText(page, '[data-testid="memory-list-view"]', "Viewer Shell Layout");
+      await expectCount(page, '[data-testid="object-row-constraint.viewer-markdown"]', 0);
 
       await page.fill('[data-testid="viewer-search"]', "empty neighborhood");
       await page.locator('[data-testid="object-row-note.viewer-empty"]').click();
@@ -181,16 +190,19 @@ describe("read-only viewer shell", () => {
       const page = await browser.newPage();
       const consoleErrors = collectPageErrors(page);
 
+      await page.setViewportSize({ width: 390, height: 780 });
       await page.goto(started.data.url, { waitUntil: "domcontentloaded" });
       await page.locator('[data-testid="viewer-search"]').waitFor();
 
       await expectText(page, '[data-testid="starter-memory-notice"]', "Starter memory only.");
       await expectText(page, '[data-testid="starter-memory-notice"]', "aictx suggest --bootstrap --patch > bootstrap-memory.json");
       await expectText(page, '[data-testid="starter-memory-notice"]', "aictx save --file bootstrap-memory.json");
-      await expectText(page, '[aria-label="Project memory counts"]', "Objects");
+      await expectCount(page, '[data-testid="selected-object"]', 0);
+      await expectText(page, '[aria-label="Project memory counts"]', "Memories");
       await expectText(page, '[aria-label="Project memory counts"]', "2");
-      await expectText(page, '[aria-label="Project memory counts"]', "Relations");
+      await expectText(page, '[aria-label="Project memory counts"]', "Connections");
       await expectText(page, '[aria-label="Project memory counts"]', "1");
+      await page.locator('[data-testid="object-row-architecture.current"]').click();
       await assertSelectedGraphNode(page, "architecture.current");
       await expectText(page, '[data-testid="relation-graph"]', "related_to");
       await expectCount(page, '[data-testid="relation-graph-svg"] [data-testid^="relation-graph-edge-"]', 1);

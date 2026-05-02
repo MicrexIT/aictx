@@ -548,13 +548,14 @@ that includes a per-run API token. Open that URL in a browser to inspect memory.
 Use `--port <number>` when you need a fixed loopback port, and `--open` when you
 want Aictx to try launching the default browser after the server starts.
 
-Inside the viewer, use the search box and type, status, and tag filters to find
-memory objects. Selecting an object shows its canonical Markdown body, sidecar
-JSON, metadata, incoming and outgoing relations, and a selected-node graph with
-only direct neighbors.
+Inside the viewer, the default Memories screen shows a centered searchable list
+with type, status, and tag filters. Selecting an object opens a focused detail
+view with its canonical Markdown body, readable incoming and outgoing related
+memories, a direct-neighborhood connection map, and collapsed technical details
+for raw JSON, paths, and timestamps. Use Back to return to the filtered list.
 
 The viewer does not edit canonical memory. The only write action in the viewer
-is the explicit Obsidian export button, which calls the same generated
+is the explicit Obsidian export screen, which calls the same generated
 projection service as `aictx export obsidian` and writes generated projection
 files only.
 

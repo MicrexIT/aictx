@@ -92,6 +92,7 @@ describe("viewer Obsidian export action", () => {
       const consoleErrors = collectPageErrors(page);
 
       await page.goto(started.data.url, { waitUntil: "domcontentloaded" });
+      await page.locator('[data-testid="nav-export"]').click();
       await page.locator('[data-testid="obsidian-export-submit"]').waitFor();
       await page.locator('[data-testid="obsidian-export-submit"]').click();
       await expectText(page, '[data-testid="obsidian-export-status"]', "Export complete.");
@@ -150,6 +151,7 @@ describe("viewer Obsidian export action", () => {
       const page = await browser.newPage();
 
       await page.goto(started.data.url, { waitUntil: "domcontentloaded" });
+      await page.locator('[data-testid="nav-export"]').click();
       await page.locator('[data-testid="obsidian-export-out-dir"]').fill("unsafe-export");
       await page.locator('[data-testid="obsidian-export-submit"]').click();
       await expectText(page, '[data-testid="obsidian-export-status"]', "AICtxExportTargetInvalid");
