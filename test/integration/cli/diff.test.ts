@@ -1,6 +1,7 @@
 import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { Readable } from "node:stream";
 
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -14,6 +15,7 @@ interface DiffSuccessEnvelope {
   data: {
     diff: string;
     changed_files: string[];
+    untracked_files: string[];
     changed_memory_ids: string[];
     changed_relation_ids: string[];
   };
@@ -41,6 +43,36 @@ afterEach(async () => {
 });
 
 describe("aictx diff CLI", () => {
+  it("includes untracked first-run Aictx files after init", async () => {
+    const repo = await createRepo("aictx-cli-diff-init-untracked-");
+    const initOutput = createCapturedOutput();
+    const initExitCode = await main(["node", "aictx", "init", "--json"], {
+      ...initOutput.writers,
+      cwd: repo
+    });
+
+    expect(initExitCode).toBe(0);
+    expect(initOutput.stderr()).toBe("");
+    const projectId = await readJsonId(join(repo, ".aictx", "memory", "project.json"));
+    const output = createCapturedOutput();
+
+    const exitCode = await main(["node", "aictx", "diff", "--json"], {
+      ...output.writers,
+      cwd: repo
+    });
+
+    expect(exitCode).toBe(0);
+    expect(output.stderr()).toBe("");
+    const envelope = JSON.parse(output.stdout()) as DiffSuccessEnvelope;
+    expect(envelope.ok).toBe(true);
+    expect(envelope.data.diff).toContain("new file mode 100644");
+    expect(envelope.data.diff).toContain(".aictx/config.json");
+    expect(envelope.data.changed_files).toContain(".aictx/config.json");
+    expect(envelope.data.untracked_files).toContain(".aictx/config.json");
+    expect(envelope.data.changed_memory_ids).toContain(projectId);
+    expect(envelope.meta.git.dirty).toBe(true);
+  });
+
   it("shows only .aictx changes and reports detectable memory IDs", async () => {
     const repo = await createInitializedGitProject("aictx-cli-diff-memory-");
     const projectId = await readJsonId(join(repo, ".aictx", "memory", "project.json"));
@@ -65,10 +97,53 @@ describe("aictx diff CLI", () => {
     expect(envelope.data.diff).toContain(".aictx/memory/project.md");
     expect(envelope.data.diff).not.toContain("src.ts");
     expect(envelope.data.changed_files).toEqual([".aictx/memory/project.md"]);
+    expect(envelope.data.untracked_files).toEqual([]);
     expect(envelope.data.changed_memory_ids).toEqual([projectId]);
     expect(envelope.data.changed_relation_ids).toEqual([]);
     expect(envelope.meta.git.available).toBe(true);
     expect(envelope.meta.git.dirty).toBe(true);
+  });
+
+  it("includes untracked memory files created by save", async () => {
+    const repo = await createInitializedGitProject("aictx-cli-diff-save-untracked-");
+    const saveOutput = createCapturedOutput();
+    const saveExitCode = await main(["node", "aictx", "save", "--stdin", "--json"], {
+      ...saveOutput.writers,
+      cwd: repo,
+      stdin: Readable.from([
+        JSON.stringify(
+          createNotePatch("Diff New Note", "New memory should appear before staging.")
+        )
+      ])
+    });
+
+    expect(saveExitCode).toBe(0);
+    expect(saveOutput.stderr()).toBe("");
+    const output = createCapturedOutput();
+
+    const exitCode = await main(["node", "aictx", "diff", "--json"], {
+      ...output.writers,
+      cwd: repo
+    });
+
+    expect(exitCode).toBe(0);
+    expect(output.stderr()).toBe("");
+    const envelope = JSON.parse(output.stdout()) as DiffSuccessEnvelope;
+    expect(envelope.ok).toBe(true);
+    expect(envelope.data.diff).toContain(".aictx/memory/notes/diff-new-note.json");
+    expect(envelope.data.diff).toContain(".aictx/memory/notes/diff-new-note.md");
+    expect(envelope.data.diff).toContain("New memory should appear before staging.");
+    expect(envelope.data.changed_files).toEqual([
+      ".aictx/events.jsonl",
+      ".aictx/memory/notes/diff-new-note.json",
+      ".aictx/memory/notes/diff-new-note.md"
+    ]);
+    expect(envelope.data.untracked_files).toEqual([
+      ".aictx/memory/notes/diff-new-note.json",
+      ".aictx/memory/notes/diff-new-note.md"
+    ]);
+    expect(envelope.data.changed_memory_ids).toEqual(["note.diff-new-note"]);
+    expect(envelope.data.changed_relation_ids).toEqual([]);
   });
 
   it("reports detectable relation IDs", async () => {
@@ -111,6 +186,7 @@ describe("aictx diff CLI", () => {
     expect(envelope.data.changed_files).toEqual([
       ".aictx/relations/project-mentions-architecture.json"
     ]);
+    expect(envelope.data.untracked_files).toEqual([]);
     expect(envelope.data.changed_memory_ids).toEqual([]);
     expect(envelope.data.changed_relation_ids).toEqual(["rel.project-mentions-architecture"]);
   });
@@ -213,6 +289,23 @@ async function readJsonId(path: string): Promise<string> {
 
 async function writeJsonFile(path: string, value: Record<string, unknown>): Promise<void> {
   await writeFile(path, `${JSON.stringify(value, null, 2)}\n`, "utf8");
+}
+
+function createNotePatch(title: string, body: string) {
+  return {
+    source: {
+      kind: "agent",
+      task: "Diff CLI untracked save test"
+    },
+    changes: [
+      {
+        op: "create_object",
+        type: "note",
+        title,
+        body: `# ${title}\n\n${body}\n`
+      }
+    ]
+  };
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

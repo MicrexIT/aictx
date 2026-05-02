@@ -523,7 +523,7 @@ Git requirement:
 
 This command is available when the project is inside a Git worktree. Outside Git, users can still inspect `.aictx/` files directly.
 
-Equivalent to a focused Git diff for memory:
+Broader than a plain focused Git diff because it also renders untracked Aictx memory files before staging:
 
 git diff -- .aictx/
 
@@ -1636,7 +1636,7 @@ Recommended v1 behavior:
 
 * load_memory may proceed and should include Git provenance when available.
 * save_memory_patch should not block only because memory files are dirty; it should back up dirty touched files before overwrite/delete and report the recovery paths.
-* diff_memory should show only .aictx/ changes.
+* diff_memory should show only .aictx/ changes, including untracked Aictx memory files.
 * restore should require an explicit target and should not affect non-Aictx files.
 
 If `.aictx/` contains malformed or conflicted memory unrelated to an incoming save, Aictx should quarantine or repair what it can and keep applying independent new memory. `aictx check` should still report remaining invalid storage.

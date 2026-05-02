@@ -517,6 +517,7 @@ git rev-parse --show-toplevel
 git symbolic-ref --short -q HEAD
 git rev-parse HEAD
 git status --porcelain=v1 -- .aictx
+git status --porcelain=v1 --untracked-files=all -- .aictx
 git diff -- .aictx
 git log --format=... -- .aictx
 git show <commit>:.aictx/<path>
@@ -959,7 +960,7 @@ Integration test targets:
 * `aictx init` outside Git creates local `.aictx/` storage.
 * `aictx save --stdin` writes expected files and events.
 * `aictx load` works after save.
-* `aictx diff` only includes `.aictx/` when Git is available.
+* `aictx diff` only includes `.aictx/`, including untracked Aictx memory files, when Git is available.
 * Git-only commands return `AICtxGitRequired` outside Git.
 * `aictx check` detects invalid JSONL.
 * `aictx rebuild` recreates SQLite from canonical files.

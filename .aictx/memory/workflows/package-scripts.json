@@ -1,11 +1,8 @@
 {
   "body_path": "memory/workflows/package-scripts.md",
-  "content_hash": "sha256:27a9fc7e7f7a862319ba411978a63447462262d8c36a39501a53cd92470a48b3",
-  "created_at": "2026-05-02T00:21:52+02:00",
+  "content_hash": "sha256:de9e9f321c0e20cb892a6f217084a960f31889a54c50f6f65c2b79c2b271a622",
+  "created_at": "2026-05-02T21:38:00+02:00",
   "evidence": [],
-  "facets": {
-    "category": "workflow"
-  },
   "id": "workflow.package-scripts",
   "scope": {
     "branch": null,
@@ -24,5 +21,5 @@
   ],
   "title": "Package scripts",
   "type": "workflow",
-  "updated_at": "2026-05-02T00:21:52+02:00"
+  "updated_at": "2026-05-02T21:38:00+02:00"
 }

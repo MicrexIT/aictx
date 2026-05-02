@@ -1,11 +1,8 @@
 {
   "body_path": "memory/constraints/node-engine.md",
-  "content_hash": "sha256:372c4a94aed51a4d43533db3655eeb68c399d148f0088066d946ce901e64b4d8",
-  "created_at": "2026-05-02T00:21:52+02:00",
+  "content_hash": "sha256:8550f8a1bb9b89d6be8c75ff46419b05df6ff474439d1233409eafd5246eef42",
+  "created_at": "2026-05-02T21:38:00+02:00",
   "evidence": [],
-  "facets": {
-    "category": "stack"
-  },
   "id": "constraint.node-engine",
   "scope": {
     "branch": null,
@@ -24,5 +21,5 @@
   ],
   "title": "Node engine requirement",
   "type": "constraint",
-  "updated_at": "2026-05-02T00:21:52+02:00"
+  "updated_at": "2026-05-02T21:38:00+02:00"
 }

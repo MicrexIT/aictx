@@ -1,11 +1,21 @@
 {
   "confidence": "high",
-  "content_hash": "sha256:e445ce343703014930de8a25dcd70ab34d133532b4f99b198a35346688c171df",
-  "created_at": "2026-05-02T00:21:32+02:00",
+  "content_hash": "sha256:d3d4572126f4e2abd4f7f3a9a5a1a7718e7b0fb5bde7d2515ee28708d3f7f5a8",
+  "created_at": "2026-05-02T21:37:40+02:00",
+  "evidence": [
+    {
+      "id": "project.aictx",
+      "kind": "memory"
+    },
+    {
+      "id": "architecture.current",
+      "kind": "memory"
+    }
+  ],
   "from": "project.aictx",
   "id": "rel.project-aictx-related-to-architecture-current",
   "predicate": "related_to",
   "status": "active",
   "to": "architecture.current",
-  "updated_at": "2026-05-02T00:21:32+02:00"
+  "updated_at": "2026-05-02T21:37:40+02:00"
 }

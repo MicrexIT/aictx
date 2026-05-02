@@ -132,6 +132,9 @@ describe("core git wrapper", () => {
           ""
         ].join("\n")
       }),
+      "status --porcelain=v1 --untracked-files=all -- .aictx": result(
+        ["status", "--porcelain=v1", "--untracked-files=all", "--", ".aictx"]
+      ),
       "log --format=%H\u001f%h\u001f%ct\u001f%s -- .aictx": result(
         ["log", "--format=%H\u001f%h\u001f%ct\u001f%s", "--", ".aictx"],
         {
@@ -148,6 +151,7 @@ describe("core git wrapper", () => {
     expect(diff.ok).toBe(true);
     if (diff.ok) {
       expect(diff.data.changedFiles).toEqual([".aictx/events.jsonl"]);
+      expect(diff.data.untrackedFiles).toEqual([]);
     }
     expect(log).toEqual({
       ok: true,
@@ -164,6 +168,7 @@ describe("core git wrapper", () => {
     expect(restore.ok).toBe(true);
     expect(calls.map((call) => call.args)).toEqual([
       ["diff", "--", ".aictx"],
+      ["status", "--porcelain=v1", "--untracked-files=all", "--", ".aictx"],
       ["log", "--format=%H\u001f%h\u001f%ct\u001f%s", "--", ".aictx"],
       ["restore", "--source", "abcdef", "--", ".aictx"]
     ]);

@@ -225,7 +225,7 @@ Success data:
     "Agents are now instructed through `AGENTS.md` and `CLAUDE.md` to load and save Aictx memory.",
     "`aictx init` creates linked starter placeholders only. To seed useful first-run memory, run `aictx setup` for a review summary or `aictx setup --apply` to apply the conservative bootstrap patch. For manual review, run `aictx suggest --bootstrap --patch > bootstrap-memory.json`, `aictx patch review bootstrap-memory.json`, `aictx save --file bootstrap-memory.json`, and `aictx check`.",
     "`aictx init` does not start MCP; configure agent clients that support MCP to launch `aictx-mcp` so agents can use `load_memory` and `save_memory_patch`. A globally launched MCP server can serve this project when tool calls include this project root as `project_root`. Agents can fall back to `aictx load` and `aictx save --stdin` when MCP is unavailable.",
-    "Review memory changes in `.aictx/`; in Git projects, use `aictx diff` or `git diff -- .aictx/` before committing.",
+    "Review memory changes in `.aictx/`; in Git projects, use `aictx diff` before committing because it includes untracked Aictx memory files that plain `git diff -- .aictx/` can omit.",
     "Optional bundled skills are available under `integrations/codex/` and `integrations/claude/`."
   ]
 }
@@ -391,7 +391,7 @@ aictx diff [--json]
 Behavior:
 
 * Require Git; outside a Git worktree return `AICtxGitRequired`.
-* Convenience wrapper equivalent in scope to `git diff -- .aictx/`; Git remains the source of truth for review/history.
+* Shows tracked and untracked Aictx memory changes under `.aictx/`; plain `git diff -- .aictx/` can omit untracked files before staging.
 * Must not show non-Aictx repository changes.
 * Must work when `.aictx/` has uncommitted changes.
 
@@ -401,6 +401,7 @@ JSON success data:
 {
   "diff": "diff --git ...",
   "changed_files": [".aictx/events.jsonl"],
+  "untracked_files": [],
   "changed_memory_ids": ["decision.billing-retries"],
   "changed_relation_ids": []
 }
@@ -991,6 +992,7 @@ Output data:
 {
   "diff": "diff --git ...",
   "changed_files": [".aictx/events.jsonl"],
+  "untracked_files": [],
   "changed_memory_ids": [],
   "changed_relation_ids": []
 }
@@ -1317,7 +1319,7 @@ Rules:
 * `save_memory_patch` must try to repair or quarantine unrelated malformed memory and keep applying independent patch changes.
 * When Git is available, `save_memory_patch` must not reject writes only because `.aictx/` is dirty.
 * When Git is available, `save_memory_patch` must back up dirty touched files to `.aictx/recovery/` before overwrite/delete.
-* When Git is available, `diff_memory` must show only `.aictx/` changes.
+* When Git is available, `diff_memory` must show only `.aictx/` changes, including untracked Aictx memory files.
 * When Git is available, `restore` and `rewind` must refuse to run when `.aictx/` is dirty.
 * No command or MCP tool may run `git commit`.
 
@@ -1376,7 +1378,7 @@ The v1 API is valid when:
 * `aictx save --stdin`, `aictx save --file`, and `save_memory_patch` use the same write path.
 * Save operations write canonical files, append events, and update hashes.
 * In Git projects, save operations leave changes uncommitted.
-* In Git projects, `aictx diff` and `diff_memory` show only `.aictx/` changes.
+* In Git projects, `aictx diff` and `diff_memory` show only `.aictx/` changes, including untracked Aictx memory files.
 * `aictx export obsidian` writes generated Obsidian files without mutating canonical memory.
 * `aictx check` reports storage validation errors without mutating canonical files.
 * Outside Git, Git-only commands return `AICtxGitRequired`.

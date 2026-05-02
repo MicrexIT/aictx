@@ -22,7 +22,7 @@ export function registerDiffCommand(
 ): void {
   program
     .command("diff")
-    .description("Show Git diff output scoped to Aictx memory files.")
+    .description("Show Aictx memory changes, including untracked memory files.")
     .action(async (_commandOptions: unknown, command: Command) => {
       const result = await diffMemory(diffMemoryOptions(options));
       const rendered = renderAppResult(result, {

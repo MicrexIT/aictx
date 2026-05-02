@@ -220,6 +220,7 @@ export interface SaveMemoryData {
 export interface DiffMemoryData {
   diff: string;
   changed_files: string[];
+  untracked_files: string[];
   changed_memory_ids: ObjectId[];
   changed_relation_ids: RelationId[];
 }
@@ -1123,6 +1124,7 @@ export async function diffMemory(
     data: {
       diff: diff.data.diff,
       changed_files: diff.data.changedFiles,
+      untracked_files: diff.data.untrackedFiles,
       changed_memory_ids: changedIds.memoryIds,
       changed_relation_ids: changedIds.relationIds
     },

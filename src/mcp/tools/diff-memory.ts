@@ -30,7 +30,7 @@ const READ_ONLY_TOOL_ANNOTATIONS: ToolAnnotations = {
 export const diffMemoryTool = {
   name: "diff_memory",
   title: "Diff Aictx Memory",
-  description: "Show Git diff output scoped to Aictx memory files.",
+  description: "Show Aictx memory changes, including untracked memory files.",
   inputSchema: DIFF_MEMORY_INPUT_SCHEMA,
   annotations: READ_ONLY_TOOL_ANNOTATIONS,
   call: callDiffMemoryTool

@@ -116,7 +116,7 @@ aictx save --file bootstrap-memory.json
 aictx check
 ```
 
-In Git projects, also run `aictx diff` or `git diff -- .aictx/` to review the `.aictx/` changes.
+In Git projects, also run `aictx diff` to review the `.aictx/` changes, including untracked memory files.
 
 The bootstrap patch command is read-only for canonical memory and only writes the redirected draft file. Review the proposed patch yourself and apply it through `aictx save`; users should not have to hand-write bootstrap JSON. Use `aictx audit --json` to find deterministic memory hygiene issues.
 
@@ -130,7 +130,7 @@ When Aictx memory changed in a Git project, suggest:
 aictx diff
 ```
 
-`aictx diff` is a convenience wrapper for `git diff -- .aictx/`; Git remains the source of truth for review, history, and rollback.
+`aictx diff` shows tracked and untracked Aictx memory changes. Git remains the source of truth for history and rollback, but plain `git diff -- .aictx/` can omit untracked memory files before staging.
 
 ## What To Save
 

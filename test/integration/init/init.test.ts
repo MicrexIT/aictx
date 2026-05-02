@@ -155,7 +155,7 @@ describe("initProject", () => {
     expect(nextSteps).toContain("aictx save --file bootstrap-memory.json");
     expect(nextSteps).toContain("save_memory_patch");
     expect(nextSteps).toContain(
-      "Review memory changes in `.aictx/`; in Git projects, use `aictx diff` or `git diff -- .aictx/` before committing."
+      "Review memory changes in `.aictx/`; in Git projects, use `aictx diff` before committing because it includes untracked Aictx memory files that plain `git diff -- .aictx/` can omit."
     );
     expect(nextSteps).not.toContain("`aictx check`, and `aictx diff`");
     expect(nextSteps).toContain("integrations/codex");

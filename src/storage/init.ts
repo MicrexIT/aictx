@@ -979,7 +979,7 @@ function nextSteps(agentGuidance: AgentGuidanceData): string[] {
     agentGuidanceNextStep(agentGuidance),
     "`aictx init` creates linked starter placeholders only. To seed useful first-run memory, run `aictx setup` for a review summary or `aictx setup --apply` to apply the conservative bootstrap patch. For manual review, run `aictx suggest --bootstrap --patch > bootstrap-memory.json`, `aictx patch review bootstrap-memory.json`, `aictx save --file bootstrap-memory.json`, and `aictx check`.",
     "`aictx init` does not start MCP; configure agent clients that support MCP to launch `aictx-mcp` so agents can use `load_memory` and `save_memory_patch`. A globally launched MCP server can serve this project when tool calls include this project root as `project_root`. Agents can fall back to `aictx load` and `aictx save --stdin` when MCP is unavailable; if `aictx` is not on `PATH`, use the project package-manager form such as `pnpm exec aictx`, `npm exec aictx`, or `./node_modules/.bin/aictx`.",
-    "Review memory changes in `.aictx/`; in Git projects, use `aictx diff` or `git diff -- .aictx/` before committing.",
+    "Review memory changes in `.aictx/`; in Git projects, use `aictx diff` before committing because it includes untracked Aictx memory files that plain `git diff -- .aictx/` can omit.",
     "Optional bundled skills are available under `integrations/codex/` and `integrations/claude/`."
   ];
 }

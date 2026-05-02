@@ -1,6 +1,7 @@
 import path from "node:path";
 
 import { aictxError } from "./errors.js";
+import { readUtf8FileInsideRoot } from "./fs.js";
 import { err, ok, type Result } from "./result.js";
 import {
   runSubprocess,
@@ -55,6 +56,7 @@ export interface AictxDirtyState {
 export interface AictxDiff {
   diff: string;
   changedFiles: string[];
+  untrackedFiles: string[];
 }
 
 export interface ProjectChangedFiles {
@@ -259,9 +261,27 @@ export async function getAictxDiff(
     return gitCommandFailed("Git diff failed.", result.data);
   }
 
+  const untrackedFiles = await getUntrackedAictxFiles(projectRoot, options);
+
+  if (!untrackedFiles.ok) {
+    return untrackedFiles;
+  }
+
+  const untrackedDiff = await renderUntrackedAictxDiff(
+    projectRoot,
+    untrackedFiles.data
+  );
+
+  if (!untrackedDiff.ok) {
+    return untrackedDiff;
+  }
+
+  const trackedChangedFiles = parseDiffChangedFiles(result.data.stdout);
+
   return ok({
-    diff: result.data.stdout,
-    changedFiles: parseDiffChangedFiles(result.data.stdout)
+    diff: appendDiff(result.data.stdout, untrackedDiff.data),
+    changedFiles: uniqueSorted([...trackedChangedFiles, ...untrackedFiles.data]),
+    untrackedFiles: untrackedFiles.data
   });
 }
 
@@ -292,6 +312,106 @@ export async function getChangedProjectFiles(
   return ok({
     changedFiles: uniqueSorted(changedFiles)
   });
+}
+
+async function getUntrackedAictxFiles(
+  projectRoot: string,
+  options: GitWrapperOptions = {}
+): Promise<Result<string[]>> {
+  const result = await runGit(
+    ["status", "--porcelain=v1", "--untracked-files=all", "--", AICTX_PATHSPEC],
+    projectRoot,
+    options
+  );
+
+  if (!result.ok) {
+    return result;
+  }
+
+  if (result.data.exitCode !== 0) {
+    return gitCommandFailed("Git untracked-file detection failed.", result.data);
+  }
+
+  const files = result.data.stdout
+    .split("\n")
+    .map(parsePorcelainStatusLine)
+    .filter((entry): entry is PorcelainStatusEntry => entry !== null)
+    .filter((entry) => entry.status === "??")
+    .map((entry) => entry.path)
+    .filter((file) => file.startsWith(".aictx/"))
+    .filter((file) => !file.endsWith("/"))
+    .filter((file) => !isIgnoredDirtyPath(file));
+
+  return ok(uniqueSorted(files));
+}
+
+async function renderUntrackedAictxDiff(
+  projectRoot: string,
+  files: readonly string[]
+): Promise<Result<string>> {
+  const hunks: string[] = [];
+
+  for (const file of files) {
+    const contents = await readUtf8FileInsideRoot(projectRoot, file);
+
+    if (!contents.ok) {
+      return contents;
+    }
+
+    hunks.push(renderNewFileDiff(file, contents.data));
+  }
+
+  return ok(hunks.join(""));
+}
+
+function renderNewFileDiff(file: string, contents: string): string {
+  const lines = [
+    `diff --git a/${file} b/${file}`,
+    "new file mode 100644",
+    "index 0000000..0000000",
+    "--- /dev/null",
+    `+++ b/${file}`
+  ];
+  const bodyLines = diffBodyLines(contents);
+
+  if (bodyLines.length > 0) {
+    lines.push(`@@ -0,0 +1,${bodyLines.length} @@`);
+    lines.push(...bodyLines.map((line) => `+${line}`));
+
+    if (!contents.endsWith("\n")) {
+      lines.push("\\ No newline at end of file");
+    }
+  }
+
+  return `${lines.join("\n")}\n`;
+}
+
+function diffBodyLines(contents: string): string[] {
+  if (contents === "") {
+    return [];
+  }
+
+  const lines = contents.split("\n");
+
+  if (contents.endsWith("\n")) {
+    lines.pop();
+  }
+
+  return lines;
+}
+
+function appendDiff(trackedDiff: string, untrackedDiff: string): string {
+  if (trackedDiff === "") {
+    return untrackedDiff;
+  }
+
+  if (untrackedDiff === "") {
+    return trackedDiff;
+  }
+
+  return trackedDiff.endsWith("\n")
+    ? `${trackedDiff}${untrackedDiff}`
+    : `${trackedDiff}\n${untrackedDiff}`;
 }
 
 export async function getAictxLog(

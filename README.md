@@ -191,7 +191,7 @@ aictx patch review bootstrap-memory.json
 # optionally edit bootstrap-memory.json
 aictx save --file bootstrap-memory.json
 aictx check
-aictx diff # or: git diff -- .aictx/
+aictx diff
 ```
 
 `aictx init` does not infer rich semantic memory from the repository. The
@@ -455,20 +455,20 @@ decisions, constraints, and notes are linked.
 
 ### Git Review And Recovery
 
-These commands require Git because they use Git history and diffs scoped to
+These commands require Git because they use Git history and Aictx-scoped diffs under
 `.aictx/`.
 
 #### `aictx diff`
 
-Convenience wrapper for Git diff output scoped to Aictx memory files.
+Shows Aictx memory changes, including untracked memory files.
 
 ```bash
 aictx diff
 ```
 
 Use this before committing to review what an agent or CLI command changed under
-`.aictx/`. Plain Git remains the source of truth, so `git diff -- .aictx/`
-is equivalent for review.
+`.aictx/`. It includes untracked Aictx memory files that plain
+`git diff -- .aictx/` can omit.
 
 #### `aictx history`
 
@@ -685,8 +685,9 @@ or stale-memory updates. This is the preferred routine write path for agents.
 
 #### `diff_memory`
 
-Returns Git diff output scoped to Aictx memory files. This is a convenience
-wrapper around the same `.aictx/` Git diff that users can run directly.
+Returns Aictx memory changes, including untracked memory files. The output is
+diff-shaped for review and includes files that plain `git diff -- .aictx/` can
+omit before staging.
 
 Inputs: none.
 

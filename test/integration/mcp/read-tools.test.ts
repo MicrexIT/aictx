@@ -86,6 +86,7 @@ interface DiffEnvelope {
   data: {
     diff: string;
     changed_files: string[];
+    untracked_files: string[];
     changed_memory_ids: string[];
     changed_relation_ids: string[];
   };
@@ -497,6 +498,17 @@ describe("aictx MCP read tools", () => {
       "# Updated Project\n\nChanged Aictx memory.\n",
       "utf8"
     );
+    await mkdir(join(repo, ".aictx", "memory", "notes"), { recursive: true });
+    await writeFile(
+      join(repo, ".aictx", "memory", "notes", "mcp-untracked-note.json"),
+      `${JSON.stringify({ id: "note.mcp-untracked-note" }, null, 2)}\n`,
+      "utf8"
+    );
+    await writeFile(
+      join(repo, ".aictx", "memory", "notes", "mcp-untracked-note.md"),
+      "# MCP Untracked Note\n\nMCP diff should match CLI diff for untracked memory.\n",
+      "utf8"
+    );
     await writeFile(join(repo, "src.ts"), "changed outside aictx\n", "utf8");
     const started = await startMcpClient(repo);
 
@@ -511,9 +523,21 @@ describe("aictx MCP read tools", () => {
 
       expect(mcpEnvelope).toEqual(cliEnvelope);
       expect(mcpEnvelope.data.diff).toContain(".aictx/memory/project.md");
+      expect(mcpEnvelope.data.diff).toContain(".aictx/memory/notes/mcp-untracked-note.md");
       expect(mcpEnvelope.data.diff).not.toContain("src.ts");
-      expect(mcpEnvelope.data.changed_files).toEqual([".aictx/memory/project.md"]);
-      expect(mcpEnvelope.data.changed_memory_ids).toEqual([projectId]);
+      expect(mcpEnvelope.data.changed_files).toEqual([
+        ".aictx/memory/notes/mcp-untracked-note.json",
+        ".aictx/memory/notes/mcp-untracked-note.md",
+        ".aictx/memory/project.md"
+      ]);
+      expect(mcpEnvelope.data.untracked_files).toEqual([
+        ".aictx/memory/notes/mcp-untracked-note.json",
+        ".aictx/memory/notes/mcp-untracked-note.md"
+      ]);
+      expect(mcpEnvelope.data.changed_memory_ids).toEqual([
+        "note.mcp-untracked-note",
+        projectId
+      ]);
       expect(mcpEnvelope.data.changed_relation_ids).toEqual([]);
     } finally {
       await started.close();

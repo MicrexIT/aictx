@@ -75,7 +75,7 @@ In Git projects, review memory changes before finalizing:
 aictx diff
 ```
 
-`aictx diff` is a convenience wrapper for `git diff -- .aictx/`; Git remains the source of truth for review, history, and rollback. Aictx writes local files and never commits automatically. The user decides whether to edit, commit, or revert memory changes.
+`aictx diff` shows tracked and untracked Aictx memory changes. Git remains the source of truth for history and rollback, but plain `git diff -- .aictx/` can omit untracked memory files before staging. Aictx writes local files and never commits automatically. The user decides whether to edit, commit, or revert memory changes.
 
 `aictx-mcp` is an MCP stdio server. The MCP client must launch it and connect to its stdin/stdout; an agent generally cannot start `aictx-mcp` in a shell and then use it as MCP tools in an already-running session. If MCP tools are not available, use the CLI fallback commands.
 
@@ -88,7 +88,7 @@ tools use the server launch directory for backward compatibility.
 
 When `aictx-mcp` is not on `PATH`, configure the MCP client to launch it through the project package manager or local binary path, such as `pnpm exec aictx-mcp`, `npm exec aictx-mcp`, or `./node_modules/.bin/aictx-mcp`. For one-off `npx` usage, name the scoped package explicitly: `npx --package @aictx/memory -- aictx-mcp`.
 
-Use `aictx setup` for guided first-run onboarding, or `aictx setup --apply` when the conservative bootstrap patch should be applied immediately after review. Use `aictx suggest --from-diff --json` when the agent needs a deterministic review packet for current code changes before drafting memory. Use `aictx suggest --bootstrap --json` for a first-run repo memory pass. If loaded memory only contains the init-created project and architecture placeholders, treat setup, onboarding, and "why is memory empty?" requests as enough context to run the bootstrap workflow proactively. Run `aictx suggest --bootstrap --patch > bootstrap-memory.json`, review it with `aictx patch review bootstrap-memory.json`, apply it with `aictx save --file bootstrap-memory.json`, then run `aictx check`. In Git projects, use `aictx diff` or `git diff -- .aictx/` before committing memory changes. The bootstrap patch command does not write memory; it only creates a reviewable draft so users do not have to hand-write JSON. Use `aictx audit --json` to find deterministic memory hygiene issues.
+Use `aictx setup` for guided first-run onboarding, or `aictx setup --apply` when the conservative bootstrap patch should be applied immediately after review. Use `aictx suggest --from-diff --json` when the agent needs a deterministic review packet for current code changes before drafting memory. Use `aictx suggest --bootstrap --json` for a first-run repo memory pass. If loaded memory only contains the init-created project and architecture placeholders, treat setup, onboarding, and "why is memory empty?" requests as enough context to run the bootstrap workflow proactively. Run `aictx suggest --bootstrap --patch > bootstrap-memory.json`, review it with `aictx patch review bootstrap-memory.json`, apply it with `aictx save --file bootstrap-memory.json`, then run `aictx check`. In Git projects, use `aictx diff` before committing memory changes so untracked memory files are included. The bootstrap patch command does not write memory; it only creates a reviewable draft so users do not have to hand-write JSON. Use `aictx audit --json` to find deterministic memory hygiene issues.
 
 ## Capability Map
 
