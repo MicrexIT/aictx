@@ -1,3 +1,8 @@
+import { spawn } from "node:child_process";
+import { open as openFile, readFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { CommanderError, type Command } from "commander";
 
 import {
@@ -17,6 +22,19 @@ import { renderAppResult } from "../render.js";
 type CliOutputWriter = (text: string) => void;
 
 export type ViewerUrlOpener = (url: string) => Promise<void> | void;
+export type ViewerDetacher = (options: DetachViewerOptions) => Promise<Result<DetachedViewer>>;
+
+export interface DetachViewerOptions {
+  port?: number;
+  open: boolean;
+}
+
+export interface DetachedViewer {
+  url: string;
+  host: string;
+  port: number;
+  log_path: string;
+}
 
 export interface RegisterViewCommandOptions {
   cwd: string;
@@ -24,6 +42,7 @@ export interface RegisterViewCommandOptions {
   stderr: CliOutputWriter;
   assetsDir?: string;
   opener?: ViewerUrlOpener;
+  detacher?: ViewerDetacher;
   shutdownSignal?: AbortSignal;
 }
 
@@ -33,11 +52,14 @@ export interface ViewServerData {
   port: number;
   token_required: true;
   open_attempted: boolean;
+  detached: boolean;
+  log_path: string | null;
 }
 
 interface ViewCommandFlags {
   port?: string;
   open?: boolean;
+  detach?: boolean;
 }
 
 export function registerViewCommand(
@@ -49,6 +71,7 @@ export function registerViewCommand(
     .description("Start the local read-only Aictx memory viewer.")
     .option("--port <number>", "Port to bind on 127.0.0.1.")
     .option("--open", "Open the viewer URL in the default browser.")
+    .option("--detach", "Start the viewer in a background process and print its URL.")
     .action(async (flags: ViewCommandFlags, command: Command) => {
       const preflight = await getViewerBootstrap({ cwd: options.cwd });
 
@@ -61,6 +84,44 @@ export function registerViewCommand(
 
       if (!port.ok) {
         renderAndThrowOnFailure(errorResult(port.error, preflight), command, options);
+        return;
+      }
+
+      if (flags.detach === true) {
+        const detached = await detachViewer(
+          {
+            ...(port.data === undefined ? {} : { port: port.data }),
+            open: flags.open === true
+          },
+          options.detacher
+        );
+
+        if (!detached.ok) {
+          renderAndThrowOnFailure(errorResult(detached.error, preflight), command, options);
+          return;
+        }
+
+        const result: AppResult<ViewServerData> = {
+          ok: true,
+          data: {
+            url: detached.data.url,
+            host: detached.data.host,
+            port: detached.data.port,
+            token_required: true,
+            open_attempted: flags.open === true,
+            detached: true,
+            log_path: detached.data.log_path
+          },
+          warnings: [...preflight.warnings, ...detached.warnings],
+          meta: preflight.meta
+        };
+        const rendered = renderAppResult(result, {
+          json: isJsonMode(command),
+          renderData: renderViewData
+        });
+
+        options.stdout(rendered.stdout);
+        options.stderr(rendered.stderr);
         return;
       }
 
@@ -86,7 +147,9 @@ export function registerViewCommand(
           host: started.data.host,
           port: started.data.port,
           token_required: true,
-          open_attempted: openAttempted
+          open_attempted: openAttempted,
+          detached: false,
+          log_path: null
         },
         warnings: [...preflight.warnings, ...openWarnings],
         meta: preflight.meta
@@ -151,7 +214,10 @@ function parsePort(value: string | undefined): Result<number | undefined> {
 }
 
 function renderViewData(data: ViewServerData): string {
-  return `Aictx viewer: ${data.url}`;
+  return [
+    `Aictx viewer: ${data.url}`,
+    ...(data.log_path === null ? [] : [`Aictx viewer log: ${data.log_path}`])
+  ].join("\n");
 }
 
 function isJsonMode(command: Command): boolean {
@@ -187,6 +253,68 @@ async function openWithDefaultBrowser(url: string): Promise<void> {
   if (result.data.exitCode !== 0) {
     throw new Error(result.data.stderr.trim() || `exit code ${result.data.exitCode}`);
   }
+}
+
+export async function detachViewer(
+  options: DetachViewerOptions,
+  detacher: ViewerDetacher | undefined
+): Promise<Result<DetachedViewer>> {
+  if (detacher !== undefined) {
+    return detacher(options);
+  }
+
+  const logPath = join(tmpdir(), `aictx-viewer-${process.pid}-${Date.now()}.log`);
+  const log = await openFile(logPath, "a");
+  const cliPath = fileURLToPath(new URL("../main.js", import.meta.url));
+  const args = [
+    cliPath,
+    "view",
+    ...(options.port === undefined ? [] : ["--port", String(options.port)]),
+    ...(options.open ? ["--open"] : [])
+  ];
+  const child = spawn(process.execPath, args, {
+    detached: true,
+    stdio: ["ignore", log.fd, log.fd]
+  });
+
+  child.unref();
+  await log.close();
+
+  const url = await waitForDetachedViewerUrl(logPath);
+
+  if (!url.ok) {
+    return url;
+  }
+
+  const parsed = new URL(url.data);
+
+  return ok({
+    url: url.data,
+    host: parsed.hostname,
+    port: Number(parsed.port),
+    log_path: logPath
+  });
+}
+
+async function waitForDetachedViewerUrl(logPath: string): Promise<Result<string>> {
+  const startedAt = Date.now();
+
+  while (Date.now() - startedAt < 5_000) {
+    const contents = await readFile(logPath, "utf8").catch(() => "");
+    const match = contents.match(/Aictx viewer: (?<url>http:\/\/127\.0\.0\.1:\d+\/\?token=\S+)/);
+
+    if (match?.groups?.url !== undefined) {
+      return ok(match.groups.url);
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+
+  return err(
+    aictxError("AICtxValidationFailed", "Detached viewer did not report a URL.", {
+      log_path: logPath
+    })
+  );
 }
 
 function browserOpenCommand(url: string): { command: string; args: string[] } {

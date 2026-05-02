@@ -7,7 +7,6 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
-import fg from "fast-glob";
 import { afterEach, describe, expect, it } from "vitest";
 
 import {
@@ -123,13 +122,12 @@ afterEach(async () => {
 });
 
 describe("integration security regression guardrails", () => {
-  it("rejects tampered body_path traversal without writing outside Aictx storage", async () => {
+  it("quarantines tampered body_path traversal without writing outside Aictx storage", async () => {
     const projectRoot = await createInitializedProject("aictx-security-path-");
     const sidecarPath = join(projectRoot, ".aictx", "memory", "project.json");
     const sidecar = JSON.parse(await readFile(sidecarPath, "utf8")) as Record<string, unknown>;
     sidecar.body_path = "memory/../../outside.md";
     await writeFile(sidecarPath, `${JSON.stringify(sidecar, null, 2)}\n`, "utf8");
-    const before = await readRawAictxSnapshot(projectRoot);
 
     const result = await saveMemoryPatch({
       cwd: projectRoot,
@@ -137,17 +135,28 @@ describe("integration security regression guardrails", () => {
       patch: createNotePatch("Traversal blocked", "This write must not happen.")
     });
 
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.error.code).toBe("AICtxValidationFailed");
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.data.memory_created).toContain("note.traversal-blocked");
+      expect(result.data.repairs_applied).toContain(
+        "Quarantined invalid memory object sidecar: .aictx/memory/project.json"
+      );
+      expect(result.data.recovery_files).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            path: ".aictx/memory/project.json",
+            reason: "repair_quarantine"
+          })
+        ])
+      );
     }
     await expect(readFile(join(projectRoot, "outside.md"), "utf8")).rejects.toMatchObject({
       code: "ENOENT"
     });
     await expect(
       readFile(join(projectRoot, ".aictx", "memory", "notes", "traversal-blocked.md"), "utf8")
-    ).rejects.toMatchObject({ code: "ENOENT" });
-    await expect(readRawAictxSnapshot(projectRoot)).resolves.toEqual(before);
+    ).resolves.toContain("This write must not happen.");
+    await expect(readFile(sidecarPath, "utf8")).rejects.toMatchObject({ code: "ENOENT" });
   });
 
   it("redacts detected secret values from CLI and MCP save failures", async () => {
@@ -196,14 +205,13 @@ describe("integration security regression guardrails", () => {
     expect(started.stderr()).toBe("");
   });
 
-  it("blocks saves when canonical files contain conflict markers and preserves storage", async () => {
+  it("quarantines conflict-marked canonical files and still applies independent creates", async () => {
     const projectRoot = await createInitializedProject("aictx-security-conflict-");
     await writeFile(
       join(projectRoot, ".aictx", "memory", "project.md"),
       ["<<<<<<< HEAD", "# Project", "=======", "# Other project", ">>>>>>> branch", ""].join("\n"),
       "utf8"
     );
-    const before = await readRawAictxSnapshot(projectRoot);
 
     const result = await saveMemoryPatch({
       cwd: projectRoot,
@@ -211,13 +219,33 @@ describe("integration security regression guardrails", () => {
       patch: createNotePatch("Conflict blocked", "This write must not happen.")
     });
 
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.error.code).toBe("AICtxConflictDetected");
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.data.memory_created).toContain("note.conflict-blocked");
+      expect(result.data.repairs_applied).toEqual(
+        expect.arrayContaining([
+          "Quarantined invalid memory object sidecar: .aictx/memory/project.json",
+          "Quarantined invalid memory object body: .aictx/memory/project.md"
+        ])
+      );
+      expect(result.data.recovery_files).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            path: ".aictx/memory/project.json",
+            reason: "repair_quarantine"
+          }),
+          expect.objectContaining({
+            path: ".aictx/memory/project.md",
+            reason: "repair_quarantine"
+          })
+        ])
+      );
     }
-    await expect(readRawAictxSnapshot(projectRoot)).resolves.toEqual(before);
     await expect(
       readFile(join(projectRoot, ".aictx", "memory", "notes", "conflict-blocked.md"), "utf8")
+    ).resolves.toContain("This write must not happen.");
+    await expect(
+      readFile(join(projectRoot, ".aictx", "memory", "project.md"), "utf8")
     ).rejects.toMatchObject({ code: "ENOENT" });
   });
 
@@ -507,23 +535,6 @@ async function writeJsonProjectFile(
   value: unknown
 ): Promise<void> {
   await writeProjectFile(projectRoot, relativePath, `${JSON.stringify(value, null, 2)}\n`);
-}
-
-async function readRawAictxSnapshot(projectRoot: string): Promise<Record<string, string>> {
-  const paths = (
-    await fg(".aictx/**/*.{json,jsonl,md}", {
-      cwd: projectRoot,
-      dot: true,
-      ignore: [".aictx/index/**", ".aictx/context/**", ".aictx/exports/**", ".aictx/.lock"],
-      onlyFiles: true,
-      unique: true
-    })
-  ).sort();
-  const entries = await Promise.all(
-    paths.map(async (path) => [path, await readFile(join(projectRoot, path), "utf8")] as const)
-  );
-
-  return Object.fromEntries(entries);
 }
 
 function parseSuccessfulCliEnvelope<T>(output: CliRunResult): T {

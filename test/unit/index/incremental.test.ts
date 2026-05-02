@@ -105,21 +105,37 @@ describe("incremental index update", () => {
 
   it("deletes touched objects from objects and FTS", async () => {
     const projectRoot = await createInitializedProject("aictx-incremental-delete-object-");
+    const storage = await readCanonicalStorage(projectRoot);
+    expect(storage.ok).toBe(true);
+    if (!storage.ok) {
+      throw new Error(storage.error.message);
+    }
+    const relation = storage.data.relations.find(
+      (item) => item.relation.to === "architecture.current"
+    );
+    expect(relation).toBeDefined();
+    if (relation === undefined) {
+      throw new Error("Expected starter relation to architecture.current.");
+    }
+
     await rm(join(projectRoot, ".aictx", "memory", "architecture.md"));
     await rm(join(projectRoot, ".aictx", "memory", "architecture.json"));
+    await rm(join(projectRoot, relation.path));
 
     const result = await updateIndexIncrementally({
       projectRoot,
       aictxRoot: join(projectRoot, ".aictx"),
       clock: createFixedTestClock(FIXED_TIMESTAMP_NEXT_MINUTE),
       touched: {
-        deletedObjectIds: ["architecture.current"]
+        deletedObjectIds: ["architecture.current"],
+        deletedRelationIds: [relation.relation.id]
       }
     });
 
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.data.objects_deleted).toBe(1);
+      expect(result.data.relations_deleted).toBe(1);
     }
 
     const connection = await openConnection(projectRoot);

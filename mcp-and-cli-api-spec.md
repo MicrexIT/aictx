@@ -52,7 +52,8 @@ When a supported MCP or CLI entrypoint exists, agents must use that entrypoint i
 | Search memory | `search_memory` | `aictx search` | Preferred routine agent path is MCP. |
 | Save memory patch | `save_memory_patch` | `aictx save` | All writes use structured patches. |
 | Show memory diff | `diff_memory` | `aictx diff` | Git-backed; CLI fallback is supported. |
-| Initialize storage | none | `aictx init` | Setup remains CLI-only in v1. |
+| Initialize storage | none | `aictx init`, `aictx setup` | Setup remains CLI-only in v1. |
+| Review patch file | none | `aictx patch review` | Patch review remains CLI-only in v1. |
 | Validate storage | none | `aictx check` | Maintenance remains CLI-only in v1. |
 | Rebuild generated index | none | `aictx rebuild` | Maintenance remains CLI-only in v1. |
 | Show memory history | none | `aictx history` | Recovery/inspection remains CLI-only in v1. |
@@ -158,7 +159,7 @@ Initialize `.aictx/` inside the current project root.
 Syntax:
 
 ```bash
-aictx init [--no-agent-guidance] [--json]
+aictx init [--no-agent-guidance] [--force] [--json]
 ```
 
 Behavior:
@@ -172,6 +173,8 @@ Behavior:
 * Create JSON schemas.
 * Create empty `events.jsonl`.
 * Create generated directories.
+* If Git is available and tracked `.aictx/` files are dirty while storage is missing or invalid, fail with `AICtxDirtyMemory` unless `--force` is provided.
+* If `--force` is provided, remove existing `.aictx/` contents except the active lock file, then create fresh starter storage.
 * If Git is available, add or recommend `.gitignore` entries for `.aictx/index/`, `.aictx/context/`, `.aictx/exports/`, and `.aictx/.lock`.
 * Create or update marked Aictx guidance sections in `AGENTS.md` and `CLAUDE.md` unless `--no-agent-guidance` is provided.
 * Do not start the MCP server; users must configure their MCP client to launch `aictx-mcp`.
@@ -181,8 +184,10 @@ Behavior:
 
 If `.aictx/` already exists:
 
-* If valid, return success with a warning.
-* If invalid, return `AICtxAlreadyInitializedInvalid`.
+* If valid, return success with a warning unless `--force` is provided.
+* If valid and `--force` is provided, reset `.aictx/` and initialize fresh starter storage.
+* If invalid, return `AICtxAlreadyInitializedInvalid` unless tracked `.aictx/` files are dirty.
+* If invalid and tracked `.aictx/` files are dirty, return `AICtxDirtyMemory` unless `--force` is provided.
 
 Success data:
 
@@ -217,13 +222,34 @@ Success data:
   },
   "next_steps": [
     "Agents are now instructed through `AGENTS.md` and `CLAUDE.md` to load and save Aictx memory.",
-    "`aictx init` creates linked starter placeholders only. To seed useful first-run memory, run `aictx suggest --bootstrap --patch > bootstrap-memory.json`, review it, then run `aictx save --file bootstrap-memory.json` and `aictx check`. In Git projects, run `aictx diff` before committing memory changes.",
+    "`aictx init` creates linked starter placeholders only. To seed useful first-run memory, run `aictx setup` for a review summary or `aictx setup --apply` to apply the conservative bootstrap patch. For manual review, run `aictx suggest --bootstrap --patch > bootstrap-memory.json`, `aictx patch review bootstrap-memory.json`, `aictx save --file bootstrap-memory.json`, and `aictx check`.",
     "`aictx init` does not start MCP; configure agent clients that support MCP to launch `aictx-mcp` so agents can use `load_memory` and `save_memory_patch`. A globally launched MCP server can serve this project when tool calls include this project root as `project_root`. Agents can fall back to `aictx load` and `aictx save --stdin` when MCP is unavailable.",
-    "Review memory changes in `.aictx/`; in Git projects, use `aictx diff` before committing.",
+    "Review memory changes in `.aictx/`; in Git projects, use `aictx diff` or `git diff -- .aictx/` before committing.",
     "Optional bundled skills are available under `integrations/codex/` and `integrations/claude/`."
   ]
 }
 ```
+
+### 5.1.1 `aictx setup`
+
+Purpose:
+
+Run the guided first-run onboarding workflow.
+
+Syntax:
+
+```bash
+aictx setup [--force] [--apply] [--view] [--open] [--json]
+```
+
+Behavior:
+
+* Run `aictx init`, using `--force` only when explicitly requested.
+* Build a conservative bootstrap patch proposal.
+* Without `--apply`, print a concise review summary and the next command.
+* With `--apply`, save the bootstrap patch directly, then run `aictx check`.
+* If no bootstrap patch is proposed, print “No bootstrap memory patch to apply” and still run `aictx check`.
+* Include a diff summary when Git is available.
 
 ### 5.2 `aictx load`
 
@@ -315,9 +341,10 @@ Behavior:
 * Require exactly one of `--file` or `--stdin`.
 * Parse the patch as JSON.
 * Validate the patch against `patch.schema.json`.
-* Reject writes if `.aictx/` contains conflict markers.
-* When Git is available, reject writes if `.aictx/` contains unresolved Git conflicts.
-* When Git is available, reject writes if the patch would overwrite modified memory files that are already dirty; valid dirty `events.jsonl` is allowed because saves append to it.
+* Repair or quarantine unrelated malformed memory where possible before applying independent patch changes.
+* When Git is available, dirty `.aictx/` files must not block saves by themselves.
+* Before overwriting or deleting dirty touched canonical files, copy their previous contents to `.aictx/recovery/` and report the recovery paths.
+* Valid dirty `events.jsonl` is allowed because saves append to it; invalid `events.jsonl` is backed up and reduced to valid preserved events where possible before appending.
 * Apply the same write path as MCP `save_memory_patch`.
 * Append semantic events to `events.jsonl`.
 * Update hashes.
@@ -333,6 +360,8 @@ Success data:
     ".aictx/memory/decisions/billing-retries.json",
     ".aictx/events.jsonl"
   ],
+  "recovery_files": [],
+  "repairs_applied": [],
   "memory_created": ["decision.billing-retries"],
   "memory_updated": [],
   "memory_deleted": [],
@@ -359,7 +388,7 @@ aictx diff [--json]
 Behavior:
 
 * Require Git; outside a Git worktree return `AICtxGitRequired`.
-* Equivalent in scope to `git diff -- .aictx/`.
+* Convenience wrapper equivalent in scope to `git diff -- .aictx/`; Git remains the source of truth for review/history.
 * Must not show non-Aictx repository changes.
 * Must work when `.aictx/` has uncommitted changes.
 
@@ -542,8 +571,10 @@ aictx stale [--json]
 aictx inspect <id> [--json]
 aictx graph <id> [--json]
 aictx export obsidian [--out <dir>] [--json]
-aictx view [--port <number>] [--open] [--json]
+aictx view [--port <number>] [--open] [--detach] [--json]
 aictx suggest (--from-diff | --bootstrap) [--patch] [--json]
+aictx patch review <file> [--json]
+aictx setup [--force] [--apply] [--view] [--open] [--json]
 aictx audit [--json]
 ```
 
@@ -560,6 +591,8 @@ Minimum behavior:
 * `aictx suggest --from-diff` returns a Git-backed deterministic memory review packet for the current diff and does not write memory.
 * `aictx suggest --bootstrap` returns a deterministic first-run memory review packet and does not write memory.
 * `aictx suggest --bootstrap --patch` returns a proposed structured memory patch and does not write canonical memory.
+* `aictx patch review <file>` validates and summarizes a patch file without writing canonical memory.
+* `aictx setup` orchestrates init, bootstrap proposal, optional save, check, and diff summary.
 * `aictx audit` returns deterministic memory hygiene findings and does not write memory.
 
 ### 5.11 `aictx suggest`
@@ -721,7 +754,7 @@ Start a local read-only web viewer for browsing canonical Aictx memory.
 Syntax:
 
 ```bash
-aictx view [--port <number>] [--open] [--json]
+aictx view [--port <number>] [--open] [--detach] [--json]
 ```
 
 Behavior:
@@ -734,6 +767,7 @@ Behavior:
 * Include a per-run token in the launched URL and require it for all viewer API requests.
 * Serve bundled Svelte/Vite static assets from the package.
 * Keep running until interrupted.
+* With `--detach`, start a background viewer process, verify it reports a URL, print the URL and log path, then exit.
 * `--open` may launch the user's default browser after the server starts.
 * Do not mutate canonical memory while starting or serving the viewer.
 * Do not expose an MCP tool for local viewing.
@@ -886,9 +920,9 @@ Behavior:
 * Must write only to the selected project's isolated `.aictx/` directory.
 * Must not infer semantic memory from code diffs.
 * Must not commit.
-* Must reject writes on unresolved `.aictx/` conflict markers.
-* When Git is available, must reject writes on unresolved `.aictx/` Git conflicts.
-* When Git is available, must reject writes that would overwrite dirty files touched by the patch; valid dirty `events.jsonl` is allowed because saves append to it.
+* Must not reject writes only because `.aictx/` files are dirty.
+* Must quarantine or repair unrelated malformed memory where possible.
+* Must back up dirty touched files to `.aictx/recovery/` before overwrite/delete and report recovery paths.
 
 Output data:
 
@@ -1240,9 +1274,9 @@ Rules:
 * `init`, `load_memory`, `search_memory`, `save_memory_patch`, `check`, and `rebuild` must work outside Git.
 * `diff_memory`, `aictx diff`, `aictx history`, `aictx restore`, and `aictx rewind` require Git and return `AICtxGitRequired` outside Git.
 * When Git is available, `load_memory` and `search_memory` may run when `.aictx/` is dirty.
-* `save_memory_patch` must reject writes when `.aictx/` has conflict markers.
-* When Git is available, `save_memory_patch` must reject writes when `.aictx/` has unresolved Git conflicts.
-* When Git is available, `save_memory_patch` must reject writes that would overwrite dirty files touched by the patch; valid dirty `events.jsonl` is allowed because saves append to it.
+* `save_memory_patch` must try to repair or quarantine unrelated malformed memory and keep applying independent patch changes.
+* When Git is available, `save_memory_patch` must not reject writes only because `.aictx/` is dirty.
+* When Git is available, `save_memory_patch` must back up dirty touched files to `.aictx/recovery/` before overwrite/delete.
 * When Git is available, `diff_memory` must show only `.aictx/` changes.
 * When Git is available, `restore` and `rewind` must refuse to run when `.aictx/` is dirty.
 * No command or MCP tool may run `git commit`.
@@ -1250,7 +1284,7 @@ Rules:
 Dirty file detection:
 
 * A file is dirty if Git reports it modified, added, deleted, renamed, or unmerged under `.aictx/`.
-* Generated and local ignored files under `.aictx/index/`, `.aictx/context/`, `.aictx/exports/`, and `.aictx/.lock` do not count as dirty.
+* Generated and local ignored files under `.aictx/index/`, `.aictx/context/`, `.aictx/exports/`, `.aictx/recovery/`, and `.aictx/.lock` do not count as dirty.
 
 Conflict detection:
 

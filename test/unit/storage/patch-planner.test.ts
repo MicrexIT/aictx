@@ -224,7 +224,7 @@ describe("planMemoryPatch", () => {
     }
   });
 
-  it("fails with AICtxDirtyMemory when dirty files overlap touched files", async () => {
+  it("plans recovery backups when dirty files overlap touched files", async () => {
     const projectRoot = await createPatchProject();
 
     const result = await planMemoryPatch({
@@ -253,15 +253,74 @@ describe("planMemoryPatch", () => {
       )
     });
 
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.error.code).toBe("AICtxDirtyMemory");
-      expect(JSON.stringify(result.error.details)).toContain(
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.data.recovery_files).toEqual([
+        {
+          path: ".aictx/memory/decisions/billing-retries.json",
+          recovery_path:
+            ".aictx/recovery/2026-04-25T14-00-00-02-00/memory/decisions/billing-retries.json",
+          reason: "dirty_overwrite"
+        }
+      ]);
+      expect(result.warnings.join("\n")).toContain(
         ".aictx/memory/decisions/billing-retries.json"
       );
-      expect(JSON.stringify(result.error.details)).not.toContain(
-        ".aictx/memory/facts/unrelated.json"
-      );
+      expect(result.warnings.join("\n")).not.toContain(".aictx/memory/facts/unrelated.json");
+    }
+  });
+
+  it("plans recovery metadata for dirty touched deletes", async () => {
+    const projectRoot = await createPatchProject();
+
+    const result = await planMemoryPatch({
+      projectRoot,
+      patch: {
+        source: {
+          kind: "agent"
+        },
+        changes: [
+          {
+            op: "delete_relation",
+            id: "rel.billing-retries-requires-idempotency"
+          },
+          {
+            op: "delete_object",
+            id: "decision.billing-retries"
+          }
+        ]
+      },
+      git: dirtyGit,
+      clock: createFixedTestClock(),
+      runner: createGitStatusRunner(
+        [
+          " M .aictx/memory/decisions/billing-retries.json",
+          " M .aictx/memory/decisions/billing-retries.md",
+          ""
+        ].join("\n"),
+        new Set([
+          ".aictx/memory/decisions/billing-retries.json",
+          ".aictx/memory/decisions/billing-retries.md"
+        ])
+      )
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.data.recovery_files).toEqual([
+        {
+          path: ".aictx/memory/decisions/billing-retries.json",
+          recovery_path:
+            ".aictx/recovery/2026-04-25T14-00-00-02-00/memory/decisions/billing-retries.json",
+          reason: "dirty_delete"
+        },
+        {
+          path: ".aictx/memory/decisions/billing-retries.md",
+          recovery_path:
+            ".aictx/recovery/2026-04-25T14-00-00-02-00/memory/decisions/billing-retries.md",
+          reason: "dirty_delete"
+        }
+      ]);
     }
   });
 

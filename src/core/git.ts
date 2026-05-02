@@ -13,7 +13,8 @@ const AICTX_PATHSPEC = ".aictx";
 const IGNORED_DIRTY_PATHS = [
   ".aictx/index/",
   ".aictx/context/",
-  ".aictx/exports/"
+  ".aictx/exports/",
+  ".aictx/recovery/"
 ] as const;
 const IGNORED_DIRTY_FILES = [".aictx/.lock"] as const;
 const IGNORED_PROJECT_CHANGE_PREFIXES = [

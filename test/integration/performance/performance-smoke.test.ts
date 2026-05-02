@@ -113,7 +113,7 @@ describe("performance smoke tests", () => {
       expect(rebuilt.data).toMatchObject({
         index_rebuilt: true,
         objects_indexed: GENERATED_OBJECT_COUNT + 2,
-        relations_indexed: GENERATED_RELATION_COUNT,
+        relations_indexed: GENERATED_RELATION_COUNT + 1,
         events_indexed: GENERATED_EVENT_COUNT,
         event_appended: false
       });

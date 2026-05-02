@@ -49,13 +49,6 @@ import {
 
 const PATCH_PATH = "<patch>";
 const EVENTS_PATH = ".aictx/events.jsonl";
-const BOOTSTRAP_PATCH_TASK =
-  "Proposed bootstrap memory patch from deterministic repository analysis";
-const BOOTSTRAP_CREATED_OBJECT_IDS = new Set<ObjectId>([
-  "workflow.package-scripts",
-  "constraint.node-engine",
-  "constraint.package-manager"
-]);
 const QUESTION_STATUSES = new Set<ObjectStatus>([
   "active",
   "draft",
@@ -99,10 +92,19 @@ export interface PatchPlan {
   relations_updated: RelationId[];
   relations_deleted: RelationId[];
   events_appended: number;
+  recovery_files: PatchRecoveryFile[];
+  repairs_applied: string[];
 }
 
 export type PatchPlannedFileWriteKind = "object_body" | "object_sidecar" | "relation";
 export type PatchPlannedFileDeleteKind = "object_body" | "object_sidecar" | "relation";
+export type PatchRecoveryReason = "dirty_overwrite" | "dirty_delete" | "repair_quarantine";
+
+export interface PatchRecoveryFile {
+  path: string;
+  recovery_path: string;
+  reason: PatchRecoveryReason;
+}
 
 export interface PatchPlannedFileWrite {
   path: string;
@@ -339,6 +341,8 @@ interface PlanningState {
   relationsCreated: RelationId[];
   relationsUpdated: RelationId[];
   relationsDeleted: RelationId[];
+  recoveryFiles: PatchRecoveryFile[];
+  warnings: string[];
 }
 
 interface ObjectPaths {
@@ -394,17 +398,24 @@ export async function planMemoryPatch(
     const planned = await planChange(state, change, index);
 
     if (!planned.ok) {
+      if (isPartialRecoverablePlanningError(planned.error.code, change)) {
+        state.warnings.push(
+          `Skipped memory patch change ${index}: ${planned.error.message}`
+        );
+        continue;
+      }
+
       return planned;
     }
   }
 
-  const dirtyCheck = await rejectDirtyTouchedFiles(projectRoot, state, options);
+  const dirtyCheck = await recordDirtyTouchedRecoveries(projectRoot, state, options);
 
   if (!dirtyCheck.ok) {
     return dirtyCheck;
   }
 
-  return ok(buildPlan(state), storage.warnings);
+  return ok(buildPlan(state), [...storage.warnings, ...state.warnings, ...dirtyCheck.warnings]);
 }
 
 async function getValidators(
@@ -466,8 +477,28 @@ function createPlanningState(
     memoryDeleted: [],
     relationsCreated: [],
     relationsUpdated: [],
-    relationsDeleted: []
+    relationsDeleted: [],
+    recoveryFiles: [],
+    warnings: []
   };
+}
+
+function isPartialRecoverablePlanningError(
+  code: AictxErrorCode,
+  change: RawPatchChange
+): boolean {
+  if (code !== "AICtxObjectNotFound" && code !== "AICtxRelationNotFound") {
+    return false;
+  }
+
+  return (
+    change.op === "update_object" ||
+    change.op === "mark_stale" ||
+    change.op === "supersede_object" ||
+    change.op === "delete_object" ||
+    change.op === "update_relation" ||
+    change.op === "delete_relation"
+  );
 }
 
 function objectRecordFromStoredObject(object: StoredMemoryObject): ObjectPlanningRecord {
@@ -1123,7 +1154,7 @@ async function pathExists(projectRoot: string, path: string): Promise<boolean> {
   return (await lstat(resolve(projectRoot, path)).catch(() => null)) !== null;
 }
 
-async function rejectDirtyTouchedFiles(
+async function recordDirtyTouchedRecoveries(
   projectRoot: string,
   state: PlanningState,
   options: GitWrapperOptions
@@ -1158,19 +1189,19 @@ async function rejectDirtyTouchedFiles(
     (file) => !isAppendOnlyDirtyTouch(state, file)
   );
 
-  if (trackedDirtyOverwriteFiles.length === 0) {
-    return ok(undefined);
-  }
+  state.recoveryFiles.push(
+    ...trackedDirtyOverwriteFiles.map((file) => ({
+      path: file,
+      recovery_path: recoveryPathForDirtyFile(state.timestamp, file),
+      reason: dirtyRecoveryReason(state, file)
+    }))
+  );
 
-  if (isStarterBootstrapPatch(state)) {
-    return ok(undefined);
-  }
-
-  return err(
-    aictxError("AICtxDirtyMemory", "Patch would overwrite dirty Aictx memory files.", {
-      dirty_files: trackedDirtyOverwriteFiles,
-      touched_files: sortedValues(state.touchedFiles)
-    })
+  return ok(
+    undefined,
+    trackedDirtyOverwriteFiles.map(
+      (file) => `Dirty Aictx file will be backed up before save: ${file}`
+    )
   );
 }
 
@@ -1183,58 +1214,17 @@ function isAppendOnlyDirtyTouch(state: PlanningState, path: string): boolean {
   );
 }
 
-function isStarterBootstrapPatch(state: PlanningState): boolean {
-  if (state.source.kind !== "cli" || state.source.task !== BOOTSTRAP_PATCH_TASK) {
-    return false;
-  }
-
-  if (!isInitStarterSnapshot(state)) {
-    return false;
-  }
-
-  const projectId = state.snapshot.config.project.id;
-
-  return state.normalizedChanges.every((change) => {
-    switch (change.op) {
-      case "update_object":
-        return change.id === projectId || change.id === "architecture.current";
-      case "create_object":
-        return BOOTSTRAP_CREATED_OBJECT_IDS.has(change.id);
-      case "create_relation":
-        return (
-          change.from === projectId &&
-          change.predicate === "related_to" &&
-          change.to === "architecture.current"
-        );
-      case "mark_stale":
-      case "supersede_object":
-      case "delete_object":
-      case "update_relation":
-      case "delete_relation":
-        return false;
-    }
-  });
+function dirtyRecoveryReason(state: PlanningState, path: string): PatchRecoveryReason {
+  return state.fileDeletes.some((deletion) => deletion.path === path)
+    ? "dirty_delete"
+    : "dirty_overwrite";
 }
 
-function isInitStarterSnapshot(state: PlanningState): boolean {
-  const projectId = state.snapshot.config.project.id;
-  const projectName = state.snapshot.config.project.name;
-  const expectedProjectBody = `# ${projectName}\n\nProject-level memory for ${projectName}.\n`;
-  const expectedArchitectureBody = "# Current Architecture\n\nArchitecture memory starts here.\n";
+export function recoveryPathForDirtyFile(timestamp: IsoDateTime, path: string): string {
+  const safeTimestamp = timestamp.replace(/[^0-9A-Za-z.-]/g, "-");
+  const relativePath = path.startsWith(".aictx/") ? path.slice(".aictx/".length) : path;
 
-  if (state.snapshot.events.length !== 0 || state.snapshot.objects.length !== 2) {
-    return false;
-  }
-
-  const projectObject = state.snapshot.objects.find((object) => object.sidecar.id === projectId);
-  const architectureObject = state.snapshot.objects.find(
-    (object) => object.sidecar.id === "architecture.current"
-  );
-
-  return (
-    projectObject?.body === expectedProjectBody &&
-    architectureObject?.body === expectedArchitectureBody
-  );
+  return `.aictx/recovery/${safeTimestamp}/${relativePath}`;
 }
 
 function buildPlan(state: PlanningState): PatchPlan {
@@ -1256,7 +1246,9 @@ function buildPlan(state: PlanningState): PatchPlan {
     relations_created: state.relationsCreated,
     relations_updated: state.relationsUpdated,
     relations_deleted: state.relationsDeleted,
-    events_appended: state.eventAppends.length
+    events_appended: state.eventAppends.length,
+    recovery_files: state.recoveryFiles,
+    repairs_applied: []
   };
 }
 

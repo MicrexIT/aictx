@@ -1,0 +1,1 @@
+First-run onboarding is centered on `aictx setup`; use `aictx setup --apply` for direct conservative bootstrap saves, or `aictx patch review <file>` before `aictx save --file <file>` for manual bootstrap review.

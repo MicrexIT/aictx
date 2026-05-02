@@ -175,15 +175,23 @@ Aictx storage and start from scratch.
 After init, the viewer will show linked starter project and architecture
 placeholders until richer memory is seeded.
 
-For first-run onboarding, ask Aictx for a proposed seed-memory patch, review it,
+For first-run onboarding, use the guided setup flow:
+
+```bash
+aictx setup
+aictx setup --apply
+```
+
+For a manual review flow, ask Aictx for a proposed seed-memory patch, review it,
 then save it explicitly:
 
 ```bash
 aictx suggest --bootstrap --patch > bootstrap-memory.json
-# review or edit bootstrap-memory.json
+aictx patch review bootstrap-memory.json
+# optionally edit bootstrap-memory.json
 aictx save --file bootstrap-memory.json
 aictx check
-aictx diff
+aictx diff # or: git diff -- .aictx/
 ```
 
 `aictx init` does not infer rich semantic memory from the repository. The
@@ -200,11 +208,10 @@ If `aictx` is not installed globally, install it first with:
 npm install -g @aictx/memory@latest
 
 Then run the initial setup:
-aictx init
-aictx suggest --bootstrap --patch > bootstrap-memory.json
+aictx setup
 
-Review `bootstrap-memory.json` for deterministic, non-sensitive facts. If it looks correct, apply it:
-aictx save --file bootstrap-memory.json
+If the setup review looks correct, apply it:
+aictx setup --apply
 aictx check
 aictx diff
 
@@ -383,8 +390,10 @@ aictx save --stdin < memory-patch.json
 ```
 
 This is the CLI equivalent of the MCP `save_memory_patch` tool. It validates the
-patch, refuses unsafe writes, updates canonical memory files, appends events,
-and refreshes generated indexes.
+patch, rejects unsafe patch input, updates canonical memory files, appends
+events, and refreshes generated indexes. Dirty touched memory files are backed
+up under `.aictx/recovery/` before overwrite or delete, then the save continues
+where possible.
 
 #### `aictx save --file <path>`
 
@@ -451,14 +460,15 @@ These commands require Git because they use Git history and diffs scoped to
 
 #### `aictx diff`
 
-Shows Git diff output for Aictx memory files.
+Convenience wrapper for Git diff output scoped to Aictx memory files.
 
 ```bash
 aictx diff
 ```
 
 Use this before committing to review what an agent or CLI command changed under
-`.aictx/`.
+`.aictx/`. Plain Git remains the source of truth, so `git diff -- .aictx/`
+is equivalent for review.
 
 #### `aictx history`
 
@@ -675,7 +685,8 @@ or stale-memory updates. This is the preferred routine write path for agents.
 
 #### `diff_memory`
 
-Returns Git diff output scoped to Aictx memory files.
+Returns Git diff output scoped to Aictx memory files. This is a convenience
+wrapper around the same `.aictx/` Git diff that users can run directly.
 
 Inputs: none.
 
@@ -697,7 +708,8 @@ MCP or CLI. It does not mean MCP and CLI expose identical command lists.
 | Search memory | `search_memory` | `aictx search` | Preferred routine agent path is MCP. |
 | Save memory patch | `save_memory_patch` | `aictx save` | All writes use structured patches. |
 | Show memory diff | `diff_memory` | `aictx diff` | Git-backed; CLI fallback is supported. |
-| Initialize storage | none | `aictx init` | Setup remains CLI-only in v1. |
+| Initialize storage | none | `aictx init`, `aictx setup` | Setup remains CLI-only in v1. |
+| Review patch file | none | `aictx patch review` | Patch review remains CLI-only in v1. |
 | Validate storage | none | `aictx check` | Maintenance remains CLI-only in v1. |
 | Rebuild generated index | none | `aictx rebuild` | Maintenance remains CLI-only in v1. |
 | Show memory history | none | `aictx history` | Recovery and inspection remain CLI-only in v1. |

@@ -1,11 +1,15 @@
-import { rm } from "node:fs/promises";
-import { resolve } from "node:path";
+import { copyFile, lstat, mkdir, rm } from "node:fs/promises";
+import { dirname, resolve } from "node:path";
+
+import fg from "fast-glob";
 
 import { aictxError, type JsonValue } from "../core/errors.js";
 import {
+  readUtf8FileInsideRoot,
   resolveInsideRoot,
   writeJsonAtomic,
-  writeMarkdownAtomic
+  writeMarkdownAtomic,
+  writeTextAtomic
 } from "../core/fs.js";
 import {
   getAictxDirtyState,
@@ -30,8 +34,10 @@ import {
   compileProjectSchemas,
   type CompiledSchemaValidators
 } from "../validation/schemas.js";
+import { detectConflictMarkersInText } from "../validation/conflicts.js";
 import {
   schemaValidationError,
+  validateEvent,
   validateObject,
   validateRelation
 } from "../validation/validate.js";
@@ -62,8 +68,10 @@ import {
   type NormalizedUpdateRelationChange,
   type PatchPlan,
   type PatchPlannedEventAppend,
+  type PatchRecoveryFile,
   type PlanMemoryPatchOptions
 } from "./patch.js";
+import { recoveryPathForDirtyFile } from "./patch.js";
 import { readCanonicalStorage } from "./read.js";
 import type { MemoryRelation } from "./relations.js";
 
@@ -147,6 +155,11 @@ export interface RestoreCanonicalStorageFromCommitData {
   files_changed: string[];
 }
 
+interface RepairCanonicalStorageForSaveData {
+  recovery_files: PatchRecoveryFile[];
+  repairs_applied: string[];
+}
+
 export async function applyMemoryPatch(
   options: PlanMemoryPatchOptions
 ): Promise<Result<PatchPlan>> {
@@ -157,6 +170,16 @@ export async function applyMemoryPatch(
     return validators;
   }
 
+  const repaired = await repairInvalidCanonicalStorageForSave(
+    projectRoot,
+    validators.data,
+    options.clock.nowIso()
+  );
+
+  if (!repaired.ok) {
+    return repaired;
+  }
+
   const planned = await planMemoryPatch({
     ...options,
     projectRoot,
@@ -164,7 +187,7 @@ export async function applyMemoryPatch(
   });
 
   if (!planned.ok) {
-    return planned;
+    return err(planned.error, [...repaired.warnings, ...planned.warnings]);
   }
 
   const storage = await readCanonicalStorage(projectRoot, {
@@ -188,21 +211,34 @@ export async function applyMemoryPatch(
     return err(events.error, planned.warnings);
   }
 
+  const recovered = await backupRecoveryFiles(projectRoot, planned.data.recovery_files);
+
+  if (!recovered.ok) {
+    return err(recovered.error, planned.warnings);
+  }
+
   for (const action of actions.data) {
     const applied = await applyWriteAction(projectRoot, action);
 
     if (!applied.ok) {
-      return err(applied.error, planned.warnings);
+      return err(applied.error, [...planned.warnings, ...recovered.warnings]);
     }
   }
 
   const appendedEvents = await appendEvents(projectRoot, validators.data, events.data);
 
   if (!appendedEvents.ok) {
-    return err(appendedEvents.error, planned.warnings);
+    return err(appendedEvents.error, [...planned.warnings, ...recovered.warnings]);
   }
 
-  return ok(planned.data, planned.warnings);
+  return ok(
+    {
+      ...planned.data,
+      recovery_files: [...repaired.data.recovery_files, ...planned.data.recovery_files],
+      repairs_applied: repaired.data.repairs_applied
+    },
+    [...repaired.warnings, ...planned.warnings, ...recovered.warnings]
+  );
 }
 
 export async function restoreCanonicalStorageFromCommit(
@@ -227,6 +263,76 @@ export async function restoreCanonicalStorageFromCommit(
   });
 }
 
+async function repairInvalidCanonicalStorageForSave(
+  projectRoot: string,
+  validators: CompiledSchemaValidators,
+  timestamp: IsoDateTime
+): Promise<Result<RepairCanonicalStorageForSaveData>> {
+  const recoveryFiles: PatchRecoveryFile[] = [];
+  const repairsApplied: string[] = [];
+  const warnings: string[] = [];
+
+  const objectPaths = await discoverCanonicalJson(projectRoot, ".aictx/memory/**/*.json");
+
+  for (const path of objectPaths) {
+    const result = await inspectObjectForSave(projectRoot, validators, path);
+
+    if (result.valid) {
+      continue;
+    }
+
+    const recovered = await quarantineCanonicalFile(projectRoot, path, timestamp);
+    warnings.push(...recovered.warnings);
+
+    if (recovered.ok && recovered.data !== null) {
+      recoveryFiles.push(recovered.data);
+      repairsApplied.push(`Quarantined invalid memory object sidecar: ${path}`);
+    }
+
+    if (result.bodyPath !== null) {
+      const bodyRecovered = await quarantineCanonicalFile(projectRoot, result.bodyPath, timestamp);
+      warnings.push(...bodyRecovered.warnings);
+
+      if (bodyRecovered.ok && bodyRecovered.data !== null) {
+        recoveryFiles.push(bodyRecovered.data);
+        repairsApplied.push(`Quarantined invalid memory object body: ${result.bodyPath}`);
+      }
+    }
+  }
+
+  const relationPaths = await discoverCanonicalJson(projectRoot, ".aictx/relations/**/*.json");
+
+  for (const path of relationPaths) {
+    const result = await inspectRelationForSave(projectRoot, validators, path);
+
+    if (result.valid) {
+      continue;
+    }
+
+    const recovered = await quarantineCanonicalFile(projectRoot, path, timestamp);
+    warnings.push(...recovered.warnings);
+
+    if (recovered.ok && recovered.data !== null) {
+      recoveryFiles.push(recovered.data);
+      repairsApplied.push(`Quarantined invalid memory relation: ${path}`);
+    }
+  }
+
+  const events = await repairEventsForSave(projectRoot, validators, timestamp);
+
+  if (!events.ok) {
+    return events;
+  }
+
+  return ok(
+    {
+      recovery_files: [...recoveryFiles, ...events.data.recovery_files],
+      repairs_applied: [...repairsApplied, ...events.data.repairs_applied]
+    },
+    [...warnings, ...events.warnings]
+  );
+}
+
 async function getValidators(
   projectRoot: string,
   validators: CompiledSchemaValidators | undefined
@@ -236,6 +342,223 @@ async function getValidators(
   }
 
   return compileProjectSchemas(projectRoot);
+}
+
+interface InspectCanonicalFileResult {
+  valid: boolean;
+  bodyPath: string | null;
+}
+
+async function inspectObjectForSave(
+  projectRoot: string,
+  validators: CompiledSchemaValidators,
+  path: string
+): Promise<InspectCanonicalFileResult> {
+  const contents = await readUtf8FileInsideRoot(projectRoot, path);
+
+  if (!contents.ok || hasConflictMarkers(contents.data, path)) {
+    return { valid: false, bodyPath: null };
+  }
+
+  const parsed = parseJson(contents.data);
+
+  if (!parsed.ok) {
+    return { valid: false, bodyPath: null };
+  }
+
+  const bodyPath = bodyPathFromSidecar(parsed.data);
+  const validation = validateObject(validators, parsed.data, path);
+
+  if (!validation.valid || bodyPath === null) {
+    return { valid: false, bodyPath };
+  }
+
+  const body = await readUtf8FileInsideRoot(projectRoot, bodyPath);
+
+  if (!body.ok || hasConflictMarkers(body.data, bodyPath)) {
+    return { valid: false, bodyPath };
+  }
+
+  return { valid: true, bodyPath };
+}
+
+async function inspectRelationForSave(
+  projectRoot: string,
+  validators: CompiledSchemaValidators,
+  path: string
+): Promise<InspectCanonicalFileResult> {
+  const contents = await readUtf8FileInsideRoot(projectRoot, path);
+
+  if (!contents.ok || hasConflictMarkers(contents.data, path)) {
+    return { valid: false, bodyPath: null };
+  }
+
+  const parsed = parseJson(contents.data);
+
+  if (!parsed.ok) {
+    return { valid: false, bodyPath: null };
+  }
+
+  const validation = validateRelation(validators, parsed.data, path);
+
+  return { valid: validation.valid, bodyPath: null };
+}
+
+async function repairEventsForSave(
+  projectRoot: string,
+  validators: CompiledSchemaValidators,
+  timestamp: IsoDateTime
+): Promise<Result<RepairCanonicalStorageForSaveData>> {
+  const path = ".aictx/events.jsonl";
+  const contents = await readUtf8FileInsideRoot(projectRoot, path);
+
+  if (!contents.ok) {
+    return ok({ recovery_files: [], repairs_applied: [] }, [
+      `Events repair skipped: ${contents.error.message}`
+    ]);
+  }
+
+  const lines = contents.data.split(/\n/);
+  const validLines: string[] = [];
+  let repaired = false;
+
+  for (const [index, line] of lines.entries()) {
+    const isLastBlankLine = index === lines.length - 1 && line === "";
+
+    if (isLastBlankLine) {
+      continue;
+    }
+
+    if (line.trim() === "" || hasConflictMarkers(line, `${path}:${index + 1}`)) {
+      repaired = true;
+      continue;
+    }
+
+    const parsed = parseJson(line);
+
+    if (!parsed.ok) {
+      repaired = true;
+      continue;
+    }
+
+    const validation = validateEvent(validators, parsed.data, path, index + 1);
+
+    if (!validation.valid) {
+      repaired = true;
+      continue;
+    }
+
+    validLines.push(line);
+  }
+
+  if (!repaired) {
+    return ok({ recovery_files: [], repairs_applied: [] });
+  }
+
+  const recovered = await backupRecoveryFiles(projectRoot, [
+    {
+      path,
+      recovery_path: recoveryPathForDirtyFile(timestamp, path)
+    }
+  ]);
+
+  if (!recovered.ok) {
+    return recovered;
+  }
+
+  const written = await writeTextAtomic(
+    projectRoot,
+    path,
+    validLines.length === 0 ? "" : `${validLines.join("\n")}\n`
+  );
+
+  if (!written.ok) {
+    return written;
+  }
+
+  return ok(
+    {
+      recovery_files: [
+        {
+          path,
+          recovery_path: recoveryPathForDirtyFile(timestamp, path),
+          reason: "repair_quarantine"
+        }
+      ],
+      repairs_applied: [`Repaired invalid events history: ${path}`]
+    },
+    recovered.warnings
+  );
+}
+
+async function quarantineCanonicalFile(
+  projectRoot: string,
+  path: string,
+  timestamp: IsoDateTime
+): Promise<Result<PatchRecoveryFile | null>> {
+  const recoveryFile: PatchRecoveryFile = {
+    path,
+    recovery_path: recoveryPathForDirtyFile(timestamp, path),
+    reason: "repair_quarantine"
+  };
+  const backedUp = await backupRecoveryFiles(projectRoot, [recoveryFile]);
+
+  if (!backedUp.ok) {
+    return backedUp;
+  }
+
+  const resolved = resolveInsideRoot(projectRoot, path);
+
+  if (!resolved.ok) {
+    return err(resolved.error, backedUp.warnings);
+  }
+
+  try {
+    await rm(resolved.data, { force: true });
+    return ok(recoveryFile, backedUp.warnings);
+  } catch (error) {
+    return err(
+      aictxError("AICtxValidationFailed", "Invalid canonical file could not be quarantined.", {
+        path,
+        message: error instanceof Error ? error.message : String(error)
+      }),
+      backedUp.warnings
+    );
+  }
+}
+
+async function discoverCanonicalJson(projectRoot: string, pattern: string): Promise<string[]> {
+  return (
+    await fg(pattern, {
+      cwd: projectRoot,
+      dot: true,
+      ignore: [".aictx/index/**", ".aictx/context/**", ".aictx/recovery/**"],
+      onlyFiles: true,
+      unique: true
+    })
+  ).sort();
+}
+
+function parseJson(contents: string): Result<unknown> {
+  try {
+    return ok(JSON.parse(contents) as unknown);
+  } catch {
+    return err(aictxError("AICtxInvalidJson", "Invalid JSON."));
+  }
+}
+
+function bodyPathFromSidecar(value: unknown): string | null {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return null;
+  }
+
+  const bodyPath = (value as { body_path?: unknown }).body_path;
+
+  return typeof bodyPath === "string" ? `.aictx/${bodyPath}` : null;
+}
+
+function hasConflictMarkers(contents: string, path: string): boolean {
+  return !detectConflictMarkersInText(contents, path).valid;
 }
 
 function createWriteState(
@@ -942,6 +1265,49 @@ async function applyWriteAction(
       })
     );
   }
+}
+
+async function backupRecoveryFiles(
+  projectRoot: string,
+  files: readonly { path: string; recovery_path: string }[]
+): Promise<Result<void>> {
+  const warnings: string[] = [];
+
+  for (const file of files) {
+    const source = resolveInsideRoot(projectRoot, file.path);
+
+    if (!source.ok) {
+      warnings.push(`Recovery backup skipped for ${file.path}: ${source.error.message}`);
+      continue;
+    }
+
+    const destination = resolveInsideRoot(projectRoot, file.recovery_path);
+
+    if (!destination.ok) {
+      warnings.push(`Recovery backup skipped for ${file.path}: ${destination.error.message}`);
+      continue;
+    }
+
+    try {
+      const stat = await lstat(source.data);
+
+      if (!stat.isFile()) {
+        warnings.push(`Recovery backup skipped for ${file.path}: path is not a regular file.`);
+        continue;
+      }
+
+      await mkdir(dirname(destination.data), { recursive: true });
+      await copyFile(source.data, destination.data);
+    } catch (error) {
+      warnings.push(
+        `Recovery backup skipped for ${file.path}: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
+    }
+  }
+
+  return ok(undefined, warnings);
 }
 
 function objectUpdateTouchesMutableField(change: NormalizedUpdateObjectChange): boolean {

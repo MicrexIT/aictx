@@ -100,7 +100,7 @@ describe("aictx export obsidian CLI", () => {
       output_dir: ".aictx/exports/obsidian",
       manifest_path: ".aictx/exports/obsidian/.aictx-obsidian-export.json",
       objects_exported: 5,
-      relations_linked: 1
+      relations_linked: 2
     });
     expect(envelope.data.files_written).toContain(
       ".aictx/exports/obsidian/memory/decision.billing-retries.md"

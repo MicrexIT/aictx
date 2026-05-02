@@ -110,6 +110,7 @@ Generated and gitignored when Git is available:
 .aictx/index/
 .aictx/context/
 .aictx/exports/
+.aictx/recovery/
 .aictx/.lock
 ```
 
@@ -119,6 +120,7 @@ Recommended `.gitignore` entries when Git is available:
 .aictx/index/
 .aictx/context/
 .aictx/exports/
+.aictx/recovery/
 .aictx/.lock
 ```
 
@@ -602,6 +604,7 @@ Generated/local locations:
 .aictx/index/
 .aictx/context/
 .aictx/exports/obsidian/
+.aictx/recovery/
 .aictx/.lock
 ```
 
@@ -623,6 +626,7 @@ The storage format is valid when:
 * A fresh `aictx init` can create the full `.aictx/` structure inside Git and non-Git project directories, including the starter project-to-architecture relation.
 * Canonical files are readable and reviewable as local files.
 * Canonical files are readable and reviewable in Git when Git is available.
+* Dirty save overwrites and save-time repairs are copied to `.aictx/recovery/` before Aictx continues.
 * `aictx check` can validate all canonical files.
 * The local index can be deleted and rebuilt from canonical files.
 * Memory object prose can be edited manually in Markdown.

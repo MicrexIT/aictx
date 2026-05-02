@@ -1158,7 +1158,7 @@ Implementation:
 * Validate operation semantics.
 * Generate missing object and relation IDs.
 * Resolve file paths.
-* Detect dirty touched files before write.
+* Detect dirty touched files before write and plan recovery backups.
 * Detect overwrite conflicts.
 * Plan all file writes and deletes.
 
@@ -1166,14 +1166,14 @@ Assignable subtasks:
 
 * `T027A`: Validate patch schema, defaults, generated IDs, and resolved output paths.
 * `T027B`: Validate operation semantics against the current storage snapshot.
-* `T027C`: Detect dirty touched files, overwrite conflicts, and produce the staged write/delete plan.
+* `T027C`: Detect dirty touched files, overwrite conflicts, recovery backups, and produce the staged write/delete plan.
 
 Acceptance:
 
 * Invalid patch fails before disk writes.
 * Empty changes fail.
 * Unknown operation fails.
-* Dirty touched files fail with `AICtxDirtyMemory`.
+* Dirty touched files produce recovery backup metadata instead of blocking saves.
 
 ### T028: Implement Relation Patch Operations
 
@@ -2327,7 +2327,7 @@ T053
 Implementation:
 
 * Add `local-viewer-spec.md` and keep the `docs/` mirror identical.
-* Specify `aictx view [--port <number>] [--open] [--json]` as a CLI-only local viewer command.
+* Specify `aictx view [--port <number>] [--open] [--detach] [--json]` as a CLI-only local viewer command.
 * Document Svelte/Vite as the viewer stack and loopback-only local serving as the runtime model.
 * Document that the viewer is read-only for canonical memory and may only write generated Obsidian projection files through the existing export service.
 * Update capability maps and generated guidance so `aictx view` is CLI-only and not exposed through MCP.
@@ -2403,7 +2403,7 @@ T055
 
 Implementation:
 
-* Add `aictx view [--port <number>] [--open] [--json]`.
+* Add `aictx view [--port <number>] [--open] [--detach] [--json]`.
 * Bind only to loopback, choose a random available port by default, and fail clearly for unavailable explicit ports.
 * Generate a per-run token and require it for all `/api/*` requests.
 * Serve built static assets from `dist/viewer/`.

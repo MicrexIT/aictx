@@ -62,6 +62,8 @@ interface SaveData {
   relations_created: string[];
   relations_updated: string[];
   relations_deleted: string[];
+  recovery_files: unknown[];
+  repairs_applied: string[];
   events_appended: number;
   index_updated: boolean;
 }
@@ -160,6 +162,8 @@ describe("aictx MCP save_memory_patch tool", () => {
         relations_created: [],
         relations_updated: [],
         relations_deleted: [],
+        recovery_files: [],
+        repairs_applied: [],
         events_appended: 1,
         index_updated: true
       });

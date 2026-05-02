@@ -5,7 +5,7 @@ import { dirname, join } from "node:path";
 import fg from "fast-glob";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { main, type CliOutputWriter } from "../../../src/cli/main.js";
+import { main, type CliMainOptions, type CliOutputWriter } from "../../../src/cli/main.js";
 import { runSubprocess } from "../../../src/core/subprocess.js";
 import type {
   ObjectId,
@@ -85,6 +85,35 @@ interface CheckSuccessEnvelope {
   ok: true;
   data: {
     valid: boolean;
+  };
+}
+
+interface SetupSuccessEnvelope {
+  ok: true;
+  data: {
+    bootstrap_patch_proposed: boolean;
+    bootstrap_patch_applied: boolean;
+    save: SaveSuccessEnvelope["data"] | null;
+    check: {
+      valid: boolean;
+    };
+    viewer_url: string | null;
+    viewer_log_path: string | null;
+    next_step: string | null;
+  };
+  warnings: string[];
+}
+
+interface PatchReviewEnvelope {
+  ok: true;
+  data: {
+    proposed: boolean;
+    operations: string[];
+    memory_ids: string[];
+    touched_files: string[];
+    validation_findings: string[];
+    secret_findings: string[];
+    reason: string | null;
   };
 }
 
@@ -281,6 +310,104 @@ describe("aictx suggest CLI", () => {
     expect(envelope.data.reason).toBeNull();
   });
 
+  it("runs setup with bootstrap apply, check, and diff summary", async () => {
+    const repo = await createBootstrapPatchGitProject("aictx-cli-setup-apply-");
+
+    const output = await runCli(["node", "aictx", "setup", "--apply", "--json"], repo);
+
+    expect(output.exitCode).toBe(0);
+    expect(output.stderr).toBe("");
+    const envelope = JSON.parse(output.stdout) as SetupSuccessEnvelope;
+    expect(envelope.ok).toBe(true);
+    expect(envelope.data.bootstrap_patch_proposed).toBe(true);
+    expect(envelope.data.bootstrap_patch_applied).toBe(true);
+    expect(envelope.data.save?.memory_created).toEqual(
+      expect.arrayContaining(["workflow.package-scripts", "constraint.node-engine"])
+    );
+    expect(envelope.data.check.valid).toBe(true);
+  });
+
+  it("prints a setup review summary without applying the bootstrap patch", async () => {
+    const repo = await createBootstrapPatchGitProject("aictx-cli-setup-review-");
+
+    const output = await runCli(["node", "aictx", "setup"], repo);
+
+    expect(output.exitCode).toBe(0);
+    expect(output.stderr).toContain("Aictx is already initialized");
+    expect(output.stdout).toContain("Bootstrap patch: proposed");
+    expect(output.stdout).toContain("Next: Run `aictx setup --apply`");
+  });
+
+  it("starts a detached viewer from setup when requested", async () => {
+    const repo = await createBootstrapPatchGitProject("aictx-cli-setup-view-");
+
+    const output = await runCli(["node", "aictx", "setup", "--view", "--open", "--json"], repo, {
+      viewer: {
+        detacher: async (options) => ({
+          ok: true,
+          data: {
+            url: "http://127.0.0.1:7777/?token=test-token",
+            host: "127.0.0.1",
+            port: 7777,
+            log_path: "/tmp/aictx-viewer-test.log"
+          },
+          warnings: options.open ? ["opened viewer"] : []
+        })
+      }
+    });
+
+    expect(output.exitCode).toBe(0);
+    const envelope = JSON.parse(output.stdout) as SetupSuccessEnvelope;
+    expect(envelope.ok).toBe(true);
+    expect(envelope.data.viewer_url).toBe("http://127.0.0.1:7777/?token=test-token");
+    expect(envelope.data.viewer_log_path).toBe("/tmp/aictx-viewer-test.log");
+    expect(envelope.warnings).toContain("opened viewer");
+  });
+
+  it("reviews real and no-op patch files without writing memory", async () => {
+    const repo = await createBootstrapPatchGitProject("aictx-cli-patch-review-");
+    const patchOutput = await runCli(
+      ["node", "aictx", "suggest", "--bootstrap", "--patch"],
+      repo
+    );
+    await writeProjectFile(repo, "bootstrap-memory.json", patchOutput.stdout);
+
+    const reviewOutput = await runCli(
+      ["node", "aictx", "patch", "review", "bootstrap-memory.json", "--json"],
+      repo
+    );
+    const review = JSON.parse(reviewOutput.stdout) as PatchReviewEnvelope;
+
+    expect(reviewOutput.exitCode).toBe(0);
+    expect(review.ok).toBe(true);
+    expect(review.data.proposed).toBe(true);
+    expect(review.data.operations).toEqual(
+      expect.arrayContaining(["create_object", "update_object"])
+    );
+    expect(review.data.memory_ids).toContain("workflow.package-scripts");
+    expect(review.data.touched_files).toContain(".aictx/events.jsonl");
+    expect(review.data.validation_findings).toEqual([]);
+    expect(review.data.secret_findings).toEqual([]);
+
+    await writeProjectFile(
+      repo,
+      "noop-memory.json",
+      JSON.stringify({
+        proposed: false,
+        reason: "No bootstrap memory patch to apply.",
+        packet: {}
+      })
+    );
+    const noopOutput = await runCli(
+      ["node", "aictx", "patch", "review", "noop-memory.json", "--json"],
+      repo
+    );
+    const noop = JSON.parse(noopOutput.stdout) as PatchReviewEnvelope;
+    expect(noopOutput.exitCode).toBe(0);
+    expect(noop.data.proposed).toBe(false);
+    expect(noop.data.reason).toBe("No bootstrap memory patch to apply.");
+  });
+
   it("returns validation errors when mode selection is invalid", async () => {
     const projectRoot = await createInitializedLocalProject("aictx-cli-suggest-invalid-");
 
@@ -439,11 +566,16 @@ async function createRepo(prefix: string): Promise<string> {
   return repo;
 }
 
-async function runCli(argv: string[], cwd: string): Promise<CliRunResult> {
+async function runCli(
+  argv: string[],
+  cwd: string,
+  options: Pick<CliMainOptions, "viewer"> = {}
+): Promise<CliRunResult> {
   const output = createCapturedOutput();
   const exitCode = await main(argv, {
     ...output.writers,
-    cwd
+    cwd,
+    ...options
   });
 
   return {

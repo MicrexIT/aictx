@@ -78,8 +78,14 @@ const cliOnlyCapabilities = [
   {
     capability: "Initialize storage",
     mcp: "none",
-    cli: "`aictx init`",
+    cli: "`aictx init`, `aictx setup`",
     notes: "Setup remains CLI-only in v1."
+  },
+  {
+    capability: "Review patch file",
+    mcp: "none",
+    cli: "`aictx patch review`",
+    notes: "Patch review remains CLI-only in v1."
   },
   {
     capability: "Validate storage",
@@ -163,7 +169,26 @@ const exactMcpTools = [
 ] as const;
 
 const exactCliOnlyCommands = [
+  "`aictx init`, `aictx setup`",
+  "`aictx patch review`",
+  "`aictx check`",
+  "`aictx rebuild`",
+  "`aictx history`",
+  "`aictx restore`",
+  "`aictx rewind`",
+  "`aictx inspect`",
+  "`aictx stale`",
+  "`aictx graph`",
+  "`aictx export obsidian`",
+  "`aictx view`",
+  "`aictx suggest`",
+  "`aictx audit`"
+] as const;
+
+const exactCliOnlyGuidanceCommands = [
   "`aictx init`",
+  "`aictx setup`",
+  "`aictx patch review`",
   "`aictx check`",
   "`aictx rebuild`",
   "`aictx history`",
@@ -398,7 +423,7 @@ describe("agent capability map guardrail", () => {
         expect(guidance).toContain(tool);
       }
 
-      for (const command of exactCliOnlyCommands) {
+      for (const command of exactCliOnlyGuidanceCommands) {
         expect(guidance).toContain(command);
       }
     }
@@ -443,7 +468,7 @@ describe("agent capability map guardrail", () => {
     const apiSpec = await readProjectFile("mcp-and-cli-api-spec.md");
 
     for (const content of [localViewerSpec, prd, apiSpec]) {
-      expect(content).toContain("aictx view [--port <number>] [--open] [--json]");
+      expect(content).toContain("aictx view [--port <number>] [--open] [--detach] [--json]");
     }
 
     expect(prd).toContain(

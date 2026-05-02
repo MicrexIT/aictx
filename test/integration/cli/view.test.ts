@@ -171,6 +171,45 @@ describe("aictx view CLI", () => {
       await closeNodeServer(busy);
     }
   });
+
+  it("prints a detached viewer URL and exits", async () => {
+    const projectRoot = await createInitializedProject("aictx-cli-view-detach-project-");
+    const output = createCapturedOutput();
+    const exitCode = await main(["node", "aictx", "view", "--detach", "--open", "--json"], {
+      ...output.writers,
+      cwd: projectRoot,
+      viewer: {
+        detacher: async () => ({
+          ok: true,
+          data: {
+            url: "http://127.0.0.1:49152/?token=test",
+            host: LOOPBACK_HOST,
+            port: 49152,
+            log_path: "/tmp/aictx-viewer-test.log"
+          },
+          warnings: []
+        })
+      }
+    });
+    const envelope = JSON.parse(output.stdout()) as {
+      ok: true;
+      data: {
+        url: string;
+        detached: boolean;
+        open_attempted: boolean;
+        log_path: string;
+      };
+    };
+
+    expect(exitCode).toBe(0);
+    expect(envelope.ok).toBe(true);
+    expect(envelope.data).toMatchObject({
+      url: "http://127.0.0.1:49152/?token=test",
+      detached: true,
+      open_attempted: true,
+      log_path: "/tmp/aictx-viewer-test.log"
+    });
+  });
 });
 
 async function createInitializedProject(prefix: string): Promise<string> {

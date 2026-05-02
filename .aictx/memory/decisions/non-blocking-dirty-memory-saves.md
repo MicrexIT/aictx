@@ -1,0 +1,1 @@
+Aictx save operations must not fail only because touched `.aictx/` files are dirty; dirty overwrites or deletes are backed up under `.aictx/recovery/`, malformed unrelated canonical memory is quarantined where possible, and invalid incoming patches or secrets still fail.

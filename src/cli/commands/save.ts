@@ -255,6 +255,11 @@ function renderSaveData(data: SaveMemoryData): string {
   return [
     "Saved Aictx memory patch.",
     ...renderList("Files changed", data.files_changed),
+    ...renderList(
+      "Recovery backups",
+      data.recovery_files.map((file) => `${file.path} -> ${file.recovery_path}`)
+    ),
+    ...renderList("Repairs applied", data.repairs_applied),
     ...renderList("Memory created", data.memory_created),
     ...renderList("Memory updated", data.memory_updated),
     ...renderList("Memory deleted", data.memory_deleted),

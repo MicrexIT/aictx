@@ -112,7 +112,8 @@ describe("agent guidance content", () => {
       expect(content).toMatch(/Do not .*MCP .*solely to mirror/i);
       expect(content).toMatch(/edit(?:ing)? `\.aictx\/` files directly/i);
       expect(content).toContain(nonBlockingDirtySaveGuidance);
-      expect(content).toContain("not a standalone preflight blocker");
+      expect(content).toContain("not a preflight blocker");
+      expect(content).toContain(".aictx/recovery/");
       expect(content).not.toContain(
         "If a memory update is rejected because of validation, dirty state"
       );

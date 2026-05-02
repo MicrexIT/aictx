@@ -84,10 +84,6 @@ import {
   restoreCanonicalStorageFromCommit
 } from "../storage/write.js";
 import {
-  conflictMarkerError,
-  scanProjectConflictMarkers
-} from "../validation/conflicts.js";
-import {
   detectSecretsInPatch,
   secretDetectionError
 } from "../validation/secrets.js";
@@ -187,6 +183,12 @@ export interface SaveMemoryPatchOptions extends GitWrapperOptions {
 
 export interface SaveMemoryData {
   files_changed: string[];
+  recovery_files: {
+    path: string;
+    recovery_path: string;
+    reason: string;
+  }[];
+  repairs_applied: string[];
   memory_created: ObjectId[];
   memory_updated: ObjectId[];
   memory_deleted: ObjectId[];
@@ -1292,12 +1294,6 @@ export async function saveMemoryPatch(
       clock
     },
     async () => {
-      const conflicts = await rejectConflictsBeforeSave(paths.data, meta.meta, options);
-
-      if (!conflicts.ok) {
-        return conflicts;
-      }
-
       const secrets = rejectPatchSecrets(options.patch);
 
       if (!secrets.ok) {
@@ -1336,6 +1332,8 @@ export async function saveMemoryPatch(
       return ok(
         {
           files_changed: applied.data.files_changed,
+          recovery_files: applied.data.recovery_files,
+          repairs_applied: applied.data.repairs_applied,
           memory_created: applied.data.memory_created,
           memory_updated: applied.data.memory_updated,
           memory_deleted: applied.data.memory_deleted,
@@ -2062,38 +2060,6 @@ function parseJsonObject(contents: string): Record<string, unknown> | null {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-async function rejectConflictsBeforeSave(
-  paths: ProjectPaths,
-  meta: AictxMeta,
-  options: GitWrapperOptions
-): Promise<Result<void>> {
-  const markerScan = await scanProjectConflictMarkers(paths.projectRoot);
-
-  if (!markerScan.valid) {
-    return err(conflictMarkerError(markerScan.errors));
-  }
-
-  if (!meta.git.available) {
-    return ok(undefined);
-  }
-
-  const dirtyState = await getAictxDirtyState(paths.projectRoot, options);
-
-  if (!dirtyState.ok) {
-    return dirtyState;
-  }
-
-  if (dirtyState.data.unmergedFiles.length === 0) {
-    return ok(undefined);
-  }
-
-  return err(
-    aictxError("AICtxConflictDetected", "Unresolved Git conflicts detected in Aictx files.", {
-      unmerged_files: dirtyState.data.unmergedFiles
-    })
-  );
 }
 
 function rejectPatchSecrets(patch: unknown): Result<void> {

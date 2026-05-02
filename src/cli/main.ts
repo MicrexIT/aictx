@@ -14,15 +14,18 @@ import { registerHistoryCommand } from "./commands/history.js";
 import { registerInitCommand } from "./commands/init.js";
 import { registerInspectCommand } from "./commands/inspect.js";
 import { registerLoadCommand } from "./commands/load.js";
+import { registerPatchCommand } from "./commands/patch.js";
 import { registerRebuildCommand } from "./commands/rebuild.js";
 import { registerRestoreCommand } from "./commands/restore.js";
 import { registerRewindCommand } from "./commands/rewind.js";
 import { registerSaveCommand } from "./commands/save.js";
 import { registerSearchCommand } from "./commands/search.js";
+import { registerSetupCommand } from "./commands/setup.js";
 import { registerStaleCommand } from "./commands/stale.js";
 import { registerSuggestCommand } from "./commands/suggest.js";
 import {
   registerViewCommand,
+  type ViewerDetacher,
   type ViewerUrlOpener
 } from "./commands/view.js";
 import {
@@ -41,6 +44,7 @@ export interface CliMainOptions {
   viewer?: {
     assetsDir?: string;
     opener?: ViewerUrlOpener;
+    detacher?: ViewerDetacher;
     shutdownSignal?: AbortSignal;
   };
 }
@@ -106,6 +110,17 @@ export function createCliProgram(options: CliMainOptions = {}): Command {
     stdout: writeOut,
     stderr: writeErr
   });
+  registerPatchCommand(program, {
+    cwd: options.cwd ?? process.cwd(),
+    stdout: writeOut,
+    stderr: writeErr
+  });
+  registerSetupCommand(program, {
+    cwd: options.cwd ?? process.cwd(),
+    stdout: writeOut,
+    stderr: writeErr,
+    ...(options.viewer?.detacher === undefined ? {} : { detacher: options.viewer.detacher })
+  });
   registerAuditCommand(program, {
     cwd: options.cwd ?? process.cwd(),
     stdout: writeOut,
@@ -129,6 +144,7 @@ export function createCliProgram(options: CliMainOptions = {}): Command {
       ? {}
       : { assetsDir: options.viewer.assetsDir }),
     ...(options.viewer?.opener === undefined ? {} : { opener: options.viewer.opener }),
+    ...(options.viewer?.detacher === undefined ? {} : { detacher: options.viewer.detacher }),
     ...(options.viewer?.shutdownSignal === undefined
       ? {}
       : { shutdownSignal: options.viewer.shutdownSignal })

@@ -28,8 +28,8 @@ importers:
         version: 4.3.6
     devDependencies:
       '@aictx/memory':
-        specifier: ^0.1.9
-        version: 0.1.9
+        specifier: ^0.1.10
+        version: 0.1.10
       '@sveltejs/vite-plugin-svelte':
         specifier: ^5.1.1
         version: 5.1.1(svelte@5.55.5)(vite@6.4.2(@types/node@25.6.0)(lightningcss@1.32.0)(tsx@4.21.0))
@@ -63,8 +63,8 @@ importers:
 
 packages:
 
-  '@aictx/memory@0.1.9':
-    resolution: {integrity: sha512-Odnhi+e1fgCFQDFzZrS3xbHc5knk45030qvGRAhISIryjgXWxbeCQx7cFGNfv91Gcy9rHflMI4rMywzc+GLDeA==}
+  '@aictx/memory@0.1.10':
+    resolution: {integrity: sha512-+Czs2BJoTxxMRNJmN5iDwo8oOvhO08UCM0jwn0iscWfPLeTyoG5obceJ2bPmTgrLdCXX6LOBi/Ar2Pci6W4w1A==}
     engines: {node: '>=22'}
     hasBin: true
 
@@ -1539,7 +1539,7 @@ packages:
 
 snapshots:
 
-  '@aictx/memory@0.1.9':
+  '@aictx/memory@0.1.10':
     dependencies:
       '@modelcontextprotocol/sdk': 1.29.0(zod@4.3.6)
       '@sqlite.org/sqlite-wasm': 3.53.0-build1

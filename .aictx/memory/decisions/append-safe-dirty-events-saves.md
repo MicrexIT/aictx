@@ -1,1 +1,0 @@
-Aictx save planning treats valid dirty `.aictx/events.jsonl` as append-safe, so existing uncommitted event history does not block future memory saves. Dirty object, body, and relation files are still rejected when a patch would overwrite them.

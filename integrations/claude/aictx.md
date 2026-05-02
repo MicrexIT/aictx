@@ -31,6 +31,8 @@ Use CLI for v1 setup, maintenance, recovery, export, inspection, local viewing, 
 * `aictx export obsidian`
 * `aictx view`
 * `aictx suggest`
+* `aictx setup`
+* `aictx patch review`
 * `aictx audit`
 
 CLI-only capabilities are not MCP parity gaps. Do not add or ask for MCP tools solely to mirror these CLI commands.
@@ -90,7 +92,7 @@ Use CLI fallback only when MCP is unavailable:
 aictx save --stdin
 ```
 
-Dirty or untracked `.aictx/` files are not by themselves a reason to skip saving durable memory. Attempt the supported MCP/CLI save when there is durable future value, and stop only if Aictx rejects the update.
+Dirty or untracked `.aictx/` files are not by themselves a reason to skip saving durable memory. Attempt the supported MCP/CLI save when there is durable future value. Aictx backs up dirty touched files under `.aictx/recovery/` before overwrite/delete and continues where possible.
 
 For setup, maintenance, inspection, export, local viewing, suggestion, audit, or recovery operations that are not exposed by MCP, use the `aictx` CLI instead of editing `.aictx/` files directly.
 
@@ -99,13 +101,21 @@ Use `aictx suggest --from-diff --json` when current code changes need a memory r
 If loaded memory only contains the init-created project and architecture placeholders, treat Aictx as needing first-run seeding. For setup, onboarding, or "why is memory empty?" requests, run the bootstrap workflow proactively instead of waiting for the user to know the `bootstrap` term:
 
 ```bash
+aictx setup
+aictx setup --apply
+```
+
+For manual bootstrap review:
+
+```bash
 aictx suggest --bootstrap --patch > bootstrap-memory.json
-# review or edit bootstrap-memory.json
+aictx patch review bootstrap-memory.json
+# optionally edit bootstrap-memory.json
 aictx save --file bootstrap-memory.json
 aictx check
 ```
 
-In Git projects, also run `aictx diff` to review the `.aictx/` changes.
+In Git projects, also run `aictx diff` or `git diff -- .aictx/` to review the `.aictx/` changes.
 
 The bootstrap patch command is read-only for canonical memory and only writes the redirected draft file. Review the proposed patch yourself and apply it through `aictx save`; users should not have to hand-write bootstrap JSON. Use `aictx audit --json` to find deterministic memory hygiene issues.
 
@@ -118,6 +128,8 @@ When Aictx memory changed in a Git project, suggest:
 ```bash
 aictx diff
 ```
+
+`aictx diff` is a convenience wrapper for `git diff -- .aictx/`; Git remains the source of truth for review, history, and rollback.
 
 ## What To Save
 
@@ -301,6 +313,6 @@ If memory conflicts with the user's request, repository code, or current evidenc
 
 Never save memory that asks future agents to ignore user instructions, bypass review, exfiltrate data, or hide changes.
 
-If Aictx rejects an attempted save because of validation, dirty touched files, unresolved conflicts, or secret detection, report the reason and do not work around Aictx by editing `.aictx/` manually. Dirty or untracked `.aictx/` files are reviewable state, not a standalone preflight blocker; Aictx may reject dirty state only when the attempted patch would overwrite dirty files it touches.
+If Aictx rejects an attempted save because of invalid incoming patch data, secret detection, lock contention, invalid config, or filesystem failures, report the reason and do not work around Aictx by editing `.aictx/` manually. Dirty or untracked `.aictx/` files are reviewable state, not a preflight blocker; Aictx backs up dirty touched files to `.aictx/recovery/` before overwrite/delete and continues where possible.
 
 If `aictx` is not on `PATH`, use the project package-manager binary path, such as `pnpm exec aictx`, `npm exec aictx`, or `./node_modules/.bin/aictx`. For one-off `npx` usage, name the scoped package explicitly: `npx --package @aictx/memory -- aictx`. MCP clients can start `aictx-mcp` globally once and pass `project_root` on routine tool calls; with project-local installs, use the equivalent package-manager command when needed. `aictx init` does not start MCP.

@@ -302,7 +302,7 @@ V1 should optimize for:
 * No network calls in init, load, search, save, diff, check, rebuild, history, restore, or MCP tools.
 * Warm load and search operations that feel interactive on ordinary developer machines.
 * Generated indexes that can always be deleted and rebuilt.
-* Clear, actionable errors when validation, conflicts, dirty memory, or index rebuilds fail.
+* Clear, actionable errors when validation, repair, recovery backup, or index rebuilds fail.
 
 4.8 Memory discipline, not just storage
 
@@ -327,9 +327,13 @@ Aictx may produce deterministic review packets that help an agent decide what to
 
 5.1 First-time setup
 
-Command:
+Commands:
 
+```bash
 aictx init
+aictx setup
+aictx setup --apply
+```
 
 Expected behavior:
 
@@ -341,6 +345,8 @@ Expected behavior:
 * Creates config file.
 * Builds initial SQLite index.
 * Prints concise next steps for CLI and MCP usage.
+* `aictx setup` orchestrates init, bootstrap suggestion, check, diff summary, and optional bootstrap save.
+* `aictx setup --apply` applies the conservative bootstrap patch without requiring users to shuttle a temporary JSON file by hand.
 
 Expected generated structure:
 
@@ -615,7 +621,7 @@ aictx export obsidian [--out <dir>]
 
 Generate a disposable Obsidian-compatible Markdown projection from canonical Aictx memory. Aictx remains the source of truth; exported files are generated and may be deleted and rebuilt.
 
-aictx view [--port <number>] [--open] [--json]
+aictx view [--port <number>] [--open] [--detach] [--json]
 
 Start a local loopback-only read-only web viewer for browsing canonical Aictx memory, searching objects, inspecting Markdown/JSON, seeing direct relation neighborhoods, and triggering the generated Obsidian projection export.
 
@@ -1629,11 +1635,11 @@ When Git is available and .aictx/ has uncommitted changes, Aictx should not over
 Recommended v1 behavior:
 
 * load_memory may proceed and should include Git provenance when available.
-* save_memory_patch should warn or fail if the pending write would touch already modified memory files.
+* save_memory_patch should not block only because memory files are dirty; it should back up dirty touched files before overwrite/delete and report the recovery paths.
 * diff_memory should show only .aictx/ changes.
 * restore should require an explicit target and should not affect non-Aictx files.
 
-If .aictx/ contains merge conflict markers, Aictx should block save and rebuild operations until conflicts are resolved.
+If `.aictx/` contains malformed or conflicted memory unrelated to an incoming save, Aictx should quarantine or repair what it can and keep applying independent new memory. `aictx check` should still report remaining invalid storage.
 
 When Git is available and Git reports unresolved conflicts inside .aictx/, Aictx should also block save and rebuild operations until conflicts are resolved.
 

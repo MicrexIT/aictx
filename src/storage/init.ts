@@ -34,6 +34,7 @@ const GENERATED_GITIGNORE_ENTRIES = [
   ".aictx/index/",
   ".aictx/context/",
   ".aictx/exports/",
+  ".aictx/recovery/",
   ".aictx/.lock"
 ] as const;
 const INDEX_UNAVAILABLE_WARNING =
@@ -60,7 +61,7 @@ const AGENT_GUIDANCE_BLOCK = `${[
   '- Fallback CLI: `aictx load "<task summary>"`',
   '  If `aictx` is not on `PATH`, use the project-local binary through `pnpm exec aictx load "<task summary>"`, `npm exec aictx load "<task summary>"`, `./node_modules/.bin/aictx load "<task summary>"`, or `npx --package @aictx/memory -- aictx load "<task summary>"`.',
   "",
-  "If loaded memory only contains the init-created project and architecture placeholders, treat Aictx as needing first-run seeding. For setup, onboarding, or \"why is memory empty?\" requests, run `aictx suggest --bootstrap --patch > bootstrap-memory.json`, review the patch for deterministic non-sensitive facts, apply it with `aictx save --file bootstrap-memory.json` when appropriate, then run `aictx check`. In Git projects, also run `aictx diff` to review the `.aictx/` changes.",
+  "If loaded memory only contains the init-created project and architecture placeholders, treat Aictx as needing first-run seeding. For setup, onboarding, or \"why is memory empty?\" requests, prefer `aictx setup` or `aictx setup --apply`. For manual bootstrap review, run `aictx suggest --bootstrap --patch > bootstrap-memory.json`, review it with `aictx patch review bootstrap-memory.json`, apply it with `aictx save --file bootstrap-memory.json` when appropriate, then run `aictx check`. In Git projects, also run `aictx diff` or `git diff -- .aictx/` to review the `.aictx/` changes.",
   "",
   "After meaningful work, autonomously save durable project knowledge:",
   "- Prefer MCP: `save_memory_patch({ patch: { source, changes } })`",
@@ -948,9 +949,9 @@ function countOccurrences(value: string, search: string): number {
 function nextSteps(agentGuidance: AgentGuidanceData): string[] {
   return [
     agentGuidanceNextStep(agentGuidance),
-    "`aictx init` creates linked starter placeholders only. To seed useful first-run memory, run `aictx suggest --bootstrap --patch > bootstrap-memory.json`, review it, then run `aictx save --file bootstrap-memory.json` and `aictx check`. In Git projects, run `aictx diff` before committing memory changes.",
+    "`aictx init` creates linked starter placeholders only. To seed useful first-run memory, run `aictx setup` for a review summary or `aictx setup --apply` to apply the conservative bootstrap patch. For manual review, run `aictx suggest --bootstrap --patch > bootstrap-memory.json`, `aictx patch review bootstrap-memory.json`, `aictx save --file bootstrap-memory.json`, and `aictx check`.",
     "`aictx init` does not start MCP; configure agent clients that support MCP to launch `aictx-mcp` so agents can use `load_memory` and `save_memory_patch`. A globally launched MCP server can serve this project when tool calls include this project root as `project_root`. Agents can fall back to `aictx load` and `aictx save --stdin` when MCP is unavailable; if `aictx` is not on `PATH`, use the project package-manager form such as `pnpm exec aictx`, `npm exec aictx`, or `./node_modules/.bin/aictx`.",
-    "Review memory changes in `.aictx/`; in Git projects, use `aictx diff` before committing.",
+    "Review memory changes in `.aictx/`; in Git projects, use `aictx diff` or `git diff -- .aictx/` before committing.",
     "Optional bundled skills are available under `integrations/codex/` and `integrations/claude/`."
   ];
 }
