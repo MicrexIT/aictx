@@ -58,7 +58,7 @@ Rules:
 
 ## 4. SQLite Schema
 
-V2 schema:
+V3 generated schema:
 
 ```sql
 CREATE TABLE meta (
@@ -91,6 +91,27 @@ CREATE TABLE objects (
   updated_at TEXT NOT NULL
 );
 
+CREATE TABLE memory_file_links (
+  memory_id TEXT NOT NULL,
+  file_path TEXT NOT NULL,
+  link_kind TEXT NOT NULL,
+  PRIMARY KEY (memory_id, file_path, link_kind)
+);
+
+CREATE TABLE memory_commit_links (
+  memory_id TEXT NOT NULL,
+  commit_hash TEXT NOT NULL,
+  link_kind TEXT NOT NULL,
+  PRIMARY KEY (memory_id, commit_hash, link_kind)
+);
+
+CREATE TABLE memory_facet_links (
+  memory_id TEXT NOT NULL,
+  facet TEXT NOT NULL,
+  link_kind TEXT NOT NULL,
+  PRIMARY KEY (memory_id, facet, link_kind)
+);
+
 CREATE TABLE relations (
   id TEXT PRIMARY KEY,
   from_id TEXT NOT NULL,
@@ -116,6 +137,15 @@ CREATE TABLE events (
   payload_json TEXT
 );
 
+CREATE TABLE git_file_changes (
+  file_path TEXT NOT NULL,
+  commit_hash TEXT NOT NULL,
+  short_commit TEXT NOT NULL,
+  timestamp TEXT NOT NULL,
+  subject TEXT NOT NULL,
+  PRIMARY KEY (file_path, commit_hash)
+);
+
 CREATE VIRTUAL TABLE objects_fts USING fts5(
   object_id UNINDEXED,
   title,
@@ -137,12 +167,20 @@ CREATE INDEX objects_scope_kind_idx ON objects(scope_kind);
 CREATE INDEX objects_scope_branch_idx ON objects(scope_branch);
 CREATE INDEX objects_scope_task_idx ON objects(scope_task);
 CREATE INDEX objects_facet_category_idx ON objects(facet_category);
+CREATE INDEX memory_file_links_file_idx ON memory_file_links(file_path);
+CREATE INDEX memory_file_links_memory_idx ON memory_file_links(memory_id);
+CREATE INDEX memory_commit_links_commit_idx ON memory_commit_links(commit_hash);
+CREATE INDEX memory_commit_links_memory_idx ON memory_commit_links(memory_id);
+CREATE INDEX memory_facet_links_facet_idx ON memory_facet_links(facet);
+CREATE INDEX memory_facet_links_memory_idx ON memory_facet_links(memory_id);
 CREATE INDEX relations_from_idx ON relations(from_id);
 CREATE INDEX relations_to_idx ON relations(to_id);
 CREATE INDEX relations_predicate_idx ON relations(predicate);
 CREATE INDEX events_memory_id_idx ON events(memory_id);
 CREATE INDEX events_relation_id_idx ON events(relation_id);
 CREATE INDEX events_line_number_idx ON events(line_number);
+CREATE INDEX git_file_changes_file_idx ON git_file_changes(file_path);
+CREATE INDEX git_file_changes_timestamp_idx ON git_file_changes(timestamp);
 ```
 
 Meta keys:
@@ -161,13 +199,15 @@ event_count
 Rules:
 
 * `schema_version` is the generated index schema version, not the storage format version.
-* V2 `schema_version` is `2`.
+* V3 `schema_version` is `3`.
 * `git_available` records whether the project root was inside a Git worktree at rebuild time.
 * `source_git_commit` records the Git `HEAD` used at rebuild time when Git is available, otherwise it is empty or omitted.
 * When Git is available, the index may be stale when `.aictx/` has uncommitted canonical changes.
 * `objects_fts.object_id` stores `objects.id`.
 * `facets.category`, `facets.applies_to`, and object-level evidence are stored in dedicated JSON/search columns so retrieval can prefer memories tied to relevant paths, tests, configs, or prior memory.
-* FTS rows must be maintained by rebuild or incremental update code; v2 does not require SQLite triggers.
+* Generated link tables are derived from canonical tags, facets, evidence, source commits, and body file references. They are rebuildable and are not canonical memory.
+* `git_file_changes` records recent Git file-change metadata as evidence that a file changed, not evidence for why it changed.
+* FTS and generated link rows must be maintained by rebuild or incremental update code; v3 does not require SQLite triggers.
 * `events.line_number` is the 1-based line number from `events.jsonl` at rebuild time.
 
 ## 5. Rebuild Behavior
@@ -181,7 +221,7 @@ Behavior:
 * Read all relation files.
 * Read all `events.jsonl` records.
 * Replace `.aictx/index/aictx.sqlite` atomically where possible.
-* Populate `objects`, `relations`, `events`, and `objects_fts`.
+* Populate `objects`, `relations`, `events`, `objects_fts`, generated memory link tables, and recent Git file-change metadata.
 * Write `meta` rows.
 * Do not mutate canonical files.
 * Do not append `index.rebuilt` to `events.jsonl` in v1.
@@ -224,7 +264,14 @@ Input:
 ```json
 {
   "query": "Stripe webhook idempotency",
-  "limit": 10
+  "limit": 10,
+  "hints": {
+    "files": ["src/context/rank.ts"],
+    "changed_files": ["src/index/search.ts"],
+    "symbols": ["rankMemoryCandidates"],
+    "subsystems": ["retrieval"],
+    "history_window": "30d"
+  }
 }
 ```
 
@@ -233,6 +280,8 @@ Rules:
 * `query` is required and must be non-empty after trimming.
 * `limit` defaults to `10`.
 * `limit` must be between `1` and `50`.
+* `hints` is optional. Hint arrays accept at most 50 strings each.
+* `hints.history_window` is optional and must use a compact duration such as `30d`, `12w`, `6m`, or `1y`.
 * Search must not include `rejected` memory by default.
 * Search may include `stale` and `superseded` memory, but results must expose status clearly.
 * Search must not require embeddings.
@@ -240,11 +289,13 @@ Rules:
 Search process:
 
 1. Normalize query text by trimming whitespace.
-2. Search exact IDs and body paths.
-3. Search `objects_fts`.
-4. Merge and de-duplicate by object ID.
-5. Rank results with the v1 scoring rules.
-6. Return at most `limit` matches.
+2. Normalize hints and append hint text to deterministic search terms.
+3. Search exact IDs and body paths.
+4. Search `objects_fts`.
+5. Seed additional candidates from hinted files, changed files, subsystem facets, symbol facets, and file-path term matches in generated link tables.
+6. Merge and de-duplicate by object ID.
+7. Rank results with the deterministic scoring rules.
+8. Return at most `limit` matches.
 
 Search result item:
 
@@ -269,6 +320,7 @@ Input fields:
 * `task` is required.
 * `token_budget` is optional.
 * `mode` is optional and defaults to `coding`.
+* `hints` is optional and supports `files`, `changed_files`, `symbols`, `subsystems`, and `history_window`.
 
 Defaults:
 
@@ -282,6 +334,8 @@ Validation:
 * `token_budget` must be greater than `500`.
 * `token_budget` values above `50000` must be treated as `50000`.
 * `mode` must be one of the allowed modes.
+* Hint arrays must contain strings only and must not exceed 50 items each.
+* `history_window` must use a compact duration such as `30d`, `12w`, `6m`, or `1y`.
 
 Mode profiles:
 
@@ -299,15 +353,16 @@ The context compiler uses a deterministic hybrid retrieval pipeline.
 
 Pipeline:
 
-1. Extract task terms from the task string.
-2. Match exact memory IDs, relation IDs, file paths, and tags mentioned in the task.
+1. Extract task terms from the task string and optional hints.
+2. Match exact memory IDs, relation IDs, file paths, tags, facets, and evidence mentioned in the task or hints.
 3. Run FTS search over titles, bodies, tags, facets, and object evidence.
-4. Add directly related objects using graph traversal.
-5. Add recent high-priority memory.
-6. Filter by status and scope.
-7. Score and rank candidates.
-8. Apply precision-first packaging; use an explicit token budget as an advisory target only when provided.
-9. Render the context pack.
+4. Seed candidates from generated file, commit, and facet link tables.
+5. Expand candidates through one-hop relation neighborhoods.
+6. Add recent high-priority memory.
+7. Filter by status and scope.
+8. Score and rank candidates.
+9. Apply precision-first packaging; use an explicit token budget as an advisory target only when provided.
+10. Render the context pack with generated `Architecture Snapshot`, `Rationale Gaps`, and `Linked History` sections when applicable.
 
 Graph traversal:
 
@@ -349,6 +404,7 @@ Base score sources:
 ```text
 exact ID match:                 +100
 exact body_path match:           +80
+retrieval hint match:            +45
 tag match:                       +40
 title FTS match:                 +30
 body FTS match:                  +15
@@ -428,20 +484,23 @@ Inclusion priority:
 
 1. Header and provenance.
 2. `Must know`.
-3. `Do not do`.
-4. Relevant constraints.
-5. Relevant decisions.
-6. Relevant stack.
-7. Relevant conventions.
-8. Relevant testing.
-9. Relevant file layout.
-10. Relevant gotchas.
-11. Relevant workflows.
-12. Abandoned approaches.
-13. Open questions.
-14. Relevant facts.
-15. Relevant files.
-16. Stale or superseded memory to avoid.
+3. `Architecture Snapshot`.
+4. `Do not do`.
+5. `Rationale Gaps`.
+6. `Linked History`.
+7. Relevant decisions.
+8. Relevant constraints.
+9. Relevant stack.
+10. Relevant conventions.
+11. Relevant testing.
+12. Relevant file layout.
+13. Relevant gotchas.
+14. Relevant workflows.
+15. Abandoned approaches.
+16. Open questions.
+17. Relevant facts.
+18. Relevant files.
+19. Stale or superseded memory to avoid.
 
 Packaging rules:
 
@@ -465,7 +524,13 @@ Generated from: <project id>[, <branch>@<commit> when Git is available]
 
 ## Must know
 
+## Architecture Snapshot
+
 ## Do not do
+
+## Rationale Gaps
+
+## Linked History
 
 ## Relevant decisions
 
@@ -502,6 +567,9 @@ Rendering rules:
 * Each bullet should include the source memory ID when useful.
 * Stale/superseded warnings must be clearly labeled.
 * Rejected memory must not appear unless a future explicit debug mode is added.
+* `Architecture Snapshot` should be compact and generated from selected current architecture, constraints, decisions, gotchas, and open questions relevant to the task or hint files.
+* `Rationale Gaps` must warn only that relevant files changed recently without active linked rationale memory; it must not infer why those changes happened.
+* `Linked History` may show recent Git file-change metadata for hinted files as "this changed" evidence only.
 * `Relevant files` should include path-like references found in selected memory bodies, source payloads, `facets.applies_to`, and file evidence; omit the section when no file references are available.
 * Memories with `facets.category: "abandoned-attempt"` should render as active warnings in `Abandoned approaches`, not as stale memory.
 * Token target, estimated token count, budget status, truncation status, and omitted IDs are structured output metadata, not Markdown context.

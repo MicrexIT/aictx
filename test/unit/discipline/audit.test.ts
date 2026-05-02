@@ -262,6 +262,84 @@ describe("audit discipline findings", () => {
     expect(rules.has("oversized_vague_memory")).toBe(true);
     expect(rules.has("duplicate_like_facet_category")).toBe(true);
   });
+
+  it("reports weak connectivity, unlinked applicability overlap, related_to overuse, and missing rationale gaps", async () => {
+    const projectRoot = await createTempRoot("aictx-discipline-audit-connectivity-");
+    const storage = storageSnapshot({
+      projectRoot,
+      version: 2,
+      objects: [
+        memoryObject({
+          id: "decision.weak",
+          type: "decision",
+          title: "Weak decision",
+          body: longBody("Decision memory has no evidence or active relation."),
+          facets: { category: "decision-rationale" },
+          evidence: []
+        }),
+        memoryObject({
+          id: "decision.overlap-a",
+          type: "decision",
+          title: "Overlap A",
+          body: longBody("First memory applies to rank context."),
+          facets: { category: "decision-rationale", applies_to: ["src/context/rank.ts"] },
+          evidence: [{ kind: "file", id: "src/context/rank.ts" }]
+        }),
+        memoryObject({
+          id: "fact.overlap-b",
+          type: "fact",
+          title: "Overlap B",
+          body: longBody("Second memory applies to rank context."),
+          facets: { category: "debugging-fact", applies_to: ["src/context/rank.ts"] },
+          evidence: [{ kind: "file", id: "src/context/rank.ts" }]
+        })
+      ],
+      relations: [
+        relation({ id: "rel.related-1", from: "note.related-1", predicate: "related_to", to: "note.related-2" }),
+        relation({ id: "rel.related-2", from: "note.related-2", predicate: "related_to", to: "note.related-3" }),
+        relation({ id: "rel.related-3", from: "note.related-3", predicate: "related_to", to: "note.related-4" }),
+        relation({ id: "rel.related-4", from: "note.related-4", predicate: "related_to", to: "note.related-5", status: "stale" }),
+        relation({ id: "rel.related-5", from: "note.related-5", predicate: "related_to", to: "note.related-6" }),
+        relation({ id: "rel.related-6", from: "note.related-6", predicate: "related_to", to: "note.related-7" })
+      ]
+    });
+
+    const findings = await buildAuditFindings({
+      projectRoot,
+      storage,
+      gitFileChanges: [
+        {
+          file: "src/context/render.ts",
+          commit: "1111111111111111111111111111111111111111",
+          shortCommit: "1111111",
+          timestamp: "2026-04-25T14:00:00+02:00",
+          subject: "Update render sections"
+        },
+        {
+          file: "src/context/render.ts",
+          commit: "2222222222222222222222222222222222222222",
+          shortCommit: "2222222",
+          timestamp: "2026-04-25T15:00:00+02:00",
+          subject: "Refine render sections"
+        }
+      ]
+    });
+    const rules = new Set(findings.map((finding) => finding.rule));
+
+    expect(rules.has("weakly_connected_memory")).toBe(true);
+    expect(rules.has("unlinked_applicability_overlap")).toBe(true);
+    expect(rules.has("excessive_related_to")).toBe(true);
+    expect(rules.has("changed_file_missing_rationale")).toBe(true);
+    expect(findings).toContainEqual(
+      expect.objectContaining({
+        rule: "changed_file_missing_rationale",
+        memory_id: "project.test",
+        evidence: expect.arrayContaining([
+          { kind: "file", id: "src/context/render.ts" }
+        ])
+      })
+    );
+  });
 });
 
 function storageSnapshot(options: {

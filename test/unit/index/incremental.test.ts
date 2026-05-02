@@ -14,6 +14,7 @@ import {
   computeObjectContentHash,
   computeRelationContentHash
 } from "../../../src/storage/hashes.js";
+import type { Evidence, ObjectFacets } from "../../../src/core/types.js";
 import type { MemoryObjectSidecar } from "../../../src/storage/objects.js";
 import { readCanonicalStorage } from "../../../src/storage/read.js";
 import type { MemoryRelation } from "../../../src/storage/relations.js";
@@ -66,8 +67,18 @@ describe("incremental index update", () => {
       title: "Incremental search",
       bodyPath: "memory/notes/incremental-search.md",
       sidecarPath: ".aictx/memory/notes/incremental-search.json",
-      body: "# Incremental search\n\nSQLite FTS receives the new body.\n",
-      tags: ["sqlite", "search"]
+      body: "# Incremental search\n\nSQLite FTS receives the new body for src/index/incremental.ts during updates.\n",
+      tags: ["sqlite", "search"],
+      facets: {
+        category: "testing",
+        applies_to: ["src/index/incremental.ts"],
+        load_modes: ["coding"]
+      },
+      evidence: [
+        { kind: "file", id: "src/index/incremental.ts" },
+        { kind: "commit", id: "abc123" }
+      ],
+      sourceCommit: "def456"
     });
 
     const result = await updateIndexIncrementally({
@@ -95,9 +106,24 @@ describe("incremental index update", () => {
       expect(readFts(connection.db, "note.incremental-search")).toMatchObject({
         object_id: "note.incremental-search",
         title: "Incremental search",
-        body: "# Incremental search\n\nSQLite FTS receives the new body.\n",
+        body: "# Incremental search\n\nSQLite FTS receives the new body for src/index/incremental.ts during updates.\n",
         tags: "sqlite search"
       });
+      expect(readMemoryFileLinks(connection.db, "note.incremental-search")).toEqual([
+        { file_path: "src/index/incremental.ts", link_kind: "body.reference" },
+        { file_path: "src/index/incremental.ts", link_kind: "evidence.file" },
+        { file_path: "src/index/incremental.ts", link_kind: "facets.applies_to" }
+      ]);
+      expect(readMemoryCommitLinks(connection.db, "note.incremental-search")).toEqual([
+        { commit_hash: "abc123", link_kind: "evidence.commit" },
+        { commit_hash: "def456", link_kind: "source.commit" }
+      ]);
+      expect(readMemoryFacetLinks(connection.db, "note.incremental-search")).toEqual([
+        { facet: "coding", link_kind: "load_mode" },
+        { facet: "search", link_kind: "tag" },
+        { facet: "sqlite", link_kind: "tag" },
+        { facet: "testing", link_kind: "category" }
+      ]);
     } finally {
       connection.close();
     }
@@ -317,6 +343,21 @@ interface EventRow {
   relation_id: string | null;
 }
 
+interface FileLinkRow {
+  file_path: string;
+  link_kind: string;
+}
+
+interface CommitLinkRow {
+  commit_hash: string;
+  link_kind: string;
+}
+
+interface FacetLinkRow {
+  facet: string;
+  link_kind: string;
+}
+
 async function createInitializedProject(prefix: string): Promise<string> {
   const projectRoot = await createTempRoot(prefix);
   const initialized = await initProject({
@@ -388,6 +429,45 @@ function readEventsRows(db: IndexDatabaseConnection["db"]): EventRow[] {
     .all();
 }
 
+function readMemoryFileLinks(db: IndexDatabaseConnection["db"], id: string): FileLinkRow[] {
+  return db
+    .prepare<[string], FileLinkRow>(
+      `
+        SELECT file_path, link_kind
+        FROM memory_file_links
+        WHERE memory_id = ?
+        ORDER BY file_path, link_kind
+      `
+    )
+    .all(id);
+}
+
+function readMemoryCommitLinks(db: IndexDatabaseConnection["db"], id: string): CommitLinkRow[] {
+  return db
+    .prepare<[string], CommitLinkRow>(
+      `
+        SELECT commit_hash, link_kind
+        FROM memory_commit_links
+        WHERE memory_id = ?
+        ORDER BY commit_hash, link_kind
+      `
+    )
+    .all(id);
+}
+
+function readMemoryFacetLinks(db: IndexDatabaseConnection["db"], id: string): FacetLinkRow[] {
+  return db
+    .prepare<[string], FacetLinkRow>(
+      `
+        SELECT facet, link_kind
+        FROM memory_facet_links
+        WHERE memory_id = ?
+        ORDER BY facet, link_kind
+      `
+    )
+    .all(id);
+}
+
 async function writeObject(
   projectRoot: string,
   projectId: string,
@@ -399,6 +479,9 @@ async function writeObject(
     sidecarPath: string;
     body: string;
     tags: string[];
+    facets?: ObjectFacets;
+    evidence?: Evidence[];
+    sourceCommit?: string;
   }
 ): Promise<void> {
   const sidecarWithoutHash = {
@@ -414,8 +497,11 @@ async function writeObject(
       task: null
     },
     tags: options.tags,
+    ...(options.facets === undefined ? {} : { facets: options.facets }),
+    ...(options.evidence === undefined ? {} : { evidence: options.evidence }),
     source: {
-      kind: "agent"
+      kind: "agent",
+      ...(options.sourceCommit === undefined ? {} : { commit: options.sourceCommit })
     },
     created_at: FIXED_TIMESTAMP,
     updated_at: FIXED_TIMESTAMP

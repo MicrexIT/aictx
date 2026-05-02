@@ -1,4 +1,5 @@
 import type { GitState, ObjectId, ProjectId } from "../core/types.js";
+import type { LinkedHistoryEntry, RationaleGap } from "./compile.js";
 import type {
   RankedMemoryCandidates,
   RankedMemoryItem
@@ -13,7 +14,10 @@ const MAX_ONBOARDING_GOTCHAS = 2;
 
 type ContextSectionTitle =
   | "Must know"
+  | "Architecture Snapshot"
   | "Do not do"
+  | "Rationale Gaps"
+  | "Linked History"
   | "Relevant decisions"
   | "Relevant constraints"
   | "Relevant stack"
@@ -37,6 +41,8 @@ export interface RenderContextPackInput {
   git: GitState;
   mode?: LoadMemoryMode;
   ranked: RankedMemoryCandidates;
+  linkedHistory?: readonly LinkedHistoryEntry[];
+  rationaleGaps?: readonly RationaleGap[];
 }
 
 export interface RenderContextPackOutput {
@@ -83,7 +89,7 @@ export function renderContextPack(
 ): RenderContextPackOutput {
   const headerLines = buildHeaderLines(input);
   const mode = input.mode ?? DEFAULT_LOAD_MODE;
-  const sections = buildSectionCandidates(input.ranked, mode);
+  const sections = buildSectionCandidates(input, input.ranked, mode);
   const fit =
     input.tokenTarget === undefined
       ? renderAllSections(sections)
@@ -131,6 +137,7 @@ function formatProvenance(projectId: ProjectId, git: GitState): string {
 }
 
 function buildSectionCandidates(
+  input: RenderContextPackInput,
   ranked: RankedMemoryCandidates,
   mode: LoadMemoryMode
 ): SectionCandidate[] {
@@ -138,7 +145,10 @@ function buildSectionCandidates(
 
   return [
     memorySection("Must know", primaryItems, sectionRequired("Must know", mode)),
+    architectureSnapshotSection(primaryItems, mode),
     doNotDoSection(primaryItems),
+    rationaleGapsSection(input.rationaleGaps ?? []),
+    linkedHistorySection(input.linkedHistory ?? []),
     memorySection(
       "Relevant decisions",
       primaryItems.filter((item) => item.type === "decision"),
@@ -290,6 +300,50 @@ function statusLabel(item: RankedMemoryItem): string | null {
   }
 }
 
+function architectureSnapshotSection(
+  items: readonly RankedMemoryItem[],
+  mode: LoadMemoryMode
+): SectionCandidate {
+  if (!["coding", "review", "architecture"].includes(mode)) {
+    return {
+      title: "Architecture Snapshot",
+      required: false,
+      bullets: []
+    };
+  }
+
+  const snapshotItems = items
+    .filter(
+      (item) =>
+        item.type === "architecture" ||
+        item.type === "constraint" ||
+        item.type === "decision" ||
+        item.type === "gotcha" ||
+        item.type === "question" ||
+        item.candidate.facets?.category === "architecture" ||
+        item.candidate.facets?.category === "decision-rationale" ||
+        item.candidate.facets?.category === "open-question"
+    )
+    .slice(0, 8);
+
+  return {
+    title: "Architecture Snapshot",
+    required: mode === "architecture",
+    bullets: snapshotItems.map((item) => {
+      const label = item.type === "question" ? "open question" : item.type;
+      const title = formatInline(item.title);
+      const snippet = bodySnippet(item.candidate.body, title);
+      const text = snippet === "" ? `${label}: ${title}` : `${label}: ${title}: ${snippet}`;
+
+      return {
+        text: `- ${text} (${item.id})`,
+        compactText: `- ${label}: ${title} (${item.id})`,
+        sourceIds: [item.id]
+      };
+    })
+  };
+}
+
 function doNotDoSection(items: readonly RankedMemoryItem[]): SectionCandidate {
   const seen = new Set<string>();
   const bullets: BulletCandidate[] = [];
@@ -322,6 +376,30 @@ function doNotDoSection(items: readonly RankedMemoryItem[]): SectionCandidate {
     title: "Do not do",
     required: true,
     bullets
+  };
+}
+
+function rationaleGapsSection(gaps: readonly RationaleGap[]): SectionCandidate {
+  return {
+    title: "Rationale Gaps",
+    required: false,
+    bullets: gaps.map((gap) => ({
+      text: `- ${gap.file}: ${gap.change_count} recent Git change(s), latest ${gap.latest_commit} ${formatInline(gap.latest_subject)}; no active linked rationale memory found.`,
+      compactText: `- ${gap.file}: recent Git changes but no linked rationale memory.`,
+      sourceIds: []
+    }))
+  };
+}
+
+function linkedHistorySection(history: readonly LinkedHistoryEntry[]): SectionCandidate {
+  return {
+    title: "Linked History",
+    required: false,
+    bullets: history.map((entry) => ({
+      text: `- ${entry.file}: ${entry.short_commit} ${entry.timestamp} ${formatInline(entry.subject)}`,
+      compactText: `- ${entry.file}: ${entry.short_commit} ${formatInline(entry.subject)}`,
+      sourceIds: []
+    }))
   };
 }
 

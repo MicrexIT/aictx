@@ -5,6 +5,7 @@ import { dirname, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { initProject, rebuildIndex } from "../../../src/app/operations.js";
+import { rebuildIndex as rebuildGeneratedIndex } from "../../../src/index/rebuild.js";
 import { openIndexDatabase, type IndexDatabaseConnection } from "../../../src/index/sqlite.js";
 import {
   computeObjectContentHash,
@@ -70,6 +71,31 @@ describe("full index rebuild", () => {
         title: "Webhook idempotency",
         tags: "stripe webhooks"
       });
+      expect(readMemoryFileLinks(connection.db, "constraint.webhook-idempotency")).toEqual([
+        { file_path: "src/billing/dedupe.ts", link_kind: "body.reference" },
+        { file_path: "src/billing/relation.ts", link_kind: "relation.evidence.file" },
+        { file_path: "src/billing/webhook.ts", link_kind: "evidence.file" },
+        { file_path: "src/billing/webhook.ts", link_kind: "facets.applies_to" }
+      ]);
+      expect(readMemoryCommitLinks(connection.db, "constraint.webhook-idempotency")).toEqual([
+        { commit_hash: "abc123", link_kind: "evidence.commit" },
+        { commit_hash: "def456", link_kind: "source.commit" },
+        { commit_hash: "feed123", link_kind: "relation.evidence.commit" }
+      ]);
+      expect(readMemoryFileLinks(connection.db, "architecture.current")).toContainEqual({
+        file_path: "src/billing/relation.ts",
+        link_kind: "relation.evidence.file"
+      });
+      expect(readMemoryCommitLinks(connection.db, "architecture.current")).toContainEqual({
+        commit_hash: "feed123",
+        link_kind: "relation.evidence.commit"
+      });
+      expect(readMemoryFacetLinks(connection.db, "constraint.webhook-idempotency")).toEqual([
+        { facet: "coding", link_kind: "load_mode" },
+        { facet: "convention", link_kind: "category" },
+        { facet: "stripe", link_kind: "tag" },
+        { facet: "webhooks", link_kind: "tag" }
+      ]);
       expect(readRelation(connection.db, "rel.architecture-requires-webhook-idempotency")).toMatchObject({
         id: "rel.architecture-requires-webhook-idempotency",
         from_id: "architecture.current",
@@ -93,7 +119,7 @@ describe("full index rebuild", () => {
         }
       ]);
       expect(readMeta(connection.db)).toMatchObject({
-        schema_version: "2",
+        schema_version: "3",
         built_at: FIXED_TIMESTAMP_NEXT_MINUTE,
         source_git_commit: "",
         git_available: "false",
@@ -207,6 +233,55 @@ describe("full index rebuild", () => {
       connection.close();
     }
   });
+
+  it("indexes supplied Git file-change metadata during rebuild", async () => {
+    const projectRoot = await createInitializedProject("aictx-rebuild-git-history-");
+    await writeAdditionalCanonicalMemory(projectRoot);
+
+    const result = await rebuildGeneratedIndex({
+      projectRoot,
+      aictxRoot: join(projectRoot, ".aictx"),
+      clock: createFixedTestClock(FIXED_TIMESTAMP_NEXT_MINUTE),
+      git: {
+        available: true,
+        branch: "main",
+        commit: "feedbeef"
+      },
+      gitFileChanges: [
+        {
+          file: "src/billing/webhook.ts",
+          commit: "1234567890abcdef",
+          shortCommit: "1234567",
+          timestamp: "2026-04-25T14:00:00+02:00",
+          subject: "Refine webhook routing"
+        }
+      ]
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+
+    const connection = await openConnection(projectRoot);
+    try {
+      expect(readGitFileChanges(connection.db)).toEqual([
+        {
+          file_path: "src/billing/webhook.ts",
+          commit_hash: "1234567890abcdef",
+          short_commit: "1234567",
+          timestamp: "2026-04-25T14:00:00+02:00",
+          subject: "Refine webhook routing"
+        }
+      ]);
+      expect(readMeta(connection.db)).toMatchObject({
+        source_git_commit: "feedbeef",
+        git_available: "true"
+      });
+    } finally {
+      connection.close();
+    }
+  });
 });
 
 interface CountRow {
@@ -228,6 +303,29 @@ interface FtsRow {
   object_id: string;
   title: string;
   tags: string;
+}
+
+interface FileLinkRow {
+  file_path: string;
+  link_kind: string;
+}
+
+interface CommitLinkRow {
+  commit_hash: string;
+  link_kind: string;
+}
+
+interface FacetLinkRow {
+  facet: string;
+  link_kind: string;
+}
+
+interface GitFileChangeRow {
+  file_path: string;
+  commit_hash: string;
+  short_commit: string;
+  timestamp: string;
+  subject: string;
 }
 
 interface RelationRow {
@@ -281,7 +379,8 @@ async function writeAdditionalCanonicalMemory(projectRoot: string): Promise<void
   }
 
   const projectId = storage.data.config.project.id;
-  const body = "# Webhook idempotency\n\nWebhook handlers must dedupe delivery IDs.\n";
+  const body =
+    "# Webhook idempotency\n\nWebhook handlers must dedupe delivery IDs in src/billing/dedupe.ts before processing.\n";
   const sidecarWithoutHash = {
     id: "constraint.webhook-idempotency",
     type: "constraint",
@@ -295,8 +394,18 @@ async function writeAdditionalCanonicalMemory(projectRoot: string): Promise<void
       task: null
     },
     tags: ["stripe", "webhooks"],
+    facets: {
+      category: "convention",
+      applies_to: ["src/billing/webhook.ts"],
+      load_modes: ["coding"]
+    },
+    evidence: [
+      { kind: "file", id: "src/billing/webhook.ts" },
+      { kind: "commit", id: "abc123" }
+    ],
     source: {
-      kind: "agent"
+      kind: "agent",
+      commit: "def456"
     },
     created_at: FIXED_TIMESTAMP,
     updated_at: FIXED_TIMESTAMP
@@ -316,6 +425,14 @@ async function writeAdditionalCanonicalMemory(projectRoot: string): Promise<void
       {
         kind: "memory",
         id: "architecture.current"
+      },
+      {
+        kind: "file",
+        id: "src/billing/relation.ts"
+      },
+      {
+        kind: "commit",
+        id: "feed123"
       }
     ],
     created_at: FIXED_TIMESTAMP,
@@ -402,6 +519,57 @@ function readFts(db: IndexDatabaseConnection["db"], id: string): FtsRow | undefi
       "SELECT object_id, title, tags FROM objects_fts WHERE object_id = ?"
     )
     .get(id);
+}
+
+function readMemoryFileLinks(db: IndexDatabaseConnection["db"], id: string): FileLinkRow[] {
+  return db
+    .prepare<[string], FileLinkRow>(
+      `
+        SELECT file_path, link_kind
+        FROM memory_file_links
+        WHERE memory_id = ?
+        ORDER BY file_path, link_kind
+      `
+    )
+    .all(id);
+}
+
+function readMemoryCommitLinks(db: IndexDatabaseConnection["db"], id: string): CommitLinkRow[] {
+  return db
+    .prepare<[string], CommitLinkRow>(
+      `
+        SELECT commit_hash, link_kind
+        FROM memory_commit_links
+        WHERE memory_id = ?
+        ORDER BY commit_hash, link_kind
+      `
+    )
+    .all(id);
+}
+
+function readMemoryFacetLinks(db: IndexDatabaseConnection["db"], id: string): FacetLinkRow[] {
+  return db
+    .prepare<[string], FacetLinkRow>(
+      `
+        SELECT facet, link_kind
+        FROM memory_facet_links
+        WHERE memory_id = ?
+        ORDER BY facet, link_kind
+      `
+    )
+    .all(id);
+}
+
+function readGitFileChanges(db: IndexDatabaseConnection["db"]): GitFileChangeRow[] {
+  return db
+    .prepare<[], GitFileChangeRow>(
+      `
+        SELECT file_path, commit_hash, short_commit, timestamp, subject
+        FROM git_file_changes
+        ORDER BY file_path, commit_hash
+      `
+    )
+    .all();
 }
 
 function readRelation(db: IndexDatabaseConnection["db"], id: string): RelationRow | undefined {

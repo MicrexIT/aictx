@@ -22,7 +22,12 @@ export interface RegisterLoadCommandOptions {
 }
 
 interface LoadCommandFlags {
+  changedFile?: string[];
+  file?: string[];
+  historyWindow?: string;
   mode?: string;
+  subsystem?: string[];
+  symbol?: string[];
   tokenBudget?: string;
 }
 
@@ -51,6 +56,11 @@ export function registerLoadCommand(
     .argument("<task>", "Task description to compile context for.")
     .option("--mode <mode>", "Context compiler mode.")
     .option("--token-budget <number>", "Advisory token target for context packaging.")
+    .option("--file <path>", "File path retrieval hint.", collectRepeated, [])
+    .option("--changed-file <path>", "Changed file retrieval hint.", collectRepeated, [])
+    .option("--symbol <name>", "Symbol retrieval hint.", collectRepeated, [])
+    .option("--subsystem <name>", "Subsystem retrieval hint.", collectRepeated, [])
+    .option("--history-window <duration>", "Git history window hint such as 30d, 12w, 6m, or 1y.")
     .action(async (task: string, commandOptions: LoadCommandFlags, command: Command) => {
       const hasExplicitTokenBudget = commandOptions.tokenBudget !== undefined;
       const result = await loadMemory(
@@ -88,8 +98,31 @@ function loadMemoryOptions(
     ...(flags.mode === undefined ? {} : { mode: flags.mode }),
     ...(flags.tokenBudget === undefined
       ? {}
-      : { token_budget: Number(flags.tokenBudget) })
+      : { token_budget: Number(flags.tokenBudget) }),
+    ...hintsFromFlags(flags)
   };
+}
+
+function hintsFromFlags(flags: LoadCommandFlags): Pick<LoadMemoryOptions, "hints"> {
+  const hints = {
+    files: flags.file ?? [],
+    changed_files: flags.changedFile ?? [],
+    symbols: flags.symbol ?? [],
+    subsystems: flags.subsystem ?? [],
+    ...(flags.historyWindow === undefined ? {} : { history_window: flags.historyWindow })
+  };
+
+  return hints.files.length === 0 &&
+    hints.changed_files.length === 0 &&
+    hints.symbols.length === 0 &&
+    hints.subsystems.length === 0 &&
+    hints.history_window === undefined
+    ? {}
+    : { hints };
+}
+
+function collectRepeated(value: string, previous: string[]): string[] {
+  return [...previous, value];
 }
 
 function cliLoadResult(

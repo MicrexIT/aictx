@@ -1,5 +1,6 @@
 import type { Clock } from "../core/clock.js";
 import { aictxError, type JsonValue } from "../core/errors.js";
+import type { ProjectFileChange } from "../core/git.js";
 import { writeMarkdownAtomic } from "../core/fs.js";
 import { slugify } from "../core/ids.js";
 import type { ProjectPaths } from "../core/paths.js";
@@ -21,6 +22,13 @@ import {
 } from "./modes.js";
 import { renderContextPack } from "./render.js";
 import { MAX_TOKEN_BUDGET, normalizeTokenBudget } from "./tokens.js";
+import {
+  hintedFiles,
+  hintSearchText,
+  normalizeRetrievalHints,
+  type NormalizedRetrievalHints,
+  type RetrievalHints
+} from "../retrieval/hints.js";
 
 const SEARCH_SEED_LIMIT = 50;
 const RECENT_CANDIDATE_LIMIT = 5;
@@ -34,12 +42,14 @@ export interface LoadMemoryInput {
   task: string;
   token_budget?: number;
   mode?: string;
+  hints?: RetrievalHints;
 }
 
 export interface CompileContextPackOptions extends LoadMemoryInput {
   paths: ProjectPaths;
   git: GitState;
   clock: Clock;
+  gitFileChanges?: readonly ProjectFileChange[];
 }
 
 export interface LoadMemorySource {
@@ -69,6 +79,21 @@ export interface LoadMemoryData {
   included_ids: ObjectId[];
   excluded_ids: ObjectId[];
   omitted_ids: ObjectId[];
+}
+
+export interface LinkedHistoryEntry {
+  file: string;
+  commit: string;
+  short_commit: string;
+  timestamp: string;
+  subject: string;
+}
+
+export interface RationaleGap {
+  file: string;
+  change_count: number;
+  latest_commit: string;
+  latest_subject: string;
 }
 
 interface TokenTargetInput {
@@ -104,6 +129,7 @@ interface IndexedCounts {
 interface CandidateSelectionInput {
   storage: CanonicalStorageSnapshot;
   task: string;
+  hints: NormalizedRetrievalHints;
   searchResults: readonly SearchResult[];
 }
 
@@ -112,6 +138,7 @@ export async function compileContextPack(
 ): Promise<Result<LoadMemoryData>> {
   const task = normalizeTask(options.task);
   const mode = normalizeLoadMemoryMode(options.mode);
+  const hints = normalizeRetrievalHints(options.hints);
 
   if (!task.ok) {
     return task;
@@ -119,6 +146,10 @@ export async function compileContextPack(
 
   if (!mode.ok) {
     return mode;
+  }
+
+  if (!hints.ok) {
+    return hints;
   }
 
   const storage = await readCanonicalStorage(options.paths.projectRoot);
@@ -139,7 +170,8 @@ export async function compileContextPack(
   const searched = await searchIndex({
     aictxRoot: options.paths.aictxRoot,
     query: task.data,
-    limit: SEARCH_SEED_LIMIT
+    limit: SEARCH_SEED_LIMIT,
+    ...(options.hints === undefined ? {} : { hints: options.hints })
   });
 
   if (!searched.ok) {
@@ -155,10 +187,12 @@ export async function compileContextPack(
   const candidates = selectCandidateObjects({
     storage: storage.data,
     task: task.data,
+    hints: hints.data,
     searchResults: searched.data.matches
   });
   const ranked = rankMemoryCandidates({
     task: task.data,
+    hints: hints.data,
     mode: mode.data,
     projectId: storage.data.config.project.id,
     git: options.git,
@@ -171,7 +205,13 @@ export async function compileContextPack(
     projectId: storage.data.config.project.id,
     git: options.git,
     mode: mode.data,
-    ranked
+    ranked,
+    linkedHistory: linkedHistoryEntries(options.gitFileChanges ?? [], hints.data),
+    rationaleGaps: rationaleGaps({
+      storage: storage.data,
+      hints: hints.data,
+      gitFileChanges: options.gitFileChanges ?? []
+    })
   });
   const contextPack = rendered.markdown;
   const estimatedTokens = rendered.estimatedTokens;
@@ -453,15 +493,17 @@ function selectCandidateObjects(input: CandidateSelectionInput): RankMemoryCandi
     input.storage.objects.map((object) => [object.sidecar.id, object] as const)
   );
   const candidateIds = new Set<ObjectId>();
-  const taskText = input.task.toLowerCase();
-  const taskTerms = extractTerms(input.task);
+  const retrievalText = [input.task, hintSearchText(input.hints)].join(" ");
+  const taskText = retrievalText.toLowerCase();
+  const taskTerms = extractTerms(retrievalText);
+  const files = hintedFiles(input.hints);
 
   for (const result of input.searchResults) {
     candidateIds.add(result.id);
   }
 
   for (const object of input.storage.objects) {
-    if (objectMatchesTask(object, taskText, taskTerms)) {
+    if (objectMatchesTask(object, taskText, taskTerms, files)) {
       candidateIds.add(object.sidecar.id);
     }
   }
@@ -485,7 +527,8 @@ function selectCandidateObjects(input: CandidateSelectionInput): RankMemoryCandi
 function objectMatchesTask(
   object: StoredMemoryObject,
   taskText: string,
-  taskTerms: readonly string[]
+  taskTerms: readonly string[],
+  hintedFilePaths: readonly string[]
 ): boolean {
   const sidecar = object.sidecar;
 
@@ -495,8 +538,100 @@ function objectMatchesTask(
     taskText.includes(sidecar.body_path.toLowerCase()) ||
     hasTagMatch(sidecar.tags ?? [], taskTerms) ||
     hasFacetMatch(sidecar.facets, taskText, taskTerms) ||
-    hasEvidenceMatch(sidecar.evidence ?? [], taskText, taskTerms)
+    hasEvidenceMatch(sidecar.evidence ?? [], taskText, taskTerms) ||
+    hintedFilePaths.some((filePath) => objectReferencesFile(object, filePath))
   );
+}
+
+function linkedHistoryEntries(
+  changes: readonly ProjectFileChange[],
+  hints: NormalizedRetrievalHints
+): LinkedHistoryEntry[] {
+  const files = new Set(hintedFiles(hints));
+
+  return uniqueGitFileChanges(changes)
+    .filter((change) => files.size === 0 || files.has(change.file))
+    .slice(0, 10)
+    .map((change) => ({
+      file: change.file,
+      commit: change.commit,
+      short_commit: change.shortCommit,
+      timestamp: change.timestamp,
+      subject: change.subject
+    }));
+}
+
+function rationaleGaps(input: {
+  storage: CanonicalStorageSnapshot;
+  hints: NormalizedRetrievalHints;
+  gitFileChanges: readonly ProjectFileChange[];
+}): RationaleGap[] {
+  const files = hintedFiles(input.hints);
+
+  if (files.length === 0 || input.gitFileChanges.length === 0) {
+    return [];
+  }
+
+  const rationaleObjects = input.storage.objects.filter(isActiveRationaleObject);
+  const gaps: RationaleGap[] = [];
+
+  for (const file of files) {
+    const changes = input.gitFileChanges.filter((change) => change.file === file);
+
+    if (changes.length === 0) {
+      continue;
+    }
+
+    if (rationaleObjects.some((object) => objectReferencesFile(object, file))) {
+      continue;
+    }
+
+    const latest = [...changes].sort(compareProjectFileChange)[0];
+
+    if (latest === undefined) {
+      continue;
+    }
+
+    gaps.push({
+      file,
+      change_count: changes.length,
+      latest_commit: latest.shortCommit,
+      latest_subject: latest.subject
+    });
+  }
+
+  return gaps.sort((left, right) => left.file.localeCompare(right.file)).slice(0, 10);
+}
+
+function isActiveRationaleObject(object: StoredMemoryObject): boolean {
+  return (
+    ["active", "open", "draft"].includes(object.sidecar.status) &&
+    ["architecture", "decision", "gotcha", "fact", "constraint"].includes(object.sidecar.type)
+  );
+}
+
+function objectReferencesFile(object: StoredMemoryObject, filePath: string): boolean {
+  const normalized = normalizeProjectFileReference(filePath);
+
+  if (normalized === null) {
+    return false;
+  }
+
+  const facets = object.sidecar.facets;
+
+  if ((facets?.applies_to ?? []).some((path) => normalizeProjectFileReference(path) === normalized)) {
+    return true;
+  }
+
+  if (
+    (object.sidecar.evidence ?? []).some(
+      (item) => item.kind === "file" && normalizeProjectFileReference(item.id) === normalized
+    )
+  ) {
+    return true;
+  }
+
+  return extractProjectFileReferences(object.body).includes(normalized);
 }
 
 function addRelationCandidates(
@@ -624,6 +759,60 @@ function extractTerms(value: string): string[] {
       .filter((term) => term.length > 0) ?? [];
 
   return [...new Set(terms)];
+}
+
+function extractProjectFileReferences(body: string): string[] {
+  return uniqueSorted(
+    [...body.matchAll(/(?:^|[\s([{"'`])((?:\.\/)?(?:[A-Za-z0-9_.-]+\/)+[A-Za-z0-9_.@+-]+\.[A-Za-z0-9]+)(?=$|[\s)\]}",'`:;])/gu)]
+      .map((match) => match[1] ?? "")
+      .map(normalizeProjectFileReference)
+      .filter((path): path is string => path !== null)
+  );
+}
+
+function normalizeProjectFileReference(value: string): string | null {
+  const normalized = value.trim().replace(/\\/gu, "/").replace(/^\.\//u, "");
+
+  if (
+    normalized === "" ||
+    normalized.startsWith("/") ||
+    normalized.startsWith("../") ||
+    normalized.includes("/../") ||
+    normalized.includes("://") ||
+    normalized.includes("\0") ||
+    normalized.startsWith(".aictx/")
+  ) {
+    return null;
+  }
+
+  return normalized;
+}
+
+function uniqueGitFileChanges(
+  changes: readonly ProjectFileChange[]
+): ProjectFileChange[] {
+  const byKey = new Map<string, ProjectFileChange>();
+
+  for (const change of changes) {
+    byKey.set(`${change.file}\0${change.commit}`, change);
+  }
+
+  return [...byKey.values()].sort(compareProjectFileChange);
+}
+
+function compareProjectFileChange(
+  left: ProjectFileChange,
+  right: ProjectFileChange
+): number {
+  return (
+    right.timestamp.localeCompare(left.timestamp) ||
+    left.file.localeCompare(right.file) ||
+    left.commit.localeCompare(right.commit)
+  );
+}
+
+function uniqueSorted(values: readonly string[]): string[] {
+  return [...new Set(values)].sort();
 }
 
 function collectRankExcludedIds(ranked: RankedMemoryCandidates): Set<ObjectId> {

@@ -5,7 +5,7 @@ import { dirname, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { main, type CliOutputWriter } from "../../../src/cli/main.js";
-import type { ObjectStatus, ObjectType } from "../../../src/core/types.js";
+import type { Evidence, ObjectFacets, ObjectStatus, ObjectType } from "../../../src/core/types.js";
 import { computeObjectContentHash } from "../../../src/storage/hashes.js";
 import type { MemoryObjectSidecar } from "../../../src/storage/objects.js";
 import { readCanonicalStorage } from "../../../src/storage/read.js";
@@ -68,6 +68,8 @@ interface MemoryFixture {
   bodyPath: string;
   body: string;
   tags: string[];
+  facets?: ObjectFacets;
+  evidence?: Evidence[];
   updatedAt?: string;
 }
 
@@ -243,6 +245,70 @@ describe("aictx load and search CLI", () => {
     });
     expect(webhook?.snippet).toContain("Stripe may deliver duplicate webhook events");
     expect(typeof webhook?.score).toBe("number");
+  });
+
+  it("accepts retrieval hint flags for load and search", async () => {
+    const projectRoot = await createInitializedProject("aictx-cli-load-search-hints-");
+    await writeMemoryObject(projectRoot, {
+      id: "decision.hinted-ranking",
+      type: "decision",
+      status: "active",
+      title: "Hinted ranking",
+      bodyPath: "memory/decisions/hinted-ranking.md",
+      body: "# Hinted ranking\n\nRanking memory is selected from explicit file hints.\n",
+      tags: ["retrieval"],
+      facets: {
+        category: "decision-rationale",
+        applies_to: ["src/context/rank.ts"]
+      },
+      evidence: [{ kind: "file", id: "src/index/search.ts" }],
+      updatedAt: FIXED_TIMESTAMP_NEXT_MINUTE
+    });
+    await rebuildProject(projectRoot);
+
+    const loadOutput = await runCli(
+      [
+        "node",
+        "aictx",
+        "load",
+        "Opaque task",
+        "--file",
+        "src/context/rank.ts",
+        "--changed-file",
+        "src/index/search.ts",
+        "--json"
+      ],
+      projectRoot
+    );
+    const searchOutput = await runCli(
+      [
+        "node",
+        "aictx",
+        "search",
+        "opaque",
+        "--file",
+        "src/context/rank.ts",
+        "--subsystem",
+        "retrieval",
+        "--history-window",
+        "30d",
+        "--json"
+      ],
+      projectRoot
+    );
+
+    expect(loadOutput.exitCode).toBe(0);
+    expect(searchOutput.exitCode).toBe(0);
+
+    const loadEnvelope = JSON.parse(loadOutput.stdout) as LoadEnvelope;
+    const searchEnvelope = JSON.parse(searchOutput.stdout) as SearchEnvelope;
+
+    expect(loadEnvelope.data.included_ids).toContain("decision.hinted-ranking");
+    expect(loadEnvelope.data.context_pack).toContain("src/context/rank.ts");
+    expect(searchEnvelope.data.matches[0]).toMatchObject({
+      id: "decision.hinted-ranking",
+      status: "active"
+    });
   });
 
   it("prints compact human search results", async () => {
@@ -427,6 +493,8 @@ async function writeMemoryObject(projectRoot: string, fixture: MemoryFixture): P
       task: null
     },
     tags: fixture.tags,
+    ...(fixture.facets === undefined ? {} : { facets: fixture.facets }),
+    ...(fixture.evidence === undefined ? {} : { evidence: fixture.evidence }),
     source: {
       kind: "agent"
     },

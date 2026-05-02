@@ -121,7 +121,8 @@ describe("aictx audit CLI", () => {
         "missing_evidence",
         "missing_facets",
         "missing_object_evidence",
-        "manifest_version_contradiction"
+        "manifest_version_contradiction",
+        "weakly_connected_memory"
       ])
     );
     expect(envelope.data.findings).toContainEqual(

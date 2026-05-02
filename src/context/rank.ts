@@ -10,6 +10,10 @@ import type {
 } from "../core/types.js";
 import type { MemoryRelation } from "../storage/relations.js";
 import { DEFAULT_LOAD_MODE, type LoadMemoryMode } from "./modes.js";
+import {
+  hintSearchText,
+  type NormalizedRetrievalHints
+} from "../retrieval/hints.js";
 
 const SCORE = {
   exactId: 100,
@@ -243,6 +247,7 @@ export interface RankMemoryCandidate {
 
 export interface RankMemoryCandidatesInput {
   task: string;
+  hints?: NormalizedRetrievalHints;
   mode?: LoadMemoryMode;
   projectId: string;
   git: GitState;
@@ -335,11 +340,12 @@ export function rankMemoryCandidates(
   input: RankMemoryCandidatesInput
 ): RankedMemoryCandidates {
   const mode = input.mode ?? DEFAULT_LOAD_MODE;
-  const normalizedTaskText = input.task.toLowerCase();
-  const normalizedTask = normalizePhrase(input.task);
-  const taskTerms = extractTerms(input.task);
-  const significantTaskTerms = new Set(extractSignificantTerms(input.task));
-  const taskFileReferences = extractFileReferences(input.task);
+  const retrievalText = [input.task, input.hints === undefined ? "" : hintSearchText(input.hints)].join(" ");
+  const normalizedTaskText = retrievalText.toLowerCase();
+  const normalizedTask = normalizePhrase(retrievalText);
+  const taskTerms = extractTerms(retrievalText);
+  const significantTaskTerms = new Set(extractSignificantTerms(retrievalText));
+  const taskFileReferences = extractFileReferences(retrievalText);
   const conflictedIds = new Set(input.conflictedIds ?? []);
   const excluded: RankExcludedCandidate[] = [];
   const rankable: RankableCandidate[] = [];

@@ -78,6 +78,24 @@ export interface AictxFileAtCommit {
   contents: string;
 }
 
+export interface ProjectFileChange {
+  file: string;
+  commit: string;
+  shortCommit: string;
+  timestamp: string;
+  subject: string;
+}
+
+export interface RecentProjectFileChanges {
+  changes: ProjectFileChange[];
+}
+
+export interface RecentProjectFileChangesOptions extends GitWrapperOptions {
+  files: readonly string[];
+  historyWindow?: string | null;
+  limit?: number;
+}
+
 interface GitCommandOptions extends GitWrapperOptions {
   gitUnavailableOk?: boolean;
 }
@@ -341,6 +359,55 @@ export async function showAictxFileAtCommit(
   });
 }
 
+export async function getRecentProjectFileChanges(
+  projectRoot: string,
+  options: RecentProjectFileChangesOptions
+): Promise<Result<RecentProjectFileChanges>> {
+  const files = uniqueSorted(
+    options.files
+      .map(normalizeProjectFilePath)
+      .filter((file): file is string => file !== null)
+  );
+
+  if (files.length === 0) {
+    return ok({ changes: [] });
+  }
+
+  const limit = options.limit ?? 50;
+
+  if (!Number.isSafeInteger(limit) || limit < 1) {
+    return err(
+      aictxError("AICtxValidationFailed", "Git file history limit must be positive.", {
+        field: "limit",
+        actual: limit
+      })
+    );
+  }
+
+  const args = [
+    "log",
+    `--format=%H${LOG_FIELD_SEPARATOR}%h${LOG_FIELD_SEPARATOR}%aI${LOG_FIELD_SEPARATOR}%s`,
+    `--max-count=${limit}`,
+    ...historyWindowArgs(options.historyWindow),
+    "--name-only",
+    "--",
+    ...files
+  ];
+  const result = await runGit(args, projectRoot, options);
+
+  if (!result.ok) {
+    return result;
+  }
+
+  if (result.data.exitCode !== 0) {
+    return gitCommandFailed("Git file history failed.", result.data);
+  }
+
+  return ok({
+    changes: parseProjectFileChanges(result.data.stdout, new Set(files))
+  });
+}
+
 export async function restoreAictxFromCommit(
   projectRoot: string,
   commit: string,
@@ -521,6 +588,102 @@ function parseLogEntries(stdout: string): AictxLogEntry[] {
     });
 }
 
+function parseProjectFileChanges(
+  stdout: string,
+  requestedFiles: ReadonlySet<string>
+): ProjectFileChange[] {
+  const changes: ProjectFileChange[] = [];
+  let current:
+    | {
+        commit: string;
+        shortCommit: string;
+        timestamp: string;
+        subject: string;
+      }
+    | null = null;
+
+  for (const rawLine of stdout.split("\n")) {
+    const line = rawLine.trim();
+
+    if (line === "") {
+      continue;
+    }
+
+    if (line.includes(LOG_FIELD_SEPARATOR)) {
+      const [commit = "", shortCommit = "", timestamp = "", subject = ""] =
+        line.split(LOG_FIELD_SEPARATOR);
+
+      current = {
+        commit,
+        shortCommit,
+        timestamp,
+        subject
+      };
+      continue;
+    }
+
+    if (current === null) {
+      continue;
+    }
+
+    const file = normalizeProjectFilePath(line);
+
+    if (file === null || (!requestedFiles.has(".") && !requestedFiles.has(file))) {
+      continue;
+    }
+
+    changes.push({
+      file,
+      ...current
+    });
+  }
+
+  return uniqueProjectFileChanges(changes);
+}
+
+function historyWindowArgs(historyWindow: string | null | undefined): string[] {
+  if (historyWindow === null || historyWindow === undefined) {
+    return [];
+  }
+
+  const match = /^([1-9][0-9]{0,3})([dwmy])$/u.exec(historyWindow);
+
+  if (match === null || match[1] === undefined || match[2] === undefined) {
+    return [];
+  }
+
+  const unit = new Map([
+    ["d", "days"],
+    ["w", "weeks"],
+    ["m", "months"],
+    ["y", "years"]
+  ]).get(match[2]);
+
+  if (unit === undefined) {
+    return [];
+  }
+
+  return [`--since=${match[1]} ${unit} ago`];
+}
+
+function normalizeProjectFilePath(filePath: string): string | null {
+  const slashPath = filePath.trim().replaceAll("\\", "/").replace(/^\.\//u, "");
+
+  if (
+    slashPath === "" ||
+    path.posix.isAbsolute(slashPath) ||
+    slashPath.startsWith("../") ||
+    slashPath.includes("/../") ||
+    slashPath.includes("\0") ||
+    slashPath.includes("://") ||
+    isIgnoredProjectChangePath(slashPath)
+  ) {
+    return null;
+  }
+
+  return path.posix.normalize(slashPath);
+}
+
 async function isTrackedFile(
   projectRoot: string,
   file: string,
@@ -620,4 +783,21 @@ function unquoteGitPath(filePath: string): string {
 
 function uniqueSorted(values: string[]): string[] {
   return [...new Set(values)].sort();
+}
+
+function uniqueProjectFileChanges(
+  changes: readonly ProjectFileChange[]
+): ProjectFileChange[] {
+  const byKey = new Map<string, ProjectFileChange>();
+
+  for (const change of changes) {
+    byKey.set(`${change.file}\0${change.commit}`, change);
+  }
+
+  return [...byKey.values()].sort(
+    (left, right) =>
+      right.timestamp.localeCompare(left.timestamp) ||
+      left.file.localeCompare(right.file) ||
+      left.commit.localeCompare(right.commit)
+  );
 }

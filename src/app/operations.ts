@@ -6,8 +6,10 @@ import {
   getAictxDirtyState,
   getChangedProjectFiles,
   getGitState,
+  getRecentProjectFileChanges,
   showAictxFileAtCommit,
-  type GitWrapperOptions
+  type GitWrapperOptions,
+  type ProjectFileChange
 } from "../core/git.js";
 import { withProjectLock } from "../core/lock.js";
 import { resolveProjectPaths, type ProjectPaths } from "../core/paths.js";
@@ -69,6 +71,10 @@ import {
   type SearchMemoryData,
   type SearchMemoryInput
 } from "../index/search.js";
+import {
+  hintedFiles,
+  normalizeRetrievalHints
+} from "../retrieval/hints.js";
 import { openSqliteDatabase } from "../index/sqlite-driver.js";
 import { resolveIndexDatabasePath } from "../index/sqlite.js";
 import {
@@ -358,7 +364,8 @@ export async function initProject(
     const rebuilt = await rebuildIndexForResolvedProject({
       paths: initialized.data.paths,
       meta: meta.meta,
-      clock
+      clock,
+      runner: options.runner
     });
     const initWarnings = initialized.warnings.filter(
       (warning) => warning !== INITIAL_INDEX_UNAVAILABLE_WARNING
@@ -429,7 +436,8 @@ export async function rebuildIndex(
   const rebuilt = await rebuildIndexForResolvedProject({
     paths: paths.data,
     meta: meta.meta,
-    clock
+    clock,
+    runner: options.runner
   });
 
   if (!rebuilt.ok) {
@@ -490,15 +498,22 @@ export async function upgradeStorage(
         return result;
       }
 
+      const gitFileChanges = await recentGitFileChangesForIndex(
+        paths.data.projectRoot,
+        meta.meta,
+        options
+      );
       const rebuilt = await rebuildGeneratedIndex({
         projectRoot: paths.data.projectRoot,
         aictxRoot: paths.data.aictxRoot,
         clock,
-        git: meta.meta.git
+        git: meta.meta.git,
+        gitFileChanges: gitFileChanges.ok ? gitFileChanges.data : []
       });
 
       return ok(result.data, [
         ...result.warnings,
+        ...gitFileChanges.warnings,
         ...rebuilt.warnings,
         ...(rebuilt.ok ? [] : [`Index warning: ${rebuilt.error.message}`])
       ]);
@@ -619,12 +634,25 @@ export async function loadMemory(
     return meta;
   }
 
+  const gitFileChanges = await hintedGitFileChanges(paths.data.projectRoot, meta.meta, options);
+
+  if (!gitFileChanges.ok) {
+    return {
+      ok: false,
+      error: gitFileChanges.error,
+      warnings: gitFileChanges.warnings,
+      meta: meta.meta
+    };
+  }
+
   const compiled = await compileContextPack({
     paths: paths.data,
     git: meta.meta.git,
     task: options.task,
     ...(options.token_budget === undefined ? {} : { token_budget: options.token_budget }),
     ...(options.mode === undefined ? {} : { mode: options.mode }),
+    ...(options.hints === undefined ? {} : { hints: options.hints }),
+    gitFileChanges: gitFileChanges.data,
     clock
   });
 
@@ -632,7 +660,7 @@ export async function loadMemory(
     return {
       ok: true,
       data: compiled.data,
-      warnings: compiled.warnings,
+      warnings: [...gitFileChanges.warnings, ...compiled.warnings],
       meta: meta.meta
     };
   }
@@ -641,7 +669,7 @@ export async function loadMemory(
     return {
       ok: false,
       error: compiled.error,
-      warnings: compiled.warnings,
+      warnings: [...gitFileChanges.warnings, ...compiled.warnings],
       meta: meta.meta
     };
   }
@@ -652,7 +680,7 @@ export async function loadMemory(
     return {
       ok: false,
       error: autoIndex.error,
-      warnings: [...compiled.warnings, ...autoIndex.warnings],
+      warnings: [...gitFileChanges.warnings, ...compiled.warnings, ...autoIndex.warnings],
       meta: meta.meta
     };
   }
@@ -661,7 +689,7 @@ export async function loadMemory(
     return {
       ok: false,
       error: compiled.error,
-      warnings: [...compiled.warnings, ...autoIndex.warnings],
+      warnings: [...gitFileChanges.warnings, ...compiled.warnings, ...autoIndex.warnings],
       meta: meta.meta
     };
   }
@@ -669,14 +697,20 @@ export async function loadMemory(
   const rebuilt = await rebuildIndexForResolvedProject({
     paths: paths.data,
     meta: meta.meta,
-    clock
+    clock,
+    runner: options.runner
   });
 
   if (!rebuilt.ok) {
     return {
       ok: false,
       error: rebuilt.error,
-      warnings: [...compiled.warnings, ...autoIndex.warnings, ...rebuilt.warnings],
+      warnings: [
+        ...gitFileChanges.warnings,
+        ...compiled.warnings,
+        ...autoIndex.warnings,
+        ...rebuilt.warnings
+      ],
       meta: meta.meta
     };
   }
@@ -687,6 +721,8 @@ export async function loadMemory(
     task: options.task,
     ...(options.token_budget === undefined ? {} : { token_budget: options.token_budget }),
     ...(options.mode === undefined ? {} : { mode: options.mode }),
+    ...(options.hints === undefined ? {} : { hints: options.hints }),
+    gitFileChanges: gitFileChanges.data,
     clock
   });
 
@@ -695,6 +731,7 @@ export async function loadMemory(
       ok: false,
       error: retried.error,
       warnings: [
+        ...gitFileChanges.warnings,
         ...compiled.warnings,
         ...autoIndex.warnings,
         ...rebuilt.warnings,
@@ -707,7 +744,12 @@ export async function loadMemory(
   return {
     ok: true,
     data: retried.data,
-    warnings: [...autoIndex.warnings, ...rebuilt.warnings, ...retried.warnings],
+    warnings: [
+      ...gitFileChanges.warnings,
+      ...autoIndex.warnings,
+      ...rebuilt.warnings,
+      ...retried.warnings
+    ],
     meta: meta.meta
   };
 }
@@ -780,7 +822,8 @@ export async function searchMemory(
   const rebuilt = await rebuildIndexForResolvedProject({
     paths: paths.data,
     meta: meta.meta,
-    clock
+    clock,
+    runner: options.runner
   });
 
   if (!rebuilt.ok) {
@@ -1236,15 +1279,25 @@ export async function auditMemory(
     return prepared;
   }
 
+  const gitFileChanges = await recentGitFileChangesForIndex(
+    prepared.storage.projectRoot,
+    prepared.meta,
+    options
+  );
+
   return {
     ok: true,
     data: {
       findings: await buildAuditFindings({
         projectRoot: prepared.storage.projectRoot,
-        storage: prepared.storage
+        storage: prepared.storage,
+        gitFileChanges: gitFileChanges.ok ? gitFileChanges.data : []
       })
     },
-    warnings: prepared.storageWarnings,
+    warnings: [
+      ...prepared.storageWarnings,
+      ...(gitFileChanges.ok ? gitFileChanges.warnings : [])
+    ],
     meta: prepared.meta
   };
 }
@@ -1649,11 +1702,17 @@ async function restoreResolvedMemory(
         return canonical;
       }
 
+      const gitFileChanges = await recentGitFileChangesForIndex(
+        options.paths.projectRoot,
+        options.meta,
+        options
+      );
       const rebuilt = await rebuildGeneratedIndex({
         projectRoot: options.paths.projectRoot,
         aictxRoot: options.paths.aictxRoot,
         clock: options.clock,
-        git: options.meta.git
+        git: options.meta.git,
+        gitFileChanges: gitFileChanges.ok ? gitFileChanges.data : []
       });
 
       return ok(
@@ -1664,6 +1723,7 @@ async function restoreResolvedMemory(
         },
         [
           ...canonical.warnings,
+          ...gitFileChanges.warnings,
           ...rebuilt.warnings,
           ...(rebuilt.ok ? [] : [`Index warning: ${rebuilt.error.message}`])
         ]
@@ -1983,10 +2043,74 @@ async function buildBestEffortMeta(
   return meta.meta;
 }
 
+async function hintedGitFileChanges(
+  projectRoot: string,
+  meta: AictxMeta,
+  options: GitWrapperOptions & { hints?: SearchMemoryInput["hints"] }
+): Promise<Result<ProjectFileChange[]>> {
+  const hints = normalizeRetrievalHints(options.hints);
+
+  if (!hints.ok) {
+    return hints;
+  }
+
+  if (!meta.git.available) {
+    return ok([]);
+  }
+
+  const files = hintedFiles(hints.data);
+
+  if (files.length === 0) {
+    return ok([]);
+  }
+
+  const changes = await getRecentProjectFileChanges(projectRoot, {
+    files,
+    historyWindow: hints.data.history_window,
+    limit: 50,
+    runner: options.runner
+  });
+
+  if (!changes.ok) {
+    return ok([], [
+      ...changes.warnings,
+      `Git file history warning: ${changes.error.message}`
+    ]);
+  }
+
+  return ok(changes.data.changes, changes.warnings);
+}
+
+async function recentGitFileChangesForIndex(
+  projectRoot: string,
+  meta: AictxMeta,
+  options: GitWrapperOptions
+): Promise<Result<ProjectFileChange[]>> {
+  if (!meta.git.available) {
+    return ok([]);
+  }
+
+  const changes = await getRecentProjectFileChanges(projectRoot, {
+    files: ["."],
+    limit: 100,
+    runner: options.runner
+  });
+
+  if (!changes.ok) {
+    return ok([], [
+      ...changes.warnings,
+      `Git file history warning: ${changes.error.message}`
+    ]);
+  }
+
+  return ok(changes.data.changes, changes.warnings);
+}
+
 async function rebuildIndexForResolvedProject(options: {
   paths: ProjectPaths;
   meta: AictxMeta;
   clock: Clock;
+  runner?: GitWrapperOptions["runner"];
 }) {
   return withProjectLock(
     {
@@ -1994,13 +2118,25 @@ async function rebuildIndexForResolvedProject(options: {
       operation: "rebuild",
       clock: options.clock
     },
-    () =>
-      rebuildGeneratedIndex({
+    async () => {
+      const gitFileChanges = await recentGitFileChangesForIndex(
+        options.paths.projectRoot,
+        options.meta,
+        options
+      );
+
+      const rebuilt = await rebuildGeneratedIndex({
         projectRoot: options.paths.projectRoot,
         aictxRoot: options.paths.aictxRoot,
         clock: options.clock,
-        git: options.meta.git
-      })
+        git: options.meta.git,
+        gitFileChanges: gitFileChanges.ok ? gitFileChanges.data : []
+      });
+
+      return rebuilt.ok
+        ? ok(rebuilt.data, [...gitFileChanges.warnings, ...rebuilt.warnings])
+        : rebuilt;
+    }
   );
 }
 
@@ -2008,7 +2144,8 @@ function searchIndexOptions(aictxRoot: string, input: SearchMemoryInput): Search
   return {
     aictxRoot,
     query: input.query,
-    ...(input.limit === undefined ? {} : { limit: input.limit })
+    ...(input.limit === undefined ? {} : { limit: input.limit }),
+    ...(input.hints === undefined ? {} : { hints: input.hints })
   };
 }
 

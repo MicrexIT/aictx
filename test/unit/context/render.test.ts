@@ -547,6 +547,74 @@ describe("context pack rendering", () => {
     );
     expect(sectionText(result.markdown, "Relevant files")).toContain("vitest.config.ts");
   });
+
+  it("renders a compact architecture snapshot for architecture-oriented modes", () => {
+    const result = renderContextPack(
+      input({
+        mode: "architecture",
+        ranked: ranked({
+          mustKnow: [
+            item({
+              id: "architecture.current-boundary",
+              type: "architecture",
+              title: "Current boundary",
+              body: "Context retrieval owns ranking and rendering boundaries."
+            }),
+            item({
+              id: "question.history-rationale",
+              type: "question",
+              status: "open",
+              title: "History rationale gap",
+              body: "Open question about how to capture missing rationale."
+            })
+          ]
+        })
+      })
+    );
+
+    expect(sectionText(result.markdown, "Architecture Snapshot")).toContain(
+      "architecture: Current boundary"
+    );
+    expect(sectionText(result.markdown, "Architecture Snapshot")).toContain(
+      "open question: History rationale gap"
+    );
+  });
+
+  it("renders rationale gaps and linked history without inventing memory IDs", () => {
+    const result = renderContextPack(
+      input({
+        ranked: ranked(),
+        rationaleGaps: [
+          {
+            file: "src/context/rank.ts",
+            change_count: 3,
+            latest_commit: "abc1234",
+            latest_subject: "Tune ranking"
+          }
+        ],
+        linkedHistory: [
+          {
+            file: "src/context/rank.ts",
+            commit: "abc123456789",
+            short_commit: "abc1234",
+            timestamp: "2026-04-25T14:00:00+02:00",
+            subject: "Tune ranking"
+          }
+        ]
+      })
+    );
+
+    expect(sectionText(result.markdown, "Rationale Gaps")).toContain(
+      "src/context/rank.ts: 3 recent Git change(s)"
+    );
+    expect(sectionText(result.markdown, "Rationale Gaps")).toContain(
+      "no active linked rationale memory found"
+    );
+    expect(sectionText(result.markdown, "Linked History")).toContain(
+      "src/context/rank.ts: abc1234"
+    );
+    expect(result.includedIds).toEqual([]);
+  });
 });
 
 function input(overrides: Partial<RenderContextPackInput> = {}): RenderContextPackInput {
@@ -563,6 +631,14 @@ function input(overrides: Partial<RenderContextPackInput> = {}): RenderContextPa
 
   if (overrides.mode !== undefined) {
     result.mode = overrides.mode;
+  }
+
+  if (overrides.linkedHistory !== undefined) {
+    result.linkedHistory = overrides.linkedHistory;
+  }
+
+  if (overrides.rationaleGaps !== undefined) {
+    result.rationaleGaps = overrides.rationaleGaps;
   }
 
   return result;

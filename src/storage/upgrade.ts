@@ -1,8 +1,9 @@
 import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 
 import type { Clock } from "../core/clock.js";
 import { aictxError, type JsonValue } from "../core/errors.js";
-import { writeJsonAtomic } from "../core/fs.js";
+import { stableJsonStringify, writeJsonAtomic } from "../core/fs.js";
 import { err, ok, type Result } from "../core/result.js";
 import type {
   Evidence,
@@ -61,14 +62,12 @@ export async function upgradeStorageToV2(
     filesChanged.push(".aictx/config.json");
   }
 
-  if (fromVersion !== 2) {
-    const schemas = await writeBundledSchemas(options.projectRoot);
+  const schemas = await writeBundledSchemas(options.projectRoot);
 
-    if (!schemas.ok) {
-      return schemas;
-    }
-    filesChanged.push(...schemas.data);
+  if (!schemas.ok) {
+    return schemas;
   }
+  filesChanged.push(...schemas.data);
 
   for (const object of storage.data.objects) {
     if (object.sidecar.facets !== undefined && object.sidecar.evidence !== undefined) {
@@ -91,7 +90,7 @@ export async function upgradeStorageToV2(
   }
 
   return ok({
-    upgraded: fromVersion !== 2 || objectsUpgraded.length > 0,
+    upgraded: fromVersion !== 2 || objectsUpgraded.length > 0 || filesChanged.length > 0,
     from_version: fromVersion,
     to_version: 2,
     files_changed: filesChanged,
@@ -195,6 +194,12 @@ async function writeBundledSchemas(projectRoot: string): Promise<Result<string[]
         );
       }
 
+      const current = await readExistingJson(projectRoot, target);
+
+      if (current.ok && stableJsonStringify(current.data) === stableJsonStringify(schema)) {
+        continue;
+      }
+
       const result = await writeJsonAtomic(projectRoot, target, schema);
 
       if (!result.ok) {
@@ -213,6 +218,28 @@ async function writeBundledSchemas(projectRoot: string): Promise<Result<string[]
   }
 
   return ok(written);
+}
+
+async function readExistingJson(projectRoot: string, target: string): Promise<Result<JsonValue>> {
+  try {
+    const parsed = JSON.parse(await readFile(join(projectRoot, target), "utf8")) as unknown;
+
+    if (!isJsonValue(parsed)) {
+      return err(
+        aictxError("AICtxValidationFailed", "Existing schema is not a JSON value.", {
+          path: target
+        })
+      );
+    }
+
+    return ok(parsed);
+  } catch {
+    return err(
+      aictxError("AICtxValidationFailed", "Existing schema could not be read.", {
+        path: target
+      })
+    );
+  }
 }
 
 function configToJson(config: AictxConfig): JsonValue {

@@ -264,6 +264,65 @@ describe("search index", () => {
     }
   });
 
+  it("seeds candidates from file and subsystem hints when query text does not match", async () => {
+    const connection = await openMigratedConnection();
+
+    try {
+      insertObject(connection, {
+        id: "decision.hinted-ranking",
+        type: "decision",
+        title: "Hinted ranking",
+        body: "This memory should be found from deterministic hint links."
+      });
+      insertFileLink(connection, "decision.hinted-ranking", "src/context/rank.ts");
+      insertFacetLink(connection, "decision.hinted-ranking", "retrieval");
+
+      const result = await searchIndex({
+        aictxRoot: connection.aictxRoot,
+        query: "opaque",
+        hints: {
+          changed_files: ["src/context/rank.ts"],
+          subsystems: ["retrieval"]
+        }
+      });
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.data.matches[0]).toMatchObject({
+          id: "decision.hinted-ranking",
+          status: "active"
+        });
+      }
+    } finally {
+      connection.close();
+    }
+  });
+
+  it("rejects invalid retrieval hint shapes", async () => {
+    const connection = await openMigratedConnection();
+
+    try {
+      const result = await searchIndex({
+        aictxRoot: connection.aictxRoot,
+        query: "ranking",
+        hints: {
+          history_window: "thirty-days"
+        }
+      });
+
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.error.code).toBe("AICtxValidationFailed");
+        expect(result.error.details).toMatchObject({
+          field: "hints.history_window",
+          actual: "thirty-days"
+        });
+      }
+    } finally {
+      connection.close();
+    }
+  });
+
   it("ranks deterministic ties by recency and then lexicographic ID", async () => {
     const connection = await openMigratedConnection();
 
@@ -501,6 +560,36 @@ function insertObject(connection: TestConnection, fixture: ObjectFixture): void 
       tags: tags.join(" "),
       facets: facets === null ? "" : facetSearchText(facets),
       evidence: evidenceSearchText(evidence)
+    });
+}
+
+function insertFileLink(connection: TestConnection, memoryId: string, filePath: string): void {
+  connection.db
+    .prepare<Record<string, string>>(
+      `
+        INSERT INTO memory_file_links (memory_id, file_path, link_kind)
+        VALUES (@memory_id, @file_path, @link_kind)
+      `
+    )
+    .run({
+      memory_id: memoryId,
+      file_path: filePath,
+      link_kind: "test"
+    });
+}
+
+function insertFacetLink(connection: TestConnection, memoryId: string, facet: string): void {
+  connection.db
+    .prepare<Record<string, string>>(
+      `
+        INSERT INTO memory_facet_links (memory_id, facet, link_kind)
+        VALUES (@memory_id, @facet, @link_kind)
+      `
+    )
+    .run({
+      memory_id: memoryId,
+      facet,
+      link_kind: "test"
     });
 }
 

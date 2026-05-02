@@ -261,7 +261,7 @@ Compile task-specific memory into a context pack.
 Syntax:
 
 ```bash
-aictx load "<task>" [--mode <mode>] [--token-budget <number>] [--json]
+aictx load "<task>" [--mode <mode>] [--token-budget <number>] [--file <path>] [--changed-file <path>] [--symbol <name>] [--subsystem <name>] [--history-window <duration>] [--json]
 ```
 
 Behavior:
@@ -274,6 +274,8 @@ Behavior:
 * If Git is unavailable, include local project provenance and mark Git provenance as unavailable.
 * Exclude stale, superseded, rejected, and conflicted memory from `Must know` by default.
 * Use `--mode` to tune deterministic ranking and rendering.
+* Use repeated `--file`, `--changed-file`, `--symbol`, and `--subsystem` flags as deterministic retrieval hints.
+* Use `--history-window` with a compact value such as `30d`, `12w`, `6m`, or `1y` to bound linked Git history for hinted files.
 * Treat `--token-budget` as an advisory target only when explicitly provided.
 * Keep token target/status metadata out of the Markdown context pack and expose it in JSON output.
 * Allowed modes are `coding`, `debugging`, `review`, `architecture`, and `onboarding`; default is `coding`.
@@ -567,7 +569,7 @@ Success data:
 Optional v1 commands may be implemented as CLI adapters over shared application services:
 
 ```bash
-aictx search "<query>" [--limit <number>] [--json]
+aictx search "<query>" [--limit <number>] [--file <path>] [--changed-file <path>] [--symbol <name>] [--subsystem <name>] [--history-window <duration>] [--json]
 aictx stale [--json]
 aictx inspect <id> [--json]
 aictx graph <id> [--json]
@@ -812,6 +814,13 @@ Input:
   "task": "Fix Stripe webhook retries",
   "token_budget": 6000,
   "mode": "coding",
+  "hints": {
+    "files": ["src/context/rank.ts"],
+    "changed_files": ["src/index/search.ts"],
+    "symbols": ["rankMemoryCandidates"],
+    "subsystems": ["retrieval"],
+    "history_window": "30d"
+  },
   "project_root": "/repo"
 }
 ```
@@ -822,6 +831,8 @@ Input fields:
 * `token_budget` is optional. If omitted, no token target is applied.
 * `mode` is optional and defaults to `coding`.
 * Allowed modes are `coding`, `debugging`, `review`, `architecture`, and `onboarding`.
+* `hints` is optional and supports `files`, `changed_files`, `symbols`, `subsystems`, and `history_window`.
+* Hint arrays must contain strings only. `history_window` must use a compact value such as `30d`, `12w`, `6m`, or `1y`.
 * `project_root` is optional. If omitted, the MCP server launch directory is used.
 
 Behavior:
@@ -830,6 +841,7 @@ Behavior:
 * Must keep each target project's memory isolated to its own `.aictx/` directory.
 * Must return Markdown context pack plus structured references.
 * Must use the same deterministic mode-aware ranking and rendering as CLI `aictx load --mode`.
+* May include generated `Architecture Snapshot`, `Rationale Gaps`, and `Linked History` sections when relevant.
 * Must preserve high-priority task memory even when an explicit token budget target is exceeded.
 
 Output data:
@@ -861,6 +873,12 @@ Input:
 {
   "query": "Stripe webhook idempotency",
   "limit": 10,
+  "hints": {
+    "files": ["src/context/rank.ts"],
+    "changed_files": ["src/index/search.ts"],
+    "subsystems": ["retrieval"],
+    "history_window": "30d"
+  },
   "project_root": "/repo"
 }
 ```
@@ -869,6 +887,7 @@ Input fields:
 
 * `query` is required.
 * `limit` is optional and defaults to `10`.
+* `hints` is optional and has the same shape as `load_memory.hints`.
 * `project_root` is optional. If omitted, the MCP server launch directory is used.
 
 Behavior:

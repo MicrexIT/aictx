@@ -11,7 +11,12 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { main, type CliOutputWriter } from "../../../src/cli/main.js";
 import { runSubprocess } from "../../../src/core/subprocess.js";
-import type { ObjectStatus, ObjectType } from "../../../src/core/types.js";
+import type {
+  Evidence,
+  ObjectFacets,
+  ObjectStatus,
+  ObjectType
+} from "../../../src/core/types.js";
 import { computeObjectContentHash } from "../../../src/storage/hashes.js";
 import type { MemoryObjectSidecar } from "../../../src/storage/objects.js";
 import { readCanonicalStorage } from "../../../src/storage/read.js";
@@ -94,6 +99,8 @@ interface MemoryFixture {
   bodyPath: string;
   body: string;
   tags: string[];
+  facets?: ObjectFacets;
+  evidence?: Evidence[];
   updatedAt?: string;
 }
 
@@ -241,6 +248,61 @@ describe("aictx MCP read tools", () => {
     expect(started.stderr()).toBe("");
   });
 
+  it("loads v2 facet-aware memory through MCP", async () => {
+    const projectRoot = await createInitializedProject("aictx-mcp-load-facets-");
+    await writeMemoryObject(projectRoot, {
+      id: "decision.facet-aware-context",
+      type: "decision",
+      status: "active",
+      title: "Facet-aware context",
+      bodyPath: "memory/decisions/facet-aware-context.md",
+      body: "# Facet-aware context\n\nRelevant testing memory applies to MCP load behavior.\n",
+      tags: ["mcp", "testing"],
+      facets: {
+        category: "testing",
+        applies_to: ["src/mcp/tools/load-memory.ts"],
+        load_modes: ["review"]
+      },
+      evidence: [{ kind: "file", id: "src/mcp/tools/load-memory.ts" }],
+      updatedAt: FIXED_TIMESTAMP_NEXT_MINUTE
+    });
+    await rebuildProject(projectRoot);
+    const started = await startMcpClient(projectRoot);
+
+    try {
+      const cli = await runCli(
+        [
+          "node",
+          "aictx",
+          "load",
+          "Review src/mcp/tools/load-memory.ts testing behavior",
+          "--mode",
+          "review",
+          "--json"
+        ],
+        projectRoot
+      );
+      const mcp = await started.client.callTool({
+        name: "load_memory",
+        arguments: {
+          task: "Review src/mcp/tools/load-memory.ts testing behavior",
+          mode: "review"
+        }
+      });
+      const cliEnvelope = parseCliEnvelope<LoadEnvelope>(cli);
+      const mcpEnvelope = parseToolEnvelope<LoadEnvelope>(mcp);
+
+      expect(mcpEnvelope).toEqual(cliEnvelope);
+      expect(mcpEnvelope.data.included_ids).toContain("decision.facet-aware-context");
+      expect(mcpEnvelope.data.context_pack).toContain("## Relevant testing");
+      expect(mcpEnvelope.data.context_pack).toContain("src/mcp/tools/load-memory.ts");
+    } finally {
+      await started.close();
+    }
+
+    expect(started.stderr()).toBe("");
+  });
+
   it("returns the shared validation envelope for invalid load_memory modes", async () => {
     const projectRoot = await createInitializedProject("aictx-mcp-load-invalid-mode-");
     const started = await startMcpClient(projectRoot);
@@ -351,6 +413,75 @@ describe("aictx MCP read tools", () => {
       expect(mcpEnvelope.data.matches.map((match) => match.id)).not.toContain(
         "note.rejected-webhook"
       );
+    } finally {
+      await started.close();
+    }
+
+    expect(started.stderr()).toBe("");
+  });
+
+  it("returns hinted search_memory data matching CLI search JSON", async () => {
+    const projectRoot = await createInitializedProject("aictx-mcp-search-hints-");
+    await writeMemoryObject(projectRoot, {
+      id: "decision.hinted-ranking",
+      type: "decision",
+      status: "active",
+      title: "Hinted ranking",
+      bodyPath: "memory/decisions/hinted-ranking.md",
+      body: "# Hinted ranking\n\nRanking memory is selected from retrieval hints.\n",
+      tags: ["retrieval"],
+      facets: {
+        category: "decision-rationale",
+        applies_to: ["src/context/rank.ts"]
+      },
+      evidence: [{ kind: "file", id: "src/index/search.ts" }],
+      updatedAt: FIXED_TIMESTAMP_NEXT_MINUTE
+    });
+    await rebuildProject(projectRoot);
+    const started = await startMcpClient(projectRoot);
+
+    try {
+      const cli = await runCli(
+        [
+          "node",
+          "aictx",
+          "search",
+          "opaque",
+          "--file",
+          "src/context/rank.ts",
+          "--changed-file",
+          "src/index/search.ts",
+          "--subsystem",
+          "retrieval",
+          "--history-window",
+          "30d",
+          "--limit",
+          "10",
+          "--json"
+        ],
+        projectRoot
+      );
+      const mcp = await started.client.callTool({
+        name: "search_memory",
+        arguments: {
+          query: "opaque",
+          limit: 10,
+          hints: {
+            files: ["src/context/rank.ts"],
+            changed_files: ["src/index/search.ts"],
+            subsystems: ["retrieval"],
+            history_window: "30d"
+          }
+        }
+      });
+      const cliEnvelope = parseCliEnvelope<SearchEnvelope>(cli);
+      const mcpEnvelope = parseToolEnvelope<SearchEnvelope>(mcp);
+
+      expect(mcpEnvelope).toEqual(cliEnvelope);
+      expect(mcpEnvelope.data.matches[0]).toMatchObject({
+        id: "decision.hinted-ranking",
+        status: "active"
+      });
     } finally {
       await started.close();
     }
@@ -612,6 +743,8 @@ async function writeMemoryObject(projectRoot: string, fixture: MemoryFixture): P
       task: null
     },
     tags: fixture.tags,
+    ...(fixture.facets === undefined ? {} : { facets: fixture.facets }),
+    ...(fixture.evidence === undefined ? {} : { evidence: fixture.evidence }),
     source: {
       kind: "agent"
     },

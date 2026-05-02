@@ -5,10 +5,12 @@ import { dirname, isAbsolute, join, relative } from "node:path";
 import type { Clock } from "../core/clock.js";
 import { systemClock } from "../core/clock.js";
 import { aictxError, type JsonValue } from "../core/errors.js";
+import type { ProjectFileChange } from "../core/git.js";
 import { err, ok, type Result } from "../core/result.js";
 import type { GitState, ValidationIssue } from "../core/types.js";
 import type { StoredMemoryObject } from "../storage/objects.js";
 import { readCanonicalStorage, type CanonicalStorageSnapshot } from "../storage/read.js";
+import type { MemoryRelation } from "../storage/relations.js";
 import { validateProject } from "../validation/validate.js";
 import {
   CURRENT_INDEX_SCHEMA_VERSION,
@@ -23,6 +25,7 @@ export interface RebuildIndexOptions {
   aictxRoot: string;
   clock?: Clock;
   git?: Pick<GitState, "available" | "branch" | "commit">;
+  gitFileChanges?: readonly ProjectFileChange[];
 }
 
 export interface RebuildIndexData {
@@ -97,7 +100,8 @@ export async function rebuildIndex(
     path: temporaryPath,
     storage: storage.data,
     clock,
-    git: options.git
+    git: options.git,
+    gitFileChanges: options.gitFileChanges ?? []
   });
 
   if (!built.ok) {
@@ -163,6 +167,7 @@ interface BuildTemporaryDatabaseOptions {
   storage: CanonicalStorageSnapshot;
   clock: Clock;
   git: Pick<GitState, "available" | "branch" | "commit"> | undefined;
+  gitFileChanges: readonly ProjectFileChange[];
 }
 
 async function buildTemporaryDatabase(
@@ -180,7 +185,13 @@ async function buildTemporaryDatabase(
       return migrated;
     }
 
-    const populated = populateDatabase(db, options.storage, options.clock, options.git);
+    const populated = populateDatabase(
+      db,
+      options.storage,
+      options.clock,
+      options.git,
+      options.gitFileChanges
+    );
 
     if (!populated.ok) {
       return populated;
@@ -210,7 +221,8 @@ function populateDatabase(
   db: SqliteDatabase,
   storage: CanonicalStorageSnapshot,
   clock: Clock,
-  git: Pick<GitState, "available" | "branch" | "commit"> | undefined
+  git: Pick<GitState, "available" | "branch" | "commit"> | undefined,
+  gitFileChanges: readonly ProjectFileChange[]
 ): Result<RebuildIndexData> {
   try {
     const run = db.transaction(() => {
@@ -218,6 +230,7 @@ function populateDatabase(
       insertObjects(db, storage);
       insertRelations(db, storage);
       insertEvents(db, storage);
+      insertGitFileChanges(db, gitFileChanges);
       insertMeta(db, storage, clock, git);
 
       return {
@@ -240,8 +253,12 @@ function populateDatabase(
 function clearGeneratedRows(db: SqliteDatabase): void {
   db.exec(`
     DELETE FROM objects_fts;
+    DELETE FROM git_file_changes;
     DELETE FROM events;
     DELETE FROM relations;
+    DELETE FROM memory_facet_links;
+    DELETE FROM memory_commit_links;
+    DELETE FROM memory_file_links;
     DELETE FROM objects;
     DELETE FROM meta;
   `);
@@ -301,6 +318,18 @@ function insertObjects(db: SqliteDatabase, storage: CanonicalStorageSnapshot): v
     INSERT INTO objects_fts (object_id, title, body, tags, facets, evidence)
     VALUES (@object_id, @title, @body, @tags, @facets, @evidence)
   `);
+  const insertFileLink = db.prepare<Record<string, string>>(`
+    INSERT OR IGNORE INTO memory_file_links (memory_id, file_path, link_kind)
+    VALUES (@memory_id, @file_path, @link_kind)
+  `);
+  const insertCommitLink = db.prepare<Record<string, string>>(`
+    INSERT OR IGNORE INTO memory_commit_links (memory_id, commit_hash, link_kind)
+    VALUES (@memory_id, @commit_hash, @link_kind)
+  `);
+  const insertFacetLink = db.prepare<Record<string, string>>(`
+    INSERT OR IGNORE INTO memory_facet_links (memory_id, facet, link_kind)
+    VALUES (@memory_id, @facet, @link_kind)
+  `);
 
   for (const object of storage.objects) {
     const sidecar = object.sidecar;
@@ -339,6 +368,87 @@ function insertObjects(db: SqliteDatabase, storage: CanonicalStorageSnapshot): v
       facets: facetSearchText(sidecar.facets),
       evidence: evidenceSearchText(sidecar.evidence)
     });
+    insertObjectLinks({
+      object,
+      tags,
+      addFileLink: (filePath, linkKind) => {
+        const normalizedPath = normalizeProjectFileReference(filePath);
+
+        if (normalizedPath !== null) {
+          insertFileLink.run({
+            memory_id: sidecar.id,
+            file_path: normalizedPath,
+            link_kind: linkKind
+          });
+        }
+      },
+      addCommitLink: (commitHash, linkKind) => {
+        const normalizedCommit = commitHash.trim();
+
+        if (normalizedCommit !== "" && !normalizedCommit.includes("\0")) {
+          insertCommitLink.run({
+            memory_id: sidecar.id,
+            commit_hash: normalizedCommit,
+            link_kind: linkKind
+          });
+        }
+      },
+      addFacetLink: (facet, linkKind) => {
+        const normalizedFacet = normalizeFacetValue(facet);
+
+        if (normalizedFacet !== "") {
+          insertFacetLink.run({
+            memory_id: sidecar.id,
+            facet: normalizedFacet,
+            link_kind: linkKind
+          });
+        }
+      }
+    });
+  }
+}
+
+function insertObjectLinks(options: {
+  object: StoredMemoryObject;
+  tags: readonly string[];
+  addFileLink: (filePath: string, linkKind: string) => void;
+  addCommitLink: (commitHash: string, linkKind: string) => void;
+  addFacetLink: (facet: string, linkKind: string) => void;
+}): void {
+  for (const tag of options.tags) {
+    options.addFacetLink(tag, "tag");
+  }
+
+  const facets = options.object.sidecar.facets;
+
+  if (facets !== undefined) {
+    options.addFacetLink(facets.category, "category");
+
+    for (const loadMode of facets.load_modes ?? []) {
+      options.addFacetLink(loadMode, "load_mode");
+    }
+
+    for (const filePath of facets.applies_to ?? []) {
+      options.addFileLink(filePath, "facets.applies_to");
+    }
+  }
+
+  for (const evidence of options.object.sidecar.evidence ?? []) {
+    if (evidence.kind === "file") {
+      options.addFileLink(evidence.id, "evidence.file");
+    }
+
+    if (evidence.kind === "commit") {
+      options.addCommitLink(evidence.id, "evidence.commit");
+    }
+  }
+
+  if (options.object.sidecar.source?.commit !== undefined) {
+    options.addCommitLink(options.object.sidecar.source.commit, "source.commit");
+  }
+
+  for (const filePath of extractProjectFileReferences(options.object.body)) {
+    options.addFileLink(filePath, "body.reference");
   }
 }
 
@@ -380,6 +490,14 @@ function insertRelations(db: SqliteDatabase, storage: CanonicalStorageSnapshot):
       @updated_at
     )
   `);
+  const insertFileLink = db.prepare<Record<string, string>>(`
+    INSERT OR IGNORE INTO memory_file_links (memory_id, file_path, link_kind)
+    VALUES (@memory_id, @file_path, @link_kind)
+  `);
+  const insertCommitLink = db.prepare<Record<string, string>>(`
+    INSERT OR IGNORE INTO memory_commit_links (memory_id, commit_hash, link_kind)
+    VALUES (@memory_id, @commit_hash, @link_kind)
+  `);
 
   for (const storedRelation of storage.relations) {
     const relation = storedRelation.relation;
@@ -396,6 +514,53 @@ function insertRelations(db: SqliteDatabase, storage: CanonicalStorageSnapshot):
       created_at: relation.created_at,
       updated_at: relation.updated_at
     });
+    insertRelationEvidenceLinks({
+      relation,
+      addFileLink: (memoryId, filePath) => {
+        const normalizedPath = normalizeProjectFileReference(filePath);
+
+        if (normalizedPath !== null) {
+          insertFileLink.run({
+            memory_id: memoryId,
+            file_path: normalizedPath,
+            link_kind: "relation.evidence.file"
+          });
+        }
+      },
+      addCommitLink: (memoryId, commitHash) => {
+        const normalizedCommit = commitHash.trim();
+
+        if (normalizedCommit !== "" && !normalizedCommit.includes("\0")) {
+          insertCommitLink.run({
+            memory_id: memoryId,
+            commit_hash: normalizedCommit,
+            link_kind: "relation.evidence.commit"
+          });
+        }
+      }
+    });
+  }
+}
+
+function insertRelationEvidenceLinks(options: {
+  relation: MemoryRelation;
+  addFileLink: (memoryId: string, filePath: string) => void;
+  addCommitLink: (memoryId: string, commitHash: string) => void;
+}): void {
+  const endpoints = uniqueSorted([options.relation.from, options.relation.to]);
+
+  for (const evidence of options.relation.evidence ?? []) {
+    if (evidence.kind !== "file" && evidence.kind !== "commit") {
+      continue;
+    }
+
+    for (const memoryId of endpoints) {
+      if (evidence.kind === "file") {
+        options.addFileLink(memoryId, evidence.id);
+      } else {
+        options.addCommitLink(memoryId, evidence.id);
+      }
+    }
   }
 }
 
@@ -436,6 +601,43 @@ function insertEvents(db: SqliteDatabase, storage: CanonicalStorageSnapshot): vo
   }
 }
 
+function insertGitFileChanges(
+  db: SqliteDatabase,
+  changes: readonly ProjectFileChange[]
+): void {
+  const insert = db.prepare<Record<string, string>>(`
+    INSERT OR IGNORE INTO git_file_changes (
+      file_path,
+      commit_hash,
+      short_commit,
+      timestamp,
+      subject
+    ) VALUES (
+      @file_path,
+      @commit_hash,
+      @short_commit,
+      @timestamp,
+      @subject
+    )
+  `);
+
+  for (const change of changes) {
+    const filePath = normalizeProjectFileReference(change.file);
+
+    if (filePath === null) {
+      continue;
+    }
+
+    insert.run({
+      file_path: filePath,
+      commit_hash: change.commit,
+      short_commit: change.shortCommit,
+      timestamp: change.timestamp,
+      subject: change.subject
+    });
+  }
+}
+
 function insertMeta(
   db: SqliteDatabase,
   storage: CanonicalStorageSnapshot,
@@ -461,6 +663,41 @@ function insertMeta(
 
 function jsonOrNull(value: unknown | undefined): string | null {
   return value === undefined ? null : JSON.stringify(value);
+}
+
+function normalizeFacetValue(value: string): string {
+  return value.toLowerCase().trim();
+}
+
+function extractProjectFileReferences(body: string): string[] {
+  return uniqueSorted(
+    [...body.matchAll(/(?:^|[\s([{"'`])((?:\.\/)?(?:[A-Za-z0-9_.-]+\/)+[A-Za-z0-9_.@+-]+\.[A-Za-z0-9]+)(?=$|[\s)\]}",'`:;])/gu)]
+      .map((match) => match[1] ?? "")
+      .map(normalizeProjectFileReference)
+      .filter((path): path is string => path !== null)
+  );
+}
+
+function normalizeProjectFileReference(value: string): string | null {
+  const normalized = value.trim().replace(/\\/gu, "/").replace(/^\.\//u, "");
+
+  if (
+    normalized === "" ||
+    normalized.startsWith("/") ||
+    normalized.startsWith("../") ||
+    normalized.includes("/../") ||
+    normalized.includes("://") ||
+    normalized.includes("\0") ||
+    normalized.startsWith(".aictx/")
+  ) {
+    return null;
+  }
+
+  return normalized;
+}
+
+function uniqueSorted(values: readonly string[]): string[] {
+  return [...new Set(values)].sort();
 }
 
 function validationIssuesDetails(issues: readonly ValidationIssue[]): JsonValue {

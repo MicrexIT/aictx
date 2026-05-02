@@ -1,0 +1,21 @@
+{
+  "confidence": "high",
+  "content_hash": "sha256:a8de2875d47d553012fe783de60cc1613960f9e1125e9e0d78926a77fbc36b9c",
+  "created_at": "2026-05-02T21:19:57+02:00",
+  "evidence": [
+    {
+      "id": "src/index/search.ts",
+      "kind": "file"
+    },
+    {
+      "id": "src/context/compile.ts",
+      "kind": "file"
+    }
+  ],
+  "from": "decision.deterministic-smart-retrieval",
+  "id": "rel.decision-deterministic-smart-retrieval-implements-decision-schema-backed-agent-memory-discipline",
+  "predicate": "implements",
+  "status": "active",
+  "to": "decision.schema-backed-agent-memory-discipline",
+  "updated_at": "2026-05-02T21:19:57+02:00"
+}

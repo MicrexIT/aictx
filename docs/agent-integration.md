@@ -18,6 +18,16 @@ Use MCP first when the client has Aictx MCP configured and connected:
 
 ```text
 load_memory({ task: "<task summary>", mode: "coding" })
+load_memory({
+  task: "<task summary>",
+  mode: "coding",
+  hints: {
+    files: ["src/context/rank.ts"],
+    changed_files: ["src/index/search.ts"],
+    subsystems: ["retrieval"],
+    history_window: "30d"
+  }
+})
 ```
 
 If the MCP server was launched globally rather than from the project root, pass
@@ -40,6 +50,7 @@ Use CLI fallback when MCP is unavailable:
 ```bash
 aictx load "<task summary>"
 aictx load "<task summary>" --mode debugging
+aictx load "<task summary>" --file src/context/rank.ts --changed-file src/index/search.ts --history-window 30d
 aictx save --stdin
 ```
 

@@ -13,7 +13,7 @@ import { dirname, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { initProject, loadMemory, rebuildIndex } from "../../../src/app/operations.js";
-import type { ObjectStatus, ObjectType } from "../../../src/core/types.js";
+import type { Evidence, ObjectFacets, ObjectStatus, ObjectType } from "../../../src/core/types.js";
 import { computeObjectContentHash } from "../../../src/storage/hashes.js";
 import type { AictxConfig, MemoryObjectSidecar } from "../../../src/storage/objects.js";
 import { readCanonicalStorage } from "../../../src/storage/read.js";
@@ -127,6 +127,53 @@ describe("loadMemory integration", () => {
     expect(onboarding.data.context_pack).toContain("## Relevant workflows");
     expect(debugging.data.included_ids[0]).toBe("gotcha.mode-service");
     expect(onboarding.data.included_ids[0]).toBe("project.mode-service");
+  });
+
+  it("loads task context from file and changed-file retrieval hints", async () => {
+    const projectRoot = await createInitializedProject("aictx-load-hints-");
+    await writeMemoryObject(projectRoot, {
+      id: "decision.hinted-retrieval",
+      type: "decision",
+      status: "active",
+      title: "Hinted retrieval",
+      bodyPath: "memory/decisions/hinted-retrieval.md",
+      body: "# Hinted retrieval\n\nContext ranking depends on explicit file hints.\n",
+      tags: ["retrieval"],
+      facets: {
+        category: "decision-rationale",
+        applies_to: ["src/context/rank.ts"],
+        load_modes: ["review"]
+      },
+      evidence: [{ kind: "file", id: "src/index/search.ts" }],
+      updatedAt: FIXED_TIMESTAMP_NEXT_MINUTE
+    });
+    const rebuilt = await rebuildIndex({
+      cwd: projectRoot,
+      clock: createFixedTestClock(FIXED_TIMESTAMP_NEXT_MINUTE)
+    });
+
+    expect(rebuilt.ok).toBe(true);
+
+    const result = await loadMemory({
+      cwd: projectRoot,
+      task: "Opaque implementation task",
+      mode: "review",
+      hints: {
+        files: ["src/context/rank.ts"],
+        changed_files: ["src/index/search.ts"]
+      },
+      clock: createFixedTestClock(FIXED_TIMESTAMP_NEXT_MINUTE)
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+
+    expect(result.data.included_ids).toContain("decision.hinted-retrieval");
+    expect(result.data.context_pack).toContain("## Architecture Snapshot");
+    expect(result.data.context_pack).toContain("src/context/rank.ts");
+    expect(result.data.context_pack).toContain("src/index/search.ts");
   });
 
   it("rejects invalid modes before index behavior matters", async () => {
@@ -316,6 +363,8 @@ interface MemoryFixture {
   bodyPath: string;
   body: string;
   tags: string[];
+  facets?: ObjectFacets;
+  evidence?: Evidence[];
   updatedAt?: string;
 }
 
@@ -440,6 +489,8 @@ async function writeMemoryObject(projectRoot: string, fixture: MemoryFixture): P
       task: null
     },
     tags: fixture.tags,
+    ...(fixture.facets === undefined ? {} : { facets: fixture.facets }),
+    ...(fixture.evidence === undefined ? {} : { evidence: fixture.evidence }),
     source: {
       kind: "agent"
     },

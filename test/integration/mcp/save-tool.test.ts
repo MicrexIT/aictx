@@ -127,6 +127,29 @@ describe("aictx MCP save_memory_patch tool", () => {
     expect(started.stderr()).toBe("");
   });
 
+  it("advertises the v2 structured patch shape", async () => {
+    const projectRoot = await createProjectRoot("aictx-mcp-save-schema-");
+    const started = await startMcpClient(projectRoot);
+
+    try {
+      const result = await started.client.listTools();
+      const saveTool = result.tools.find((tool) => tool.name === "save_memory_patch");
+      const schema = JSON.stringify(saveTool?.inputSchema);
+
+      expect(saveTool).toBeDefined();
+      expect(schema).toContain("create_object");
+      expect(schema).toContain("update_object");
+      expect(schema).toContain("facets");
+      expect(schema).toContain("evidence");
+      expect(schema).toContain("abandoned-attempt");
+      expect(schema).not.toContain("additionalProperties\":{}");
+    } finally {
+      await started.close();
+    }
+
+    expect(started.stderr()).toBe("");
+  });
+
   it("produces equivalent canonical files to CLI save", async () => {
     const patch = createNotePatch(
       "MCP shared save note",
@@ -172,6 +195,49 @@ describe("aictx MCP save_memory_patch tool", () => {
       await expect(readCanonicalSnapshot(mcpProject)).resolves.toEqual(
         await readCanonicalSnapshot(cliProject)
       );
+    } finally {
+      await started.close();
+    }
+
+    expect(started.stderr()).toBe("");
+  });
+
+  it("saves v2 object facets and object evidence through MCP", async () => {
+    const projectRoot = await createInitializedProject("aictx-mcp-save-facets-");
+    const started = await startMcpClient(projectRoot);
+
+    try {
+      const mcp = await started.client.callTool({
+        name: "save_memory_patch",
+        arguments: {
+          patch: createFacetedPatch()
+        }
+      });
+      const envelope = parseToolEnvelope<SaveEnvelope>(mcp);
+
+      expect(envelope.ok).toBe(true);
+      expect(envelope.data.memory_created).toEqual(["decision.mcp-faceted-memory"]);
+
+      const storage = await readCanonicalStorage(projectRoot);
+
+      expect(storage.ok).toBe(true);
+      if (!storage.ok) {
+        return;
+      }
+
+      const saved = storage.data.objects.find(
+        (object) => object.sidecar.id === "decision.mcp-faceted-memory"
+      );
+
+      expect(saved?.sidecar.facets).toEqual({
+        category: "decision-rationale",
+        applies_to: ["src/mcp/tools/save-memory-patch.ts"],
+        load_modes: ["coding", "review"]
+      });
+      expect(saved?.sidecar.evidence).toEqual([
+        { kind: "file", id: "src/mcp/tools/save-memory-patch.ts" },
+        { kind: "task", id: "Save MCP faceted memory" }
+      ]);
     } finally {
       await started.close();
     }
@@ -422,6 +488,34 @@ function createNotePatch(title: string, body: string) {
         type: "note",
         title,
         body: `# ${title}\n\n${body}\n`
+      }
+    ]
+  };
+}
+
+function createFacetedPatch() {
+  return {
+    source: {
+      kind: "agent",
+      task: "Save MCP faceted memory"
+    },
+    changes: [
+      {
+        op: "create_object",
+        id: "decision.mcp-faceted-memory",
+        type: "decision",
+        title: "MCP faceted memory",
+        body: "# MCP faceted memory\n\nMCP save accepts object-level facets and evidence.\n",
+        tags: ["mcp", "facets"],
+        facets: {
+          category: "decision-rationale",
+          applies_to: ["src/mcp/tools/save-memory-patch.ts"],
+          load_modes: ["coding", "review"]
+        },
+        evidence: [
+          { kind: "file", id: "src/mcp/tools/save-memory-patch.ts" },
+          { kind: "task", id: "Save MCP faceted memory" }
+        ]
       }
     ]
   };

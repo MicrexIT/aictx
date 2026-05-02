@@ -5,6 +5,7 @@ import fg from "fast-glob";
 
 import { generateRelationId } from "../core/ids.js";
 import type {
+  Evidence,
   FacetCategory,
   ObjectId,
   ObjectStatus,
@@ -27,10 +28,19 @@ export interface SuggestReviewPacket {
   related_memory_ids: ObjectId[];
   possible_stale_ids: ObjectId[];
   recommended_memory: ObjectType[];
+  recommended_evidence?: Evidence[];
+  recommended_relations?: SuggestedRelation[];
   recommended_facets?: FacetCategory[];
   save_decision_checklist?: string[];
   task?: string;
   agent_checklist: string[];
+}
+
+export interface SuggestedRelation {
+  from: ObjectId;
+  predicate: Predicate;
+  to: ObjectId;
+  reason: string;
 }
 
 export interface BuildSuggestFromDiffPacketOptions {
@@ -236,6 +246,8 @@ export function buildSuggestFromDiffPacket(
     related_memory_ids: related,
     possible_stale_ids: possibleStale,
     recommended_memory: [...FROM_DIFF_RECOMMENDED_MEMORY],
+    recommended_evidence: recommendedFileEvidence(changedFiles),
+    recommended_relations: recommendedRelations(options.storage, changedFiles),
     agent_checklist: [...AGENT_CHECKLIST]
   };
 }
@@ -252,6 +264,8 @@ export function buildSuggestAfterTaskPacket(
     related_memory_ids: relatedMemoryIds(options.storage, changedFiles),
     possible_stale_ids: possibleStaleIds(options.storage, changedFiles),
     recommended_memory: [...AFTER_TASK_RECOMMENDED_MEMORY],
+    recommended_evidence: recommendedFileEvidence(changedFiles),
+    recommended_relations: recommendedRelations(options.storage, changedFiles),
     recommended_facets: recommendedFacetsForTask(options.task, changedFiles),
     save_decision_checklist: [...SAVE_DECISION_CHECKLIST],
     agent_checklist: [...AGENT_CHECKLIST]
@@ -1009,6 +1023,106 @@ function relatedMemoryIds(
   return [...ids].sort();
 }
 
+function recommendedFileEvidence(changedFiles: readonly string[]): Evidence[] {
+  return uniqueSorted(changedFiles)
+    .filter((file) => !file.startsWith(".aictx/"))
+    .slice(0, 12)
+    .map((file) => ({ kind: "file", id: file }));
+}
+
+function recommendedRelations(
+  storage: CanonicalStorageSnapshot,
+  changedFiles: readonly string[]
+): SuggestedRelation[] {
+  const related = storage.objects
+    .filter((object) => ["active", "draft", "open"].includes(object.sidecar.status))
+    .filter((object) => objectMatchesFiles(object, changedFiles))
+    .sort(compareObjectsById);
+  const suggestions: SuggestedRelation[] = [];
+
+  for (const [index, left] of related.entries()) {
+    for (const right of related.slice(index + 1)) {
+      if (hasAnyRelation(storage, left.sidecar.id, right.sidecar.id)) {
+        continue;
+      }
+
+      const suggested = relationSuggestion(left, right);
+
+      if (suggested !== null) {
+        suggestions.push(suggested);
+      }
+
+      if (suggestions.length >= 8) {
+        return suggestions;
+      }
+    }
+  }
+
+  return suggestions;
+}
+
+function relationSuggestion(
+  left: StoredMemoryObject,
+  right: StoredMemoryObject
+): SuggestedRelation | null {
+  const ordered = orderRelationEndpoints(left, right);
+
+  if (ordered === null) {
+    return null;
+  }
+
+  return {
+    from: ordered.from.sidecar.id,
+    predicate: ordered.predicate,
+    to: ordered.to.sidecar.id,
+    reason: "Related memory overlaps changed files but has no direct relation."
+  };
+}
+
+function orderRelationEndpoints(
+  left: StoredMemoryObject,
+  right: StoredMemoryObject
+): { from: StoredMemoryObject; predicate: Predicate; to: StoredMemoryObject } | null {
+  if (left.sidecar.type === "decision" && right.sidecar.type === "constraint") {
+    return { from: left, predicate: "requires", to: right };
+  }
+
+  if (right.sidecar.type === "decision" && left.sidecar.type === "constraint") {
+    return { from: right, predicate: "requires", to: left };
+  }
+
+  if (left.sidecar.type === "gotcha") {
+    return { from: left, predicate: "affects", to: right };
+  }
+
+  if (right.sidecar.type === "gotcha") {
+    return { from: right, predicate: "affects", to: left };
+  }
+
+  if (left.sidecar.type === "architecture") {
+    return { from: left, predicate: "mentions", to: right };
+  }
+
+  if (right.sidecar.type === "architecture") {
+    return { from: right, predicate: "mentions", to: left };
+  }
+
+  return { from: left, predicate: "mentions", to: right };
+}
+
+function hasAnyRelation(
+  storage: CanonicalStorageSnapshot,
+  left: ObjectId,
+  right: ObjectId
+): boolean {
+  return storage.relations.some(
+    (relation) =>
+      relation.relation.status === "active" &&
+      ((relation.relation.from === left && relation.relation.to === right) ||
+        (relation.relation.from === right && relation.relation.to === left))
+  );
+}
+
 function possibleStaleIds(
   storage: CanonicalStorageSnapshot,
   changedFiles: readonly string[]
@@ -1064,6 +1178,8 @@ function relationHasFileEvidence(
 }
 
 function objectSearchText(object: StoredMemoryObject): string {
+  const facets = object.sidecar.facets;
+
   return normalizeForSearch(
     [
       object.path,
@@ -1071,9 +1187,20 @@ function objectSearchText(object: StoredMemoryObject): string {
       object.sidecar.id,
       object.sidecar.title,
       ...(object.sidecar.tags ?? []),
+      facets?.category ?? "",
+      ...(facets?.applies_to ?? []),
+      ...(facets?.load_modes ?? []),
+      ...(object.sidecar.evidence ?? []).map((item) => item.id),
       object.body
     ].join("\n")
   );
+}
+
+function compareObjectsById(
+  left: StoredMemoryObject,
+  right: StoredMemoryObject
+): number {
+  return left.sidecar.id.localeCompare(right.sidecar.id);
 }
 
 function tokenize(value: string): Set<string> {

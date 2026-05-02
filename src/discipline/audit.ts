@@ -3,6 +3,7 @@ import { access, lstat, readFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import { resolveInsideRoot } from "../core/fs.js";
+import type { ProjectFileChange } from "../core/git.js";
 import type { Evidence, ObjectId, ObjectStatus } from "../core/types.js";
 import type { StoredMemoryObject } from "../storage/objects.js";
 import type { CanonicalStorageSnapshot } from "../storage/read.js";
@@ -22,7 +23,11 @@ export type AuditRule =
   | "oversized_vague_memory"
   | "duplicate_like_facet_category"
   | "missing_evidence"
-  | "manifest_version_contradiction";
+  | "manifest_version_contradiction"
+  | "weakly_connected_memory"
+  | "unlinked_applicability_overlap"
+  | "excessive_related_to"
+  | "changed_file_missing_rationale";
 
 export interface AuditFinding {
   severity: AuditSeverity;
@@ -35,6 +40,7 @@ export interface AuditFinding {
 export interface BuildAuditFindingsOptions {
   projectRoot: string;
   storage: CanonicalStorageSnapshot;
+  gitFileChanges?: readonly ProjectFileChange[];
 }
 
 const VAGUE_STATUSES = new Set<ObjectStatus>(["active", "draft"]);
@@ -65,6 +71,10 @@ const GENERIC_TITLES = new Set([
 const VERY_SHORT_BODY_WORD_LIMIT = 8;
 const OVERSIZED_BODY_WORD_LIMIT = 220;
 const MINIMUM_DUPLICATE_TAG_COUNT = 3;
+const RELATED_TO_WARNING_MINIMUM = 5;
+const RELATED_TO_WARNING_RATIO = 0.5;
+const REPEATED_CHANGE_MINIMUM = 2;
+const RATIONALE_TYPES = new Set(["decision", "fact", "gotcha"]);
 const SEVERITY_ORDER = new Map<AuditSeverity, number>([
   ["warning", 0],
   ["info", 1]
@@ -89,6 +99,15 @@ export async function buildAuditFindings(
   findings.push(...oversizedVagueMemoryFindings(options.storage.objects));
   findings.push(...duplicateFacetCategoryFindings(options.storage.objects));
   findings.push(...missingEvidenceFindings(options.storage.relations));
+  findings.push(...weaklyConnectedMemoryFindings(options.storage));
+  findings.push(...unlinkedApplicabilityOverlapFindings(options.storage));
+  findings.push(...excessiveRelatedToFindings(options.storage.relations));
+  findings.push(
+    ...changedFileMissingRationaleFindings({
+      storage: options.storage,
+      gitFileChanges: options.gitFileChanges ?? []
+    })
+  );
   findings.push(
     ...(await referencedFileMissingFindings({
       projectRoot: options.projectRoot,
@@ -307,6 +326,142 @@ function missingEvidenceFindings(
     }));
 }
 
+function weaklyConnectedMemoryFindings(
+  storage: CanonicalStorageSnapshot
+): AuditFinding[] {
+  if (storage.config.version < 2) {
+    return [];
+  }
+
+  return currentObjects(storage.objects, TAG_REQUIRED_STATUSES)
+    .filter((object) => RATIONALE_TYPES.has(object.sidecar.type))
+    .filter((object) => (object.sidecar.evidence ?? []).length === 0)
+    .filter((object) => !hasActiveRelation(storage.relations, object.sidecar.id))
+    .map((object) => ({
+      severity: "info",
+      rule: "weakly_connected_memory",
+      memory_id: object.sidecar.id,
+      message: "Decision, fact, and gotcha memory should have evidence or at least one active relation.",
+      evidence: [{ kind: "memory", id: object.sidecar.id }]
+    }));
+}
+
+function unlinkedApplicabilityOverlapFindings(
+  storage: CanonicalStorageSnapshot
+): AuditFinding[] {
+  if (storage.config.version < 2) {
+    return [];
+  }
+
+  const findings: AuditFinding[] = [];
+  const objects = currentObjects(storage.objects, CURRENT_STATUSES)
+    .filter((object) => (object.sidecar.facets?.applies_to ?? []).length > 0);
+
+  for (let leftIndex = 0; leftIndex < objects.length; leftIndex += 1) {
+    const left = objects[leftIndex];
+
+    if (left === undefined) {
+      continue;
+    }
+
+    for (let rightIndex = leftIndex + 1; rightIndex < objects.length; rightIndex += 1) {
+      const right = objects[rightIndex];
+
+      if (
+        right === undefined ||
+        hasActiveDirectRelation(storage.relations, left.sidecar.id, right.sidecar.id)
+      ) {
+        continue;
+      }
+
+      const overlap = overlappingApplicability(left, right);
+
+      if (overlap.length === 0) {
+        continue;
+      }
+
+      findings.push(
+        applicabilityOverlapFinding(left, right, overlap),
+        applicabilityOverlapFinding(right, left, overlap)
+      );
+    }
+  }
+
+  return findings;
+}
+
+function excessiveRelatedToFindings(
+  relations: readonly StoredMemoryRelation[]
+): AuditFinding[] {
+  const activeRelations = relations.filter((relation) => relation.relation.status === "active");
+  const relatedToRelations = activeRelations
+    .filter((relation) => relation.relation.predicate === "related_to")
+    .sort(compareRelationsById);
+
+  if (
+    relatedToRelations.length < RELATED_TO_WARNING_MINIMUM ||
+    relatedToRelations.length / Math.max(activeRelations.length, 1) <= RELATED_TO_WARNING_RATIO
+  ) {
+    return [];
+  }
+
+  const firstRelation = relatedToRelations[0];
+
+  if (firstRelation === undefined) {
+    return [];
+  }
+
+  return [
+    {
+      severity: "info",
+      rule: "excessive_related_to",
+      memory_id: firstRelation.relation.from,
+      message: "`related_to` is overused; prefer specific predicates when a stronger link is known.",
+      evidence: relatedToRelations.map((relation) => ({
+        kind: "relation",
+        id: relation.relation.id
+      }))
+    }
+  ];
+}
+
+function changedFileMissingRationaleFindings(options: {
+  storage: CanonicalStorageSnapshot;
+  gitFileChanges: readonly ProjectFileChange[];
+}): AuditFinding[] {
+  if (options.gitFileChanges.length === 0) {
+    return [];
+  }
+
+  const changesByFile = groupGitChangesByFile(options.gitFileChanges);
+  const rationaleObjects = activeRationaleObjects(options.storage.objects);
+  const findings: AuditFinding[] = [];
+
+  for (const [file, changes] of [...changesByFile.entries()].sort(compareEntriesByKey)) {
+    const commitIds = uniqueSorted(changes.map((change) => change.commit));
+
+    if (
+      commitIds.length < REPEATED_CHANGE_MINIMUM ||
+      rationaleObjects.some((object) => objectReferencesFile(object, file))
+    ) {
+      continue;
+    }
+
+    findings.push({
+      severity: "info",
+      rule: "changed_file_missing_rationale",
+      memory_id: options.storage.config.project.id,
+      message: "File has repeated recent Git changes but no active rationale memory linked to it.",
+      evidence: [
+        { kind: "file", id: file },
+        ...commitIds.slice(0, 5).map((commit) => ({ kind: "commit", id: commit }) satisfies Evidence)
+      ]
+    });
+  }
+
+  return findings;
+}
+
 async function referencedFileMissingFindings(options: {
   projectRoot: string;
   storage: CanonicalStorageSnapshot;
@@ -485,6 +640,119 @@ function hasActiveSupersedesRelation(
   return activeRelations.some(
     (relation) =>
       relation.relation.predicate === "supersedes" && relation.relation.to === supersededId
+  );
+}
+
+function hasActiveRelation(
+  relations: readonly StoredMemoryRelation[],
+  memoryId: ObjectId
+): boolean {
+  return relations.some(
+    (relation) =>
+      relation.relation.status === "active" &&
+      (relation.relation.from === memoryId || relation.relation.to === memoryId)
+  );
+}
+
+function hasActiveDirectRelation(
+  relations: readonly StoredMemoryRelation[],
+  leftId: ObjectId,
+  rightId: ObjectId
+): boolean {
+  return relations.some(
+    (relation) =>
+      relation.relation.status === "active" &&
+      ((relation.relation.from === leftId && relation.relation.to === rightId) ||
+        (relation.relation.from === rightId && relation.relation.to === leftId))
+  );
+}
+
+function overlappingApplicability(
+  left: StoredMemoryObject,
+  right: StoredMemoryObject
+): string[] {
+  const leftValues = normalizedApplicabilityValues(left);
+  const rightValues = new Set(normalizedApplicabilityValues(right));
+
+  return leftValues.filter((value) => rightValues.has(value));
+}
+
+function normalizedApplicabilityValues(object: StoredMemoryObject): string[] {
+  return uniqueSorted(
+    (object.sidecar.facets?.applies_to ?? [])
+      .map(normalizeApplicabilityValue)
+      .filter((value) => value !== "")
+  );
+}
+
+function normalizeApplicabilityValue(value: string): string {
+  return value.trim().replace(/\\/gu, "/").replace(/^\.\//u, "").toLowerCase();
+}
+
+function applicabilityOverlapFinding(
+  object: StoredMemoryObject,
+  other: StoredMemoryObject,
+  overlap: readonly string[]
+): AuditFinding {
+  const fileEvidence = overlap
+    .map(normalizeProjectFileReference)
+    .filter((path): path is string => path !== null && isFileLikeApplicability(path))
+    .map((path) => ({ kind: "file", id: path }) satisfies Evidence);
+
+  return {
+    severity: "info",
+    rule: "unlinked_applicability_overlap",
+    memory_id: object.sidecar.id,
+    message: "Memory overlaps another object's applies_to facets but has no active relation to it.",
+    evidence: [{ kind: "memory", id: other.sidecar.id }, ...fileEvidence]
+  };
+}
+
+function isFileLikeApplicability(value: string): boolean {
+  return value.includes("/") || /\.[A-Za-z0-9]+$/u.test(value);
+}
+
+function groupGitChangesByFile(
+  changes: readonly ProjectFileChange[]
+): Map<string, ProjectFileChange[]> {
+  const byFile = new Map<string, ProjectFileChange[]>();
+
+  for (const change of changes) {
+    const file = normalizeProjectFileReference(change.file);
+
+    if (file === null) {
+      continue;
+    }
+
+    byFile.set(file, [...(byFile.get(file) ?? []), change]);
+  }
+
+  return byFile;
+}
+
+function activeRationaleObjects(
+  objects: readonly StoredMemoryObject[]
+): StoredMemoryObject[] {
+  return currentObjects(objects, new Set<ObjectStatus>(["active", "draft"]))
+    .filter((object) => RATIONALE_TYPES.has(object.sidecar.type));
+}
+
+function objectReferencesFile(object: StoredMemoryObject, file: string): boolean {
+  return objectLinkedFiles(object).some(
+    (linkedFile) => file === linkedFile || file.startsWith(`${linkedFile}/`)
+  );
+}
+
+function objectLinkedFiles(object: StoredMemoryObject): string[] {
+  const evidenceFiles = (object.sidecar.evidence ?? [])
+    .filter((item) => item.kind === "file")
+    .map((item) => item.id);
+  const facetFiles = object.sidecar.facets?.applies_to ?? [];
+
+  return uniqueSorted(
+    [...evidenceFiles, ...facetFiles, ...extractProjectFileReferences(object.body)]
+      .map(normalizeProjectFileReference)
+      .filter((path): path is string => path !== null)
   );
 }
 

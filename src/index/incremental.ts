@@ -59,6 +59,10 @@ interface ExistingHashRow {
   content_hash: string;
 }
 
+interface LinkInsertStatement {
+  run(values: Record<string, string>): unknown;
+}
+
 export async function updateIndexIncrementally(
   options: IncrementalIndexUpdateOptions
 ): Promise<Result<IncrementalIndexUpdateData>> {
@@ -217,6 +221,7 @@ function applyIncrementalTransaction(
     deleteRelations(db, touched.deletedRelationIds, data);
     upsertTouchedRelations(db, relations, touched, data);
     data.events_indexed = insertAppendedEvents(db, storage.events, touched.appendedEventCount);
+    rebuildMemoryLinks(db, storage.objects, storage.relations);
     upsertMeta(db, storage, clock, git);
 
     return data;
@@ -230,9 +235,15 @@ function deleteObjects(
 ): void {
   const deleteObject = db.prepare<[ObjectId]>("DELETE FROM objects WHERE id = ?");
   const deleteFts = db.prepare<[ObjectId]>("DELETE FROM objects_fts WHERE object_id = ?");
+  const deleteFileLinks = db.prepare<[ObjectId]>("DELETE FROM memory_file_links WHERE memory_id = ?");
+  const deleteCommitLinks = db.prepare<[ObjectId]>("DELETE FROM memory_commit_links WHERE memory_id = ?");
+  const deleteFacetLinks = db.prepare<[ObjectId]>("DELETE FROM memory_facet_links WHERE memory_id = ?");
 
   for (const objectId of objectIds) {
     deleteFts.run(objectId);
+    deleteFileLinks.run(objectId);
+    deleteCommitLinks.run(objectId);
+    deleteFacetLinks.run(objectId);
     deleteObject.run(objectId);
     data.objects_deleted += 1;
   }
@@ -324,6 +335,9 @@ function upsertTouchedObjects(
     VALUES (@object_id, @title, @body, @tags, @facets, @evidence)
   `);
   const deleteObject = db.prepare<[ObjectId]>("DELETE FROM objects WHERE id = ?");
+  const deleteFileLinks = db.prepare<[ObjectId]>("DELETE FROM memory_file_links WHERE memory_id = ?");
+  const deleteCommitLinks = db.prepare<[ObjectId]>("DELETE FROM memory_commit_links WHERE memory_id = ?");
+  const deleteFacetLinks = db.prepare<[ObjectId]>("DELETE FROM memory_facet_links WHERE memory_id = ?");
 
   for (const objectId of touched.objectIds) {
     if (touched.deletedObjectIds.has(objectId)) {
@@ -334,6 +348,9 @@ function upsertTouchedObjects(
 
     if (object === undefined) {
       deleteFts.run(objectId);
+      deleteFileLinks.run(objectId);
+      deleteCommitLinks.run(objectId);
+      deleteFacetLinks.run(objectId);
       deleteObject.run(objectId);
       data.objects_deleted += 1;
       continue;
@@ -526,6 +543,105 @@ function insertAppendedEvents(
   return appendedEvents.length;
 }
 
+function rebuildMemoryLinks(
+  db: SqliteDatabase,
+  objects: readonly StoredMemoryObject[],
+  relations: readonly StoredMemoryRelation[]
+): void {
+  db.exec(`
+    DELETE FROM memory_facet_links;
+    DELETE FROM memory_commit_links;
+    DELETE FROM memory_file_links;
+  `);
+
+  const insertFileLink = db.prepare<Record<string, string>>(`
+    INSERT OR IGNORE INTO memory_file_links (memory_id, file_path, link_kind)
+    VALUES (@memory_id, @file_path, @link_kind)
+  `);
+  const insertCommitLink = db.prepare<Record<string, string>>(`
+    INSERT OR IGNORE INTO memory_commit_links (memory_id, commit_hash, link_kind)
+    VALUES (@memory_id, @commit_hash, @link_kind)
+  `);
+  const insertFacetLink = db.prepare<Record<string, string>>(`
+    INSERT OR IGNORE INTO memory_facet_links (memory_id, facet, link_kind)
+    VALUES (@memory_id, @facet, @link_kind)
+  `);
+
+  for (const object of objects) {
+    const memoryId = object.sidecar.id;
+
+    for (const tag of object.sidecar.tags ?? []) {
+      insertFacetLinkIfValid(insertFacetLink, memoryId, tag, "tag");
+    }
+
+    const facets = object.sidecar.facets;
+
+    if (facets !== undefined) {
+      insertFacetLinkIfValid(insertFacetLink, memoryId, facets.category, "category");
+
+      for (const loadMode of facets.load_modes ?? []) {
+        insertFacetLinkIfValid(insertFacetLink, memoryId, loadMode, "load_mode");
+      }
+
+      for (const filePath of facets.applies_to ?? []) {
+        insertFileLinkIfValid(insertFileLink, memoryId, filePath, "facets.applies_to");
+      }
+    }
+
+    for (const evidence of object.sidecar.evidence ?? []) {
+      if (evidence.kind === "file") {
+        insertFileLinkIfValid(insertFileLink, memoryId, evidence.id, "evidence.file");
+      }
+
+      if (evidence.kind === "commit") {
+        insertCommitLinkIfValid(insertCommitLink, memoryId, evidence.id, "evidence.commit");
+      }
+    }
+
+    if (object.sidecar.source?.commit !== undefined) {
+      insertCommitLinkIfValid(
+        insertCommitLink,
+        memoryId,
+        object.sidecar.source.commit,
+        "source.commit"
+      );
+    }
+
+    for (const filePath of extractProjectFileReferences(object.body)) {
+      insertFileLinkIfValid(insertFileLink, memoryId, filePath, "body.reference");
+    }
+  }
+
+  for (const storedRelation of relations) {
+    const relation = storedRelation.relation;
+    const endpoints = uniqueSorted([relation.from, relation.to]);
+
+    for (const evidence of relation.evidence ?? []) {
+      if (evidence.kind !== "file" && evidence.kind !== "commit") {
+        continue;
+      }
+
+      for (const memoryId of endpoints) {
+        if (evidence.kind === "file") {
+          insertFileLinkIfValid(
+            insertFileLink,
+            memoryId,
+            evidence.id,
+            "relation.evidence.file"
+          );
+        } else {
+          insertCommitLinkIfValid(
+            insertCommitLink,
+            memoryId,
+            evidence.id,
+            "relation.evidence.commit"
+          );
+        }
+      }
+    }
+  }
+}
+
 function upsertMeta(
   db: SqliteDatabase,
   storage: CanonicalStorageSnapshot,
@@ -609,6 +725,90 @@ function evidenceSearchText(evidence: StoredMemoryObject["sidecar"]["evidence"])
   return (evidence ?? []).map((item) => `${item.kind} ${item.id}`).join(" ");
 }
 
+function insertFileLinkIfValid(
+  statement: LinkInsertStatement,
+  memoryId: string,
+  rawPath: string,
+  linkKind: string
+): void {
+  const filePath = normalizeProjectFileReference(rawPath);
+
+  if (filePath === null) {
+    return;
+  }
+
+  statement.run({
+    memory_id: memoryId,
+    file_path: filePath,
+    link_kind: linkKind
+  });
+}
+
+function insertCommitLinkIfValid(
+  statement: LinkInsertStatement,
+  memoryId: string,
+  commitHash: string,
+  linkKind: string
+): void {
+  const normalized = commitHash.trim();
+
+  if (normalized === "" || normalized.includes("\0")) {
+    return;
+  }
+
+  statement.run({
+    memory_id: memoryId,
+    commit_hash: normalized,
+    link_kind: linkKind
+  });
+}
+
+function insertFacetLinkIfValid(
+  statement: LinkInsertStatement,
+  memoryId: string,
+  facet: string,
+  linkKind: string
+): void {
+  const normalized = facet.toLowerCase().trim();
+
+  if (normalized === "") {
+    return;
+  }
+
+  statement.run({
+    memory_id: memoryId,
+    facet: normalized,
+    link_kind: linkKind
+  });
+}
+
+function extractProjectFileReferences(body: string): string[] {
+  return uniqueSorted(
+    [...body.matchAll(/(?:^|[\s([{"'`])((?:\.\/)?(?:[A-Za-z0-9_.-]+\/)+[A-Za-z0-9_.@+-]+\.[A-Za-z0-9]+)(?=$|[\s)\]}",'`:;])/gu)]
+      .map((match) => match[1] ?? "")
+      .map(normalizeProjectFileReference)
+      .filter((path): path is string => path !== null)
+  );
+}
+
+function normalizeProjectFileReference(value: string): string | null {
+  const normalized = value.trim().replace(/\\/gu, "/").replace(/^\.\//u, "");
+
+  if (
+    normalized === "" ||
+    normalized.startsWith("/") ||
+    normalized.startsWith("../") ||
+    normalized.includes("/../") ||
+    normalized.includes("://") ||
+    normalized.includes("\0") ||
+    normalized.startsWith(".aictx/")
+  ) {
+    return null;
+  }
+
+  return normalized;
+}
+
 function indexRelationsById(
   relations: readonly StoredMemoryRelation[]
 ): Map<RelationId, StoredMemoryRelation> {
@@ -650,6 +850,10 @@ function emptyUpdateData(): IncrementalIndexUpdateData {
 
 function jsonOrNull(value: unknown | undefined): string | null {
   return value === undefined ? null : JSON.stringify(value);
+}
+
+function uniqueSorted(values: readonly string[]): string[] {
+  return [...new Set(values)].sort();
 }
 
 function validationIssuesDetails(issues: readonly ValidationIssue[]): JsonValue {

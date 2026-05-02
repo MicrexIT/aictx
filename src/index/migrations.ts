@@ -2,7 +2,7 @@ import { aictxError } from "../core/errors.js";
 import { err, ok, type Result } from "../core/result.js";
 import type { SqliteDatabase } from "./sqlite-driver.js";
 
-export const CURRENT_INDEX_SCHEMA_VERSION = 2;
+export const CURRENT_INDEX_SCHEMA_VERSION = 3;
 
 export const REQUIRED_META_DEFAULTS = {
   schema_version: String(CURRENT_INDEX_SCHEMA_VERSION),
@@ -106,6 +106,27 @@ function createSchema(db: SqliteDatabase): void {
       updated_at TEXT NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS memory_file_links (
+      memory_id TEXT NOT NULL,
+      file_path TEXT NOT NULL,
+      link_kind TEXT NOT NULL,
+      PRIMARY KEY (memory_id, file_path, link_kind)
+    );
+
+    CREATE TABLE IF NOT EXISTS memory_commit_links (
+      memory_id TEXT NOT NULL,
+      commit_hash TEXT NOT NULL,
+      link_kind TEXT NOT NULL,
+      PRIMARY KEY (memory_id, commit_hash, link_kind)
+    );
+
+    CREATE TABLE IF NOT EXISTS memory_facet_links (
+      memory_id TEXT NOT NULL,
+      facet TEXT NOT NULL,
+      link_kind TEXT NOT NULL,
+      PRIMARY KEY (memory_id, facet, link_kind)
+    );
+
     CREATE TABLE IF NOT EXISTS relations (
       id TEXT PRIMARY KEY,
       from_id TEXT NOT NULL,
@@ -131,6 +152,15 @@ function createSchema(db: SqliteDatabase): void {
       payload_json TEXT
     );
 
+    CREATE TABLE IF NOT EXISTS git_file_changes (
+      file_path TEXT NOT NULL,
+      commit_hash TEXT NOT NULL,
+      short_commit TEXT NOT NULL,
+      timestamp TEXT NOT NULL,
+      subject TEXT NOT NULL,
+      PRIMARY KEY (file_path, commit_hash)
+    );
+
     CREATE VIRTUAL TABLE IF NOT EXISTS objects_fts USING fts5(
       object_id UNINDEXED,
       title,
@@ -148,12 +178,20 @@ function createSchema(db: SqliteDatabase): void {
     CREATE INDEX IF NOT EXISTS objects_scope_branch_idx ON objects(scope_branch);
     CREATE INDEX IF NOT EXISTS objects_scope_task_idx ON objects(scope_task);
     CREATE INDEX IF NOT EXISTS objects_facet_category_idx ON objects(facet_category);
+    CREATE INDEX IF NOT EXISTS memory_file_links_file_idx ON memory_file_links(file_path);
+    CREATE INDEX IF NOT EXISTS memory_file_links_memory_idx ON memory_file_links(memory_id);
+    CREATE INDEX IF NOT EXISTS memory_commit_links_commit_idx ON memory_commit_links(commit_hash);
+    CREATE INDEX IF NOT EXISTS memory_commit_links_memory_idx ON memory_commit_links(memory_id);
+    CREATE INDEX IF NOT EXISTS memory_facet_links_facet_idx ON memory_facet_links(facet);
+    CREATE INDEX IF NOT EXISTS memory_facet_links_memory_idx ON memory_facet_links(memory_id);
     CREATE INDEX IF NOT EXISTS relations_from_idx ON relations(from_id);
     CREATE INDEX IF NOT EXISTS relations_to_idx ON relations(to_id);
     CREATE INDEX IF NOT EXISTS relations_predicate_idx ON relations(predicate);
     CREATE INDEX IF NOT EXISTS events_memory_id_idx ON events(memory_id);
     CREATE INDEX IF NOT EXISTS events_relation_id_idx ON events(relation_id);
     CREATE INDEX IF NOT EXISTS events_line_number_idx ON events(line_number);
+    CREATE INDEX IF NOT EXISTS git_file_changes_file_idx ON git_file_changes(file_path);
+    CREATE INDEX IF NOT EXISTS git_file_changes_timestamp_idx ON git_file_changes(timestamp);
   `);
 }
 

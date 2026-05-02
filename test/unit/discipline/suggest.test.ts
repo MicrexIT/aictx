@@ -101,6 +101,18 @@ describe("suggest discipline packets", () => {
         "decision.webhook-retries"
       ],
       recommended_memory: ["decision", "constraint", "gotcha", "workflow", "fact"],
+      recommended_evidence: [
+        { kind: "file", id: "src/billing/webhook.ts" },
+        { kind: "file", id: "src/billing/worker.ts" }
+      ],
+      recommended_relations: [
+        {
+          from: "decision.webhook-retries",
+          predicate: "requires",
+          to: "constraint.billing-idempotency",
+          reason: "Related memory overlaps changed files but has no direct relation."
+        }
+      ],
       agent_checklist: [
         "Create memory only for durable future value.",
         "Prefer updating, marking stale, or superseding existing memory over creating duplicates.",
@@ -195,6 +207,10 @@ describe("suggest discipline packets", () => {
       "test/billing/webhook.test.ts"
     ]);
     expect(packet.related_memory_ids).toEqual(["decision.webhook-retries"]);
+    expect(packet.recommended_evidence).toEqual([
+      { kind: "file", id: "src/billing/webhook.ts" },
+      { kind: "file", id: "test/billing/webhook.test.ts" }
+    ]);
     expect(packet.recommended_facets).toEqual(
       expect.arrayContaining(["testing", "decision-rationale", "abandoned-attempt"])
     );

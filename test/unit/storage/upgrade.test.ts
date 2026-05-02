@@ -85,6 +85,43 @@ describe("storage upgrade", () => {
       warnings: []
     });
   });
+
+  it("repairs outdated bundled schema files even when config is already v2", async () => {
+    const projectRoot = await createV1Project();
+    const first = await upgradeStorageToV2({
+      projectRoot,
+      clock: createFixedTestClock("2026-04-25T14:00:00+02:00")
+    });
+
+    expect(first.ok).toBe(true);
+    if (!first.ok) {
+      return;
+    }
+
+    await writeFile(
+      join(projectRoot, ".aictx/schema/object.schema.json"),
+      `${JSON.stringify({ $id: "https://aictx.dev/schemas/v1/object.schema.json" }, null, 2)}\n`,
+      "utf8"
+    );
+
+    const repaired = await upgradeStorageToV2({
+      projectRoot,
+      clock: createFixedTestClock("2026-04-25T15:00:00+02:00")
+    });
+
+    expect(repaired.ok).toBe(true);
+    if (!repaired.ok) {
+      return;
+    }
+
+    expect(repaired.data).toMatchObject({
+      upgraded: true,
+      from_version: 2,
+      to_version: 2,
+      files_changed: [".aictx/schema/object.schema.json"],
+      objects_upgraded: []
+    });
+  });
 });
 
 async function createV1Project(): Promise<string> {

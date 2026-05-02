@@ -1,0 +1,21 @@
+{
+  "confidence": "medium",
+  "content_hash": "sha256:e9f706705d6a782cea32855b4f756f7e21822ed572785e72105f89b7e570a8c8",
+  "created_at": "2026-05-02T21:19:57+02:00",
+  "evidence": [
+    {
+      "id": "src/context/render.ts",
+      "kind": "file"
+    },
+    {
+      "id": "src/index/rebuild.ts",
+      "kind": "file"
+    }
+  ],
+  "from": "decision.deterministic-smart-retrieval",
+  "id": "rel.decision-deterministic-smart-retrieval-mentions-architecture-current",
+  "predicate": "mentions",
+  "status": "active",
+  "to": "architecture.current",
+  "updated_at": "2026-05-02T21:19:57+02:00"
+}
