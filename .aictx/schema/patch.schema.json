@@ -7,6 +7,12 @@
           "minLength": 1,
           "type": "string"
         },
+        "evidence": {
+          "$ref": "#/$defs/evidence"
+        },
+        "facets": {
+          "$ref": "#/$defs/facets"
+        },
         "id": {
           "$ref": "#/$defs/objectId"
         },
@@ -158,7 +164,8 @@
               "memory",
               "relation",
               "file",
-              "commit"
+              "commit",
+              "task"
             ]
           }
         },
@@ -169,6 +176,53 @@
         "type": "object"
       },
       "type": "array"
+    },
+    "facets": {
+      "additionalProperties": false,
+      "properties": {
+        "applies_to": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "type": "array",
+          "uniqueItems": true
+        },
+        "category": {
+          "enum": [
+            "project-description",
+            "architecture",
+            "stack",
+            "convention",
+            "file-layout",
+            "testing",
+            "decision-rationale",
+            "abandoned-attempt",
+            "workflow",
+            "gotcha",
+            "debugging-fact",
+            "concept",
+            "open-question"
+          ]
+        },
+        "load_modes": {
+          "items": {
+            "enum": [
+              "coding",
+              "debugging",
+              "review",
+              "architecture",
+              "onboarding"
+            ]
+          },
+          "type": "array",
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "category"
+      ],
+      "type": "object"
     },
     "markStale": {
       "additionalProperties": false,
@@ -299,6 +353,12 @@
           "minLength": 1,
           "type": "string"
         },
+        "evidence": {
+          "$ref": "#/$defs/evidence"
+        },
+        "facets": {
+          "$ref": "#/$defs/facets"
+        },
         "id": {
           "$ref": "#/$defs/objectId"
         },
@@ -373,7 +433,7 @@
       "type": "object"
     }
   },
-  "$id": "https://aictx.dev/schemas/v1/patch.schema.json",
+  "$id": "https://aictx.dev/schemas/v2/patch.schema.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "properties": {

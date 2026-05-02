@@ -16,9 +16,14 @@ type ContextSectionTitle =
   | "Do not do"
   | "Relevant decisions"
   | "Relevant constraints"
+  | "Relevant stack"
+  | "Relevant conventions"
+  | "Relevant testing"
+  | "Relevant file layout"
   | "Relevant gotchas"
   | "Relevant workflows"
   | "Relevant facts"
+  | "Abandoned approaches"
   | "Relevant files"
   | "Open questions"
   | "Stale or superseded memory to avoid";
@@ -145,6 +150,26 @@ function buildSectionCandidates(
       sectionRequired("Relevant constraints", mode)
     ),
     memorySection(
+      "Relevant stack",
+      primaryItems.filter((item) => item.candidate.facets?.category === "stack"),
+      sectionRequired("Relevant stack", mode)
+    ),
+    memorySection(
+      "Relevant conventions",
+      primaryItems.filter((item) => item.candidate.facets?.category === "convention"),
+      sectionRequired("Relevant conventions", mode)
+    ),
+    memorySection(
+      "Relevant testing",
+      primaryItems.filter((item) => item.candidate.facets?.category === "testing"),
+      sectionRequired("Relevant testing", mode)
+    ),
+    memorySection(
+      "Relevant file layout",
+      primaryItems.filter((item) => item.candidate.facets?.category === "file-layout"),
+      sectionRequired("Relevant file layout", mode)
+    ),
+    memorySection(
       "Relevant gotchas",
       primaryItems.filter((item) => item.type === "gotcha"),
       sectionRequired("Relevant gotchas", mode)
@@ -158,6 +183,11 @@ function buildSectionCandidates(
       "Relevant facts",
       primaryItems.filter((item) => item.type === "fact"),
       sectionRequired("Relevant facts", mode)
+    ),
+    memorySection(
+      "Abandoned approaches",
+      primaryItems.filter((item) => item.candidate.facets?.category === "abandoned-attempt"),
+      sectionRequired("Abandoned approaches", mode)
     ),
     relevantFilesSection(primaryItems),
     memorySection(
@@ -203,7 +233,9 @@ function sectionRequired(title: ContextSectionTitle, mode: LoadMemoryMode): bool
       return (
         title === "Relevant constraints" ||
         title === "Relevant decisions" ||
-        title === "Relevant gotchas"
+        title === "Relevant gotchas" ||
+        title === "Relevant conventions" ||
+        title === "Relevant testing"
       );
     case "architecture":
       return (
@@ -212,7 +244,11 @@ function sectionRequired(title: ContextSectionTitle, mode: LoadMemoryMode): bool
         title === "Open questions"
       );
     case "onboarding":
-      return title === "Relevant workflows";
+      return (
+        title === "Relevant workflows" ||
+        title === "Relevant stack" ||
+        title === "Relevant file layout"
+      );
   }
 }
 
@@ -293,6 +329,32 @@ function relevantFilesSection(items: readonly RankedMemoryItem[]): SectionCandid
   const paths = new Set<string>();
 
   for (const item of items) {
+    for (const path of item.candidate.facets?.applies_to ?? []) {
+      paths.add(path);
+
+      if (paths.size >= MAX_RELEVANT_FILES) {
+        break;
+      }
+    }
+
+    if (paths.size >= MAX_RELEVANT_FILES) {
+      break;
+    }
+
+    for (const evidence of item.candidate.evidence ?? []) {
+      if (evidence.kind === "file") {
+        paths.add(evidence.id);
+      }
+
+      if (paths.size >= MAX_RELEVANT_FILES) {
+        break;
+      }
+    }
+
+    if (paths.size >= MAX_RELEVANT_FILES) {
+      break;
+    }
+
     for (const path of extractFilePaths(item.candidate.body)) {
       paths.add(path);
 

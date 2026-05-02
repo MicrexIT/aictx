@@ -263,6 +263,10 @@ function upsertTouchedObjects(
       scope_branch,
       scope_task,
       tags_json,
+      facets_json,
+      facet_category,
+      applies_to_json,
+      evidence_json,
       source_json,
       superseded_by,
       created_at,
@@ -282,6 +286,10 @@ function upsertTouchedObjects(
       @scope_branch,
       @scope_task,
       @tags_json,
+      @facets_json,
+      @facet_category,
+      @applies_to_json,
+      @evidence_json,
       @source_json,
       @superseded_by,
       @created_at,
@@ -301,6 +309,10 @@ function upsertTouchedObjects(
       scope_branch = excluded.scope_branch,
       scope_task = excluded.scope_task,
       tags_json = excluded.tags_json,
+      facets_json = excluded.facets_json,
+      facet_category = excluded.facet_category,
+      applies_to_json = excluded.applies_to_json,
+      evidence_json = excluded.evidence_json,
       source_json = excluded.source_json,
       superseded_by = excluded.superseded_by,
       created_at = excluded.created_at,
@@ -308,8 +320,8 @@ function upsertTouchedObjects(
   `);
   const deleteFts = db.prepare<[ObjectId]>("DELETE FROM objects_fts WHERE object_id = ?");
   const insertFts = db.prepare<Record<string, string>>(`
-    INSERT INTO objects_fts (object_id, title, body, tags)
-    VALUES (@object_id, @title, @body, @tags)
+    INSERT INTO objects_fts (object_id, title, body, tags, facets, evidence)
+    VALUES (@object_id, @title, @body, @tags, @facets, @evidence)
   `);
   const deleteObject = db.prepare<[ObjectId]>("DELETE FROM objects WHERE id = ?");
 
@@ -351,6 +363,10 @@ function upsertTouchedObjects(
       scope_branch: object.sidecar.scope.branch,
       scope_task: object.sidecar.scope.task,
       tags_json: JSON.stringify(tags),
+      facets_json: jsonOrNull(object.sidecar.facets),
+      facet_category: object.sidecar.facets?.category ?? null,
+      applies_to_json: jsonOrNull(object.sidecar.facets?.applies_to),
+      evidence_json: jsonOrNull(object.sidecar.evidence),
       source_json: jsonOrNull(object.sidecar.source),
       superseded_by: object.sidecar.superseded_by ?? null,
       created_at: object.sidecar.created_at,
@@ -361,7 +377,9 @@ function upsertTouchedObjects(
       object_id: object.sidecar.id,
       title: object.sidecar.title,
       body: object.body,
-      tags: tags.join(" ")
+      tags: tags.join(" "),
+      facets: facetSearchText(object.sidecar.facets),
+      evidence: evidenceSearchText(object.sidecar.evidence)
     });
     data.objects_updated += 1;
   }
@@ -577,6 +595,18 @@ function indexObjectsById(
   objects: readonly StoredMemoryObject[]
 ): Map<ObjectId, StoredMemoryObject> {
   return new Map(objects.map((object) => [object.sidecar.id, object]));
+}
+
+function facetSearchText(facets: StoredMemoryObject["sidecar"]["facets"]): string {
+  if (facets === undefined) {
+    return "";
+  }
+
+  return [facets.category, ...(facets.applies_to ?? []), ...(facets.load_modes ?? [])].join(" ");
+}
+
+function evidenceSearchText(evidence: StoredMemoryObject["sidecar"]["evidence"]): string {
+  return (evidence ?? []).map((item) => `${item.kind} ${item.id}`).join(" ");
 }
 
 function indexRelationsById(

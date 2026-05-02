@@ -20,6 +20,7 @@ import { err, ok, type Result } from "../core/result.js";
 import type {
   Evidence,
   IsoDateTime,
+  ObjectFacets,
   MemoryEvent,
   ObjectId,
   ObjectStatus,
@@ -141,6 +142,8 @@ interface ObjectSidecarInput {
   createdAt: IsoDateTime;
   updatedAt: IsoDateTime;
   tags?: string[] | undefined;
+  facets?: ObjectFacets | undefined;
+  evidence?: Evidence[] | undefined;
   source?: Source | undefined;
   supersededBy?: ObjectId | null | undefined;
 }
@@ -655,6 +658,8 @@ function buildCreateObjectActions(
     bodyPath: bodyPath.data,
     scope: change.scope,
     tags: change.tags,
+    facets: change.facets,
+    evidence: change.evidence,
     source: change.source,
     createdAt: timestamp.data,
     updatedAt: timestamp.data
@@ -724,6 +729,8 @@ function buildUpdateObjectActions(
     bodyPath: existing.sidecar.body_path,
     scope: change.scope ?? existing.sidecar.scope,
     tags: change.tags ?? existing.sidecar.tags,
+    facets: change.facets ?? existing.sidecar.facets,
+    evidence: change.evidence ?? existing.sidecar.evidence,
     source: change.source ?? existing.sidecar.source,
     supersededBy:
       change.superseded_by === undefined
@@ -846,6 +853,8 @@ function buildObjectStatusActions(
     bodyPath: existing.sidecar.body_path,
     scope: existing.sidecar.scope,
     tags: existing.sidecar.tags,
+    facets: existing.sidecar.facets,
+    evidence: existing.sidecar.evidence,
     source: existing.sidecar.source,
     supersededBy:
       update.supersededBy === undefined
@@ -1044,6 +1053,14 @@ function buildObjectSidecarWithoutHash(
     sidecar.tags = [...input.tags];
   }
 
+  if (input.facets !== undefined) {
+    sidecar.facets = cloneFacets(input.facets);
+  }
+
+  if (input.evidence !== undefined) {
+    sidecar.evidence = input.evidence.map(cloneEvidence);
+  }
+
   if (input.source !== undefined) {
     sidecar.source = cloneSource(input.source);
   }
@@ -1113,6 +1130,14 @@ function objectSidecarToJson(
     json.tags = [...sidecar.tags];
   }
 
+  if (sidecar.facets !== undefined) {
+    json.facets = facetsToJson(sidecar.facets);
+  }
+
+  if (sidecar.evidence !== undefined) {
+    json.evidence = sidecar.evidence.map(evidenceToJson);
+  }
+
   if (sidecar.source !== undefined) {
     json.source = sourceToJson(sidecar.source);
   }
@@ -1144,6 +1169,21 @@ function sourceToJson(source: Source): Record<string, JsonValue> {
   return json;
 }
 
+function facetsToJson(facets: ObjectFacets): Record<string, JsonValue> {
+  return {
+    category: facets.category,
+    ...(facets.applies_to === undefined ? {} : { applies_to: [...facets.applies_to] }),
+    ...(facets.load_modes === undefined ? {} : { load_modes: [...facets.load_modes] })
+  };
+}
+
+function evidenceToJson(evidence: Evidence): Record<string, JsonValue> {
+  return {
+    kind: evidence.kind,
+    id: evidence.id
+  };
+}
+
 function relationToJson(relation: RelationJsonInput): Record<string, JsonValue> {
   const json: Record<string, JsonValue> = {
     id: relation.id,
@@ -1160,10 +1200,7 @@ function relationToJson(relation: RelationJsonInput): Record<string, JsonValue> 
   }
 
   if (relation.evidence !== undefined) {
-    json.evidence = relation.evidence.map((item) => ({
-      kind: item.kind,
-      id: item.id
-    }));
+    json.evidence = relation.evidence.map(evidenceToJson);
   }
 
   if (relation.content_hash !== undefined) {
@@ -1317,6 +1354,8 @@ function objectUpdateTouchesMutableField(change: NormalizedUpdateObjectChange): 
     change.body !== undefined ||
     change.scope !== undefined ||
     change.tags !== undefined ||
+    change.facets !== undefined ||
+    change.evidence !== undefined ||
     change.source !== undefined ||
     change.superseded_by !== undefined
   );
@@ -1396,6 +1435,21 @@ function cloneSource(source: Source): Source {
     kind: source.kind,
     ...(source.task === undefined ? {} : { task: source.task }),
     ...(source.commit === undefined ? {} : { commit: source.commit })
+  };
+}
+
+function cloneFacets(facets: ObjectFacets): ObjectFacets {
+  return {
+    category: facets.category,
+    ...(facets.applies_to === undefined ? {} : { applies_to: [...facets.applies_to] }),
+    ...(facets.load_modes === undefined ? {} : { load_modes: [...facets.load_modes] })
+  };
+}
+
+function cloneEvidence(evidence: Evidence): Evidence {
+  return {
+    kind: evidence.kind,
+    id: evidence.id
   };
 }
 

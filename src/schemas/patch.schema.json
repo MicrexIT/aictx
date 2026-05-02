@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://aictx.dev/schemas/v1/patch.schema.json",
+  "$id": "https://aictx.dev/schemas/v2/patch.schema.json",
   "type": "object",
   "additionalProperties": false,
   "required": ["source", "changes"],
@@ -117,12 +117,51 @@
         "required": ["kind", "id"],
         "properties": {
           "kind": {
-            "enum": ["memory", "relation", "file", "commit"]
+            "enum": ["memory", "relation", "file", "commit", "task"]
           },
           "id": {
             "type": "string",
             "minLength": 1
           }
+        }
+      }
+    },
+    "facets": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["category"],
+      "properties": {
+        "category": {
+          "enum": [
+            "project-description",
+            "architecture",
+            "stack",
+            "convention",
+            "file-layout",
+            "testing",
+            "decision-rationale",
+            "abandoned-attempt",
+            "workflow",
+            "gotcha",
+            "debugging-fact",
+            "concept",
+            "open-question"
+          ]
+        },
+        "applies_to": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "load_modes": {
+          "type": "array",
+          "items": {
+            "enum": ["coding", "debugging", "review", "architecture", "onboarding"]
+          },
+          "uniqueItems": true
         }
       }
     },
@@ -157,6 +196,12 @@
         "tags": {
           "$ref": "#/$defs/tags"
         },
+        "facets": {
+          "$ref": "#/$defs/facets"
+        },
+        "evidence": {
+          "$ref": "#/$defs/evidence"
+        },
         "source": {
           "$ref": "#/$defs/source"
         }
@@ -189,6 +234,12 @@
         },
         "tags": {
           "$ref": "#/$defs/tags"
+        },
+        "facets": {
+          "$ref": "#/$defs/facets"
+        },
+        "evidence": {
+          "$ref": "#/$defs/evidence"
         },
         "source": {
           "$ref": "#/$defs/source"

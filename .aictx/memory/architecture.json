@@ -1,7 +1,11 @@
 {
   "body_path": "memory/architecture.md",
-  "content_hash": "sha256:2733840706306775df32fea04347c104c36679826bed7f40d57777fcaad08c1d",
+  "content_hash": "sha256:66ae0bdd99ce4e0485559ab298f3fc342b24634cd1bf45d54552737dc53e0334",
   "created_at": "2026-05-02T00:21:32+02:00",
+  "evidence": [],
+  "facets": {
+    "category": "architecture"
+  },
   "id": "architecture.current",
   "scope": {
     "branch": null,

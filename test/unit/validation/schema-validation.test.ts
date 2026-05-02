@@ -34,7 +34,7 @@ const tempRoots: string[] = [];
 const hash = `sha256:${"0".repeat(64)}`;
 
 const validConfig = {
-  version: 1,
+  version: 2,
   project: {
     id: "project.billing-api",
     name: "Billing API"
@@ -62,6 +62,21 @@ const validObject = {
     task: null
   },
   tags: ["billing", "stripe", "webhooks"],
+  facets: {
+    category: "decision-rationale",
+    applies_to: ["src/billing/webhook.ts"],
+    load_modes: ["coding", "review"]
+  },
+  evidence: [
+    {
+      kind: "file",
+      id: "src/billing/webhook.ts"
+    },
+    {
+      kind: "task",
+      id: "Fix Stripe webhook retries"
+    }
+  ],
   source: {
     kind: "agent",
     task: "Fix Stripe webhook retries",
@@ -148,7 +163,17 @@ const createObjectPatch = {
         branch: null,
         task: null
       },
-      tags: ["billing", "stripe"]
+      tags: ["billing", "stripe"],
+      facets: {
+        category: "decision-rationale",
+        applies_to: ["src/billing/webhook.ts"]
+      },
+      evidence: [
+        {
+          kind: "file",
+          id: "src/billing/webhook.ts"
+        }
+      ]
     }
   ]
 };
@@ -249,6 +274,62 @@ describe("schema validators", () => {
     expect(validateEvent(validators, validRelationEvent, ".aictx/events.jsonl", 2).valid).toBe(true);
     expect(validatePatch(validators, minimalPatch).valid).toBe(true);
     expect(validatePatch(validators, createObjectPatch).valid).toBe(true);
+  });
+
+  it("accepts v1 config while supporting v2 object facets and evidence", async () => {
+    const validators = await compileFixtureProject();
+
+    expect(validateConfig(validators, { ...validConfig, version: 1 }).valid).toBe(true);
+    expect(
+      validateObject(
+        validators,
+        {
+          ...validObject,
+          facets: {
+            category: "abandoned-attempt",
+            applies_to: ["src/old.ts"],
+            load_modes: ["debugging"]
+          },
+          evidence: [{ kind: "task", id: "Tried worker-local cache" }]
+        },
+        ".aictx/memory/decisions/billing-retries.json"
+      ).valid
+    ).toBe(true);
+  });
+
+  it("rejects invalid object facets and evidence", async () => {
+    const validators = await compileFixtureProject();
+
+    expect(
+      issueCodes(
+        validateObject(
+          validators,
+          {
+            ...validObject,
+            facets: {
+              category: "random-category"
+            }
+          },
+          ".aictx/memory/decisions/billing-retries.json"
+        )
+      )
+    ).toContain("SchemaEnum");
+    expect(
+      issueCodes(
+        validatePatch(validators, {
+          source: { kind: "agent" },
+          changes: [
+            {
+              op: "create_object",
+              type: "fact",
+              title: "Fact",
+              body: "Fact body.",
+              evidence: [{ kind: "url", id: "https://example.com" }]
+            }
+          ]
+        })
+      )
+    ).toContain("SchemaOneOf");
   });
 
   it("accepts gotcha and workflow objects and create patches", async () => {

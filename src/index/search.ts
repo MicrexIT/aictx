@@ -112,6 +112,8 @@ interface ObjectRow {
   body_path: string;
   body: string;
   tags_json: string;
+  facets_json: string | null;
+  evidence_json: string | null;
   updated_at: string;
 }
 
@@ -123,6 +125,8 @@ interface IndexedObject {
   bodyPath: string;
   body: string;
   tags: string[];
+  facetsText: string;
+  evidenceText: string;
   updatedAt: string;
 }
 
@@ -300,7 +304,7 @@ function selectObjectById(db: SqliteDatabase, id: string): IndexedObject | undef
   const row = db
     .prepare<[string], ObjectRow>(
       `
-        SELECT id, type, status, title, body_path, body, tags_json, updated_at
+        SELECT id, type, status, title, body_path, body, tags_json, facets_json, evidence_json, updated_at
         FROM objects
         WHERE id = ? AND status <> 'rejected'
       `
@@ -314,7 +318,7 @@ function selectObjectByBodyPath(db: SqliteDatabase, bodyPath: string): IndexedOb
   const row = db
     .prepare<[string], ObjectRow>(
       `
-        SELECT id, type, status, title, body_path, body, tags_json, updated_at
+        SELECT id, type, status, title, body_path, body, tags_json, facets_json, evidence_json, updated_at
         FROM objects
         WHERE body_path = ? AND status <> 'rejected'
       `
@@ -336,6 +340,8 @@ function selectObjectsByFts(db: SqliteDatabase, ftsQuery: string): IndexedObject
           o.body_path,
           o.body,
           o.tags_json,
+          o.facets_json,
+          o.evidence_json,
           o.updated_at
         FROM objects_fts
         JOIN objects o ON o.id = objects_fts.object_id
@@ -364,6 +370,8 @@ function indexedObjectFromRow(row: ObjectRow): IndexedObject {
     bodyPath: row.body_path,
     body: row.body,
     tags: parseTags(row.tags_json),
+    facetsText: jsonSearchText(row.facets_json),
+    evidenceText: jsonSearchText(row.evidence_json),
     updatedAt: row.updated_at
   };
 }
@@ -393,13 +401,19 @@ function sourcesForTerms(object: IndexedObject, terms: readonly string[]): Score
   const normalizedTitle = normalizeForMatch(object.title);
   const normalizedBody = normalizeForMatch(object.body);
   const normalizedTags = object.tags.map(normalizeForMatch);
+  const normalizedFacets = normalizeForMatch(object.facetsText);
+  const normalizedEvidence = normalizeForMatch(object.evidenceText);
 
   for (const term of terms) {
     if (normalizedTitle.includes(term)) {
       sources.add("titleFtsMatch");
     }
 
-    if (normalizedBody.includes(term)) {
+    if (
+      normalizedBody.includes(term) ||
+      normalizedFacets.includes(term) ||
+      normalizedEvidence.includes(term)
+    ) {
       sources.add("bodyFtsMatch");
     }
 
@@ -574,6 +588,34 @@ function parseTags(tagsJson: string): string[] {
   }
 
   return parsed;
+}
+
+function jsonSearchText(value: string | null): string {
+  if (value === null) {
+    return "";
+  }
+
+  try {
+    return flattenJsonText(JSON.parse(value) as unknown).join(" ");
+  } catch {
+    return "";
+  }
+}
+
+function flattenJsonText(value: unknown): string[] {
+  if (typeof value === "string") {
+    return [value];
+  }
+
+  if (Array.isArray(value)) {
+    return value.flatMap(flattenJsonText);
+  }
+
+  if (typeof value === "object" && value !== null) {
+    return Object.values(value).flatMap(flattenJsonText);
+  }
+
+  return [];
 }
 
 function isObjectType(value: string): value is ObjectType {

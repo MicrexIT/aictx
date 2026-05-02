@@ -119,6 +119,8 @@ describe("aictx audit CLI", () => {
         "referenced_file_missing",
         "missing_tags",
         "missing_evidence",
+        "missing_facets",
+        "missing_object_evidence",
         "manifest_version_contradiction"
       ])
     );

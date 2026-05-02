@@ -56,6 +56,7 @@ When a supported MCP or CLI entrypoint exists, agents must use that entrypoint i
 | Review patch file | none | `aictx patch review` | Patch review remains CLI-only in v1. |
 | Validate storage | none | `aictx check` | Maintenance remains CLI-only in v1. |
 | Rebuild generated index | none | `aictx rebuild` | Maintenance remains CLI-only in v1. |
+| Upgrade storage schema | none | `aictx upgrade` | Migration remains CLI-only in v2. |
 | Show memory history | none | `aictx history` | Recovery/inspection remains CLI-only in v1. |
 | Restore memory | none | `aictx restore` | Recovery remains CLI-only in v1. |
 | Rewind memory | none | `aictx rewind` | Recovery remains CLI-only in v1. |
@@ -572,7 +573,8 @@ aictx inspect <id> [--json]
 aictx graph <id> [--json]
 aictx export obsidian [--out <dir>] [--json]
 aictx view [--port <number>] [--open] [--detach] [--json]
-aictx suggest (--from-diff | --bootstrap) [--patch] [--json]
+aictx suggest (--from-diff | --bootstrap | --after-task "<task>") [--patch] [--json]
+aictx upgrade [--json]
 aictx patch review <file> [--json]
 aictx setup [--force] [--apply] [--view] [--open] [--json]
 aictx audit [--json]
@@ -590,10 +592,12 @@ Minimum behavior:
 * `aictx view` starts a loopback-only read-only web viewer for human memory inspection.
 * `aictx suggest --from-diff` returns a Git-backed deterministic memory review packet for the current diff and does not write memory.
 * `aictx suggest --bootstrap` returns a deterministic first-run memory review packet and does not write memory.
+* `aictx suggest --after-task "<task>"` returns an end-of-task save/no-save review packet and does not write memory.
 * `aictx suggest --bootstrap --patch` returns a proposed structured memory patch and does not write canonical memory.
 * `aictx patch review <file>` validates and summarizes a patch file without writing canonical memory.
 * `aictx setup` orchestrates init, bootstrap proposal, optional save, check, and diff summary.
 * `aictx audit` returns deterministic memory hygiene findings and does not write memory.
+* `aictx upgrade` migrates v1 storage and bundled schemas to v2 without inventing evidence.
 
 ### 5.11 `aictx suggest`
 
@@ -607,17 +611,19 @@ Syntax:
 aictx suggest --from-diff [--json]
 aictx suggest --bootstrap [--json]
 aictx suggest --bootstrap --patch [--json]
+aictx suggest --after-task "<task>" [--json]
 ```
 
 Behavior:
 
-* Require exactly one of `--from-diff` or `--bootstrap`.
+* Require exactly one of `--from-diff`, `--bootstrap`, or `--after-task`.
 * `--from-diff` requires Git and returns `AICtxGitRequired` outside a Git worktree.
 * `--from-diff` reads the current non-generated project diff and related Aictx memory but does not create memory patches.
 * `--bootstrap` works with or without Git and lists likely files for the agent to inspect before creating seed memory.
+* `--after-task` packages changed files, related memory, duplicate or stale candidates, recommended facets, and a save/no-save checklist for the completed task.
 * `--patch` is valid only with `--bootstrap`; it emits a conservative proposed patch suitable for review and `aictx save --file`.
 * `--bootstrap --patch` updates init-created project and architecture placeholders when deterministic evidence is strong, creates small workflow or constraint memories from package metadata, proposes the starter project-to-architecture relation when it is missing, and otherwise emits no patch when confidence is low.
-* Both modes must be deterministic, local-only, and read-only for canonical memory.
+* All suggestion modes must be deterministic, local-only, and read-only for canonical memory.
 * Do not expose an MCP tool for suggestion packets in v1.
 
 JSON success data:
@@ -973,7 +979,7 @@ Output data:
 
 ## 7. Structured Patch Format
 
-The structured patch is the only v1 write contract.
+The structured patch is the only write contract.
 
 Top-level shape:
 
@@ -1033,7 +1039,13 @@ Example:
     "branch": null,
     "task": null
   },
-  "tags": ["billing", "stripe"]
+  "tags": ["billing", "stripe"],
+  "facets": {
+    "category": "decision-rationale",
+    "applies_to": ["src/workers/billing-retries.ts"],
+    "load_modes": ["coding", "debugging"]
+  },
+  "evidence": [{ "kind": "file", "id": "src/workers/billing-retries.ts" }]
 }
 ```
 
@@ -1050,6 +1062,8 @@ Optional fields:
 * `status`
 * `scope`
 * `tags`
+* `facets`
+* `evidence`
 * `source`
 
 Defaults:
@@ -1075,7 +1089,12 @@ Example:
   "id": "decision.billing-retries",
   "title": "Billing retries run in the queue worker",
   "body": "Updated body text.",
-  "tags": ["billing", "stripe", "queue"]
+  "tags": ["billing", "stripe", "queue"],
+  "facets": {
+    "category": "decision-rationale",
+    "applies_to": ["src/workers/billing-retries.ts"]
+  },
+  "evidence": [{ "kind": "file", "id": "src/workers/billing-retries.ts" }]
 }
 ```
 
@@ -1091,6 +1110,8 @@ Optional update fields:
 * `body`
 * `scope`
 * `tags`
+* `facets`
+* `evidence`
 * `source`
 * `superseded_by`
 

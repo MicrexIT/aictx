@@ -1,7 +1,11 @@
 {
   "body_path": "memory/project.md",
-  "content_hash": "sha256:5184789b344806f965f73372a3316cac30fb6a2740d6d61e6ea12516aba995a7",
+  "content_hash": "sha256:5e37d1d8bb917b2770fb104952eee35b3c7d37e629dae6b001d577afe7f3c63d",
   "created_at": "2026-05-02T00:21:32+02:00",
+  "evidence": [],
+  "facets": {
+    "category": "project-description"
+  },
   "id": "project.aictx",
   "scope": {
     "branch": null,

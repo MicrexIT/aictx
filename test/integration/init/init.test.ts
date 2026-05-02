@@ -82,15 +82,15 @@ describe("initProject", () => {
     const claudeGuidance = await readFile(join(repo, "CLAUDE.md"), "utf8");
     for (const guidance of [agentsGuidance, claudeGuidance]) {
       expect(guidance).toContain(
-        "After meaningful work, autonomously save durable project knowledge:"
+        "After meaningful work, make a save/no-save decision."
       );
+      expect(guidance).toContain('aictx suggest --after-task "<task>" --json');
       expect(guidance).toContain("save_memory_patch({ patch: { source, changes } })");
-      expect(guidance).toContain("then run `aictx check`. In Git projects, also run `aictx diff`");
-      expect(guidance).toContain("Save only durable knowledge future agents should know");
+      expect(guidance).toContain("Save durable decisions");
       expect(guidance).toContain("one durable claim per object");
-      expect(guidance).toContain("update, mark stale, or supersede");
-      expect(guidance).toContain("Save nothing when the work produced no durable future value");
-      expect(guidance).toContain("Do not create `history` or `task-note` memory objects");
+      expect(guidance).toContain("updating, marking stale, or superseding");
+      expect(guidance).toContain("Save nothing when there is no durable future value");
+      expect(guidance).toContain("Do not save task diaries");
       expect(guidance).toContain("Before finalizing, say whether Aictx memory changed");
       expect(guidance).toContain("If it changed, suggest reviewing `.aictx/` changes");
       expect(guidance).toContain("use `diff_memory` or `aictx diff`");
@@ -200,6 +200,7 @@ describe("initProject", () => {
           to: relation.to,
           status: relation.status,
           confidence: relation.confidence,
+          evidence: relation.evidence,
           created_at: relation.created_at,
           updated_at: relation.updated_at
         })
@@ -433,7 +434,7 @@ describe("initProject", () => {
 
     expect(agents).toContain("# Existing instructions");
     expect(agents).toContain("<!-- aictx-memory:start -->");
-    expect(agents).toContain("autonomously save durable project knowledge");
+    expect(agents).toContain("make a save/no-save decision");
     expect(claude).not.toContain("old guidance");
     expect(claude).toContain("Keep this line.");
     expect(countOccurrences(claude, "<!-- aictx-memory:start -->")).toBe(1);

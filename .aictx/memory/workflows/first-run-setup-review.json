@@ -1,7 +1,11 @@
 {
   "body_path": "memory/workflows/first-run-setup-review.md",
-  "content_hash": "sha256:d34abc324b5d5770222c443e01b9eb5b7717f2e188a294107f48440b363ea20d",
+  "content_hash": "sha256:a684fe1c9b985ba8adfe0294d8bdf600a0415a3b6dc35e68aaa26966ff5ef6a7",
   "created_at": "2026-05-02T10:37:12+02:00",
+  "evidence": [],
+  "facets": {
+    "category": "workflow"
+  },
   "id": "workflow.first-run-setup-review",
   "scope": {
     "branch": null,

@@ -22,6 +22,24 @@ export const OBJECT_TYPES = [
 
 export type ObjectType = (typeof OBJECT_TYPES)[number];
 
+export const FACET_CATEGORIES = [
+  "project-description",
+  "architecture",
+  "stack",
+  "convention",
+  "file-layout",
+  "testing",
+  "decision-rationale",
+  "abandoned-attempt",
+  "workflow",
+  "gotcha",
+  "debugging-fact",
+  "concept",
+  "open-question"
+] as const;
+
+export type FacetCategory = (typeof FACET_CATEGORIES)[number];
+
 export const OBJECT_STATUSES = [
   "active",
   "draft",
@@ -127,9 +145,22 @@ export interface Source {
 }
 
 export interface Evidence {
-  kind: "memory" | "relation" | "file" | "commit";
+  kind: "memory" | "relation" | "file" | "commit" | "task";
   id: string;
 }
+
+export interface ObjectFacets {
+  category: FacetCategory;
+  applies_to?: string[];
+  load_modes?: LoadMemoryModeName[];
+}
+
+export type LoadMemoryModeName =
+  | "coding"
+  | "debugging"
+  | "review"
+  | "architecture"
+  | "onboarding";
 
 export interface MemoryEvent {
   event: EventType;

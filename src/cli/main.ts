@@ -23,6 +23,7 @@ import { registerSearchCommand } from "./commands/search.js";
 import { registerSetupCommand } from "./commands/setup.js";
 import { registerStaleCommand } from "./commands/stale.js";
 import { registerSuggestCommand } from "./commands/suggest.js";
+import { registerUpgradeCommand } from "./commands/upgrade.js";
 import {
   registerViewCommand,
   type ViewerDetacher,
@@ -122,6 +123,11 @@ export function createCliProgram(options: CliMainOptions = {}): Command {
     ...(options.viewer?.detacher === undefined ? {} : { detacher: options.viewer.detacher })
   });
   registerAuditCommand(program, {
+    cwd: options.cwd ?? process.cwd(),
+    stdout: writeOut,
+    stderr: writeErr
+  });
+  registerUpgradeCommand(program, {
     cwd: options.cwd ?? process.cwd(),
     stdout: writeOut,
     stderr: writeErr

@@ -493,7 +493,9 @@ function objectMatchesTask(
     taskText.includes(sidecar.id.toLowerCase()) ||
     taskText.includes(object.bodyPath.toLowerCase()) ||
     taskText.includes(sidecar.body_path.toLowerCase()) ||
-    hasTagMatch(sidecar.tags ?? [], taskTerms)
+    hasTagMatch(sidecar.tags ?? [], taskTerms) ||
+    hasFacetMatch(sidecar.facets, taskText, taskTerms) ||
+    hasEvidenceMatch(sidecar.evidence ?? [], taskText, taskTerms)
   );
 }
 
@@ -543,6 +545,8 @@ function rankCandidateFromStoredObject(object: StoredMemoryObject): RankMemoryCa
     body: object.body,
     scope: sidecar.scope,
     tags: sidecar.tags ?? [],
+    ...(sidecar.facets === undefined ? {} : { facets: sidecar.facets }),
+    ...(sidecar.evidence === undefined ? {} : { evidence: sidecar.evidence }),
     updated_at: sidecar.updated_at
   };
 }
@@ -575,6 +579,41 @@ function hasTagMatch(tags: readonly string[], taskTerms: readonly string[]): boo
   const terms = new Set(taskTerms);
 
   return tags.some((tag) => extractTerms(tag).some((term) => terms.has(term)));
+}
+
+function hasFacetMatch(
+  facets: StoredMemoryObject["sidecar"]["facets"],
+  taskText: string,
+  taskTerms: readonly string[]
+): boolean {
+  if (facets === undefined) {
+    return false;
+  }
+
+  const terms = new Set(taskTerms);
+  const facetTerms = extractTerms([
+    facets.category,
+    ...(facets.applies_to ?? []),
+    ...(facets.load_modes ?? [])
+  ].join(" "));
+
+  return (
+    facetTerms.some((term) => terms.has(term)) ||
+    (facets.applies_to ?? []).some((path) => taskText.includes(path.toLowerCase()))
+  );
+}
+
+function hasEvidenceMatch(
+  evidence: readonly NonNullable<StoredMemoryObject["sidecar"]["evidence"]>[number][],
+  taskText: string,
+  taskTerms: readonly string[]
+): boolean {
+  const terms = new Set(taskTerms);
+
+  return evidence.some((item) => {
+    const id = item.id.toLowerCase();
+    return taskText.includes(id) || extractTerms(id).some((term) => terms.has(term));
+  });
 }
 
 function extractTerms(value: string): string[] {

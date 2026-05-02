@@ -20,6 +20,7 @@ import type {
   AictxMeta,
   IsoDateTime,
   ObjectId,
+  ObjectFacets,
   ObjectStatus,
   ObjectType,
   Predicate,
@@ -38,6 +39,7 @@ import {
 import {
   buildSuggestBootstrapPatchProposal,
   buildSuggestBootstrapPacket,
+  buildSuggestAfterTaskPacket,
   buildSuggestFromDiffPacket,
   type SuggestBootstrapPatchProposal,
   type SuggestMode,
@@ -84,6 +86,10 @@ import {
   restoreCanonicalStorageFromCommit
 } from "../storage/write.js";
 import {
+  upgradeStorageToV2,
+  type UpgradeStorageData
+} from "../storage/upgrade.js";
+import {
   detectSecretsInPatch,
   secretDetectionError
 } from "../validation/secrets.js";
@@ -108,6 +114,11 @@ export interface RebuildIndexOptions extends GitWrapperOptions {
 
 export interface CheckProjectOptions extends GitWrapperOptions {
   cwd: string;
+}
+
+export interface UpgradeStorageOptions extends GitWrapperOptions {
+  cwd: string;
+  clock?: Clock;
 }
 
 export interface LoadMemoryOptions extends GitWrapperOptions, LoadMemoryInput {
@@ -142,6 +153,7 @@ export interface SuggestMemoryOptions extends GitWrapperOptions {
   cwd: string;
   fromDiff?: boolean;
   bootstrap?: boolean;
+  afterTask?: string;
   patch?: boolean;
 }
 
@@ -238,6 +250,8 @@ export interface CheckProjectData {
   warnings: ValidationIssue[];
 }
 
+export type { UpgradeStorageData };
+
 export interface MemoryObjectSummary {
   id: ObjectId;
   type: ObjectType;
@@ -247,6 +261,8 @@ export interface MemoryObjectSummary {
   json_path: string;
   scope: Scope;
   tags: string[];
+  facets: ObjectFacets | null;
+  evidence: Array<{ kind: "memory" | "relation" | "file" | "commit" | "task"; id: string }>;
   source: Source | null;
   superseded_by: ObjectId | null;
   created_at: string;
@@ -261,7 +277,7 @@ export interface MemoryRelationSummary {
   to: ObjectId;
   status: RelationStatus;
   confidence: RelationConfidence | null;
-  evidence: Array<{ kind: "memory" | "relation" | "file" | "commit"; id: string }>;
+  evidence: Array<{ kind: "memory" | "relation" | "file" | "commit" | "task"; id: string }>;
   content_hash: string | null;
   created_at: string;
   updated_at: string;
@@ -430,6 +446,88 @@ export async function rebuildIndex(
     data: rebuilt.data,
     warnings: rebuilt.warnings,
     meta: meta.meta
+  };
+}
+
+export async function upgradeStorage(
+  options: UpgradeStorageOptions
+): Promise<AppResult<UpgradeStorageData>> {
+  const clock = options.clock ?? systemClock;
+  const paths = await resolveProjectPaths({
+    cwd: options.cwd,
+    mode: "require-initialized",
+    runner: options.runner
+  });
+
+  if (!paths.ok) {
+    return {
+      ok: false,
+      error: paths.error,
+      warnings: paths.warnings,
+      meta: await buildBestEffortMeta(options)
+    };
+  }
+
+  const meta = await buildMeta(paths.data, options);
+
+  if (!meta.ok) {
+    return meta;
+  }
+
+  const upgraded = await withProjectLock(
+    {
+      aictxRoot: paths.data.aictxRoot,
+      operation: "upgrade",
+      clock
+    },
+    async () => {
+      const result = await upgradeStorageToV2({
+        projectRoot: paths.data.projectRoot,
+        clock
+      });
+
+      if (!result.ok) {
+        return result;
+      }
+
+      const rebuilt = await rebuildGeneratedIndex({
+        projectRoot: paths.data.projectRoot,
+        aictxRoot: paths.data.aictxRoot,
+        clock,
+        git: meta.meta.git
+      });
+
+      return ok(result.data, [
+        ...result.warnings,
+        ...rebuilt.warnings,
+        ...(rebuilt.ok ? [] : [`Index warning: ${rebuilt.error.message}`])
+      ]);
+    }
+  );
+
+  if (!upgraded.ok) {
+    return {
+      ok: false,
+      error: upgraded.error,
+      warnings: upgraded.warnings,
+      meta: meta.meta
+    };
+  }
+
+  const refreshedMeta = await buildMeta(paths.data, options);
+
+  return {
+    ok: true,
+    data: upgraded.data,
+    warnings:
+      refreshedMeta.ok
+        ? upgraded.warnings
+        : [
+            ...upgraded.warnings,
+            ...refreshedMeta.warnings,
+            `Git metadata refresh failed after upgrade: ${refreshedMeta.error.message}`
+          ],
+    meta: refreshedMeta.ok ? refreshedMeta.meta : meta.meta
   };
 }
 
@@ -1080,6 +1178,38 @@ export async function suggestMemory(
     };
   }
 
+  if (mode.data === "after_task") {
+    const changed = meta.meta.git.available
+      ? await getChangedProjectFiles(paths.data.projectRoot, options)
+      : ok({ changedFiles: [] as string[] });
+
+    if (!changed.ok) {
+      return {
+        ok: false,
+        error: changed.error,
+        warnings: [...storage.warnings, ...changed.warnings],
+        meta: meta.meta
+      };
+    }
+
+    return {
+      ok: true,
+      data: buildSuggestAfterTaskPacket({
+        task: options.afterTask ?? "",
+        changedFiles: changed.data.changedFiles,
+        storage: storage.data
+      }),
+      warnings: [
+        ...storage.warnings,
+        ...changed.warnings,
+        ...(meta.meta.git.available
+          ? []
+          : ["Git is unavailable; after-task changed_files is empty."])
+      ],
+      meta: meta.meta
+    };
+  }
+
   return {
     ok: true,
     data:
@@ -1402,7 +1532,8 @@ export const applicationOperations = {
   rewindMemory,
   saveMemoryPatch,
   searchMemory,
-  suggestMemory
+  suggestMemory,
+  upgradeStorage
 };
 
 const STALE_MEMORY_STATUSES = new Set<ObjectStatus>([
@@ -1682,6 +1813,8 @@ function summarizeObject(object: StoredMemoryObject): MemoryObjectSummary {
     json_path: object.path,
     scope: sidecar.scope,
     tags: [...(sidecar.tags ?? [])],
+    facets: sidecar.facets ?? null,
+    evidence: [...(sidecar.evidence ?? [])],
     source: sidecar.source ?? null,
     superseded_by: sidecar.superseded_by ?? null,
     created_at: sidecar.created_at,
@@ -1760,18 +1893,30 @@ function objectNotFound(id: ObjectId): AictxError {
 }
 
 function suggestMode(options: SuggestMemoryOptions): Result<SuggestMode> {
-  const selected = [options.fromDiff === true, options.bootstrap === true].filter(Boolean);
+  const selected = [
+    options.fromDiff === true,
+    options.bootstrap === true,
+    options.afterTask !== undefined
+  ].filter(Boolean);
 
   if (selected.length !== 1) {
     return err(
       aictxError(
         "AICtxValidationFailed",
-        "Suggest requires exactly one of --from-diff or --bootstrap."
+        "Suggest requires exactly one of --from-diff, --bootstrap, or --after-task."
       )
     );
   }
 
-  return ok(options.fromDiff === true ? "from_diff" : "bootstrap");
+  if (options.fromDiff === true) {
+    return ok("from_diff");
+  }
+
+  if (options.bootstrap === true) {
+    return ok("bootstrap");
+  }
+
+  return ok("after_task");
 }
 
 type MetaBuildResult =

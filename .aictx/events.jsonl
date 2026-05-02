@@ -5,3 +5,5 @@
 {"actor":"cli","event":"memory.created","id":"constraint.package-manager","timestamp":"2026-05-02T00:21:52+02:00"}
 {"actor":"agent","event":"memory.created","id":"decision.non-blocking-dirty-memory-saves","timestamp":"2026-05-02T10:37:12+02:00"}
 {"actor":"agent","event":"memory.created","id":"workflow.first-run-setup-review","timestamp":"2026-05-02T10:37:12+02:00"}
+{"actor":"agent","event":"memory.created","id":"decision.schema-backed-agent-memory-discipline","timestamp":"2026-05-02T16:13:27+02:00"}
+{"actor":"agent","event":"memory.updated","id":"decision.schema-backed-agent-memory-discipline","timestamp":"2026-05-02T16:14:28+02:00"}

@@ -28,12 +28,12 @@ describe("bundled schema files", () => {
     expect(schemaJsonFiles).toEqual([...schemaFiles].sort());
   });
 
-  it("parse as JSON Schema Draft 2020-12 with canonical v1 ids", async () => {
+  it("parse as JSON Schema Draft 2020-12 with canonical v2 ids", async () => {
     for (const file of schemaFiles) {
       const schema = await readSchema(file);
 
       expect(schema.$schema).toBe("https://json-schema.org/draft/2020-12/schema");
-      expect(schema.$id).toBe(`https://aictx.dev/schemas/v1/${file}`);
+      expect(schema.$id).toBe(`https://aictx.dev/schemas/v2/${file}`);
     }
   });
 

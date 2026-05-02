@@ -7,6 +7,7 @@ import { systemClock } from "../core/clock.js";
 import { aictxError, type JsonValue } from "../core/errors.js";
 import { err, ok, type Result } from "../core/result.js";
 import type { GitState, ValidationIssue } from "../core/types.js";
+import type { StoredMemoryObject } from "../storage/objects.js";
 import { readCanonicalStorage, type CanonicalStorageSnapshot } from "../storage/read.js";
 import { validateProject } from "../validation/validate.js";
 import {
@@ -263,6 +264,10 @@ function insertObjects(db: SqliteDatabase, storage: CanonicalStorageSnapshot): v
       scope_branch,
       scope_task,
       tags_json,
+      facets_json,
+      facet_category,
+      applies_to_json,
+      evidence_json,
       source_json,
       superseded_by,
       created_at,
@@ -282,6 +287,10 @@ function insertObjects(db: SqliteDatabase, storage: CanonicalStorageSnapshot): v
       @scope_branch,
       @scope_task,
       @tags_json,
+      @facets_json,
+      @facet_category,
+      @applies_to_json,
+      @evidence_json,
       @source_json,
       @superseded_by,
       @created_at,
@@ -289,8 +298,8 @@ function insertObjects(db: SqliteDatabase, storage: CanonicalStorageSnapshot): v
     )
   `);
   const insertFts = db.prepare<Record<string, string>>(`
-    INSERT INTO objects_fts (object_id, title, body, tags)
-    VALUES (@object_id, @title, @body, @tags)
+    INSERT INTO objects_fts (object_id, title, body, tags, facets, evidence)
+    VALUES (@object_id, @title, @body, @tags, @facets, @evidence)
   `);
 
   for (const object of storage.objects) {
@@ -312,6 +321,10 @@ function insertObjects(db: SqliteDatabase, storage: CanonicalStorageSnapshot): v
       scope_branch: sidecar.scope.branch,
       scope_task: sidecar.scope.task,
       tags_json: JSON.stringify(tags),
+      facets_json: jsonOrNull(sidecar.facets),
+      facet_category: sidecar.facets?.category ?? null,
+      applies_to_json: jsonOrNull(sidecar.facets?.applies_to),
+      evidence_json: jsonOrNull(sidecar.evidence),
       source_json: jsonOrNull(sidecar.source),
       superseded_by: sidecar.superseded_by ?? null,
       created_at: sidecar.created_at,
@@ -322,9 +335,23 @@ function insertObjects(db: SqliteDatabase, storage: CanonicalStorageSnapshot): v
       object_id: sidecar.id,
       title: sidecar.title,
       body: object.body,
-      tags: tags.join(" ")
+      tags: tags.join(" "),
+      facets: facetSearchText(sidecar.facets),
+      evidence: evidenceSearchText(sidecar.evidence)
     });
   }
+}
+
+function facetSearchText(facets: StoredMemoryObject["sidecar"]["facets"]): string {
+  if (facets === undefined) {
+    return "";
+  }
+
+  return [facets.category, ...(facets.applies_to ?? []), ...(facets.load_modes ?? [])].join(" ");
+}
+
+function evidenceSearchText(evidence: StoredMemoryObject["sidecar"]["evidence"]): string {
+  return (evidence ?? []).map((item) => `${item.kind} ${item.id}`).join(" ");
 }
 
 function insertRelations(db: SqliteDatabase, storage: CanonicalStorageSnapshot): void {

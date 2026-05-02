@@ -198,18 +198,83 @@ describe("audit discipline findings", () => {
 
     await expect(buildAuditFindings({ projectRoot, storage })).resolves.toEqual([]);
   });
+
+  it("reports v2 facet, object evidence, task diary, oversized vague, and duplicate facet findings", async () => {
+    const projectRoot = await createTempRoot("aictx-discipline-audit-v2-");
+    const storage = storageSnapshot({
+      projectRoot,
+      version: 2,
+      objects: [
+        memoryObject({
+          id: "decision.no-facets",
+          title: "Decision without facets",
+          body: longBody("Decision memory should carry facets in storage v2."),
+          tags: ["decision"]
+        }),
+        memoryObject({
+          id: "gotcha.no-evidence",
+          type: "gotcha",
+          title: "Gotcha without evidence",
+          body: longBody("Gotcha memory should include evidence when possible."),
+          facets: { category: "gotcha" }
+        }),
+        memoryObject({
+          id: "note.task-diary",
+          type: "note",
+          title: "Changed files",
+          body: "I changed three files and tests passed.",
+          facets: { category: "concept" },
+          evidence: []
+        }),
+        memoryObject({
+          id: "note.large-vague",
+          type: "note",
+          title: "Notes",
+          body: `${"large vague memory ".repeat(230)}`,
+          evidence: []
+        }),
+        memoryObject({
+          id: "constraint.duplicate-a",
+          type: "constraint",
+          title: "Duplicate A",
+          body: longBody("First duplicate applies to the same file."),
+          facets: { category: "testing", applies_to: ["src/a.ts"] },
+          evidence: []
+        }),
+        memoryObject({
+          id: "constraint.duplicate-b",
+          type: "constraint",
+          title: "Duplicate B",
+          body: longBody("Second duplicate applies to the same file."),
+          facets: { category: "testing", applies_to: ["src/a.ts"] },
+          evidence: []
+        })
+      ],
+      relations: []
+    });
+
+    const findings = await buildAuditFindings({ projectRoot, storage });
+    const rules = new Set(findings.map((finding) => finding.rule));
+
+    expect(rules.has("missing_facets")).toBe(true);
+    expect(rules.has("missing_object_evidence")).toBe(true);
+    expect(rules.has("task_diary_like_memory")).toBe(true);
+    expect(rules.has("oversized_vague_memory")).toBe(true);
+    expect(rules.has("duplicate_like_facet_category")).toBe(true);
+  });
 });
 
 function storageSnapshot(options: {
   projectRoot: string;
   objects: StoredMemoryObject[];
   relations: StoredMemoryRelation[];
+  version?: 1 | 2;
 }): CanonicalStorageSnapshot {
   return {
     projectRoot: options.projectRoot,
     aictxRoot: join(options.projectRoot, ".aictx"),
     config: {
-      version: 1,
+      version: options.version ?? 1,
       project: {
         id: "project.test",
         name: "Test"
@@ -236,6 +301,8 @@ function memoryObject(options: {
   title: string;
   body: string;
   tags?: string[];
+  facets?: MemoryObjectSidecar["facets"];
+  evidence?: MemoryObjectSidecar["evidence"];
   supersededBy?: ObjectId | null;
 }): StoredMemoryObject {
   const type = options.type ?? objectTypeFromId(options.id);
@@ -254,6 +321,8 @@ function memoryObject(options: {
       task: null
     },
     tags: options.tags ?? ["test"],
+    ...(options.facets === undefined ? {} : { facets: options.facets }),
+    ...(options.evidence === undefined ? {} : { evidence: options.evidence }),
     source: {
       kind: "agent"
     },

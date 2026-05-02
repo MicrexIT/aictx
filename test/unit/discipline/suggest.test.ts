@@ -8,6 +8,7 @@ import {
   bootstrapCandidateFiles,
   buildSuggestBootstrapPatchProposal,
   buildSuggestBootstrapPacket,
+  buildSuggestAfterTaskPacket,
   buildSuggestFromDiffPacket
 } from "../../../src/discipline/suggest.js";
 import type { ObjectId, ObjectStatus, ObjectType } from "../../../src/core/types.js";
@@ -165,6 +166,41 @@ describe("suggest discipline packets", () => {
       "decision"
     ]);
     expect(packet.agent_checklist).toHaveLength(5);
+  });
+
+  it("builds after-task packets with recommended facets and save/no-save checklist", () => {
+    const storage = storageSnapshot({
+      objects: [
+        memoryObject({
+          id: "decision.webhook-retries",
+          type: "decision",
+          status: "active",
+          title: "Webhook retries",
+          body: "Webhook retry behavior references src/billing/webhook.ts."
+        })
+      ],
+      relations: []
+    });
+
+    const packet = buildSuggestAfterTaskPacket({
+      task: "Refactor webhook tests",
+      changedFiles: ["src/billing/webhook.ts", "test/billing/webhook.test.ts"],
+      storage
+    });
+
+    expect(packet.mode).toBe("after_task");
+    expect(packet.task).toBe("Refactor webhook tests");
+    expect(packet.changed_files).toEqual([
+      "src/billing/webhook.ts",
+      "test/billing/webhook.test.ts"
+    ]);
+    expect(packet.related_memory_ids).toEqual(["decision.webhook-retries"]);
+    expect(packet.recommended_facets).toEqual(
+      expect.arrayContaining(["testing", "decision-rationale", "abandoned-attempt"])
+    );
+    expect(packet.save_decision_checklist).toContain(
+      "Save memory only when the task produced durable future value."
+    );
   });
 
   it("builds a conservative schema-valid bootstrap patch from deterministic evidence", async () => {

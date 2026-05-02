@@ -93,11 +93,11 @@ describe("full index rebuild", () => {
         }
       ]);
       expect(readMeta(connection.db)).toMatchObject({
-        schema_version: "1",
+        schema_version: "2",
         built_at: FIXED_TIMESTAMP_NEXT_MINUTE,
         source_git_commit: "",
         git_available: "false",
-        storage_version: "1",
+        storage_version: "2",
         object_count: "3",
         relation_count: "2",
         event_count: "2"

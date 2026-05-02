@@ -519,6 +519,41 @@ describe("context memory ranking", () => {
     });
   });
 
+  it("boosts facet categories, applicability hints, evidence, and facet load modes", () => {
+    const result = rankMemoryCandidates({
+      task: "Review services/billing/src/webhooks/handler.ts for retry evidence",
+      mode: "review",
+      projectId: PROJECT_ID,
+      git: GIT_MAIN,
+      candidates: [
+        memory({
+          id: "note.unrelated-facet",
+          title: "Retry evidence",
+          body: "General retry evidence."
+        }),
+        memory({
+          id: "decision.retry-handler-facet",
+          type: "decision",
+          title: "Retry handler",
+          body: "Retry evidence is tied to the handler.",
+          facets: {
+            category: "decision-rationale",
+            applies_to: ["services/billing/src/webhooks/handler.ts"],
+            load_modes: ["review"]
+          },
+          evidence: [{ kind: "file", id: "services/billing/src/webhooks/handler.ts" }]
+        })
+      ]
+    });
+
+    expect(result.items[0]?.id).toBe("decision.retry-handler-facet");
+    expect(result.items[0]?.scoreBreakdown).toMatchObject({
+      appliesToMatch: 35,
+      evidenceMatch: 18,
+      modeModifier: 24
+    });
+  });
+
   it("keeps conflicted memory out of high-priority sections by default", () => {
     const result = rankMemoryCandidates({
       task: "webhook",
@@ -556,6 +591,8 @@ function memory(overrides: Partial<RankMemoryCandidate> & { id: string }): RankM
     body: overrides.body ?? "Memory body.",
     scope: overrides.scope ?? projectScope(),
     tags: overrides.tags ?? [],
+    ...(overrides.facets === undefined ? {} : { facets: overrides.facets }),
+    ...(overrides.evidence === undefined ? {} : { evidence: overrides.evidence }),
     updated_at: overrides.updated_at ?? "2026-04-27T12:00:00+02:00"
   };
 }

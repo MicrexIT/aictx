@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { searchIndex } from "../../../src/index/search.js";
 import { openIndexDatabase, type IndexDatabaseConnection } from "../../../src/index/sqlite.js";
-import type { ObjectStatus, ObjectType } from "../../../src/core/types.js";
+import type { Evidence, ObjectFacets, ObjectStatus, ObjectType } from "../../../src/core/types.js";
 
 const tempRoots: string[] = [];
 
@@ -226,6 +226,44 @@ describe("search index", () => {
     }
   });
 
+  it("matches facet and object evidence search material", async () => {
+    const connection = await openMigratedConnection();
+
+    try {
+      insertObject(connection, {
+        id: "decision.sqlite-schema",
+        type: "decision",
+        title: "SQLite schema",
+        body: "The index keeps deterministic search material.",
+        facets: {
+          category: "decision-rationale",
+          applies_to: ["src/index/migrations.ts"],
+          load_modes: ["architecture"]
+        },
+        evidence: [{ kind: "file", id: "src/index/migrations.ts" }]
+      });
+
+      const byFacet = await searchIndex({
+        aictxRoot: connection.aictxRoot,
+        query: "decision-rationale"
+      });
+      const byEvidence = await searchIndex({
+        aictxRoot: connection.aictxRoot,
+        query: "migrations"
+      });
+
+      expect(byFacet.ok).toBe(true);
+      expect(byEvidence.ok).toBe(true);
+
+      if (byFacet.ok && byEvidence.ok) {
+        expect(byFacet.data.matches[0]?.id).toBe("decision.sqlite-schema");
+        expect(byEvidence.data.matches[0]?.id).toBe("decision.sqlite-schema");
+      }
+    } finally {
+      connection.close();
+    }
+  });
+
   it("ranks deterministic ties by recency and then lexicographic ID", async () => {
     const connection = await openMigratedConnection();
 
@@ -328,6 +366,8 @@ interface ObjectFixture {
   bodyPath?: string;
   body: string;
   tags?: string[];
+  facets?: ObjectFacets;
+  evidence?: Evidence[];
   updatedAt?: string;
 }
 
@@ -361,6 +401,8 @@ function insertObject(connection: TestConnection, fixture: ObjectFixture): void 
   const status = fixture.status ?? "active";
   const bodyPath = fixture.bodyPath ?? `.aictx/memory/notes/${fixture.id.replace(".", "-")}.md`;
   const tags = fixture.tags ?? [];
+  const facets = fixture.facets ?? null;
+  const evidence = fixture.evidence ?? [];
   const updatedAt = fixture.updatedAt ?? "2026-04-27T12:00:00+02:00";
 
   connection.db
@@ -381,6 +423,10 @@ function insertObject(connection: TestConnection, fixture: ObjectFixture): void 
           scope_branch,
           scope_task,
           tags_json,
+          facets_json,
+          facet_category,
+          applies_to_json,
+          evidence_json,
           source_json,
           superseded_by,
           created_at,
@@ -400,6 +446,10 @@ function insertObject(connection: TestConnection, fixture: ObjectFixture): void 
           @scope_branch,
           @scope_task,
           @tags_json,
+          @facets_json,
+          @facet_category,
+          @applies_to_json,
+          @evidence_json,
           @source_json,
           @superseded_by,
           @created_at,
@@ -427,6 +477,10 @@ function insertObject(connection: TestConnection, fixture: ObjectFixture): void 
       scope_branch: null,
       scope_task: null,
       tags_json: JSON.stringify(tags),
+      facets_json: jsonOrNull(facets),
+      facet_category: facets?.category ?? null,
+      applies_to_json: jsonOrNull(facets?.applies_to),
+      evidence_json: JSON.stringify(evidence),
       source_json: null,
       superseded_by: null,
       created_at: updatedAt,
@@ -436,14 +490,32 @@ function insertObject(connection: TestConnection, fixture: ObjectFixture): void 
   connection.db
     .prepare<Record<string, string>>(
       `
-        INSERT INTO objects_fts (object_id, title, body, tags)
-        VALUES (@object_id, @title, @body, @tags)
+        INSERT INTO objects_fts (object_id, title, body, tags, facets, evidence)
+        VALUES (@object_id, @title, @body, @tags, @facets, @evidence)
       `
     )
     .run({
       object_id: fixture.id,
       title: fixture.title,
       body: fixture.body,
-      tags: tags.join(" ")
+      tags: tags.join(" "),
+      facets: facets === null ? "" : facetSearchText(facets),
+      evidence: evidenceSearchText(evidence)
     });
+}
+
+function jsonOrNull(value: unknown): string | null {
+  return value === undefined || value === null ? null : JSON.stringify(value);
+}
+
+function facetSearchText(facets: ObjectFacets): string {
+  return [
+    facets.category,
+    ...(facets.applies_to ?? []),
+    ...(facets.load_modes ?? [])
+  ].join(" ");
+}
+
+function evidenceSearchText(evidence: readonly Evidence[]): string {
+  return evidence.map((item) => `${item.kind} ${item.id}`).join(" ");
 }

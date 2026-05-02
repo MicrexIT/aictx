@@ -79,7 +79,7 @@ type RelativeFileRead =
       issue: ValidationIssue;
     };
 
-const SUPPORTED_STORAGE_VERSION = 1;
+const SUPPORTED_STORAGE_VERSIONS = new Set([1, 2]);
 const RELATED_TO_WARNING_MINIMUM = 5;
 
 export function validateConfig(
@@ -408,7 +408,7 @@ async function validateConfigFile(state: ProjectValidationState): Promise<void> 
       path: parsed.path,
       field: "/version"
     });
-  } else if (version !== SUPPORTED_STORAGE_VERSION) {
+  } else if (!SUPPORTED_STORAGE_VERSIONS.has(Number(version))) {
     state.errors.push({
       code: "StorageVersionUnsupported",
       message: "Storage version is unsupported.",

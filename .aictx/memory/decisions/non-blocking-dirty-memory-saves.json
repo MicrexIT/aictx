@@ -1,7 +1,11 @@
 {
   "body_path": "memory/decisions/non-blocking-dirty-memory-saves.md",
-  "content_hash": "sha256:95941b23aabd29c3d7efe0a9ec039df4ae8c49a8d4eecf495745642c1b652a28",
+  "content_hash": "sha256:9a3ad3cd21e26048b1eb30dd250e984539f34c6a2507bc034af9d38f3c575ca4",
   "created_at": "2026-05-02T10:37:12+02:00",
+  "evidence": [],
+  "facets": {
+    "category": "decision-rationale"
+  },
   "id": "decision.non-blocking-dirty-memory-saves",
   "scope": {
     "branch": null,

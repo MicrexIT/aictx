@@ -1,7 +1,11 @@
 {
   "body_path": "memory/constraints/package-manager.md",
-  "content_hash": "sha256:b4207eeadfa8221e6897e0a076d80e8498646b71d877d8b694d109043785edaf",
+  "content_hash": "sha256:9d08a2d6434be1f01763235467f1f698e5c93843b26f89d1e7805418776dd1db",
   "created_at": "2026-05-02T00:21:52+02:00",
+  "evidence": [],
+  "facets": {
+    "category": "stack"
+  },
   "id": "constraint.package-manager",
   "scope": {
     "branch": null,

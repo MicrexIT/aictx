@@ -2,14 +2,14 @@ import { aictxError } from "../core/errors.js";
 import { err, ok, type Result } from "../core/result.js";
 import type { SqliteDatabase } from "./sqlite-driver.js";
 
-export const CURRENT_INDEX_SCHEMA_VERSION = 1;
+export const CURRENT_INDEX_SCHEMA_VERSION = 2;
 
 export const REQUIRED_META_DEFAULTS = {
   schema_version: String(CURRENT_INDEX_SCHEMA_VERSION),
   built_at: "",
   source_git_commit: "",
   git_available: "false",
-  storage_version: "1",
+  storage_version: "2",
   object_count: "0",
   relation_count: "0",
   event_count: "0"
@@ -96,6 +96,10 @@ function createSchema(db: SqliteDatabase): void {
       scope_branch TEXT,
       scope_task TEXT,
       tags_json TEXT NOT NULL,
+      facets_json TEXT,
+      facet_category TEXT,
+      applies_to_json TEXT,
+      evidence_json TEXT,
       source_json TEXT,
       superseded_by TEXT,
       created_at TEXT NOT NULL,
@@ -131,7 +135,9 @@ function createSchema(db: SqliteDatabase): void {
       object_id UNINDEXED,
       title,
       body,
-      tags
+      tags,
+      facets,
+      evidence
     );
 
     CREATE INDEX IF NOT EXISTS objects_type_idx ON objects(type);
@@ -141,6 +147,7 @@ function createSchema(db: SqliteDatabase): void {
     CREATE INDEX IF NOT EXISTS objects_scope_kind_idx ON objects(scope_kind);
     CREATE INDEX IF NOT EXISTS objects_scope_branch_idx ON objects(scope_branch);
     CREATE INDEX IF NOT EXISTS objects_scope_task_idx ON objects(scope_task);
+    CREATE INDEX IF NOT EXISTS objects_facet_category_idx ON objects(facet_category);
     CREATE INDEX IF NOT EXISTS relations_from_idx ON relations(from_id);
     CREATE INDEX IF NOT EXISTS relations_to_idx ON relations(to_id);
     CREATE INDEX IF NOT EXISTS relations_predicate_idx ON relations(predicate);

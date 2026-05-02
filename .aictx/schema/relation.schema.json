@@ -1,5 +1,5 @@
 {
-  "$id": "https://aictx.dev/schemas/v1/relation.schema.json",
+  "$id": "https://aictx.dev/schemas/v2/relation.schema.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "properties": {
@@ -31,7 +31,8 @@
               "memory",
               "relation",
               "file",
-              "commit"
+              "commit",
+              "task"
             ]
           }
         },

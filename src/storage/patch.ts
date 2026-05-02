@@ -19,6 +19,7 @@ import type {
   Evidence,
   GitState,
   IsoDateTime,
+  ObjectFacets,
   ObjectId,
   ObjectStatus,
   ObjectType,
@@ -151,6 +152,8 @@ export interface NormalizedCreateObjectChange {
   body: string;
   scope: Scope;
   tags: string[];
+  facets?: ObjectFacets;
+  evidence: Evidence[];
   source: Source;
   path: string;
   bodyPath: string;
@@ -166,6 +169,8 @@ export interface NormalizedUpdateObjectChange {
   body?: string;
   scope?: Scope;
   tags?: string[];
+  facets?: ObjectFacets;
+  evidence?: Evidence[];
   source?: Source;
   superseded_by?: ObjectId;
 }
@@ -244,6 +249,8 @@ interface RawCreateObjectChange {
   body: string;
   scope?: Scope;
   tags?: string[];
+  facets?: ObjectFacets;
+  evidence?: Evidence[];
   source?: Source;
 }
 
@@ -255,6 +262,8 @@ interface RawUpdateObjectChange {
   body?: string;
   scope?: Scope;
   tags?: string[];
+  facets?: ObjectFacets;
+  evidence?: Evidence[];
   source?: Source;
   superseded_by?: ObjectId;
 }
@@ -612,6 +621,8 @@ async function planCreateObject(
     body: change.body,
     scope,
     tags: change.tags ?? [],
+    ...(change.facets === undefined ? {} : { facets: change.facets }),
+    evidence: change.evidence ?? [],
     source,
     path: paths.sidecarPath,
     bodyPath: paths.bodyPath
@@ -696,6 +707,8 @@ function planUpdateObject(
     ...(change.body === undefined ? {} : { body: change.body }),
     ...(change.scope === undefined ? {} : { scope: change.scope }),
     ...(change.tags === undefined ? {} : { tags: change.tags }),
+    ...(change.facets === undefined ? {} : { facets: change.facets }),
+    ...(change.evidence === undefined ? {} : { evidence: change.evidence }),
     ...(change.source === undefined ? {} : { source: change.source }),
     ...(change.superseded_by === undefined ? {} : { superseded_by: change.superseded_by })
   };
@@ -706,6 +719,8 @@ function planUpdateObject(
     change.title !== undefined ||
     change.scope !== undefined ||
     change.tags !== undefined ||
+    change.facets !== undefined ||
+    change.evidence !== undefined ||
     change.source !== undefined ||
     change.superseded_by !== undefined;
 

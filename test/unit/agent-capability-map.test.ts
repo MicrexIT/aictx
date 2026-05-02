@@ -100,6 +100,12 @@ const cliOnlyCapabilities = [
     notes: "Maintenance remains CLI-only in v1."
   },
   {
+    capability: "Upgrade storage schema",
+    mcp: "none",
+    cli: "`aictx upgrade`",
+    notes: "Migration remains CLI-only in v2."
+  },
+  {
     capability: "Show memory history",
     mcp: "none",
     cli: "`aictx history`",
@@ -173,6 +179,7 @@ const exactCliOnlyCommands = [
   "`aictx patch review`",
   "`aictx check`",
   "`aictx rebuild`",
+  "`aictx upgrade`",
   "`aictx history`",
   "`aictx restore`",
   "`aictx rewind`",
@@ -191,6 +198,7 @@ const exactCliOnlyGuidanceCommands = [
   "`aictx patch review`",
   "`aictx check`",
   "`aictx rebuild`",
+  "`aictx upgrade`",
   "`aictx history`",
   "`aictx restore`",
   "`aictx rewind`",

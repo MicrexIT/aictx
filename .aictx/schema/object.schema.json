@@ -1,5 +1,5 @@
 {
-  "$id": "https://aictx.dev/schemas/v1/object.schema.json",
+  "$id": "https://aictx.dev/schemas/v2/object.schema.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "allOf": [
@@ -53,6 +53,79 @@
     "created_at": {
       "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
       "type": "string"
+    },
+    "evidence": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "memory",
+              "relation",
+              "file",
+              "commit",
+              "task"
+            ]
+          }
+        },
+        "required": [
+          "kind",
+          "id"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "facets": {
+      "additionalProperties": false,
+      "properties": {
+        "applies_to": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "type": "array",
+          "uniqueItems": true
+        },
+        "category": {
+          "enum": [
+            "project-description",
+            "architecture",
+            "stack",
+            "convention",
+            "file-layout",
+            "testing",
+            "decision-rationale",
+            "abandoned-attempt",
+            "workflow",
+            "gotcha",
+            "debugging-fact",
+            "concept",
+            "open-question"
+          ]
+        },
+        "load_modes": {
+          "items": {
+            "enum": [
+              "coding",
+              "debugging",
+              "review",
+              "architecture",
+              "onboarding"
+            ]
+          },
+          "type": "array",
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "category"
+      ],
+      "type": "object"
     },
     "id": {
       "pattern": "^[a-z][a-z0-9_]*\\.[a-z0-9][a-z0-9-]*$",

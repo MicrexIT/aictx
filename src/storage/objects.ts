@@ -1,15 +1,17 @@
 import type {
   IsoDateTime,
+  ObjectFacets,
   ObjectId,
   ObjectStatus,
   ObjectType,
+  Evidence,
   Scope,
   Sha256Hash,
   Source
 } from "../core/types.js";
 
 export interface AictxConfig {
-  version: 1;
+  version: 1 | 2;
   project: {
     id: string;
     name: string;
@@ -32,6 +34,8 @@ export interface MemoryObjectSidecar {
   body_path: string;
   scope: Scope;
   tags?: string[];
+  facets?: ObjectFacets;
+  evidence?: Evidence[];
   source?: Source;
   superseded_by?: ObjectId | null;
   content_hash: Sha256Hash;
@@ -56,7 +60,7 @@ export function isAictxConfig(value: unknown): value is AictxConfig {
   const git = value.git;
 
   return (
-    value.version === 1 &&
+    (value.version === 1 || value.version === 2) &&
     isRecord(project) &&
     typeof project.id === "string" &&
     typeof project.name === "string" &&

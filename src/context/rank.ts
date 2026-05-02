@@ -1,5 +1,7 @@
 import type {
   GitState,
+  Evidence,
+  ObjectFacets,
   ObjectId,
   ObjectStatus,
   ObjectType,
@@ -13,8 +15,11 @@ const SCORE = {
   exactId: 100,
   exactBodyPath: 80,
   tagMatch: 40,
+  appliesToMatch: 35,
+  facetMatch: 25,
   titleFtsMatch: 30,
   bodyFtsMatch: 15,
+  evidenceMatch: 18,
   oneHopRelation: 12,
   recentMemoryBoost: 5
 } as const;
@@ -138,6 +143,7 @@ const MODE_STATUS_MODIFIERS = {
 } as const satisfies Record<LoadMemoryMode, number>;
 
 const REVIEW_FILE_REFERENCE_BOOST = 25;
+const FACET_LOAD_MODE_BOOST = 10;
 
 const MODE_TYPE_PRIORITIES = {
   coding: TYPE_PRIORITY,
@@ -230,6 +236,8 @@ export interface RankMemoryCandidate {
   body: string;
   scope: Scope;
   tags?: string[];
+  facets?: ObjectFacets;
+  evidence?: Evidence[];
   updated_at: string;
 }
 
@@ -249,6 +257,9 @@ export interface RankScoreBreakdown {
   tagMatch: number;
   titleFtsMatch: number;
   bodyFtsMatch: number;
+  facetMatch: number;
+  appliesToMatch: number;
+  evidenceMatch: number;
   relationNeighborhood: number;
   relationPredicate: number;
   recentMemoryBoost: number;
@@ -305,6 +316,9 @@ interface DirectScoreBreakdown {
   tagMatch: number;
   titleFtsMatch: number;
   bodyFtsMatch: number;
+  facetMatch: number;
+  appliesToMatch: number;
+  evidenceMatch: number;
 }
 
 interface RelationScoreBreakdown {
@@ -354,7 +368,7 @@ export function rankMemoryCandidates(
 
     rankable.push({
       candidate,
-      directScores: scoreDirectMatches(candidate, normalizedTaskText, taskTerms)
+      directScores: scoreDirectMatches(candidate, normalizedTaskText, taskTerms, taskFileReferences)
     });
   }
 
@@ -469,7 +483,8 @@ function taskScopeMatches(
 function scoreDirectMatches(
   candidate: RankMemoryCandidate,
   taskText: string,
-  taskTerms: readonly string[]
+  taskTerms: readonly string[],
+  taskFileReferences: readonly string[]
 ): DirectScoreBreakdown {
   return {
     exactId: taskText.includes(candidate.id.toLowerCase()) ? SCORE.exactId : 0,
@@ -477,8 +492,15 @@ function scoreDirectMatches(
       ? SCORE.exactBodyPath
       : 0,
     tagMatch: hasTagMatch(candidate.tags ?? [], taskTerms) ? SCORE.tagMatch : 0,
+    facetMatch: hasFacetMatch(candidate.facets, taskTerms) ? SCORE.facetMatch : 0,
+    appliesToMatch: hasAppliesToMatch(candidate.facets, taskText, taskFileReferences)
+      ? SCORE.appliesToMatch
+      : 0,
     titleFtsMatch: hasTermOverlap(candidate.title, taskTerms) ? SCORE.titleFtsMatch : 0,
-    bodyFtsMatch: hasTermOverlap(candidate.body, taskTerms) ? SCORE.bodyFtsMatch : 0
+    bodyFtsMatch: hasTermOverlap(candidate.body, taskTerms) ? SCORE.bodyFtsMatch : 0,
+    evidenceMatch: hasEvidenceMatch(candidate.evidence ?? [], taskText, taskTerms)
+      ? SCORE.evidenceMatch
+      : 0
   };
 }
 
@@ -589,7 +611,10 @@ function directScoreTotal(scores: DirectScoreBreakdown): number {
     scores.exactBodyPath +
     scores.tagMatch +
     scores.titleFtsMatch +
-    scores.bodyFtsMatch
+    scores.bodyFtsMatch +
+    scores.facetMatch +
+    scores.appliesToMatch +
+    scores.evidenceMatch
   );
 }
 
@@ -600,6 +625,9 @@ function totalScore(scores: RankScoreBreakdown): number {
     scores.tagMatch +
     scores.titleFtsMatch +
     scores.bodyFtsMatch +
+    scores.facetMatch +
+    scores.appliesToMatch +
+    scores.evidenceMatch +
     scores.relationNeighborhood +
     scores.relationPredicate +
     scores.recentMemoryBoost +
@@ -617,9 +645,17 @@ function modeModifier(input: {
 }): number {
   return (
     MODE_TYPE_MODIFIERS[input.mode][input.candidate.type] +
+    facetLoadModeModifier(input.candidate.facets, input.mode) +
     staleOrSupersededModeModifier(input.candidate.status, input.mode, input.matched) +
     reviewFileReferenceModifier(input.candidate, input.mode, input.taskFileReferences)
   );
+}
+
+function facetLoadModeModifier(
+  facets: ObjectFacets | undefined,
+  mode: LoadMemoryMode
+): number {
+  return facets?.load_modes?.includes(mode) === true ? FACET_LOAD_MODE_BOOST : 0;
 }
 
 function staleOrSupersededModeModifier(
@@ -654,6 +690,44 @@ function reviewFileReferenceModifier(
 
 function hasTagMatch(tags: readonly string[], taskTerms: readonly string[]): boolean {
   return tags.some((tag) => hasTermOverlap(tag, taskTerms));
+}
+
+function hasFacetMatch(facets: ObjectFacets | undefined, taskTerms: readonly string[]): boolean {
+  if (facets === undefined) {
+    return false;
+  }
+
+  return hasTermOverlap(
+    [facets.category, ...(facets.applies_to ?? []), ...(facets.load_modes ?? [])].join(" "),
+    taskTerms
+  );
+}
+
+function hasAppliesToMatch(
+  facets: ObjectFacets | undefined,
+  taskText: string,
+  taskFileReferences: readonly string[]
+): boolean {
+  const appliesTo = facets?.applies_to ?? [];
+
+  return appliesTo.some((path) => {
+    const normalized = path.toLowerCase();
+    return (
+      taskText.includes(normalized) ||
+      taskFileReferences.some((reference) => normalized.includes(reference.toLowerCase()))
+    );
+  });
+}
+
+function hasEvidenceMatch(
+  evidence: readonly Evidence[],
+  taskText: string,
+  taskTerms: readonly string[]
+): boolean {
+  return evidence.some((item) => {
+    const normalized = item.id.toLowerCase();
+    return taskText.includes(normalized) || hasTermOverlap(normalized, taskTerms);
+  });
 }
 
 function hasTermOverlap(value: string, taskTerms: readonly string[]): boolean {

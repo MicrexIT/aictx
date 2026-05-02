@@ -41,6 +41,9 @@ const EMPTY_SCORE_BREAKDOWN: RankScoreBreakdown = {
   tagMatch: 0,
   titleFtsMatch: 0,
   bodyFtsMatch: 0,
+  facetMatch: 0,
+  appliesToMatch: 0,
+  evidenceMatch: 0,
   relationNeighborhood: 0,
   relationPredicate: 0,
   recentMemoryBoost: 0,
@@ -505,6 +508,45 @@ describe("context pack rendering", () => {
     expect(files).toContain("services/billing/src/webhooks/handler.ts");
     expect(files).not.toContain(".aictx/memory/decisions/old-webhook.md");
   });
+
+  it("renders facet-aware sections and file references from facets and evidence", () => {
+    const result = renderContextPack(
+      input({
+        ranked: ranked({
+          mustKnow: [
+            item({
+              id: "constraint.test-convention",
+              type: "constraint",
+              title: "Use Vitest for unit coverage",
+              body: "Unit tests run through the package test script.",
+              facets: {
+                category: "testing",
+                applies_to: ["test/unit/context/render.test.ts"]
+              },
+              evidence: [{ kind: "file", id: "vitest.config.ts" }]
+            }),
+            item({
+              id: "gotcha.old-cache",
+              type: "gotcha",
+              title: "Worker-local cache was abandoned",
+              body: "Do not reintroduce worker-local cache state for retries.",
+              facets: {
+                category: "abandoned-attempt",
+                applies_to: ["src/worker/retries.ts"]
+              }
+            })
+          ]
+        })
+      })
+    );
+
+    expect(sectionText(result.markdown, "Relevant testing")).toContain("Use Vitest");
+    expect(sectionText(result.markdown, "Abandoned approaches")).toContain("Worker-local cache");
+    expect(sectionText(result.markdown, "Relevant files")).toContain(
+      "test/unit/context/render.test.ts"
+    );
+    expect(sectionText(result.markdown, "Relevant files")).toContain("vitest.config.ts");
+  });
 });
 
 function input(overrides: Partial<RenderContextPackInput> = {}): RenderContextPackInput {
@@ -561,6 +603,8 @@ function item(
     body: overrides.body ?? "Memory body.",
     scope: overrides.scope ?? projectScope(),
     tags: overrides.tags ?? [],
+    ...(overrides.facets === undefined ? {} : { facets: overrides.facets }),
+    ...(overrides.evidence === undefined ? {} : { evidence: overrides.evidence }),
     updated_at: overrides.updated_at ?? "2026-04-27T12:00:00+02:00"
   };
 

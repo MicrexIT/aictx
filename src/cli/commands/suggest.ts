@@ -21,6 +21,7 @@ export interface RegisterSuggestCommandOptions {
 interface SuggestCommandOptions {
   fromDiff?: boolean;
   bootstrap?: boolean;
+  afterTask?: string;
   patch?: boolean;
 }
 
@@ -33,6 +34,7 @@ export function registerSuggestCommand(
     .description("Build a read-only Aictx memory review packet.")
     .option("--from-diff", "Build a packet from current Git project changes.")
     .option("--bootstrap", "Build a first-run project memory packet.")
+    .option("--after-task <task>", "Build an end-of-task save/no-save review packet.")
     .option("--patch", "With --bootstrap, output a proposed structured memory patch.")
     .action(async (commandOptions: SuggestCommandOptions, command: Command) => {
       const result = await suggestMemory(suggestMemoryOptions(options, commandOptions));
@@ -61,6 +63,7 @@ function suggestMemoryOptions(
     cwd: options.cwd,
     fromDiff: commandOptions.fromDiff === true,
     bootstrap: commandOptions.bootstrap === true,
+    ...(commandOptions.afterTask === undefined ? {} : { afterTask: commandOptions.afterTask }),
     patch: commandOptions.patch === true
   };
 }
@@ -79,6 +82,8 @@ function renderSuggestData(data: SuggestMemoryData): string {
     renderList("Related memory", packet.related_memory_ids),
     renderList("Possible stale memory", packet.possible_stale_ids),
     renderList("Recommended memory", packet.recommended_memory),
+    renderList("Recommended facets", packet.recommended_facets ?? []),
+    renderList("Save decision checklist", packet.save_decision_checklist ?? []),
     renderList("Checklist", packet.agent_checklist)
   ].join("\n");
 }

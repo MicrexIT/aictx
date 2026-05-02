@@ -27,6 +27,7 @@ Use CLI for v1 setup, maintenance, recovery, export, inspection, local viewing, 
 * `aictx init`
 * `aictx check`
 * `aictx rebuild`
+* `aictx upgrade`
 * `aictx history`
 * `aictx restore`
 * `aictx rewind`
@@ -102,6 +103,8 @@ Dirty or untracked `.aictx/` files are not by themselves a reason to skip saving
 For setup, maintenance, inspection, export, local viewing, suggestion, audit, or recovery operations that are not exposed by MCP, use the `aictx` CLI instead of editing `.aictx/` files directly.
 
 Use `aictx suggest --from-diff --json` when current code changes need a memory review packet before drafting a patch. Use `aictx suggest --bootstrap --json` for a first-run repo memory pass.
+
+Use `aictx suggest --after-task "<task summary>" --json` at the end of meaningful work when you want a save/no-save review packet. The packet is read-only and packages changed files, related memory, possible stale candidates, recommended object types, recommended facets, and a save decision checklist.
 
 If loaded memory only contains the init-created project and architecture placeholders, treat Aictx as needing first-run seeding. For setup, onboarding, or "why is memory empty?" requests, run the bootstrap workflow proactively instead of waiting for the user to know the `bootstrap` term:
 
@@ -206,6 +209,30 @@ V1 object types are `project`, `architecture`, `decision`, `constraint`, `questi
 
 Use `gotcha` for known failure modes and traps. Use `workflow` for repeated project procedures. Do not create `history` or `task-note` object types; use Git/events/statuses for history and branch/task scope for temporary context.
 
+Schema-backed memory can include `facets` and object-level `evidence`.
+
+Use facets to make broad object types retrieval-friendly without inventing new object types:
+
+* `project-description`
+* `architecture`
+* `stack`
+* `convention`
+* `file-layout`
+* `testing`
+* `decision-rationale`
+* `abandoned-attempt`
+* `workflow`
+* `gotcha`
+* `debugging-fact`
+* `concept`
+* `open-question`
+
+Use `facets.applies_to` for relevant files, directories, subsystems, commands, or config names. Use `facets.load_modes` only when a memory is especially relevant to `coding`, `debugging`, `review`, `architecture`, or `onboarding`.
+
+Use object-level `evidence` for the current proof behind durable claims, such as `{ "kind": "file", "id": "src/billing/webhook.ts" }`, `{ "kind": "commit", "id": "abc123" }`, `{ "kind": "memory", "id": "decision.billing-retries" }`, `{ "kind": "relation", "id": "rel.example" }`, or `{ "kind": "task", "id": "Fix Stripe webhook retries" }`.
+
+Represent tried-and-abandoned approaches as active memory with `facets.category: "abandoned-attempt"` when future agents should avoid retrying them. Use `stale` or `superseded` only when the memory itself is no longer valid.
+
 Minimal patch shape:
 
 ```json
@@ -220,7 +247,15 @@ Minimal patch shape:
       "type": "decision",
       "title": "Billing retries moved to queue worker",
       "body": "Stripe webhook retries now happen in the queue worker instead of inside the HTTP handler.",
-      "tags": ["billing", "stripe", "webhooks"]
+      "tags": ["billing", "stripe", "webhooks"],
+      "facets": {
+        "category": "decision-rationale",
+        "applies_to": ["services/billing/src/webhooks/handler.ts"],
+        "load_modes": ["coding", "review"]
+      },
+      "evidence": [
+        { "kind": "file", "id": "services/billing/src/webhooks/handler.ts" }
+      ]
     }
   ]
 }

@@ -5,6 +5,7 @@ import fg from "fast-glob";
 
 import { generateRelationId } from "../core/ids.js";
 import type {
+  FacetCategory,
   ObjectId,
   ObjectStatus,
   ObjectType,
@@ -18,7 +19,7 @@ import type { CanonicalStorageSnapshot } from "../storage/read.js";
 import type { StoredMemoryObject } from "../storage/objects.js";
 import type { StoredMemoryRelation } from "../storage/relations.js";
 
-export type SuggestMode = "from_diff" | "bootstrap";
+export type SuggestMode = "from_diff" | "bootstrap" | "after_task";
 
 export interface SuggestReviewPacket {
   mode: SuggestMode;
@@ -26,6 +27,9 @@ export interface SuggestReviewPacket {
   related_memory_ids: ObjectId[];
   possible_stale_ids: ObjectId[];
   recommended_memory: ObjectType[];
+  recommended_facets?: FacetCategory[];
+  save_decision_checklist?: string[];
+  task?: string;
   agent_checklist: string[];
 }
 
@@ -36,6 +40,12 @@ export interface BuildSuggestFromDiffPacketOptions {
 
 export interface BuildSuggestBootstrapPacketOptions {
   projectRoot: string;
+  storage: CanonicalStorageSnapshot;
+}
+
+export interface BuildSuggestAfterTaskPacketOptions {
+  task: string;
+  changedFiles: readonly string[];
   storage: CanonicalStorageSnapshot;
 }
 
@@ -93,12 +103,39 @@ const BOOTSTRAP_RECOMMENDED_MEMORY: ObjectType[] = [
   "gotcha",
   "decision"
 ];
+const AFTER_TASK_RECOMMENDED_MEMORY: ObjectType[] = [
+  "decision",
+  "constraint",
+  "gotcha",
+  "workflow",
+  "fact",
+  "question"
+];
+const RECOMMENDED_FACETS: FacetCategory[] = [
+  "decision-rationale",
+  "convention",
+  "gotcha",
+  "workflow",
+  "debugging-fact",
+  "testing",
+  "file-layout",
+  "stack",
+  "abandoned-attempt",
+  "open-question"
+];
 const AGENT_CHECKLIST = [
   "Create memory only for durable future value.",
   "Prefer updating, marking stale, or superseding existing memory over creating duplicates.",
   "Use current code, tests, manifests, and user instructions as evidence.",
   "Keep each memory object short, linked, and reviewable.",
   "Save nothing if the work produced no durable future value."
+] as const;
+const SAVE_DECISION_CHECKLIST = [
+  "Save memory only when the task produced durable future value.",
+  "Prefer updating, marking stale, or superseding related memory over creating duplicates.",
+  "Add facets.category and evidence when creating or updating durable memory.",
+  "Use facets.applies_to for relevant files, subsystems, commands, or configs.",
+  "Record abandoned approaches as active abandoned-attempt memory only when future agents should avoid retrying them."
 ] as const;
 const STALE_CANDIDATE_STATUSES = new Set<ObjectStatus>([
   "active",
@@ -199,6 +236,24 @@ export function buildSuggestFromDiffPacket(
     related_memory_ids: related,
     possible_stale_ids: possibleStale,
     recommended_memory: [...FROM_DIFF_RECOMMENDED_MEMORY],
+    agent_checklist: [...AGENT_CHECKLIST]
+  };
+}
+
+export function buildSuggestAfterTaskPacket(
+  options: BuildSuggestAfterTaskPacketOptions
+): SuggestReviewPacket {
+  const changedFiles = uniqueSorted(options.changedFiles);
+
+  return {
+    mode: "after_task",
+    task: options.task,
+    changed_files: changedFiles,
+    related_memory_ids: relatedMemoryIds(options.storage, changedFiles),
+    possible_stale_ids: possibleStaleIds(options.storage, changedFiles),
+    recommended_memory: [...AFTER_TASK_RECOMMENDED_MEMORY],
+    recommended_facets: recommendedFacetsForTask(options.task, changedFiles),
+    save_decision_checklist: [...SAVE_DECISION_CHECKLIST],
     agent_checklist: [...AGENT_CHECKLIST]
   };
 }
@@ -363,6 +418,48 @@ function buildBootstrapPatchChanges(
   }
 
   return changes;
+}
+
+function recommendedFacetsForTask(
+  task: string,
+  changedFiles: readonly string[]
+): FacetCategory[] {
+  const recommended = new Set<FacetCategory>();
+  const taskText = task.toLowerCase();
+
+  if (/\b(test|spec|vitest|coverage)\b/u.test(taskText) || changedFiles.some(isTestPath)) {
+    recommended.add("testing");
+  }
+
+  if (changedFiles.some(isConfigOrManifestPath)) {
+    recommended.add("stack");
+    recommended.add("convention");
+  }
+
+  if (changedFiles.some(isDocsOrArchitecturePath) || /\b(architecture|design|schema)\b/u.test(taskText)) {
+    recommended.add("architecture");
+    recommended.add("decision-rationale");
+  }
+
+  for (const facet of RECOMMENDED_FACETS) {
+    recommended.add(facet);
+  }
+
+  return [...recommended];
+}
+
+function isTestPath(path: string): boolean {
+  return /(?:^|\/)(test|tests|__tests__)\/|\.test\.|\.spec\./u.test(path);
+}
+
+function isConfigOrManifestPath(path: string): boolean {
+  return /(?:^|\/)(package\.json|pnpm-lock\.yaml|tsconfig[^/]*\.json|vite\.config\.|vitest\.config\.|next\.config\.|svelte\.config\.)/u.test(
+    path
+  );
+}
+
+function isDocsOrArchitecturePath(path: string): boolean {
+  return path.startsWith("docs/") || /\.mdx?$/u.test(path);
 }
 
 function projectBootstrapBody(

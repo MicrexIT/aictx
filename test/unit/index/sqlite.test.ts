@@ -18,7 +18,7 @@ afterEach(async () => {
 });
 
 describe("SQLite index connection and migrations", () => {
-  it("opens an empty database and migrates it to schema version 1", async () => {
+  it("opens an empty database and migrates it to the current schema version", async () => {
     const aictxRoot = await createAictxRoot();
 
     const opened = await openIndexDatabase({ aictxRoot });
@@ -64,6 +64,7 @@ describe("SQLite index connection and migrations", () => {
         "objects_scope_kind_idx",
         "objects_scope_project_idx",
         "objects_scope_task_idx",
+        "objects_facet_category_idx",
         "objects_status_idx",
         "objects_type_idx",
         "objects_updated_at_idx",

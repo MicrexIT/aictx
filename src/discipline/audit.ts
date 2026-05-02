@@ -16,6 +16,11 @@ export type AuditRule =
   | "stale_or_superseded_cleanup"
   | "referenced_file_missing"
   | "missing_tags"
+  | "missing_facets"
+  | "missing_object_evidence"
+  | "task_diary_like_memory"
+  | "oversized_vague_memory"
+  | "duplicate_like_facet_category"
   | "missing_evidence"
   | "manifest_version_contradiction";
 
@@ -58,6 +63,7 @@ const GENERIC_TITLES = new Set([
   "work in progress"
 ]);
 const VERY_SHORT_BODY_WORD_LIMIT = 8;
+const OVERSIZED_BODY_WORD_LIMIT = 220;
 const MINIMUM_DUPLICATE_TAG_COUNT = 3;
 const SEVERITY_ORDER = new Map<AuditSeverity, number>([
   ["warning", 0],
@@ -77,6 +83,11 @@ export async function buildAuditFindings(
   findings.push(...duplicateLikeFindings(options.storage.objects));
   findings.push(...staleOrSupersededCleanupFindings(options.storage));
   findings.push(...missingTagFindings(options.storage.objects));
+  findings.push(...missingFacetFindings(options.storage));
+  findings.push(...missingObjectEvidenceFindings(options.storage));
+  findings.push(...taskDiaryLikeFindings(options.storage.objects));
+  findings.push(...oversizedVagueMemoryFindings(options.storage.objects));
+  findings.push(...duplicateFacetCategoryFindings(options.storage.objects));
   findings.push(...missingEvidenceFindings(options.storage.relations));
   findings.push(
     ...(await referencedFileMissingFindings({
@@ -92,6 +103,84 @@ export async function buildAuditFindings(
   );
 
   return findings.map(normalizeFinding).sort(compareFindings);
+}
+
+function missingFacetFindings(storage: CanonicalStorageSnapshot): AuditFinding[] {
+  if (storage.config.version < 2) {
+    return [];
+  }
+
+  return currentObjects(storage.objects, TAG_REQUIRED_STATUSES)
+    .filter((object) => object.sidecar.facets === undefined)
+    .map((object) => ({
+      severity: "info",
+      rule: "missing_facets",
+      memory_id: object.sidecar.id,
+      message: "Memory has no schema-backed facets.",
+      evidence: [{ kind: "memory", id: object.sidecar.id }]
+    }));
+}
+
+function missingObjectEvidenceFindings(storage: CanonicalStorageSnapshot): AuditFinding[] {
+  if (storage.config.version < 2) {
+    return [];
+  }
+
+  return currentObjects(storage.objects, TAG_REQUIRED_STATUSES)
+    .filter((object) => ["decision", "fact", "gotcha"].includes(object.sidecar.type))
+    .filter((object) => (object.sidecar.evidence ?? []).length === 0)
+    .map((object) => ({
+      severity: "info",
+      rule: "missing_object_evidence",
+      memory_id: object.sidecar.id,
+      message: "Decision, fact, and gotcha memory should include object-level evidence when possible.",
+      evidence: [{ kind: "memory", id: object.sidecar.id }]
+    }));
+}
+
+function taskDiaryLikeFindings(objects: readonly StoredMemoryObject[]): AuditFinding[] {
+  return currentObjects(objects, TAG_REQUIRED_STATUSES)
+    .filter((object) => isTaskDiaryLike(`${object.sidecar.title}\n${object.body}`))
+    .map((object) => ({
+      severity: "warning",
+      rule: "task_diary_like_memory",
+      memory_id: object.sidecar.id,
+      message: "Memory looks like a task diary instead of durable project knowledge.",
+      evidence: [{ kind: "memory", id: object.sidecar.id }]
+    }));
+}
+
+function oversizedVagueMemoryFindings(objects: readonly StoredMemoryObject[]): AuditFinding[] {
+  return currentObjects(objects, TAG_REQUIRED_STATUSES)
+    .filter((object) => wordCount(object.body) > OVERSIZED_BODY_WORD_LIMIT)
+    .filter((object) => object.sidecar.facets === undefined || isGenericTitle(object.sidecar.title))
+    .map((object) => ({
+      severity: "info",
+      rule: "oversized_vague_memory",
+      memory_id: object.sidecar.id,
+      message: "Memory is large and weakly categorized; split or facet it for reliable retrieval.",
+      evidence: [{ kind: "memory", id: object.sidecar.id }]
+    }));
+}
+
+function duplicateFacetCategoryFindings(objects: readonly StoredMemoryObject[]): AuditFinding[] {
+  const duplicateEvidence = new Map<ObjectId, Evidence[]>();
+  const candidates = currentObjects(objects, CURRENT_STATUSES).filter(
+    (object) => object.sidecar.facets !== undefined
+  );
+
+  recordDuplicateGroups(
+    duplicateEvidence,
+    groupObjects(candidates, facetCategoryKey)
+  );
+
+  return [...duplicateEvidence.entries()].map(([memoryId, evidence]) => ({
+    severity: "info",
+    rule: "duplicate_like_facet_category",
+    memory_id: memoryId,
+    message: "Memory shares a facet category and applicability hints with another current memory entry.",
+    evidence
+  }));
 }
 
 function vagueMemoryFindings(objects: readonly StoredMemoryObject[]): AuditFinding[] {
@@ -316,6 +405,12 @@ function wordCount(text: string): number {
   return text.split(/[^A-Za-z0-9]+/u).filter((word) => word.length > 0).length;
 }
 
+function isTaskDiaryLike(text: string): boolean {
+  return /\b(i|we|agent)\s+(changed|updated|modified|fixed|implemented|ran)\b/i.test(text) ||
+    /\b(tests?|typecheck|build)\s+passed\b/i.test(text) ||
+    /\bchanged\s+\d+\s+files?\b/i.test(text);
+}
+
 function groupObjects(
   objects: readonly StoredMemoryObject[],
   keyForObject: (object: StoredMemoryObject) => string | null
@@ -343,6 +438,22 @@ function duplicateTagKey(object: StoredMemoryObject): string | null {
   }
 
   return `${object.sidecar.type}:${tags.join(",")}`;
+}
+
+function facetCategoryKey(object: StoredMemoryObject): string | null {
+  const facets = object.sidecar.facets;
+
+  if (facets === undefined) {
+    return null;
+  }
+
+  const appliesTo = [...(facets.applies_to ?? [])].sort().join(",");
+
+  if (appliesTo === "") {
+    return null;
+  }
+
+  return `${facets.category}:${appliesTo}`;
 }
 
 function recordDuplicateGroups(

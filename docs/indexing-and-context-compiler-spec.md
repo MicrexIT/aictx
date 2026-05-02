@@ -2,7 +2,7 @@
 
 ## 1. Purpose
 
-This document defines the v1 generated index and context compiler behavior for Aictx.
+This document defines the v2 generated index and context compiler behavior for Aictx.
 
 This spec owns:
 
@@ -29,7 +29,7 @@ This spec does not define:
 
 ## 2. Index Principles
 
-V1 indexing must follow these rules:
+Indexing must follow these rules:
 
 * The SQLite index is generated data.
 * The index is never canonical.
@@ -58,7 +58,7 @@ Rules:
 
 ## 4. SQLite Schema
 
-V1 schema:
+V2 schema:
 
 ```sql
 CREATE TABLE meta (
@@ -81,6 +81,10 @@ CREATE TABLE objects (
   scope_branch TEXT,
   scope_task TEXT,
   tags_json TEXT NOT NULL,
+  facets_json TEXT,
+  facet_category TEXT,
+  applies_to_json TEXT,
+  evidence_json TEXT,
   source_json TEXT,
   superseded_by TEXT,
   created_at TEXT NOT NULL,
@@ -116,7 +120,9 @@ CREATE VIRTUAL TABLE objects_fts USING fts5(
   object_id UNINDEXED,
   title,
   body,
-  tags
+  tags,
+  facets,
+  evidence
 );
 ```
 
@@ -130,6 +136,7 @@ CREATE INDEX objects_scope_project_idx ON objects(scope_project);
 CREATE INDEX objects_scope_kind_idx ON objects(scope_kind);
 CREATE INDEX objects_scope_branch_idx ON objects(scope_branch);
 CREATE INDEX objects_scope_task_idx ON objects(scope_task);
+CREATE INDEX objects_facet_category_idx ON objects(facet_category);
 CREATE INDEX relations_from_idx ON relations(from_id);
 CREATE INDEX relations_to_idx ON relations(to_id);
 CREATE INDEX relations_predicate_idx ON relations(predicate);
@@ -154,12 +161,13 @@ event_count
 Rules:
 
 * `schema_version` is the generated index schema version, not the storage format version.
-* V1 `schema_version` is `1`.
+* V2 `schema_version` is `2`.
 * `git_available` records whether the project root was inside a Git worktree at rebuild time.
 * `source_git_commit` records the Git `HEAD` used at rebuild time when Git is available, otherwise it is empty or omitted.
 * When Git is available, the index may be stale when `.aictx/` has uncommitted canonical changes.
 * `objects_fts.object_id` stores `objects.id`.
-* FTS rows must be maintained by rebuild or incremental update code; v1 does not require SQLite triggers.
+* `facets.category`, `facets.applies_to`, and object-level evidence are stored in dedicated JSON/search columns so retrieval can prefer memories tied to relevant paths, tests, configs, or prior memory.
+* FTS rows must be maintained by rebuild or incremental update code; v2 does not require SQLite triggers.
 * `events.line_number` is the 1-based line number from `events.jsonl` at rebuild time.
 
 ## 5. Rebuild Behavior
@@ -272,7 +280,7 @@ Validation:
 
 * `task` must be non-empty after trimming.
 * `token_budget` must be greater than `500`.
-* `token_budget` values above `50000` must be treated as `50000` in v1.
+* `token_budget` values above `50000` must be treated as `50000`.
 * `mode` must be one of the allowed modes.
 
 Mode profiles:
@@ -293,7 +301,7 @@ Pipeline:
 
 1. Extract task terms from the task string.
 2. Match exact memory IDs, relation IDs, file paths, and tags mentioned in the task.
-3. Run FTS search over titles, bodies, and tags.
+3. Run FTS search over titles, bodies, tags, facets, and object evidence.
 4. Add directly related objects using graph traversal.
 5. Add recent high-priority memory.
 6. Filter by status and scope.
@@ -306,7 +314,7 @@ Graph traversal:
 * Include one-hop relations from high-scoring candidates.
 * Include both outgoing and incoming relations.
 * Prefer `requires`, `depends_on`, `supersedes`, and `conflicts_with` over `related_to`.
-* Do not traverse more than one hop in v1.
+* Do not traverse more than one hop.
 
 Scope filtering:
 
@@ -315,7 +323,15 @@ Scope filtering:
 * Include `kind: "task"` memory only when it matches the current task terms.
 * Use the denormalized `scope_kind`, `scope_project`, `scope_branch`, and `scope_task` columns for filtering; `scope_json` remains the canonical indexed copy for diagnostics and rebuild checks.
 * Prefer project-scoped memory over branch/task-scoped memory unless the branch/task match is strong.
-* Global, workspace, and cross-project scopes are not supported in v1.
+* Global, workspace, and cross-project scopes are not supported.
+
+Facet and evidence matching:
+
+* `facets.category` terms should boost memories whose durable category fits the task.
+* `facets.applies_to` should boost memories tied to paths, tests, configs, or subsystem names mentioned in the task.
+* `facets.load_modes` should boost memories when the requested load mode matches.
+* File, memory, relation, commit, and task evidence should participate in direct matching and FTS material.
+* Facets and evidence are ranking hints, not proof that a memory is correct.
 
 Status filtering:
 
@@ -324,9 +340,9 @@ Status filtering:
 * `rejected` must be excluded by default.
 * `stale` and `superseded` may appear in `Stale or superseded memory to avoid`.
 
-## 10. V1 Scoring Rules
+## 10. V2 Scoring Rules
 
-V1 scoring should be simple, explainable, and deterministic.
+Scoring should be simple, explainable, and deterministic.
 
 Base score sources:
 
@@ -336,8 +352,12 @@ exact body_path match:           +80
 tag match:                       +40
 title FTS match:                 +30
 body FTS match:                  +15
+facet category match:            +18
+facet applies_to match:          +18
+object evidence match:           +10
 one-hop relation from match:     +12
 recent memory boost:              +5
+load-mode facet boost:            +6
 ```
 
 Recent memory boost:
@@ -391,7 +411,7 @@ Tie-breakers:
 3. Newer `updated_at`.
 4. Lexicographic ID.
 
-The exact numeric values may be tuned later, but v1 implementation should keep scoring deterministic and inspectable.
+The exact numeric values may be tuned later, but implementation should keep scoring deterministic and inspectable.
 
 ## 11. Token Budget Handling
 
@@ -399,7 +419,7 @@ Aictx should treat `token_budget` as an optional token target for packaging, not
 
 Token counting:
 
-* V1 may approximate tokens as `ceil(character_count / 4)`.
+* Aictx may approximate tokens as `ceil(character_count / 4)`.
 * If `token_budget` is omitted, no budget-driven truncation or compression should occur.
 * If `token_budget` is provided, lower-priority sections may be compacted or omitted first.
 * If preserved high-priority content exceeds the target, render it anyway and report `budget_status: "over_target"` in structured output.
@@ -411,12 +431,17 @@ Inclusion priority:
 3. `Do not do`.
 4. Relevant constraints.
 5. Relevant decisions.
-6. Relevant gotchas.
-7. Relevant workflows.
-8. Open questions.
-9. Relevant facts.
-10. Relevant files.
-11. Stale or superseded memory to avoid.
+6. Relevant stack.
+7. Relevant conventions.
+8. Relevant testing.
+9. Relevant file layout.
+10. Relevant gotchas.
+11. Relevant workflows.
+12. Abandoned approaches.
+13. Open questions.
+14. Relevant facts.
+15. Relevant files.
+16. Stale or superseded memory to avoid.
 
 Packaging rules:
 
@@ -448,7 +473,17 @@ Generated from: <project id>[, <branch>@<commit> when Git is available]
 
 ## Relevant gotchas
 
+## Relevant stack
+
+## Relevant conventions
+
+## Relevant testing
+
+## Relevant file layout
+
 ## Relevant workflows
+
+## Abandoned approaches
 
 ## Relevant facts
 
@@ -467,7 +502,8 @@ Rendering rules:
 * Each bullet should include the source memory ID when useful.
 * Stale/superseded warnings must be clearly labeled.
 * Rejected memory must not appear unless a future explicit debug mode is added.
-* `Relevant files` should include path-like references found in selected memory bodies or source payloads; omit the section when no file references are available.
+* `Relevant files` should include path-like references found in selected memory bodies, source payloads, `facets.applies_to`, and file evidence; omit the section when no file references are available.
+* Memories with `facets.category: "abandoned-attempt"` should render as active warnings in `Abandoned approaches`, not as stale memory.
 * Token target, estimated token count, budget status, truncation status, and omitted IDs are structured output metadata, not Markdown context.
 
 Example:

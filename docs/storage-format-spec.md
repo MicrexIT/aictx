@@ -2,7 +2,7 @@
 
 ## 1. Purpose
 
-This document defines the v1 on-disk storage format for Aictx.
+This document defines the v2 on-disk storage format for Aictx.
 
 Aictx stores durable project memory as local files under `.aictx/`. The storage format must be readable by humans, deterministic for tools, rebuildable into generated indexes, and safe to review or revert with Git when Git is available.
 
@@ -30,7 +30,7 @@ Those belong in `mcp-and-cli-api-spec.md` and `indexing-and-context-compiler-spe
 
 ## 2. Storage Principles
 
-V1 storage must follow these rules:
+Storage must follow these rules:
 
 * Git is optional for core storage.
 * `.aictx/` lives inside the resolved local project root.
@@ -48,7 +48,7 @@ V1 storage must follow these rules:
 
 ## 3. Directory Layout
 
-V1 uses this layout:
+Storage uses this layout:
 
 ```text
 .aictx/
@@ -128,11 +128,11 @@ Recommended `.gitignore` entries when Git is available:
 
 `.aictx/config.json` is canonical and should be tracked when Git is available.
 
-V1 example:
+V2 example:
 
 ```json
 {
-  "version": 1,
+  "version": 2,
   "project": {
     "id": "project.billing-api",
     "name": "Billing API"
@@ -171,9 +171,9 @@ Version behavior:
 
 * Missing `version` is an error.
 * `version > supported_version` must refuse writes.
-* `version < supported_version` must refuse writes until migration exists.
+* `version < supported_version` must be upgraded before writes that require the newer schema.
 * Read-only inspection may proceed when safe.
-* V1 must not silently rewrite storage formats.
+* Aictx must not silently rewrite storage formats; use `aictx upgrade` for v1-to-v2 migration.
 
 ## 5. Memory Objects
 
@@ -188,7 +188,7 @@ The Markdown file contains prose. The JSON sidecar contains canonical metadata a
 
 ### 5.1 Object Types
 
-V1 object types:
+Object types:
 
 * `project`
 * `architecture`
@@ -216,7 +216,9 @@ note           -> .aictx/memory/notes/
 concept        -> .aictx/memory/concepts/
 ```
 
-`gotcha` captures known failure modes, traps, recurring bugs, and behavior future agents should avoid. `workflow` captures repeated project procedures such as release steps, debugging paths, migrations, local setup, or recurring maintenance. Do not add `history` or `task-note` as object types in v1; use Git/events/statuses for history and branch/task scope for temporary context.
+`gotcha` captures known failure modes, traps, recurring bugs, and behavior future agents should avoid. `workflow` captures repeated project procedures such as release steps, debugging paths, migrations, local setup, or recurring maintenance. Do not add `history` or `task-note` object types; use Git/events/statuses for history and branch/task scope for temporary context.
+
+V2 keeps the broad object type taxonomy and adds object-level facets for more specific agent-memory categories.
 
 ### 5.2 Object Statuses
 
@@ -309,6 +311,17 @@ Example:
     "task": null
   },
   "tags": ["billing", "stripe", "webhooks"],
+  "facets": {
+    "category": "decision-rationale",
+    "applies_to": ["src/webhooks/stripe.ts", "src/workers/billing-retries.ts"],
+    "load_modes": ["coding", "debugging"]
+  },
+  "evidence": [
+    {
+      "kind": "file",
+      "id": "src/workers/billing-retries.ts"
+    }
+  ],
   "source": {
     "kind": "agent",
     "task": "Fix Stripe webhook retries",
@@ -336,6 +349,8 @@ Required fields:
 Optional fields:
 
 * `tags`
+* `facets`
+* `evidence`
 * `source`
 * `superseded_by`
 
@@ -347,12 +362,39 @@ Rules:
 * Markdown H1 should match `title`; mismatch is a warning.
 * `created_at` and `updated_at` must be ISO 8601 strings with timezone offsets.
 * `tags` must be lowercase slug strings.
-* Unknown top-level fields are invalid in v1.
+* `facets.category` should classify the durable claim with one of the v2 facet categories.
+* `facets.applies_to` should list relevant paths, globs, or subsystem hints when the memory is not globally applicable.
+* `facets.load_modes` may restrict boosts to `coding`, `debugging`, `review`, `architecture`, or `onboarding`.
+* `evidence` should link durable claims to supporting files, commits, memory objects, relations, or tasks.
+* Unknown top-level fields are invalid.
+
+V2 facet categories:
+
+* `project-description`
+* `architecture`
+* `stack`
+* `convention`
+* `file-layout`
+* `testing`
+* `decision-rationale`
+* `abandoned-attempt`
+* `workflow`
+* `gotcha`
+* `debugging-fact`
+* `concept`
+* `open-question`
+
+Rules:
+
+* Use facets instead of adding narrower object types.
+* Represent tried-and-abandoned approaches as active memory with `facets.category: "abandoned-attempt"`.
+* Use `stale` or `superseded` only when the memory object itself is no longer valid.
+* Leave `evidence` empty during conservative migrations rather than inventing support.
 
 Scope rules:
 
 * `scope` must be an object with `kind`, `project`, `branch`, and `task` keys.
-* `scope.kind` must be `project`, `branch`, or `task` in v1.
+* `scope.kind` must be `project`, `branch`, or `task`.
 * `scope.project` must be the local Aictx project ID, such as `project.billing-api`.
 * `aictx init` should default `config.project.id` from the project root directory basename.
 * `scope.kind: "project"` means the memory applies to the local project regardless of branch or task.
@@ -363,7 +405,7 @@ Scope rules:
 * Task-scoped memory must have a non-empty `task`; `branch` may be a string or `null`.
 * Branch scope must not be used when Git is unavailable.
 * Branch scope must not match when Git is in detached HEAD state because there is no current branch name.
-* Global, workspace, and cross-project scopes are reserved for future versions and must not appear in v1 object sidecars.
+* Global, workspace, and cross-project scopes are reserved for future versions and must not appear in object sidecars.
 
 ## 7. Markdown Body Format
 

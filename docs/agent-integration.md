@@ -280,7 +280,11 @@ Create a relation with `create_relation` when the connection is durable and usef
 }
 ```
 
-The v1 object types are `project`, `architecture`, `decision`, `constraint`, `question`, `fact`, `gotcha`, `workflow`, `note`, and `concept`. Use `gotcha` for known failure modes and traps. Use `workflow` for repeated project procedures. Do not create `history` or `task-note` object types; use Git/events/statuses for history and branch/task scope for temporary context.
+The object types remain broad: `project`, `architecture`, `decision`, `constraint`, `question`, `fact`, `gotcha`, `workflow`, `note`, and `concept`. Use v2 facets for more specific durable categories such as `stack`, `convention`, `testing`, `file-layout`, `decision-rationale`, `abandoned-attempt`, `workflow`, `gotcha`, and `debugging-fact`. Do not create `history` or `task-note` object types; use Git/events/statuses for history and branch/task scope for temporary context.
+
+After meaningful work, prefer `aictx suggest --after-task "<task>" --json` before saving memory when the right durable update is not obvious. The helper is read-only and packages changed files, related memory, stale or duplicate candidates, recommended facets, and a save/no-save checklist.
+
+Use `facets.applies_to` to tie memory to relevant files, tests, configs, or subsystems. Add object-level `evidence` when a durable decision, gotcha, fact, or convention depends on a file, commit, memory object, relation, or task. Leave evidence empty rather than inventing support.
 
 Do not save secrets, tokens, credentials, private keys, sensitive logs, unverified speculation, or short-lived implementation notes.
 

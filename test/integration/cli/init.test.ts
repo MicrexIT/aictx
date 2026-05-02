@@ -148,13 +148,10 @@ describe("aictx init CLI", () => {
     expect(output.stdout()).toContain("aictx save --file bootstrap-memory.json");
 
     const agentGuidance = await readFile(join(projectRoot, "AGENTS.md"), "utf8");
-    expect(agentGuidance).toContain("pnpm exec aictx");
-    expect(agentGuidance).toContain("npm exec aictx");
-    expect(agentGuidance).toContain("./node_modules/.bin/aictx");
-    expect(agentGuidance).toContain("npx --package @aictx/memory -- aictx");
-    expect(agentGuidance).toContain(
-      "Dirty or untracked `.aictx/` files are not by themselves a reason to skip saving durable memory"
-    );
+    expect(agentGuidance).toContain("aictx suggest --after-task");
+    expect(agentGuidance).toContain("save/no-save decision");
+    expect(agentGuidance).toContain("useful tags/facets/evidence");
+    expect(agentGuidance).toContain("Save nothing when there is no durable future value");
   });
 
   it("skips repo agent guidance when requested", async () => {

@@ -1,5 +1,5 @@
 {
-  "$id": "https://aictx.dev/schemas/v1/config.schema.json",
+  "$id": "https://aictx.dev/schemas/v2/config.schema.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "properties": {
@@ -56,7 +56,10 @@
       "type": "object"
     },
     "version": {
-      "const": 1
+      "enum": [
+        1,
+        2
+      ]
     }
   },
   "required": [
