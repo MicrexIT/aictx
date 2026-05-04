@@ -265,26 +265,15 @@
   let exportFilesWritten = $state(0);
   let exportManifestPath = $state("");
   let briefState = $state<BriefState>("idle");
-  let graphScale = $state(1);
-  let graphOffsetX = $state(0);
-  let graphOffsetY = $state(0);
   let expandedGraphGroups = $state<string[]>([]);
-  let graphScope = $state<GraphScope>("local");
-  let graphDepth = $state<GraphDepth>(2);
-  let showGraphConcepts = $state(true);
-  let showImplicitGraphEdges = $state(true);
-  let groupGraphNodes = $state(true);
-  let isDraggingGraph = $state(false);
-  let dragStartX = $state(0);
-  let dragStartY = $state(0);
-  let dragOriginX = $state(0);
-  let dragOriginY = $state(0);
   let pendingOpenObjectId = $state<string | null>(null);
   let githubStars = $state<number | null>(null);
 
   const graphWidth = 480;
   const graphMinHeight = 420;
   const graphGroupThreshold = 5;
+  const graphScope: GraphScope = "local";
+  const graphDepth: GraphDepth = 2;
   const token = new URLSearchParams(window.location.search).get("token") ?? "";
   const githubRepoUrl = "https://github.com/MicrexIT/aictx";
   const githubReadmeUrl = `${githubRepoUrl}#readme`;
@@ -298,7 +287,6 @@
     { id: "security-gdpr", label: "Security/GDPR" },
     { id: "review", label: "Review memory" }
   ];
-
   const objects = $derived(bootstrap?.objects ?? []);
   const relations = $derived(bootstrap?.relations ?? []);
   const objectById = $derived(new Map(objects.map((object) => [object.id, object])));
@@ -359,7 +347,7 @@
       linkedObjectIds,
       graphScope,
       graphDepth,
-      showGraphConcepts
+      true
     )
   );
   const hiddenUnlinkedConcepts = $derived.by(() =>
@@ -368,7 +356,6 @@
   const graphHeight = $derived.by(() =>
     graphHeightForObjects(graphObjects, selectedObject?.id ?? null, graphFocusId)
   );
-  const graphSurfaceHeight = $derived(Math.max(382, Math.round(graphHeight * 1.24)));
   const graphNodeList = $derived.by(() =>
     buildGraphNodes(
       graphObjects,
@@ -376,7 +363,7 @@
       selectedObject?.id ?? null,
       graphFocusId,
       expandedGraphGroups,
-      groupGraphNodes
+      true
     )
   );
   const graphNodeById = $derived(new Map(graphNodeList.flatMap((node) => node.objectIds.map((id) => [id, node]))));
@@ -384,7 +371,7 @@
     graphNodeList.reduce((total, node) => total + (node.grouped ? node.objectIds.length : 0), 0)
   );
   const graphEdgeList = $derived.by(() =>
-    buildGraphEdges(relations, graphNodeById, graphNodeList, graphFocusId, showImplicitGraphEdges)
+    buildGraphEdges(relations, graphNodeById, graphNodeList, graphFocusId, true)
   );
   const directGraphEdgeCount = $derived(graphEdgeList.filter((edge) => !edge.implicit).length);
   const graphPreview = $derived.by(() =>
@@ -448,7 +435,6 @@
       bootstrap = envelope.data;
       selectedObjectId = envelope.data.objects[0]?.id ?? null;
       graphFocusId = null;
-      fitGraph();
       loadState = "ready";
     } catch (error) {
       loadState = "error";
@@ -583,44 +569,6 @@
       objectMatchesSearch(object, searchQuery) && matchesTaskFilter(object, filter, linkedObjectIds)
     );
     selectedObjectId = nextObject?.id ?? objects[0]?.id ?? null;
-    fitGraph();
-  }
-
-  function handleGraphWheel(event: WheelEvent): void {
-    event.preventDefault();
-    const nextScale = clamp(graphScale + (event.deltaY > 0 ? -0.08 : 0.08), 0.55, 2.2);
-    graphScale = nextScale;
-  }
-
-  function startGraphDrag(event: MouseEvent): void {
-    isDraggingGraph = true;
-    dragStartX = event.clientX;
-    dragStartY = event.clientY;
-    dragOriginX = graphOffsetX;
-    dragOriginY = graphOffsetY;
-  }
-
-  function moveGraphDrag(event: MouseEvent): void {
-    if (!isDraggingGraph) {
-      return;
-    }
-
-    graphOffsetX = dragOriginX + event.clientX - dragStartX;
-    graphOffsetY = dragOriginY + event.clientY - dragStartY;
-  }
-
-  function endGraphDrag(): void {
-    isDraggingGraph = false;
-  }
-
-  function zoomGraph(delta: number): void {
-    graphScale = clamp(graphScale + delta, 0.55, 2.2);
-  }
-
-  function fitGraph(): void {
-    graphScale = 1;
-    graphOffsetX = 0;
-    graphOffsetY = 0;
   }
 
   function activateGraphNode(node: GraphNode): void {
@@ -636,18 +584,10 @@
     expandedGraphGroups = expandedGraphGroups.includes(groupKey)
       ? expandedGraphGroups.filter((key) => key !== groupKey)
       : [...expandedGraphGroups, groupKey];
-    fitGraph();
   }
 
-  function setGraphScope(scope: GraphScope): void {
-    graphScope = scope;
-    expandedGraphGroups = [];
-    fitGraph();
-  }
-
-  function setGraphDepth(depth: GraphDepth): void {
-    graphDepth = depth;
-    fitGraph();
+  function handleTaskFilterChange(event: Event): void {
+    chooseTaskFilter((event.currentTarget as HTMLSelectElement).value as TaskFilter);
   }
 
   function objectMatchesSearch(object: MemoryObjectSummary, rawQuery: string): boolean {
@@ -823,17 +763,32 @@
     return isDenseNeighborhood ? Math.max(graphMinHeight, neededHeight) : graphMinHeight;
   }
 
-  function graphScopeLabel(): string {
-    if (graphScope === "local") {
-      return graphFocusId === null ? "Local graph uses the selected memory." : "Local graph uses the graph focus.";
-    }
-
-    return "Overview graph shows matching memories, grouped by type when dense.";
-  }
-
   function graphNodeConnectionCount(node: GraphNode, edges: GraphEdge[]): number {
     return edges.filter((edge) => edge.from.id === node.id || edge.to.id === node.id)
       .reduce((total, edge) => total + edge.count, 0);
+  }
+
+  function graphNodeRelationshipLabel(node: GraphNode, edges: GraphEdge[]): string {
+    if (node.selected) {
+      return "Current memory";
+    }
+
+    if (node.grouped) {
+      return "Grouped lane";
+    }
+
+    const explicitPredicates = edges
+      .filter((edge) => !edge.implicit && (edge.from.id === node.id || edge.to.id === node.id))
+      .map((edge) => {
+        const direction = edge.from.id === node.id ? "from" : "to";
+        return `${direction} ${edge.predicate}${edge.count > 1 ? ` x${edge.count}` : ""}`;
+      });
+
+    if (explicitPredicates.length > 0) {
+      return uniqueSorted(explicitPredicates).join(", ");
+    }
+
+    return "Inferred link";
   }
 
   function graphNodeActionLabel(node: GraphNode): string {
@@ -1182,33 +1137,6 @@
       });
 
     return [...explicitEdges, ...implicitEdges];
-  }
-
-  function graphEdgePath(edge: GraphEdge): string {
-    const midX = (edge.from.x + edge.to.x) / 2;
-    const midY = (edge.from.y + edge.to.y) / 2;
-    const dx = edge.to.x - edge.from.x;
-    const dy = edge.to.y - edge.from.y;
-    const length = Math.max(1, Math.hypot(dx, dy));
-    const curve = edge.implicit ? 16 : 26;
-    const controlX = midX - (dy / length) * curve;
-    const controlY = midY + (dx / length) * curve;
-
-    return `M ${edge.from.x} ${edge.from.y} Q ${controlX} ${controlY} ${edge.to.x} ${edge.to.y}`;
-  }
-
-  function graphEdgeLabelPosition(edge: GraphEdge): { x: number; y: number } {
-    const midX = (edge.from.x + edge.to.x) / 2;
-    const midY = (edge.from.y + edge.to.y) / 2;
-    const dx = edge.to.x - edge.from.x;
-    const dy = edge.to.y - edge.from.y;
-    const length = Math.max(1, Math.hypot(dx, dy));
-    const curve = edge.implicit ? 9 : 15;
-
-    return {
-      x: midX - (dy / length) * curve,
-      y: midY + (dx / length) * curve - 6
-    };
   }
 
   function laneY(index: number, total: number, top: number, bottom: number): number {
@@ -1771,10 +1699,6 @@
     return Math.max(min, Math.min(max, value));
   }
 
-  function graphText(value: string, maxLength: number): string {
-    return value.length > maxLength ? `${value.slice(0, maxLength - 1)}...` : value;
-  }
-
   function cssEscape(value: string): string {
     return value.replace(/["\\]/g, "\\$&");
   }
@@ -1870,7 +1794,7 @@
       <nav class="page-links" aria-label="Handbook sections">
         <span>PAGES</span>
         <a href="#start-here">Overview</a>
-        <a href="#memory-graph">Context Map {bootstrap.counts.objects}</a>
+        <a href="#memory-graph">Context Table {bootstrap.counts.objects}</a>
         <a href="#do-not-do">Do Not Do</a>
         <a href="#coding-workflows">Coding Workflows</a>
         <a href="#architecture">Architecture</a>
@@ -1994,127 +1918,24 @@
         </section>
       </header>
 
-      <section class="task-filters" aria-label="Memory focus">
-        <span>Focus memory</span>
-        {#each taskOptions as option (option.id)}
-          <button
-            type="button"
-            class:active={taskFilter === option.id}
-            onclick={() => chooseTaskFilter(option.id)}
-          >
-            {option.label}
-          </button>
-        {/each}
-      </section>
-
-      <section class="graph-panel" id="memory-graph" aria-label="Repo Context Map" data-testid="relation-graph">
+      <section class="graph-panel" id="memory-graph" aria-label="Repo Context Table" data-testid="relation-graph">
         <div class="section-heading">
-          <h2>Repo Context Map</h2>
-          <p>See the decisions, rules, and gotchas that improve agent code quality before editing.</p>
+          <h2>Repo Context Table</h2>
+          <p>Scan the decisions, rules, and gotchas that improve agent code quality before editing.</p>
         </div>
 
-        <div class="graph-toolbar" aria-label="Graph controls">
-          <button type="button" class:active={graphScope === "overview"} onclick={() => setGraphScope("overview")}>Overview</button>
-          <button type="button" class:active={graphScope === "local"} onclick={() => setGraphScope("local")}>Local</button>
-          <button type="button" class:active={graphDepth === 1} disabled={graphScope !== "local"} onclick={() => setGraphDepth(1)}>Depth 1</button>
-          <button type="button" class:active={graphDepth === 2} disabled={graphScope !== "local"} onclick={() => setGraphDepth(2)}>Depth 2</button>
-          <button type="button" onclick={() => zoomGraph(0.12)}>Zoom in</button>
-          <button type="button" onclick={() => zoomGraph(-0.12)}>Zoom out</button>
-          <button type="button" onclick={() => fitGraph()}>Fit</button>
-        </div>
-
-        <div class="graph-filterbar" aria-label="Graph filters">
-          <label>
-            <input type="checkbox" bind:checked={showGraphConcepts} />
-            Concepts
-          </label>
-          <label>
-            <input type="checkbox" bind:checked={showImplicitGraphEdges} />
-            Inferred links
-          </label>
-          <label>
-            <input type="checkbox" bind:checked={groupGraphNodes} />
-            Group dense lanes
-          </label>
-          <span>{graphScopeLabel()}</span>
-        </div>
-
-        <!-- svelte-ignore a11y_no_noninteractive_element_interactions, a11y_no_noninteractive_tabindex -->
-        <div
-          class="graph-surface"
-          role="application"
-          aria-label="Pan and zoom memory graph"
-          tabindex="0"
-          onwheel={handleGraphWheel}
-          onmousedown={startGraphDrag}
-          onmousemove={moveGraphDrag}
-          onmouseup={endGraphDrag}
-          onmouseleave={endGraphDrag}
-        >
-          <svg
-            class="relation-graph-svg"
-            viewBox={`0 0 ${graphWidth} ${graphHeight}`}
-            style={`height: ${graphSurfaceHeight}px; min-height: ${graphSurfaceHeight}px;`}
-            role="img"
-            aria-labelledby="relation-graph-title"
-            data-testid="relation-graph-svg"
-          >
-            <title id="relation-graph-title">Memory graph for {bootstrap.project.name}</title>
-            <g transform={`translate(${graphOffsetX} ${graphOffsetY}) scale(${graphScale})`}>
-              {#each graphEdgeList as edge (edge.id)}
-                <g
-                  class:highlighted={edge.highlighted}
-                  class:dimmed={edge.dimmed}
-                  class:implicit={edge.implicit}
-                  class="graph-edge"
-                  data-testid={edge.implicit ? undefined : `relation-graph-edge-${edge.id}`}
-                >
-                  <line class="graph-edge-measure" x1={edge.from.x} y1={edge.from.y} x2={edge.to.x} y2={edge.to.y} />
-                  <path d={graphEdgePath(edge)} />
-                  {#if graphNodeList.length <= 8 || edge.highlighted}
-                    <text x={graphEdgeLabelPosition(edge).x} y={graphEdgeLabelPosition(edge).y}>
-                      {edge.predicate}{edge.count > 1 ? ` ×${edge.count}` : ""}
-                    </text>
-                  {/if}
-                </g>
-              {/each}
-
-              {#each graphNodeList as node (node.id)}
-                <g
-                  class:selected-node={node.selected}
-                  class:neighbor-node={node.neighbor}
-                  class:dimmed={node.dimmed}
-                  class:group-node={node.grouped}
-                  class={`graph-node type-${node.type}`}
-                  role="button"
-                  tabindex="0"
-                  onclick={() => {
-                    activateGraphNode(node);
-                  }}
-                  onkeydown={(event) => {
-                    if (event.key === "Enter" || event.key === " ") {
-                      event.preventDefault();
-                      activateGraphNode(node);
-                    }
-                  }}
-                  data-testid={`relation-graph-node-${node.id}`}
-                >
-                  <title>{node.grouped ? `${node.title}. Activate to expand this group.` : `${node.title} (${node.id})`}</title>
-                  <circle class="graph-node-dot" cx={node.x} cy={node.y} r={node.radius} fill={node.color} />
-                  <foreignObject
-                    class="graph-node-title-wrap"
-                    x={node.labelX}
-                    y={node.labelY - 11}
-                    width={node.labelWidth}
-                    height="22"
-                  >
-                    <div class="graph-node-label" title={node.title}>{node.title}</div>
-                  </foreignObject>
-                </g>
-              {/each}
-            </g>
-          </svg>
-        </div>
+        <section class="context-filters" aria-label="Context filters">
+          <div class="filter-row">
+            <label class="filter-field filter-field-wide">
+              <span>Task focus</span>
+              <select value={taskFilter} onchange={handleTaskFilterChange} data-testid="context-task-filter">
+                {#each taskOptions as option (option.id)}
+                  <option value={option.id}>{option.label}</option>
+                {/each}
+              </select>
+            </label>
+          </div>
+        </section>
 
         {#if directGraphEdgeCount === 0}
           <p class="empty-copy" data-testid="relation-graph-empty">No direct relations for this object.</p>
@@ -2122,30 +1943,31 @@
 
         {#if hiddenUnlinkedConcepts.length > 0}
           <p class="graph-note">
-            {hiddenUnlinkedConcepts.length} unlinked concepts hidden from graph. They are still available in Source Memory.
+            {hiddenUnlinkedConcepts.length} unlinked concepts hidden from the table. They are still available in Source Memory.
           </p>
         {/if}
 
         {#if groupedGraphObjectCount > 0}
           <p class="graph-note">
-            {groupedGraphObjectCount} related memories grouped in the map. Activate a grouped node to expand it.
+            {groupedGraphObjectCount} related memories grouped in the table. Use Expand to inspect a grouped row.
           </p>
         {/if}
 
         {#if graphNodeList.length > 0}
           <div class="graph-table-wrap">
-            <table class="graph-table" aria-label="Structured graph items">
+            <table class="graph-table" aria-label="Structured context items">
               <thead>
                 <tr>
                   <th scope="col">Item</th>
                   <th scope="col">Type</th>
+                  <th scope="col">Relationship</th>
                   <th scope="col">Links</th>
                   <th scope="col">Action</th>
                 </tr>
               </thead>
               <tbody>
                 {#each graphNodeList as node (node.id)}
-                  <tr class:selected-row={node.selected}>
+                  <tr class:selected-row={node.selected} data-testid={`graph-table-row-${node.id}`}>
                     <td>
                       <span class="graph-table-title">{node.title}</span>
                       {#if node.grouped}
@@ -2153,6 +1975,7 @@
                       {/if}
                     </td>
                     <td>{laneLabel(node.lane)}</td>
+                    <td>{graphNodeRelationshipLabel(node, graphEdgeList)}</td>
                     <td>{graphNodeConnectionCount(node, graphEdgeList)}</td>
                     <td>
                       <button type="button" disabled={!node.grouped && node.selected} onclick={() => activateGraphNode(node)}>
@@ -2177,13 +2000,6 @@
           </article>
         {/if}
 
-        <ul class="graph-legend" aria-label="Graph legend">
-          <li><span class="legend-rule"></span>Rules</li>
-          <li><span class="legend-workflow"></span>Workflows</li>
-          <li><span class="legend-fact"></span>Facts</li>
-          <li><span class="legend-architecture"></span>Architecture</li>
-          <li><span class="legend-concept"></span>Concepts</li>
-        </ul>
       </section>
 
       {#each sections as section (section.id)}
@@ -2720,8 +2536,7 @@
   }
 
   .cli-workflow > span,
-  .sidebar-export > span,
-  .task-filters > span {
+  .sidebar-export > span {
     color: #76767c;
     font-size: 12px;
     font-weight: 760;
@@ -2778,19 +2593,13 @@
     border-radius: 8px;
   }
 
-  .task-filters {
-    order: 2;
-    padding-bottom: 10px;
-    border-bottom: 0;
-  }
-
   .graph-panel {
-    order: 3;
+    order: 2;
   }
 
   .memory-section,
   .relations-panel {
-    order: 4;
+    order: 3;
   }
 
   .obsidian-export {
@@ -2856,46 +2665,48 @@
     border: 0;
   }
 
-  .task-filters,
-  .graph-toolbar {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 8px;
-    margin-top: 10px;
-  }
-
-  .graph-filterbar {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
+  .context-filters {
+    display: grid;
     gap: 10px;
-    margin: 8px 0 10px;
-    color: #6f6f74;
-    font-size: 13px;
-  }
-
-  .graph-filterbar label {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    min-height: 28px;
-    padding: 4px 8px;
-    background: #fff;
+    margin: 16px 0 14px;
+    padding: 12px;
+    background: #faf9f5;
     border: 1px solid #dedbd4;
+    border-radius: 8px;
+  }
+
+  .filter-row {
+    display: grid;
+    grid-template-columns: minmax(240px, 420px);
+    gap: 10px;
+    align-items: end;
+  }
+
+  .filter-field {
+    display: grid;
+    gap: 5px;
+    min-width: 0;
+  }
+
+  .filter-field span {
+    color: #6d6d73;
+    font-size: 12px;
+    font-weight: 760;
+  }
+
+  .filter-field select {
+    width: 100%;
+    min-height: 36px;
+    min-width: 0;
+    padding: 7px 32px 7px 10px;
+    color: #262626;
+    background: #fff;
+    border: 1px solid #d8d4cc;
     border-radius: 7px;
+    font: inherit;
+    font-size: 14px;
   }
 
-  .graph-filterbar input {
-    margin: 0;
-  }
-
-  .graph-filterbar span {
-    color: #7b7b80;
-  }
-
-  .task-filters button,
-  .graph-toolbar button,
   .node-preview button {
     min-height: 31px;
     display: inline-flex;
@@ -2964,145 +2775,17 @@
   .primary-link:hover,
   .header-actions button:hover,
   .sidebar-export button:hover,
-  .task-filters button:hover,
-  .graph-toolbar button:hover,
   .node-preview button:hover,
-  .obsidian-export button:hover,
-  .task-filters button.active {
+  .obsidian-export button:hover {
     color: #222;
     background: #f3f2ee;
     border-color: #d4d1c9;
-  }
-
-  .task-filters button.active {
-    color: #fff;
-    background: #202124;
-    border-color: #202124;
-  }
-
-  .graph-toolbar button.active {
-    color: #fff;
-    background: #202124;
-    border-color: #202124;
-  }
-
-  .graph-toolbar button:disabled {
-    cursor: not-allowed;
-    opacity: 0.45;
   }
 
   .obsidian-export button:hover {
     color: #242424;
     background: #f4f0e8;
     border-color: #cfc5b5;
-  }
-
-  .graph-surface {
-    overflow: hidden;
-    background:
-      radial-gradient(circle at 50% 56%, rgba(224, 239, 246, 0.62), rgba(255, 255, 255, 0) 42%),
-      #fff;
-    border: 1px solid #dedbd4;
-    border-radius: 8px;
-    box-shadow: 0 16px 34px rgba(32, 32, 32, 0.06);
-  }
-
-  .graph-surface:focus {
-    outline: none;
-  }
-
-  .graph-surface:focus-visible {
-    outline: 2px solid #c8d6ef;
-    outline-offset: 2px;
-  }
-
-  .relation-graph-svg {
-    display: block;
-    width: 100%;
-    height: 382px;
-    min-height: 382px;
-    cursor: grab;
-    touch-action: none;
-  }
-
-  .relation-graph-svg:active {
-    cursor: grabbing;
-  }
-
-  .graph-edge path {
-    fill: none;
-    stroke: #cbd3d2;
-    stroke-width: 1.15;
-  }
-
-  .graph-edge-measure {
-    stroke: transparent;
-    stroke-width: 0;
-  }
-
-  .graph-edge text {
-    fill: #9a9aa0;
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-size: 7.5px;
-    text-anchor: middle;
-  }
-
-  .graph-edge.implicit text {
-    display: none;
-  }
-
-  .graph-edge.implicit path {
-    stroke-dasharray: 4 4;
-  }
-
-  .graph-edge.highlighted path {
-    stroke: #8f9898;
-    stroke-width: 1.8;
-  }
-
-  .graph-edge.dimmed,
-  .graph-node.dimmed {
-    opacity: 0.26;
-  }
-
-  .graph-node {
-    outline: none;
-  }
-
-  .graph-node-dot {
-    stroke: #fff;
-    stroke-width: 3;
-    filter: drop-shadow(0 8px 13px rgba(30, 30, 30, 0.17));
-  }
-
-  .graph-node.selected-node .graph-node-dot {
-    stroke: #202124;
-    stroke-width: 3;
-  }
-
-  .graph-node.neighbor-node .graph-node-dot {
-    stroke: #202124;
-    stroke-width: 2;
-  }
-
-  .graph-node.group-node .graph-node-dot {
-    stroke: #202124;
-    stroke-dasharray: 3 2;
-    stroke-width: 2.5;
-  }
-
-  .graph-node-title-wrap {
-    pointer-events: none;
-  }
-
-  .graph-node-label {
-    overflow: hidden;
-    color: #242424;
-    font-size: 8.8px;
-    font-weight: 760;
-    line-height: 20px;
-    text-overflow: ellipsis;
-    white-space: nowrap;
   }
 
   .graph-note {
@@ -3232,49 +2915,6 @@
     border-radius: 0;
     text-decoration: underline;
     white-space: nowrap;
-  }
-
-  .graph-legend {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12px;
-    margin: 10px 0 0;
-    padding: 0;
-    color: #6e6e74;
-    list-style: none;
-  }
-
-  .graph-legend li {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 13px;
-  }
-
-  .graph-legend span {
-    width: 10px;
-    height: 10px;
-    border-radius: 999px;
-  }
-
-  .legend-rule {
-    background: #ad4332;
-  }
-
-  .legend-workflow {
-    background: #2b7f98;
-  }
-
-  .legend-fact {
-    background: #397c4e;
-  }
-
-  .legend-architecture {
-    background: #a97a18;
-  }
-
-  .legend-concept {
-    background: #7a5fbd;
   }
 
   .memory-toggles {
@@ -3543,6 +3183,7 @@
     }
 
     .brief-grid,
+    .filter-row,
     .relation-columns,
     .trust-grid {
       grid-template-columns: 1fr;
@@ -3554,10 +3195,6 @@
       display: grid;
     }
 
-    .relation-graph-svg {
-      min-height: 300px;
-    }
-
     .tag-list {
       grid-column: auto;
     }
@@ -3566,9 +3203,5 @@
       grid-template-columns: 1fr;
     }
 
-    .graph-surface,
-    .relation-graph-svg {
-      min-height: 300px;
-    }
   }
 </style>

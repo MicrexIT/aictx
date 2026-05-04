@@ -23,8 +23,6 @@ import {
 
 const repoRoot = resolve(fileURLToPath(new URL("../../..", import.meta.url)));
 const viewerAssetsDir = join(repoRoot, "dist", "viewer");
-const GRAPH_WIDTH = 960;
-const GRAPH_HEIGHT = 420;
 const tempRoots: string[] = [];
 
 interface MemoryFixture {
@@ -117,22 +115,19 @@ describe("read-only viewer shell", () => {
       await assertSelectedObject(page, "Viewer Shell Layout", "decision.viewer-shell");
       await expectText(page, '[data-testid="outgoing-relations"]', "requires");
       await expectText(page, '[data-testid="outgoing-relations"]', "Viewer Markdown Safety");
-      await assertGraphSurfaceNonblank(page);
-      await assertSelectedGraphNode(page, "decision.viewer-shell");
+      await assertGraphTableNonblank(page);
+      await assertSelectedGraphTableRow(page, "decision.viewer-shell");
       await expectText(page, '[data-testid="relation-graph"]', "Viewer Shell Layout");
       await expectText(page, '[data-testid="relation-graph"]', "Viewer Markdown Safety");
       await expectText(page, '[data-testid="relation-graph"]', "requires");
       await expectNoText(page, '[data-testid="relation-graph"]', "Unrelated Source");
       await expectNoText(page, '[data-testid="relation-graph"]', "Unrelated Target");
-      await expectCount(page, '[data-testid="relation-graph-svg"] [data-testid^="relation-graph-edge-"]', 1);
-      await assertGraphNodeWithinViewBox(page, "decision.viewer-shell");
-      await assertGraphNodeWithinViewBox(page, "constraint.viewer-markdown");
-      await assertGraphEdgeWithinViewBox(page, "rel.viewer-shell-requires-markdown");
+      await expectCount(page, '[data-testid="relation-graph-svg"]', 0);
 
       await page.getByRole("button", { name: "to Viewer Markdown Safety", exact: true }).click();
       await assertSelectedObject(page, "Viewer Markdown Safety", "constraint.viewer-markdown");
-      await assertGraphSurfaceNonblank(page);
-      await assertSelectedGraphNode(page, "constraint.viewer-markdown");
+      await assertGraphTableNonblank(page);
+      await assertSelectedGraphTableRow(page, "constraint.viewer-markdown");
       await expectText(page, '[data-testid="relation-graph"]', "Viewer Shell Layout");
       await expectText(page, '[data-testid="relation-graph"]', "requires");
       await expectNoText(page, '[data-testid="relation-graph"]', "Unrelated Source");
@@ -148,10 +143,10 @@ describe("read-only viewer shell", () => {
       await page.fill('[data-testid="viewer-search"]', "empty neighborhood");
       await page.locator('[data-testid="object-row-note.viewer-empty"]').click();
       await assertSelectedObject(page, "Viewer Empty Neighborhood", "note.viewer-empty");
-      await assertSelectedGraphNode(page, "note.viewer-empty");
+      await assertSelectedGraphTableRow(page, "note.viewer-empty");
       await expectText(page, '[data-testid="relation-graph"]', "Viewer Empty Neighborhood");
       await expectText(page, '[data-testid="relation-graph-empty"]', "No direct relations for this object.");
-      await expectCount(page, '[data-testid="relation-graph-svg"] [data-testid^="relation-graph-edge-"]', 0);
+      await expectCount(page, '[data-testid="relation-graph-svg"]', 0);
 
       expect(await page.evaluate("window.__AICTX_HTML_EXECUTED")).toBeUndefined();
       expect(consoleErrors()).toEqual([]);
@@ -195,9 +190,9 @@ describe("read-only viewer shell", () => {
       await expectText(page, '[data-testid="starter-memory-notice"]', "aictx suggest --bootstrap --patch > bootstrap-memory.json");
       await expectText(page, '[data-testid="starter-memory-notice"]', "aictx save --file bootstrap-memory.json");
       await expectCount(page, '[aria-label="Project memory counts"]', 0);
-      await assertSelectedGraphNode(page, "architecture.current");
+      await assertSelectedGraphTableRow(page, "architecture.current");
       await expectText(page, '[data-testid="relation-graph"]', "related_to");
-      await expectCount(page, '[data-testid="relation-graph-svg"] [data-testid^="relation-graph-edge-"]', 1);
+      await expectCount(page, '[data-testid="relation-graph-svg"]', 0);
 
       expect(consoleErrors()).toEqual([]);
     } finally {
@@ -230,61 +225,16 @@ async function assertMarkdownIsSafe(page: Page): Promise<void> {
   await expect(markdown.textContent()).resolves.toContain("Verify search works");
 }
 
-async function assertGraphSurfaceNonblank(page: Page): Promise<void> {
-  const graph = page.locator('[data-testid="relation-graph-svg"]');
-
-  await graph.waitFor();
-  const box = await graph.boundingBox();
-
-  expect(box).not.toBeNull();
-  expect(box?.width ?? 0).toBeGreaterThan(100);
-  expect(box?.height ?? 0).toBeGreaterThan(100);
-  await expectCount(page, '[data-testid="relation-graph-svg"] [data-testid^="relation-graph-edge-"]', 1);
+async function assertGraphTableNonblank(page: Page): Promise<void> {
+  await expectCount(page, '[data-testid="relation-graph"] .graph-table', 1);
+  expect(await page.locator('[data-testid="relation-graph"] .graph-table tbody tr').count()).toBeGreaterThan(0);
 }
 
-async function assertSelectedGraphNode(page: Page, id: string): Promise<void> {
-  const node = page.locator(`[data-testid="relation-graph-node-${id}"]`);
+async function assertSelectedGraphTableRow(page: Page, id: string): Promise<void> {
+  const row = page.locator(`[data-testid="graph-table-row-${id}"]`);
 
-  await node.waitFor();
-  await expect(node.getAttribute("class")).resolves.toContain("selected-node");
-}
-
-async function assertGraphNodeWithinViewBox(page: Page, id: string): Promise<void> {
-  const circle = page.locator(`[data-testid="relation-graph-node-${id}"] circle`);
-  const cx = await numberAttribute(circle, "cx");
-  const cy = await numberAttribute(circle, "cy");
-  const radius = await numberAttribute(circle, "r");
-
-  expect(cx - radius).toBeGreaterThanOrEqual(0);
-  expect(cy - radius).toBeGreaterThanOrEqual(0);
-  expect(cx + radius).toBeLessThanOrEqual(GRAPH_WIDTH);
-  expect(cy + radius).toBeLessThanOrEqual(GRAPH_HEIGHT);
-}
-
-async function assertGraphEdgeWithinViewBox(page: Page, id: string): Promise<void> {
-  const line = page.locator(`[data-testid="relation-graph-edge-${id}"] line`);
-
-  for (const attribute of ["x1", "y1", "x2", "y2"] as const) {
-    const value = await numberAttribute(line, attribute);
-    const upperBound = attribute.startsWith("x") ? GRAPH_WIDTH : GRAPH_HEIGHT;
-
-    expect(value).toBeGreaterThanOrEqual(0);
-    expect(value).toBeLessThanOrEqual(upperBound);
-  }
-}
-
-async function numberAttribute(
-  locator: ReturnType<Page["locator"]>,
-  attribute: string
-): Promise<number> {
-  const rawValue = await locator.getAttribute(attribute);
-  const value = Number(rawValue);
-
-  if (rawValue === null || !Number.isFinite(value)) {
-    throw new Error(`Expected numeric ${attribute} attribute, got ${String(rawValue)}.`);
-  }
-
-  return value;
+  await row.waitFor();
+  await expect(row.getAttribute("class")).resolves.toContain("selected-row");
 }
 
 async function expectText(page: Page, selector: string, expected: string): Promise<void> {
