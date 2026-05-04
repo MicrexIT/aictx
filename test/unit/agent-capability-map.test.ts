@@ -100,6 +100,12 @@ const cliOnlyCapabilities = [
     notes: "Maintenance remains CLI-only in v1."
   },
   {
+    capability: "Reset local storage",
+    mcp: "none",
+    cli: "`aictx reset`",
+    notes: "Destructive maintenance remains CLI-only in v1."
+  },
+  {
     capability: "Upgrade storage schema",
     mcp: "none",
     cli: "`aictx upgrade`",
@@ -179,6 +185,7 @@ const exactCliOnlyCommands = [
   "`aictx patch review`",
   "`aictx check`",
   "`aictx rebuild`",
+  "`aictx reset`",
   "`aictx upgrade`",
   "`aictx history`",
   "`aictx restore`",
@@ -198,6 +205,7 @@ const exactCliOnlyGuidanceCommands = [
   "`aictx patch review`",
   "`aictx check`",
   "`aictx rebuild`",
+  "`aictx reset`",
   "`aictx upgrade`",
   "`aictx history`",
   "`aictx restore`",
