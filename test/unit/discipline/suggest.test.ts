@@ -292,6 +292,7 @@ describe("suggest discipline packets", () => {
       "create_relation",
       "create_object",
       "create_object",
+      "create_object",
       "create_object"
     ]);
     expect(proposal.patch?.changes).toEqual(
@@ -308,6 +309,11 @@ describe("suggest discipline packets", () => {
           confidence: "high"
         }),
         expect.objectContaining({ op: "create_object", id: "workflow.package-scripts" }),
+        expect.objectContaining({
+          op: "create_object",
+          id: "workflow.post-task-verification",
+          facets: expect.objectContaining({ category: "testing" })
+        }),
         expect.objectContaining({ op: "create_object", id: "constraint.node-engine" }),
         expect.objectContaining({ op: "create_object", id: "constraint.package-manager" })
       ])
@@ -380,6 +386,173 @@ describe("suggest discipline packets", () => {
     }
   });
 
+  it("creates verification and convention memory from agent guidance while ignoring generated Aictx blocks", async () => {
+    const projectRoot = await createTempRoot("aictx-discipline-bootstrap-agent-guidance-");
+    await writeProjectFile(
+      projectRoot,
+      "README.md",
+      "# Billing API\n\nHandles recurring billing for Stripe.\n"
+    );
+    await writeJsonProjectFile(projectRoot, "package.json", {
+      packageManager: "pnpm@10.0.0",
+      scripts: {
+        typecheck: "tsc --noEmit",
+        test: "vitest run"
+      }
+    });
+    await writeProjectFile(
+      projectRoot,
+      "AGENTS.md",
+      [
+        "# Agent instructions",
+        "",
+        "## Code Conventions",
+        "",
+        "- Prefer small TypeScript modules.",
+        "- Avoid default exports in source files.",
+        "- After changes, run `pnpm run lint`.",
+        "",
+        "<!-- aictx-memory:start -->",
+        "## Aictx Memory",
+        "- Never use generated convention text.",
+        "- Run `pnpm run generated`.",
+        "<!-- aictx-memory:end -->",
+        ""
+      ].join("\n")
+    );
+    await writeBundledSchemas(projectRoot);
+    const storage = storageSnapshot({
+      objects: [
+        initialProjectObject("project.billing-api", "Billing API"),
+        initialArchitectureObject("project.billing-api")
+      ],
+      relations: [projectArchitectureRelation("project.billing-api")],
+      projectId: "project.billing-api",
+      projectName: "Billing API"
+    });
+
+    const proposal = await buildSuggestBootstrapPatchProposal({
+      projectRoot,
+      storage
+    });
+
+    expect(proposal.proposed).toBe(true);
+    expect(proposal.packet.recommended_facets).toEqual(["testing", "convention"]);
+    const verification = proposal.patch?.changes.find(
+      (change) => change.op === "create_object" && change.id === "workflow.post-task-verification"
+    );
+    expect(verification).toEqual(
+      expect.objectContaining({
+        facets: expect.objectContaining({ category: "testing" }),
+        evidence: expect.arrayContaining([
+          { kind: "file", id: "package.json" },
+          { kind: "file", id: "AGENTS.md" }
+        ])
+      })
+    );
+    expect(verification?.op === "create_object" ? verification.body : "").toContain(
+      "`pnpm run lint`"
+    );
+    expect(verification?.op === "create_object" ? verification.body : "").not.toContain(
+      "generated"
+    );
+
+    const conventions = proposal.patch?.changes.find(
+      (change) => change.op === "create_object" && change.id === "constraint.code-conventions"
+    );
+    expect(conventions).toEqual(
+      expect.objectContaining({
+        facets: {
+          category: "convention",
+          applies_to: ["AGENTS.md"],
+          load_modes: ["coding", "review"]
+        },
+        evidence: [{ kind: "file", id: "AGENTS.md" }]
+      })
+    );
+    expect(conventions?.op === "create_object" ? conventions.body : "").toContain(
+      "Prefer small TypeScript modules."
+    );
+    expect(conventions?.op === "create_object" ? conventions.body : "").not.toContain(
+      "generated convention"
+    );
+
+    const validators = await compileProjectSchemas(projectRoot);
+    expect(validators.ok).toBe(true);
+    if (validators.ok && proposal.patch !== null) {
+      expect(validatePatch(validators.data, proposal.patch).valid).toBe(true);
+    }
+  });
+
+  it("creates product-feature concepts from package bins, CLI commands, and route files", async () => {
+    const projectRoot = await createTempRoot("aictx-discipline-bootstrap-code-features-");
+    await writeProjectFile(projectRoot, "README.md", "# Billing App\n");
+    await writeJsonProjectFile(projectRoot, "package.json", {
+      name: "billing-app",
+      bin: {
+        billing: "dist/cli.js"
+      }
+    });
+    await writeProjectFile(
+      projectRoot,
+      "src/cli/commands/sync.ts",
+      [
+        "export function registerSync(program) {",
+        "  program",
+        "    .command(\"sync\")",
+        "    .description(\"Synchronize billing data.\");",
+        "}",
+        ""
+      ].join("\n")
+    );
+    await writeProjectFile(projectRoot, "app/dashboard/page.tsx", "export default function Page() {}\n");
+    await writeBundledSchemas(projectRoot);
+    const storage = storageSnapshot({
+      objects: [
+        initialProjectObject("project.billing-app", "Billing App"),
+        initialArchitectureObject("project.billing-app")
+      ],
+      relations: [projectArchitectureRelation("project.billing-app")],
+      projectId: "project.billing-app",
+      projectName: "Billing App"
+    });
+
+    const proposal = await buildSuggestBootstrapPatchProposal({
+      projectRoot,
+      storage
+    });
+
+    expect(proposal.proposed).toBe(true);
+    expect(proposal.packet.recommended_memory).toContain("concept");
+    expect(proposal.packet.recommended_facets).toEqual(["product-feature"]);
+    expect(proposal.patch?.changes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "concept.feature-cli-binary-billing",
+          type: "concept",
+          facets: expect.objectContaining({ category: "product-feature" }),
+          evidence: [{ kind: "file", id: "package.json" }]
+        }),
+        expect.objectContaining({
+          id: "concept.feature-cli-command-sync",
+          type: "concept",
+          evidence: [{ kind: "file", id: "src/cli/commands/sync.ts" }]
+        }),
+        expect.objectContaining({
+          id: "concept.feature-route-dashboard",
+          type: "concept",
+          evidence: [{ kind: "file", id: "app/dashboard/page.tsx" }]
+        })
+      ])
+    );
+
+    const validators = await compileProjectSchemas(projectRoot);
+    expect(validators.ok).toBe(true);
+    if (validators.ok && proposal.patch !== null) {
+      expect(validatePatch(validators.data, proposal.patch).valid).toBe(true);
+    }
+  });
+
   it("avoids duplicate bootstrap memories when deterministic objects already exist", async () => {
     const projectRoot = await createTempRoot("aictx-discipline-bootstrap-duplicates-");
     await writeJsonProjectFile(projectRoot, "package.json", {
@@ -403,6 +576,13 @@ describe("suggest discipline packets", () => {
           status: "active",
           title: "Package scripts",
           body: "Existing package script workflow."
+        }),
+        memoryObject({
+          id: "workflow.post-task-verification",
+          type: "workflow",
+          status: "active",
+          title: "Post-task verification",
+          body: "Existing post-task verification workflow."
         }),
         memoryObject({
           id: "constraint.node-engine",

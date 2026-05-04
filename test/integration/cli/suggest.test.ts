@@ -363,6 +363,52 @@ describe("aictx suggest CLI", () => {
     expect(envelope.data.check.valid).toBe(true);
   });
 
+  it("applies agent guidance, verification commands, and code-derived features during setup", async () => {
+    const repo = await createRichBootstrapGitProject("aictx-cli-setup-rich-bootstrap-");
+
+    const output = await runCli(["node", "aictx", "setup", "--apply", "--json"], repo);
+
+    expect(output.exitCode).toBe(0);
+    expect(output.stderr).toBe("");
+    const envelope = JSON.parse(output.stdout) as SetupSuccessEnvelope;
+    expect(envelope.ok).toBe(true);
+    expect(envelope.data.bootstrap_patch_applied).toBe(true);
+    expect(envelope.data.save?.memory_created).toEqual(
+      expect.arrayContaining([
+        "workflow.post-task-verification",
+        "constraint.code-conventions",
+        "concept.feature-cli-binary-billing",
+        "concept.feature-cli-command-sync"
+      ])
+    );
+
+    const storage = await readCanonicalStorage(repo);
+    expect(storage.ok).toBe(true);
+    if (!storage.ok) {
+      return;
+    }
+
+    const conventions = storage.data.objects.find(
+      (object) => object.sidecar.id === "constraint.code-conventions"
+    );
+    expect(conventions?.sidecar.facets).toEqual({
+      category: "convention",
+      applies_to: ["AGENTS.md"],
+      load_modes: ["coding", "review"]
+    });
+    expect(conventions?.body).toContain("Prefer small TypeScript modules.");
+    expect(conventions?.body).not.toContain("generated convention");
+
+    const verification = storage.data.objects.find(
+      (object) => object.sidecar.id === "workflow.post-task-verification"
+    );
+    expect(verification?.sidecar.facets?.category).toBe("testing");
+    expect(verification?.body).toContain("pnpm run typecheck");
+    expect(verification?.body).toContain("pnpm run lint");
+    expect(verification?.body).not.toContain("pnpm run generated");
+    expect(envelope.data.check.valid).toBe(true);
+  });
+
   it("prints a setup review summary without applying the bootstrap patch", async () => {
     const repo = await createBootstrapPatchGitProject("aictx-cli-setup-review-");
 
@@ -600,6 +646,70 @@ async function createProductFeatureBootstrapGitProject(prefix: string): Promise<
     }
   });
   await writeProjectFile(repo, "src/index.ts", "export const value = 1;\n");
+  await git(repo, ["add", "."]);
+  await git(repo, ["commit", "-m", "Initial project files"]);
+
+  const output = await runCli(["node", "aictx", "init", "--json"], repo);
+
+  expect(output.exitCode).toBe(0);
+  expect(output.stderr).toBe("");
+
+  return repo;
+}
+
+async function createRichBootstrapGitProject(prefix: string): Promise<string> {
+  const repo = await createTempRoot(prefix);
+  await git(repo, ["init", "--initial-branch=main"]);
+  await git(repo, ["config", "user.email", "test@example.com"]);
+  await git(repo, ["config", "user.name", "Aictx Test"]);
+  await writeProjectFile(
+    repo,
+    "README.md",
+    "# Billing App\n\nCoordinates billing support operations.\n"
+  );
+  await writeProjectFile(
+    repo,
+    "AGENTS.md",
+    [
+      "# Agent instructions",
+      "",
+      "## Code Conventions",
+      "",
+      "- Prefer small TypeScript modules.",
+      "- Avoid default exports in source files.",
+      "- After changes, run `pnpm run lint`.",
+      "",
+      "<!-- aictx-memory:start -->",
+      "## Aictx Memory",
+      "- Never use generated convention text.",
+      "- Run `pnpm run generated`.",
+      "<!-- aictx-memory:end -->",
+      ""
+    ].join("\n")
+  );
+  await writeJsonProjectFile(repo, "package.json", {
+    name: "billing-app",
+    packageManager: "pnpm@10.0.0",
+    bin: {
+      billing: "dist/cli.js"
+    },
+    scripts: {
+      typecheck: "tsc --noEmit",
+      test: "vitest run"
+    }
+  });
+  await writeProjectFile(
+    repo,
+    "src/cli/commands/sync.ts",
+    [
+      "export function registerSync(program) {",
+      "  program",
+      "    .command(\"sync\")",
+      "    .description(\"Synchronize billing data.\");",
+      "}",
+      ""
+    ].join("\n")
+  );
   await git(repo, ["add", "."]);
   await git(repo, ["commit", "-m", "Initial project files"]);
 

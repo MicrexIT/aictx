@@ -145,6 +145,9 @@ const AGENT_CHECKLIST = [
 ] as const;
 const BOOTSTRAP_PRODUCT_FEATURE_CHECKLIST_ITEM =
   "During setup, capture explicit current product features as concept memory with the product-feature facet; mark removed or replaced features stale or superseded.";
+const AGENT_GUIDANCE_FILES = ["AGENTS.md", "CLAUDE.md"] as const;
+const AICTX_MEMORY_START_MARKER = "<!-- aictx-memory:start -->";
+const AICTX_MEMORY_END_MARKER = "<!-- aictx-memory:end -->";
 const SAVE_DECISION_CHECKLIST = [
   "Save memory only when the task produced durable future value.",
   "Prefer updating, marking stale, or superseding related memory over creating duplicates.",
@@ -159,6 +162,18 @@ const STALE_CANDIDATE_STATUSES = new Set<ObjectStatus>([
   "closed"
 ]);
 const BOOTSTRAP_FILE_LIMIT = 40;
+const BOOTSTRAP_PRODUCT_FEATURE_LIMIT = 8;
+const BOOTSTRAP_DOC_FEATURE_FILE_LIMIT = 8;
+const POST_TASK_SCRIPT_PRIORITY = [
+  "typecheck",
+  "lint",
+  "check",
+  "test:local",
+  "test",
+  "test:package",
+  "build"
+] as const;
+const POST_TASK_SCRIPT_NAMES = new Set<string>(POST_TASK_SCRIPT_PRIORITY);
 const BOOTSTRAP_IGNORE = [
   ".aictx/**",
   ".git/**",
@@ -191,6 +206,8 @@ const BOOTSTRAP_PATTERNS = [
   "eslint.config.*",
   "src/**/*.{ts,tsx,js,jsx,svelte,md}",
   "app/**/*.{ts,tsx,js,jsx,svelte,md}",
+  "pages/**/*.{ts,tsx,js,jsx,svelte,md}",
+  "routes/**/*.{ts,tsx,js,jsx,svelte,md}",
   "lib/**/*.{ts,tsx,js,jsx,svelte,md}",
   "test/**/*.{ts,tsx,js,jsx,svelte,md}",
   "tests/**/*.{ts,tsx,js,jsx,svelte,md}",
@@ -292,9 +309,7 @@ function buildBootstrapPacketFromAnalysis(
   analysis: BootstrapAnalysis
 ): SuggestReviewPacket {
   const hasProductFeatures = hasProductFeatureBootstrapSignal(analysis);
-  const recommendedFacets = hasProductFeatures
-    ? (["product-feature"] satisfies FacetCategory[])
-    : [];
+  const recommendedFacets = bootstrapRecommendedFacets(analysis);
 
   return {
     mode: "bootstrap",
@@ -352,14 +367,28 @@ export async function bootstrapCandidateFiles(projectRoot: string): Promise<stri
 interface BootstrapAnalysis {
   files: Set<string>;
   readme: ReadmeInfo | null;
+  agentGuidance: AgentGuidanceInfo[];
   packageJson: PackageJsonInfo | null;
   packageManager: PackageManagerInfo | null;
+  productFeatures: ProductFeatureInfo[];
 }
 
 interface ReadmeInfo {
   title: string | null;
   summary: string | null;
   features: ProductFeatureInfo[];
+}
+
+interface AgentGuidanceInfo {
+  path: string;
+  conventionStatements: string[];
+  verificationCommands: VerificationCommandInfo[];
+}
+
+interface VerificationCommandInfo {
+  command: string;
+  description: string;
+  evidence: Evidence[];
 }
 
 interface ProductFeatureInfo {
@@ -377,6 +406,7 @@ interface PackageJsonInfo {
   packageManager: string | null;
   nodeEngine: string | null;
   scripts: Record<string, string>;
+  bin: Record<string, string>;
   devDependencies: Set<string>;
   dependencies: Set<string>;
 }
@@ -392,12 +422,23 @@ async function analyzeBootstrapRepository(
   changedFiles: readonly string[]
 ): Promise<BootstrapAnalysis> {
   const packageJson = await readPackageJson(projectRoot);
+  const readme = await readReadme(projectRoot);
+  const agentGuidance = await readAgentGuidance(projectRoot);
+  const packageManager = await detectPackageManager(projectRoot, packageJson);
+  const codeFeatures = await codeProductFeatures(projectRoot, changedFiles, packageJson);
+  const documentedFeatures = await documentedProductFeatures(projectRoot, changedFiles);
 
   return {
     files: new Set(changedFiles),
-    readme: await readReadme(projectRoot),
+    readme,
+    agentGuidance,
     packageJson,
-    packageManager: await detectPackageManager(projectRoot, packageJson)
+    packageManager,
+    productFeatures: uniqueProductFeatures([
+      ...(readme?.features ?? []),
+      ...codeFeatures,
+      ...documentedFeatures
+    ])
   };
 }
 
@@ -447,6 +488,18 @@ function buildBootstrapPatchChanges(
 
   if (workflow !== null) {
     changes.push(workflow);
+  }
+
+  const verificationWorkflow = postTaskVerificationWorkflow(storage, analysis);
+
+  if (verificationWorkflow !== null) {
+    changes.push(verificationWorkflow);
+  }
+
+  const conventions = codeConventionsConstraint(storage, analysis);
+
+  if (conventions !== null) {
+    changes.push(conventions);
   }
 
   const nodeConstraint = nodeEngineConstraint(storage, analysis);
@@ -703,6 +756,194 @@ function packageScriptsWorkflow(
   };
 }
 
+function postTaskVerificationWorkflow(
+  storage: CanonicalStorageSnapshot,
+  analysis: BootstrapAnalysis
+): BootstrapPatchChange | null {
+  if (
+    hasSimilarObject(
+      storage,
+      "workflow",
+      "workflow.post-task-verification",
+      "Post-task verification"
+    )
+  ) {
+    return null;
+  }
+
+  const commands = postTaskVerificationCommands(analysis).slice(0, 8);
+
+  if (commands.length === 0) {
+    return null;
+  }
+
+  const appliesTo = uniqueSorted(
+    commands.flatMap((command) => command.evidence.map((evidence) => evidence.id))
+  );
+
+  return {
+    op: "create_object",
+    id: "workflow.post-task-verification",
+    type: "workflow",
+    title: "Post-task verification",
+    body: [
+      "# Post-task verification",
+      "",
+      "After meaningful code changes, prefer these repo verification commands when relevant:",
+      ...commands.map((command) => `- \`${command.command}\`: ${command.description}`),
+      ""
+    ].join("\n"),
+    tags: ["verification", "testing", "workflow"],
+    facets: {
+      category: "testing",
+      applies_to: appliesTo,
+      load_modes: ["coding", "debugging", "review"]
+    },
+    evidence: appliesTo.map((path) => ({ kind: "file", id: path }))
+  };
+}
+
+function postTaskVerificationCommands(analysis: BootstrapAnalysis): VerificationCommandInfo[] {
+  const commands: VerificationCommandInfo[] = [];
+  const scripts = analysis.packageJson?.scripts ?? {};
+  const manager = analysis.packageManager?.manager ?? "npm";
+  const scriptNames = Object.keys(scripts)
+    .filter((name) => isPostTaskScriptName(name))
+    .sort(comparePostTaskScriptNames);
+
+  for (const name of scriptNames) {
+    const script = scripts[name];
+
+    if (script === undefined) {
+      continue;
+    }
+
+    commands.push({
+      command: packageScriptCommand(manager, name),
+      description: `package.json script \`${name}\`: \`${script}\``,
+      evidence: [{ kind: "file", id: "package.json" }]
+    });
+  }
+
+  for (const guidance of analysis.agentGuidance) {
+    commands.push(...guidance.verificationCommands);
+  }
+
+  return uniqueVerificationCommands(commands);
+}
+
+function isPostTaskScriptName(name: string): boolean {
+  return POST_TASK_SCRIPT_NAMES.has(name) || /^(?:test|lint|typecheck|check)(?::|$)/u.test(name);
+}
+
+function comparePostTaskScriptNames(left: string, right: string): number {
+  const leftPriority = postTaskScriptPriority(left);
+  const rightPriority = postTaskScriptPriority(right);
+
+  if (leftPriority !== rightPriority) {
+    return leftPriority - rightPriority;
+  }
+
+  return left.localeCompare(right);
+}
+
+function postTaskScriptPriority(name: string): number {
+  const directIndex = POST_TASK_SCRIPT_PRIORITY.indexOf(
+    name as (typeof POST_TASK_SCRIPT_PRIORITY)[number]
+  );
+
+  if (directIndex !== -1) {
+    return directIndex;
+  }
+
+  if (name.startsWith("typecheck")) {
+    return 0;
+  }
+
+  if (name.startsWith("lint")) {
+    return 1;
+  }
+
+  if (name.startsWith("check")) {
+    return 2;
+  }
+
+  if (name.startsWith("test")) {
+    return 3;
+  }
+
+  return POST_TASK_SCRIPT_PRIORITY.length;
+}
+
+function packageScriptCommand(manager: string, name: string): string {
+  return `${manager} run ${name}`;
+}
+
+function uniqueVerificationCommands(
+  commands: readonly VerificationCommandInfo[]
+): VerificationCommandInfo[] {
+  const seen = new Set<string>();
+  const unique: VerificationCommandInfo[] = [];
+
+  for (const command of commands) {
+    const normalized = command.command.toLowerCase();
+
+    if (seen.has(normalized)) {
+      continue;
+    }
+
+    seen.add(normalized);
+    unique.push(command);
+  }
+
+  return unique;
+}
+
+function codeConventionsConstraint(
+  storage: CanonicalStorageSnapshot,
+  analysis: BootstrapAnalysis
+): BootstrapPatchChange | null {
+  if (
+    hasSimilarObject(storage, "constraint", "constraint.code-conventions", "Code conventions")
+  ) {
+    return null;
+  }
+
+  const statements = uniqueSorted(
+    analysis.agentGuidance.flatMap((guidance) => guidance.conventionStatements)
+  ).slice(0, 8);
+
+  if (statements.length === 0) {
+    return null;
+  }
+
+  const appliesTo = analysis.agentGuidance
+    .filter((guidance) => guidance.conventionStatements.length > 0)
+    .map((guidance) => guidance.path)
+    .sort();
+
+  return {
+    op: "create_object",
+    id: "constraint.code-conventions",
+    type: "constraint",
+    title: "Code conventions",
+    body: [
+      "# Code conventions",
+      "",
+      "Follow these explicit repo instructions from agent guidance files:",
+      ...statements.map((statement) => `- ${statement}`),
+      ""
+    ].join("\n"),
+    tags: ["convention", "code-style", "agents"],
+    facets: {
+      category: "convention",
+      applies_to: appliesTo,
+      load_modes: ["coding", "review"]
+    },
+    evidence: appliesTo.map((path) => ({ kind: "file", id: path }))
+  };
+}
+
 function nodeEngineConstraint(
   storage: CanonicalStorageSnapshot,
   analysis: BootstrapAnalysis
@@ -767,7 +1008,7 @@ function productFeatureConcepts(
   storage: CanonicalStorageSnapshot,
   analysis: BootstrapAnalysis
 ): BootstrapPatchChange[] {
-  const features = analysis.readme?.features ?? [];
+  const features = analysis.productFeatures;
 
   if (features.length === 0) {
     return [];
@@ -776,7 +1017,7 @@ function productFeatureConcepts(
   const existingIds = new Set(storage.objects.map((object) => object.sidecar.id));
   const changes: BootstrapPatchChange[] = [];
 
-  for (const feature of features.slice(0, 6)) {
+  for (const feature of features.slice(0, BOOTSTRAP_PRODUCT_FEATURE_LIMIT)) {
     const title = `Feature: ${feature.title}`;
     const baseId = generateObjectId({
       type: "concept",
@@ -815,13 +1056,30 @@ function productFeatureConcepts(
 
 function hasProductFeatureBootstrapSignal(analysis: BootstrapAnalysis): boolean {
   return (
-    (analysis.readme?.features.length ?? 0) > 0 ||
+    analysis.productFeatures.length > 0 ||
     [...analysis.files].some((file) =>
-      /(?:^app\/.*\/page\.(?:tsx?|jsx?|svelte)$|^pages\/.*\.(?:tsx?|jsx?|svelte)$|^routes\/)/u.test(
-        file
-      )
+      routeProductFeature(file) !== null ||
+      /(?:^src\/cli\/commands\/.*\.ts$|^src\/cli\/main\.ts$)/u.test(file)
     )
   );
+}
+
+function bootstrapRecommendedFacets(analysis: BootstrapAnalysis): FacetCategory[] {
+  const facets: FacetCategory[] = [];
+
+  if (hasProductFeatureBootstrapSignal(analysis)) {
+    facets.push("product-feature");
+  }
+
+  if (postTaskVerificationCommands(analysis).length > 0) {
+    facets.push("testing");
+  }
+
+  if (analysis.agentGuidance.some((guidance) => guidance.conventionStatements.length > 0)) {
+    facets.push("convention");
+  }
+
+  return facets;
 }
 
 async function readReadme(projectRoot: string): Promise<ReadmeInfo | null> {
@@ -840,11 +1098,192 @@ async function readReadme(projectRoot: string): Promise<ReadmeInfo | null> {
   return {
     title: title ?? null,
     summary,
-    features: readmeProductFeatures(lines)
+    features: markdownProductFeatures(lines, "README.md")
   };
 }
 
-function readmeProductFeatures(lines: readonly string[]): ProductFeatureInfo[] {
+async function readAgentGuidance(projectRoot: string): Promise<AgentGuidanceInfo[]> {
+  const guidance: AgentGuidanceInfo[] = [];
+
+  for (const path of AGENT_GUIDANCE_FILES) {
+    const raw = await readUtf8IfExists(projectRoot, path);
+
+    if (raw === null) {
+      continue;
+    }
+
+    const contents = stripAictxMemoryBlocks(raw);
+    const conventionStatements = extractConventionStatements(contents);
+    const verificationCommands = extractVerificationCommands(contents, path);
+
+    if (conventionStatements.length === 0 && verificationCommands.length === 0) {
+      continue;
+    }
+
+    guidance.push({
+      path,
+      conventionStatements,
+      verificationCommands
+    });
+  }
+
+  return guidance;
+}
+
+function stripAictxMemoryBlocks(contents: string): string {
+  let remaining = contents;
+
+  for (;;) {
+    const start = remaining.indexOf(AICTX_MEMORY_START_MARKER);
+
+    if (start === -1) {
+      return remaining;
+    }
+
+    const end = remaining.indexOf(AICTX_MEMORY_END_MARKER, start);
+
+    if (end === -1) {
+      return remaining.slice(0, start);
+    }
+
+    remaining = `${remaining.slice(0, start)}${remaining.slice(
+      end + AICTX_MEMORY_END_MARKER.length
+    )}`;
+  }
+}
+
+function extractConventionStatements(contents: string): string[] {
+  const statements: string[] = [];
+  let inFence = false;
+  let inConventionSection = false;
+
+  for (const line of contents.split(/\r\n|\n|\r/u)) {
+    const trimmed = line.trim();
+
+    if (trimmed.startsWith("```") || trimmed.startsWith("~~~")) {
+      inFence = !inFence;
+      continue;
+    }
+
+    if (inFence || trimmed === "") {
+      continue;
+    }
+
+    const heading = /^#{1,6}\s+(.+?)\s*$/u.exec(trimmed);
+
+    if (heading !== null) {
+      inConventionSection = isConventionHeading(heading[1] ?? "");
+      continue;
+    }
+
+    const bullet = /^(?:[-*+]\s+|\d+\.\s+)(.+?)\s*$/u.exec(trimmed);
+    const candidate = cleanMarkdownText((bullet?.[1] ?? trimmed).replace(/^\[[ xX]\]\s+/u, ""));
+
+    if (
+      candidate === "" ||
+      containsVerificationCommand(candidate) ||
+      (!inConventionSection && !isStrongConventionStatement(candidate))
+    ) {
+      continue;
+    }
+
+    statements.push(truncateSentence(candidate, 180));
+
+    if (statements.length >= 12) {
+      break;
+    }
+  }
+
+  return uniqueSorted(statements);
+}
+
+function isConventionHeading(value: string): boolean {
+  return /\b(?:code\s+)?(?:conventions?|style|standards?|guidelines?|instructions?)\b/iu.test(
+    cleanMarkdownText(value)
+  );
+}
+
+function isStrongConventionStatement(value: string): boolean {
+  return (
+    /\b(?:prefer|use|avoid|do not|don't|never|must|should|keep|write|default to)\b/iu.test(
+      value
+    ) &&
+    /\b(?:code|TypeScript|JavaScript|tests?|lint|format|style|components?|files?|imports?|errors?|comments?|ASCII|schema|API)\b/iu.test(
+      value
+    )
+  );
+}
+
+function extractVerificationCommands(
+  contents: string,
+  path: string
+): VerificationCommandInfo[] {
+  const commands: VerificationCommandInfo[] = [];
+  let inFence = false;
+
+  for (const line of contents.split(/\r\n|\n|\r/u)) {
+    const trimmed = line.trim();
+
+    if (trimmed.startsWith("```") || trimmed.startsWith("~~~")) {
+      inFence = !inFence;
+      continue;
+    }
+
+    const candidates = [
+      ...[...trimmed.matchAll(/`([^`]+)`/gu)].map((match) => match[1] ?? ""),
+      ...(inFence ? [trimmed] : [])
+    ];
+
+    for (const candidate of candidates.flatMap(splitShellCommands)) {
+      const command = cleanCommand(candidate);
+
+      if (command === "" || !isVerificationCommand(command)) {
+        continue;
+      }
+
+      commands.push({
+        command,
+        description: `explicitly documented in \`${path}\``,
+        evidence: [{ kind: "file", id: path }]
+      });
+    }
+  }
+
+  return uniqueVerificationCommands(commands);
+}
+
+function splitShellCommands(value: string): string[] {
+  return value
+    .split(/\s+(?:&&|\|\|)\s+/u)
+    .map((command) => command.trim())
+    .filter((command) => command !== "");
+}
+
+function cleanCommand(value: string): string {
+  return value
+    .replace(/^\$\s*/u, "")
+    .replace(/^[#>-]\s*/u, "")
+    .replace(/[.;,]\s*$/u, "")
+    .replace(/\s+/gu, " ")
+    .trim();
+}
+
+function isVerificationCommand(value: string): boolean {
+  return /^(?:(?:pnpm|npm|yarn|bun)\s+(?:run\s+)?(?:typecheck|lint|test|check|build)(?::[a-z0-9:_-]+)?\b|(?:tsc|svelte-check|vitest|eslint|biome|prettier)\b)/iu.test(
+    value
+  );
+}
+
+function containsVerificationCommand(value: string): boolean {
+  return /(?:^|\b)(?:(?:pnpm|npm|yarn|bun)\s+(?:run\s+)?(?:typecheck|lint|test|check|build)(?::[a-z0-9:_-]+)?\b|(?:tsc|svelte-check|vitest|eslint|biome|prettier)\b)/iu.test(
+    value
+  );
+}
+
+function markdownProductFeatures(
+  lines: readonly string[],
+  relativePath: string
+): ProductFeatureInfo[] {
   const features: ProductFeatureInfo[] = [];
   let inFence = false;
   let inFeatureSection = false;
@@ -888,12 +1327,12 @@ function readmeProductFeatures(lines: readonly string[]): ProductFeatureInfo[] {
     features.push({
       title,
       description,
-      evidence: [{ kind: "file", id: "README.md" }],
-      appliesTo: ["README.md"],
+      evidence: [{ kind: "file", id: relativePath }],
+      appliesTo: [relativePath],
       tags: productFeatureTags(title)
     });
 
-    if (features.length >= 6) {
+    if (features.length >= BOOTSTRAP_PRODUCT_FEATURE_LIMIT) {
       return features;
     }
   }
@@ -916,6 +1355,215 @@ function featureTitle(description: string): string {
 
 function productFeatureTags(title: string): string[] {
   return uniqueSorted(["feature", "product", ...[...tokenize(title)].slice(0, 4)]);
+}
+
+async function documentedProductFeatures(
+  projectRoot: string,
+  changedFiles: readonly string[]
+): Promise<ProductFeatureInfo[]> {
+  const features: ProductFeatureInfo[] = [];
+  const docs = changedFiles
+    .filter((file) => file.startsWith("docs/") && /\.mdx?$/u.test(file))
+    .slice(0, BOOTSTRAP_DOC_FEATURE_FILE_LIMIT);
+
+  for (const file of docs) {
+    const contents = await readUtf8IfExists(projectRoot, file);
+
+    if (contents === null) {
+      continue;
+    }
+
+    features.push(...markdownProductFeatures(contents.split(/\r\n|\n|\r/u), file));
+
+    if (features.length >= BOOTSTRAP_PRODUCT_FEATURE_LIMIT) {
+      return features.slice(0, BOOTSTRAP_PRODUCT_FEATURE_LIMIT);
+    }
+  }
+
+  return features;
+}
+
+async function codeProductFeatures(
+  projectRoot: string,
+  changedFiles: readonly string[],
+  packageJson: PackageJsonInfo | null
+): Promise<ProductFeatureInfo[]> {
+  const features: ProductFeatureInfo[] = [
+    ...packageBinProductFeatures(packageJson),
+    ...(await cliCommandProductFeatures(projectRoot, changedFiles)),
+    ...routeProductFeatures(changedFiles)
+  ];
+
+  return features.slice(0, BOOTSTRAP_PRODUCT_FEATURE_LIMIT);
+}
+
+function packageBinProductFeatures(packageJson: PackageJsonInfo | null): ProductFeatureInfo[] {
+  if (packageJson === null) {
+    return [];
+  }
+
+  return Object.entries(packageJson.bin)
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([name, target]) => ({
+      title: `CLI binary ${name}`,
+      description: `The \`${name}\` executable is published by \`package.json\` and points to \`${target}\`.`,
+      evidence: [{ kind: "file", id: "package.json" }],
+      appliesTo: ["package.json"],
+      tags: productFeatureTags(`CLI binary ${name}`)
+    }));
+}
+
+async function cliCommandProductFeatures(
+  projectRoot: string,
+  changedFiles: readonly string[]
+): Promise<ProductFeatureInfo[]> {
+  const features: ProductFeatureInfo[] = [];
+  const commandFiles = changedFiles.filter((file) =>
+    /(?:^src\/cli\/commands\/.*\.ts$|^src\/cli\/main\.ts$)/u.test(file)
+  );
+
+  for (const file of commandFiles) {
+    const contents = await readUtf8IfExists(projectRoot, file);
+
+    if (contents === null) {
+      continue;
+    }
+
+    for (const command of extractCliCommandDescriptions(contents)) {
+      features.push({
+        title: `CLI command ${command.name}`,
+        description: `The \`${command.name}\` CLI command ${lowercaseFirst(
+          ensureTerminalPeriod(command.description)
+        )}`,
+        evidence: [{ kind: "file", id: file }],
+        appliesTo: [file],
+        tags: productFeatureTags(`CLI command ${command.name}`)
+      });
+
+      if (features.length >= BOOTSTRAP_PRODUCT_FEATURE_LIMIT) {
+        return features;
+      }
+    }
+  }
+
+  return features;
+}
+
+function extractCliCommandDescriptions(
+  contents: string
+): Array<{ name: string; description: string }> {
+  const descriptions: Array<{ name: string; description: string }> = [];
+  const commandPattern =
+    /\.command\(\s*["`]([^"`]+?)["`]\s*\)[\s\S]{0,320}?\.description\(\s*["`]([^"`]+?)["`]\s*\)/gu;
+
+  for (const match of contents.matchAll(commandPattern)) {
+    const rawName = match[1]?.trim() ?? "";
+    const description = cleanMarkdownText(match[2] ?? "");
+    const name = rawName.split(/\s+/u)[0]?.trim();
+
+    if (name === undefined || name === "" || description === "") {
+      continue;
+    }
+
+    descriptions.push({ name, description });
+  }
+
+  return descriptions;
+}
+
+function routeProductFeatures(changedFiles: readonly string[]): ProductFeatureInfo[] {
+  return changedFiles
+    .map(routeProductFeature)
+    .filter((feature): feature is ProductFeatureInfo => feature !== null);
+}
+
+function routeProductFeature(file: string): ProductFeatureInfo | null {
+  const route = routePath(file);
+
+  if (route === null) {
+    return null;
+  }
+
+  return {
+    title: `Route ${route}`,
+    description: `The \`${route}\` route surface is implemented by \`${file}\`.`,
+    evidence: [{ kind: "file", id: file }],
+    appliesTo: [file],
+    tags: productFeatureTags(`Route ${route}`)
+  };
+}
+
+function routePath(file: string): string | null {
+  const appMatch = /^app\/(.+?)\/page\.(?:tsx?|jsx?|svelte)$/u.exec(file);
+
+  if (appMatch !== null) {
+    return normalizeRoutePath(appMatch[1] ?? "");
+  }
+
+  if (/^app\/page\.(?:tsx?|jsx?|svelte)$/u.test(file)) {
+    return "/";
+  }
+
+  const pagesMatch = /^pages\/(.+?)\.(?:tsx?|jsx?|svelte)$/u.exec(file);
+
+  if (pagesMatch !== null) {
+    return normalizeRoutePath(pagesMatch[1] ?? "");
+  }
+
+  const svelteKitMatch = /^src\/routes\/(.+?)\/\+page\.svelte$/u.exec(file);
+
+  if (svelteKitMatch !== null) {
+    return normalizeRoutePath(svelteKitMatch[1] ?? "");
+  }
+
+  if (file === "src/routes/+page.svelte" || file === "routes/+page.svelte") {
+    return "/";
+  }
+
+  const topLevelSvelteKitMatch = /^routes\/(.+?)\/\+page\.svelte$/u.exec(file);
+
+  if (topLevelSvelteKitMatch !== null) {
+    return normalizeRoutePath(topLevelSvelteKitMatch[1] ?? "");
+  }
+
+  const routesMatch = /^routes\/(.+?)\.(?:tsx?|jsx?|svelte)$/u.exec(file);
+
+  if (routesMatch !== null) {
+    return normalizeRoutePath(routesMatch[1] ?? "");
+  }
+
+  return null;
+}
+
+function normalizeRoutePath(value: string): string {
+  const withoutIndex = value.replace(/(?:^|\/)index$/u, "");
+  const segments = withoutIndex
+    .split("/")
+    .filter((segment) => segment !== "" && !/^\(.+\)$/u.test(segment));
+
+  return segments.length === 0 ? "/" : `/${segments.join("/")}`;
+}
+
+function uniqueProductFeatures(features: readonly ProductFeatureInfo[]): ProductFeatureInfo[] {
+  const seen = new Set<string>();
+  const unique: ProductFeatureInfo[] = [];
+
+  for (const feature of features) {
+    const key = feature.title.toLowerCase();
+
+    if (seen.has(key)) {
+      continue;
+    }
+
+    seen.add(key);
+    unique.push(feature);
+
+    if (unique.length >= BOOTSTRAP_PRODUCT_FEATURE_LIMIT) {
+      return unique;
+    }
+  }
+
+  return unique;
 }
 
 async function readPackageJson(projectRoot: string): Promise<PackageJsonInfo | null> {
@@ -944,6 +1592,7 @@ function packageJsonInfo(value: unknown): PackageJsonInfo | null {
     packageManager: stringProperty(value, "packageManager"),
     nodeEngine: engineValue(value, "node"),
     scripts: stringRecordProperty(value, "scripts"),
+    bin: binRecordProperty(value),
     dependencies: dependencySet(value, "dependencies"),
     devDependencies: dependencySet(value, "devDependencies")
   };
@@ -1051,6 +1700,20 @@ function truncateSentence(value: string, maxLength: number): string {
   }
 
   return `${value.slice(0, maxLength - 1).trimEnd()}.`;
+}
+
+function ensureTerminalPeriod(value: string): string {
+  return /[.!?]$/u.test(value) ? value : `${value}.`;
+}
+
+function lowercaseFirst(value: string): string {
+  const first = value[0];
+
+  if (first === undefined) {
+    return value;
+  }
+
+  return `${first.toLowerCase()}${value.slice(1)}`;
 }
 
 async function readUtf8IfExists(projectRoot: string, relativePath: string): Promise<string | null> {
@@ -1173,6 +1836,26 @@ function engineValue(value: Record<string, unknown>, key: string): string | null
 
 function stringRecordProperty(value: Record<string, unknown>, key: string): Record<string, string> {
   const property = value[key];
+
+  if (!isRecord(property)) {
+    return {};
+  }
+
+  return Object.fromEntries(
+    Object.entries(property).filter(
+      (entry): entry is [string, string] =>
+        typeof entry[0] === "string" && typeof entry[1] === "string"
+    )
+  );
+}
+
+function binRecordProperty(value: Record<string, unknown>): Record<string, string> {
+  const property = value.bin;
+
+  if (typeof property === "string") {
+    const name = stringProperty(value, "name");
+    return name === null ? {} : { [name]: property };
+  }
 
   if (!isRecord(property)) {
     return {};
@@ -1437,7 +2120,13 @@ function bootstrapPriority(file: string): number {
     return 3;
   }
 
-  if (file.startsWith("src/") || file.startsWith("app/") || file.startsWith("lib/")) {
+  if (
+    file.startsWith("src/") ||
+    file.startsWith("app/") ||
+    file.startsWith("pages/") ||
+    file.startsWith("routes/") ||
+    file.startsWith("lib/")
+  ) {
     return 4;
   }
 

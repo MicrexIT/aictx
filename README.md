@@ -211,23 +211,25 @@ as enough context to run this bootstrap workflow proactively.
 Copy and paste this prompt into an AI coding agent to set up a repository:
 
 ```text
-Set up Aictx memory for this repository.
+Set up fresh Aictx memory for this Aictx source repository.
 
-If `aictx` is not installed globally, install it first with:
-npm install -g @aictx/memory@0.1.16
+First reinstall the current Aictx package globally:
+npm install -g @aictx/memory@0.1.17
 
-Then run the initial setup:
-aictx setup
+Then reset the local `.aictx/` state with the repo script:
+pnpm run reset:aictx
 
-If the setup review looks correct, apply it:
+Run the initial onboarding and apply the conservative bootstrap memory patch:
 aictx setup --apply
+
+Validate and review the generated memory:
 aictx check
 aictx diff
 
 Start the local viewer:
 aictx view --open
 
-If this repository previously had Aictx memory and I explicitly want to discard it and start from scratch, use `aictx init --force` instead of `aictx init`. Do not manually edit `.aictx/`; report any Aictx errors and the viewer URL.
+Do not manually edit `.aictx/`; report any Aictx errors and the viewer URL.
 ```
 
 Before a task, load relevant memory:

@@ -32,13 +32,16 @@ describe("repo maintenance scripts", () => {
         "Copy and paste this prompt into an AI coding agent to set up a repository:",
         "",
         "```text",
-        "Set up Aictx memory for this repository.",
+        "Set up fresh Aictx memory for this Aictx source repository.",
         "",
-        "If `aictx` is not installed globally, install it first with:",
+        "First reinstall the current Aictx package globally:",
         "npm install -g @aictx/memory@latest",
         "",
-        "Then run the initial setup:",
-        "aictx setup",
+        "Then reset the local `.aictx/` state with the repo script:",
+        "pnpm run reset:aictx",
+        "",
+        "Run the initial onboarding and apply the conservative bootstrap memory patch:",
+        "aictx setup --apply",
         "```",
         ""
       ].join("\n")
@@ -54,6 +57,12 @@ describe("repo maintenance scripts", () => {
     );
     await expect(readFile(join(root, "README.md"), "utf8")).resolves.toContain(
       "npm install -g @aictx/memory\n"
+    );
+    await expect(readFile(join(root, "README.md"), "utf8")).resolves.toContain(
+      "pnpm run reset:aictx"
+    );
+    await expect(readFile(join(root, "README.md"), "utf8")).resolves.toContain(
+      "aictx setup --apply"
     );
   });
 

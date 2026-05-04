@@ -75,8 +75,10 @@ describe("release package", () => {
   it("packs required files and runs published binaries", async () => {
     const packDestination = await createTempRoot("aictx-release-pack-");
     const installRoot = await createTempRoot("aictx-release-install-");
+    const packageJson = parsePackageJson(await readFile(join(repoRoot, "package.json"), "utf8"));
+    const packageVersion = requirePackageVersion(packageJson);
 
-    await ensureBuiltPackageOutput();
+    await ensureBuiltPackageOutput(packageVersion);
     await expect(readFile(join(repoRoot, "dist", "viewer", "index.html"), "utf8")).resolves.toContain(
       '<script type="module"'
     );
@@ -112,9 +114,6 @@ describe("release package", () => {
     expect(packedPaths.every((path) => !path.startsWith("scripts/"))).toBe(true);
     expect(packedPaths.every((path) => !path.startsWith("test/"))).toBe(true);
     expect(packedPaths.every((path) => !path.startsWith("viewer/"))).toBe(true);
-
-    const packageJson = parsePackageJson(await readFile(join(repoRoot, "package.json"), "utf8"));
-    const packageVersion = requirePackageVersion(packageJson);
 
     expect(packageJson.name).toBe("@aictx/memory");
     expect(packageJson.publishConfig).toEqual({
@@ -248,16 +247,27 @@ const generatedGuidancePaths = [
   "integrations/generic/aictx-agent-instructions.md"
 ] as const;
 
-async function ensureBuiltPackageOutput(): Promise<void> {
+async function ensureBuiltPackageOutput(packageVersion: string): Promise<void> {
   try {
     await Promise.all([
       readFile(join(repoRoot, "dist", "cli", "main.js"), "utf8"),
       readFile(join(repoRoot, "dist", "mcp", "server.js"), "utf8"),
       readFile(join(repoRoot, "dist", "viewer", "index.html"), "utf8")
     ]);
+    const version = await expectSuccessfulCommand(
+      join(repoRoot, "dist", "cli", "main.js"),
+      ["--version"],
+      repoRoot
+    );
+
+    if (version.stdout === `${packageVersion}\n`) {
+      return;
+    }
   } catch {
-    await expectSuccessfulCommand("pnpm", ["build"], repoRoot);
+    // Fall through to a full rebuild when artifacts are missing or unusable.
   }
+
+  await expectSuccessfulCommand("pnpm", ["build"], repoRoot);
 }
 
 async function expectSuccessfulCommand(

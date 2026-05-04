@@ -8,3 +8,4 @@
 {"actor":"agent","event":"memory.created","id":"gotcha.pnpm-exec-aictx-old-reader","timestamp":"2026-05-04T16:24:33+02:00"}
 {"actor":"agent","event":"memory.created","id":"decision.cli-first-mcp-compatible-guidance","timestamp":"2026-05-04T16:46:38+02:00"}
 {"actor":"agent","event":"memory.updated","id":"workflow.package-scripts","timestamp":"2026-05-04T17:03:31+02:00"}
+{"actor":"agent","event":"memory.created","id":"decision.bootstrap-captures-onboarding-context","timestamp":"2026-05-04T17:31:42+02:00"}
