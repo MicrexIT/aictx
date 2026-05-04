@@ -199,12 +199,22 @@
     label: string;
   }
 
+  interface GraphGroup {
+    key: string;
+    title: string;
+    lane: string;
+    objects: MemoryObjectSummary[];
+  }
+
   interface GraphNode {
     id: string;
+    objectIds: string[];
     title: string;
     type: ObjectType;
     status: ObjectStatus;
     lane: string;
+    groupKey: string | null;
+    grouped: boolean;
     x: number;
     y: number;
     labelX: number;
@@ -226,6 +236,7 @@
     highlighted: boolean;
     dimmed: boolean;
     implicit: boolean;
+    count: number;
   }
 
   let loadState = $state<ViewerState>("loading");
@@ -255,6 +266,7 @@
   let graphScale = $state(1);
   let graphOffsetX = $state(0);
   let graphOffsetY = $state(0);
+  let expandedGraphGroups = $state<string[]>([]);
   let isDraggingGraph = $state(false);
   let dragStartX = $state(0);
   let dragStartY = $state(0);
@@ -263,8 +275,9 @@
   let pendingOpenObjectId = $state<string | null>(null);
   let githubStars = $state<number | null>(null);
 
-  const graphWidth = 640;
-  const graphHeight = 300;
+  const graphWidth = 420;
+  const graphMinHeight = 300;
+  const graphGroupThreshold = 5;
   const token = new URLSearchParams(window.location.search).get("token") ?? "";
   const githubRepoUrl = "https://github.com/MicrexIT/aictx";
   const githubReadmeUrl = `${githubRepoUrl}#readme`;
@@ -335,10 +348,17 @@
   const hiddenUnlinkedConcepts = $derived.by(() =>
     filteredObjects.filter((object) => object.type === "concept" && !linkedObjectIds.has(object.id))
   );
-  const graphNodeList = $derived.by(() =>
-    buildGraphNodes(graphObjects, relations, selectedObject?.id ?? null, graphFocusId)
+  const graphHeight = $derived.by(() =>
+    graphHeightForObjects(graphObjects, selectedObject?.id ?? null, graphFocusId)
   );
-  const graphNodeById = $derived(new Map(graphNodeList.map((node) => [node.id, node])));
+  const graphSurfaceHeight = $derived(Math.max(382, Math.round(graphHeight * 1.24)));
+  const graphNodeList = $derived.by(() =>
+    buildGraphNodes(graphObjects, relations, selectedObject?.id ?? null, graphFocusId, expandedGraphGroups)
+  );
+  const graphNodeById = $derived(new Map(graphNodeList.flatMap((node) => node.objectIds.map((id) => [id, node]))));
+  const groupedGraphObjectCount = $derived(
+    graphNodeList.reduce((total, node) => total + (node.grouped ? node.objectIds.length : 0), 0)
+  );
   const graphEdgeList = $derived.by(() =>
     buildGraphEdges(relations, graphNodeById, graphNodeList, graphFocusId)
   );
@@ -579,6 +599,22 @@
     graphOffsetY = 0;
   }
 
+  function activateGraphNode(node: GraphNode): void {
+    if (node.grouped && node.groupKey !== null) {
+      toggleGraphGroup(node.groupKey);
+      return;
+    }
+
+    selectObject(node.objectIds[0] ?? node.id);
+  }
+
+  function toggleGraphGroup(groupKey: string): void {
+    expandedGraphGroups = expandedGraphGroups.includes(groupKey)
+      ? expandedGraphGroups.filter((key) => key !== groupKey)
+      : [...expandedGraphGroups, groupKey];
+    fitGraph();
+  }
+
   function objectMatchesSearch(object: MemoryObjectSummary, rawQuery: string): boolean {
     const query = normalizeText(rawQuery);
 
@@ -680,7 +716,7 @@
     focusId: string | null,
     linkedIdsForGraph: Set<string>
   ): MemoryObjectSummary[] {
-    const ids = new Set(baseObjects.map((object) => object.id));
+    const ids = new Set<string>();
     const anchorId = focusId ?? selectedId;
 
     if (anchorId !== null) {
@@ -688,25 +724,140 @@
       for (const neighborId of directNeighborIds(anchorId, relationList)) {
         ids.add(neighborId);
       }
+    } else {
+      const firstObject = baseObjects[0];
+
+      if (firstObject !== undefined) {
+        ids.add(firstObject.id);
+      }
     }
 
-    return [...ids]
+    const candidates = [...ids]
       .map((id) => lookup.get(id))
       .filter((object): object is MemoryObjectSummary => object !== undefined)
       .filter((object) => object.type !== "concept" || linkedIdsForGraph.has(object.id))
       .sort(compareMemoryPriority);
+
+    return candidates;
+  }
+
+  function graphHeightForObjects(
+    memoryObjects: MemoryObjectSummary[],
+    selectedId: string | null,
+    focusId: string | null
+  ): number {
+    const project = memoryObjects.find((object) => object.type === "project") ?? memoryObjects[0];
+    const laneCounts = new Map<string, number>();
+
+    for (const object of memoryObjects) {
+      const lane = laneForObject(object, project?.id ?? null);
+      laneCounts.set(lane, (laneCounts.get(lane) ?? 0) + 1);
+    }
+
+    const maxLaneCount = Math.max(1, ...laneCounts.values());
+    const isDenseNeighborhood = (focusId ?? selectedId) !== null && memoryObjects.length > 10;
+    const neededHeight = 96 + maxLaneCount * 30;
+
+    return isDenseNeighborhood ? Math.max(graphMinHeight, neededHeight) : graphMinHeight;
+  }
+
+  function graphBucketItems(
+    bucket: Array<MemoryObjectSummary | GraphGroup>,
+    lane: string,
+    anchorId: string | null,
+    expandedGroups: string[]
+  ): Array<MemoryObjectSummary | GraphGroup> {
+    const memoryObjects = bucket.filter((item): item is MemoryObjectSummary => !isGraphGroup(item));
+    const sorted = memoryObjects.sort(compareMemoryPriority);
+    const pinned = anchorId === null ? [] : sorted.filter((object) => object.id === anchorId);
+    const candidates = sorted.filter((object) => object.id !== anchorId);
+
+    if (candidates.length < graphGroupThreshold) {
+      return sorted;
+    }
+
+    const group = graphGroupForLane(lane, candidates);
+
+    if (expandedGroups.includes(group.key)) {
+      return sorted;
+    }
+
+    return [...pinned, group].sort(compareGraphItems);
+  }
+
+  function graphGroupForLane(lane: string, objectsForGroup: MemoryObjectSummary[]): GraphGroup {
+    const sorted = objectsForGroup.sort(compareMemoryPriority);
+    const allFeatures = sorted.every((object) => object.title.startsWith("Feature: "));
+    const title = allFeatures
+      ? `Features (${sorted.length})`
+      : `${laneLabel(lane)} (${sorted.length})`;
+
+    return {
+      key: `${lane}:${allFeatures ? "features" : "group"}`,
+      title,
+      lane,
+      objects: sorted
+    };
+  }
+
+  function compareGraphItems(left: MemoryObjectSummary | GraphGroup, right: MemoryObjectSummary | GraphGroup): number {
+    const leftObject = graphItemPrimaryObject(left);
+    const rightObject = graphItemPrimaryObject(right);
+
+    return compareMemoryPriority(leftObject, rightObject);
+  }
+
+  function isGraphGroup(item: MemoryObjectSummary | GraphGroup): item is GraphGroup {
+    return "objects" in item;
+  }
+
+  function graphItemId(item: MemoryObjectSummary | GraphGroup): string {
+    return isGraphGroup(item) ? `group-${item.key}` : item.id;
+  }
+
+  function graphItemObjectIds(item: MemoryObjectSummary | GraphGroup): string[] {
+    return isGraphGroup(item) ? item.objects.map((object) => object.id) : [item.id];
+  }
+
+  function graphItemPrimaryObject(item: MemoryObjectSummary | GraphGroup): MemoryObjectSummary {
+    return isGraphGroup(item) ? item.objects[0]! : item;
+  }
+
+  function graphItemTitle(item: MemoryObjectSummary | GraphGroup): string {
+    return isGraphGroup(item) ? item.title : item.title;
+  }
+
+  function laneLabel(lane: string): string {
+    if (lane === "architecture") {
+      return "Architecture";
+    }
+    if (lane === "rules") {
+      return "Rules";
+    }
+    if (lane === "workflows") {
+      return "Workflows";
+    }
+    if (lane === "facts") {
+      return "Facts";
+    }
+    if (lane === "project") {
+      return "Project";
+    }
+    return "Concepts";
   }
 
   function buildGraphNodes(
     memoryObjects: MemoryObjectSummary[],
     relationList: MemoryRelationSummary[],
     selectedId: string | null,
-    focusId: string | null
+    focusId: string | null,
+    expandedGroups: string[]
   ): GraphNode[] {
     const idsInGraph = new Set(memoryObjects.map((object) => object.id));
-    const neighborIds = focusId === null ? new Set<string>() : directNeighborIds(focusId, relationList);
+    const anchorId = focusId ?? selectedId;
+    const neighborIds = anchorId === null ? new Set<string>() : directNeighborIds(anchorId, relationList);
     const project = memoryObjects.find((object) => object.type === "project") ?? memoryObjects[0];
-    const laneBuckets = new Map<string, MemoryObjectSummary[]>();
+    const laneBuckets = new Map<string, Array<MemoryObjectSummary | GraphGroup>>();
 
     for (const object of memoryObjects) {
       const lane = laneForObject(object, project?.id ?? null);
@@ -714,41 +865,46 @@
     }
 
     const laneConfig = new Map<string, { x: number; top: number; bottom: number; anchor: "start" | "end"; labelOffset: number; labelWidth: number }>([
-      ["other", { x: 198, top: 48, bottom: 126, anchor: "start", labelOffset: 18, labelWidth: 178 }],
-      ["architecture", { x: 456, top: 86, bottom: 116, anchor: "start", labelOffset: 18, labelWidth: 154 }],
-      ["project", { x: 300, top: 162, bottom: 162, anchor: "start", labelOffset: 22, labelWidth: 120 }],
-      ["rules", { x: 454, top: 128, bottom: 208, anchor: "start", labelOffset: 18, labelWidth: 160 }],
-      ["facts", { x: 154, top: 174, bottom: 220, anchor: "start", labelOffset: 18, labelWidth: 174 }],
-      ["workflows", { x: 290, top: 232, bottom: 264, anchor: "start", labelOffset: 18, labelWidth: 126 }]
+      ["other", { x: 82, top: 44, bottom: Math.max(126, graphHeight - 174), anchor: "start", labelOffset: 18, labelWidth: 126 }],
+      ["architecture", { x: 280, top: 62, bottom: Math.max(116, graphHeight - 190), anchor: "start", labelOffset: 18, labelWidth: 112 }],
+      ["project", { x: 182, top: graphHeight / 2, bottom: graphHeight / 2, anchor: "start", labelOffset: 22, labelWidth: 104 }],
+      ["rules", { x: 278, top: Math.min(128, graphHeight * 0.38), bottom: graphHeight - 76, anchor: "start", labelOffset: 18, labelWidth: 118 }],
+      ["facts", { x: 82, top: Math.min(174, graphHeight * 0.5), bottom: graphHeight - 80, anchor: "start", labelOffset: 18, labelWidth: 126 }],
+      ["workflows", { x: 182, top: graphHeight - 68, bottom: graphHeight - 36, anchor: "start", labelOffset: 18, labelWidth: 112 }]
     ]);
     const nodes: GraphNode[] = [];
 
     for (const [lane, bucket] of laneBuckets.entries()) {
       const config = laneConfig.get(lane) ?? laneConfig.get("other")!;
-      const sorted = bucket.sort(compareMemoryPriority);
+      const sorted = graphBucketItems(bucket, lane, anchorId, expandedGroups);
 
-      sorted.forEach((object, index) => {
+      sorted.forEach((item, index) => {
         const y = laneY(index, sorted.length, config.top, config.bottom);
-        const isFocus = focusId === object.id;
-        const isNeighbor = focusId !== null && neighborIds.has(object.id);
-        const isSelected = selectedId === object.id;
+        const ids = graphItemObjectIds(item);
+        const primaryObject = graphItemPrimaryObject(item);
+        const isFocus = anchorId !== null && ids.includes(anchorId);
+        const isNeighbor = anchorId !== null && ids.some((id) => neighborIds.has(id));
+        const isSelected = selectedId !== null && ids.includes(selectedId);
         nodes.push({
-          id: object.id,
-          title: object.title,
-          type: object.type,
-          status: object.status,
+          id: graphItemId(item),
+          objectIds: ids,
+          title: graphItemTitle(item),
+          type: primaryObject.type,
+          status: primaryObject.status,
           lane,
+          groupKey: isGraphGroup(item) ? item.key : null,
+          grouped: isGraphGroup(item),
           x: config.x,
           y,
           labelX: config.x + config.labelOffset,
           labelY: y + 4,
-          labelWidth: config.labelWidth,
+          labelWidth: isGraphGroup(item) ? Math.max(config.labelWidth, 136) : config.labelWidth,
           textAnchor: config.anchor,
-          radius: lane === "project" ? 14 : 9,
-          color: graphColor(object, lane),
+          radius: isGraphGroup(item) ? 12 : lane === "project" ? 14 : 9,
+          color: graphColor(primaryObject, lane),
           selected: isSelected || isFocus,
           neighbor: isNeighbor,
-          dimmed: focusId !== null && !isFocus && !isNeighbor
+          dimmed: anchorId !== null && !isFocus && !isNeighbor
         });
       });
     }
@@ -762,28 +918,46 @@
     nodes: GraphNode[],
     focusId: string | null
   ): GraphEdge[] {
-    const explicitEdges = relationList
-      .map((relation) => {
+    const selectedNode = nodes.find((node) => node.selected);
+    const anchorId = focusId ?? selectedNode?.id ?? null;
+    const explicitEdgesByKey = new Map<string, GraphEdge>();
+
+    for (const relation of relationList) {
         const from = nodeLookup.get(relation.from);
         const to = nodeLookup.get(relation.to);
 
         if (from === undefined || to === undefined) {
-          return null;
+          continue;
         }
 
-        const highlighted = focusId !== null && (relation.from === focusId || relation.to === focusId);
-        return {
-          id: relation.id,
+        if (from.id === to.id) {
+          continue;
+        }
+
+        const key = `${from.id}->${to.id}:${relation.predicate}`;
+        const highlighted = anchorId !== null && (relation.from === anchorId || relation.to === anchorId);
+        const existing = explicitEdgesByKey.get(key);
+
+        if (existing !== undefined) {
+          existing.count += 1;
+          existing.highlighted = existing.highlighted || highlighted;
+          existing.dimmed = anchorId !== null && !existing.highlighted;
+          continue;
+        }
+
+        explicitEdgesByKey.set(key, {
+          id: relation.id.startsWith("rel.") ? relation.id : key,
           predicate: relation.predicate,
           from,
           to,
           highlighted,
-          dimmed: focusId !== null && !highlighted,
-          implicit: false
-        };
-      })
-      .filter((edge): edge is GraphEdge => edge !== null)
-      .sort((left, right) => left.id.localeCompare(right.id));
+          dimmed: anchorId !== null && !highlighted,
+          implicit: false,
+          count: 1
+        });
+    }
+
+    const explicitEdges = [...explicitEdgesByKey.values()].sort((left, right) => left.id.localeCompare(right.id));
     const project = nodes.find((node) => node.lane === "project");
 
     if (project === undefined) {
@@ -797,15 +971,16 @@
       .filter((node) => node.id !== project.id)
       .filter((node) => !explicitPairs.has(`${project.id}->${node.id}`))
       .map((node) => {
-        const highlighted = focusId !== null && (project.id === focusId || node.id === focusId);
+        const highlighted = anchorId !== null && (project.id === anchorId || node.id === anchorId);
         return {
           id: `implicit-${project.id}-${node.id}`,
           predicate: "related_to" as Predicate,
           from: project,
           to: node,
           highlighted,
-          dimmed: focusId !== null && !highlighted,
-          implicit: true
+          dimmed: anchorId !== null && !highlighted,
+          implicit: true,
+          count: 1
         };
       });
 
@@ -1635,6 +1810,7 @@
           <svg
             class="relation-graph-svg"
             viewBox={`0 0 ${graphWidth} ${graphHeight}`}
+            style={`height: ${graphSurfaceHeight}px; min-height: ${graphSurfaceHeight}px;`}
             role="img"
             aria-labelledby="relation-graph-title"
             data-testid="relation-graph-svg"
@@ -1650,9 +1826,11 @@
                   data-testid={edge.implicit ? undefined : `relation-graph-edge-${edge.id}`}
                 >
                   <line x1={edge.from.x} y1={edge.from.y} x2={edge.to.x} y2={edge.to.y} />
-                  <text x={(edge.from.x + edge.to.x) / 2} y={(edge.from.y + edge.to.y) / 2 - 6}>
-                    {edge.predicate}
-                  </text>
+                  {#if graphNodeList.length <= 8 || edge.highlighted}
+                    <text x={(edge.from.x + edge.to.x) / 2} y={(edge.from.y + edge.to.y) / 2 - 6}>
+                      {edge.predicate}{edge.count > 1 ? ` ×${edge.count}` : ""}
+                    </text>
+                  {/if}
                 </g>
               {/each}
 
@@ -1661,21 +1839,22 @@
                   class:selected-node={node.selected}
                   class:neighbor-node={node.neighbor}
                   class:dimmed={node.dimmed}
+                  class:group-node={node.grouped}
                   class={`graph-node type-${node.type}`}
                   role="button"
                   tabindex="0"
                   onclick={() => {
-                    selectObject(node.id);
+                    activateGraphNode(node);
                   }}
                   onkeydown={(event) => {
                     if (event.key === "Enter" || event.key === " ") {
                       event.preventDefault();
-                      selectObject(node.id);
+                      activateGraphNode(node);
                     }
                   }}
                   data-testid={`relation-graph-node-${node.id}`}
                 >
-                  <title>{node.title} ({node.id})</title>
+                  <title>{node.grouped ? `${node.title}. Activate to expand this group.` : `${node.title} (${node.id})`}</title>
                   <circle class="graph-node-dot" cx={node.x} cy={node.y} r={node.radius} fill={node.color} />
                   <foreignObject
                     class="graph-node-title-wrap"
@@ -1699,6 +1878,12 @@
         {#if hiddenUnlinkedConcepts.length > 0}
           <p class="graph-note">
             {hiddenUnlinkedConcepts.length} unlinked concepts hidden from graph. They are still available in Source Memory.
+          </p>
+        {/if}
+
+        {#if groupedGraphObjectCount > 0}
+          <p class="graph-note">
+            {groupedGraphObjectCount} related memories grouped in the map. Activate a grouped node to expand it.
           </p>
         {/if}
 
@@ -2569,6 +2754,12 @@
   .graph-node.neighbor-node .graph-node-dot {
     stroke: #202124;
     stroke-width: 2;
+  }
+
+  .graph-node.group-node .graph-node-dot {
+    stroke: #202124;
+    stroke-dasharray: 3 2;
+    stroke-width: 2.5;
   }
 
   .graph-node-title-wrap {
