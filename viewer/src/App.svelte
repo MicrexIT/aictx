@@ -180,6 +180,8 @@
   type ViewerScreen = "projects" | "memories" | "detail" | "export";
   type ExportState = "idle" | "running" | "success" | "error";
   type BriefState = "idle" | "copied" | "error";
+  type GraphScope = "overview" | "local";
+  type GraphDepth = 1 | 2;
 
   interface MarkdownBlock {
     kind: "heading" | "paragraph" | "list" | "quote" | "code";
@@ -267,6 +269,11 @@
   let graphOffsetX = $state(0);
   let graphOffsetY = $state(0);
   let expandedGraphGroups = $state<string[]>([]);
+  let graphScope = $state<GraphScope>("overview");
+  let graphDepth = $state<GraphDepth>(1);
+  let showGraphConcepts = $state(true);
+  let showImplicitGraphEdges = $state(true);
+  let groupGraphNodes = $state(true);
   let isDraggingGraph = $state(false);
   let dragStartX = $state(0);
   let dragStartY = $state(0);
@@ -343,7 +350,17 @@
       .sort(compareMemoryPriority)
   );
   const graphObjects = $derived.by(() =>
-    graphObjectsForView(filteredObjects, objectById, relations, selectedObject?.id ?? null, graphFocusId, linkedObjectIds)
+    graphObjectsForView(
+      filteredObjects,
+      objectById,
+      relations,
+      selectedObject?.id ?? null,
+      graphFocusId,
+      linkedObjectIds,
+      graphScope,
+      graphDepth,
+      showGraphConcepts
+    )
   );
   const hiddenUnlinkedConcepts = $derived.by(() =>
     filteredObjects.filter((object) => object.type === "concept" && !linkedObjectIds.has(object.id))
@@ -353,14 +370,21 @@
   );
   const graphSurfaceHeight = $derived(Math.max(382, Math.round(graphHeight * 1.24)));
   const graphNodeList = $derived.by(() =>
-    buildGraphNodes(graphObjects, relations, selectedObject?.id ?? null, graphFocusId, expandedGraphGroups)
+    buildGraphNodes(
+      graphObjects,
+      relations,
+      selectedObject?.id ?? null,
+      graphFocusId,
+      expandedGraphGroups,
+      groupGraphNodes
+    )
   );
   const graphNodeById = $derived(new Map(graphNodeList.flatMap((node) => node.objectIds.map((id) => [id, node]))));
   const groupedGraphObjectCount = $derived(
     graphNodeList.reduce((total, node) => total + (node.grouped ? node.objectIds.length : 0), 0)
   );
   const graphEdgeList = $derived.by(() =>
-    buildGraphEdges(relations, graphNodeById, graphNodeList, graphFocusId)
+    buildGraphEdges(relations, graphNodeById, graphNodeList, graphFocusId, showImplicitGraphEdges)
   );
   const directGraphEdgeCount = $derived(graphEdgeList.filter((edge) => !edge.implicit).length);
   const graphPreview = $derived.by(() =>
@@ -615,6 +639,17 @@
     fitGraph();
   }
 
+  function setGraphScope(scope: GraphScope): void {
+    graphScope = scope;
+    expandedGraphGroups = [];
+    fitGraph();
+  }
+
+  function setGraphDepth(depth: GraphDepth): void {
+    graphDepth = depth;
+    fitGraph();
+  }
+
   function objectMatchesSearch(object: MemoryObjectSummary, rawQuery: string): boolean {
     const query = normalizeText(rawQuery);
 
@@ -714,17 +749,19 @@
     relationList: MemoryRelationSummary[],
     selectedId: string | null,
     focusId: string | null,
-    linkedIdsForGraph: Set<string>
+    linkedIdsForGraph: Set<string>,
+    scope: GraphScope,
+    depth: GraphDepth,
+    includeConcepts: boolean
   ): MemoryObjectSummary[] {
     const ids = new Set<string>();
 
-    const focusObject = focusId === null ? null : lookup.get(focusId) ?? null;
-    const shouldUseFocusedNeighborhood = focusId !== null && focusObject !== null && focusObject.type !== "project";
+    const anchorId = focusId ?? selectedId;
+    const focusObject = anchorId === null ? null : lookup.get(anchorId) ?? null;
+    const shouldUseFocusedNeighborhood = scope === "local" && anchorId !== null && focusObject !== null && focusObject.type !== "project";
 
     if (shouldUseFocusedNeighborhood) {
-      const focusedId = focusId;
-      ids.add(focusedId);
-      for (const neighborId of directNeighborIds(focusedId, relationList)) {
+      for (const neighborId of neighborIdsWithinDepth(anchorId, relationList, depth)) {
         ids.add(neighborId);
       }
     } else {
@@ -740,10 +777,37 @@
     const candidates = [...ids]
       .map((id) => lookup.get(id))
       .filter((object): object is MemoryObjectSummary => object !== undefined)
+      .filter((object) => includeConcepts || object.type !== "concept")
       .filter((object) => object.type !== "concept" || linkedIdsForGraph.has(object.id))
       .sort(compareMemoryPriority);
 
     return candidates;
+  }
+
+  function neighborIdsWithinDepth(
+    id: string,
+    relationList: MemoryRelationSummary[],
+    depth: GraphDepth
+  ): Set<string> {
+    const ids = new Set<string>([id]);
+    let frontier = new Set<string>([id]);
+
+    for (let level = 0; level < depth; level += 1) {
+      const next = new Set<string>();
+
+      for (const frontierId of frontier) {
+        for (const neighborId of directNeighborIds(frontierId, relationList)) {
+          if (!ids.has(neighborId)) {
+            ids.add(neighborId);
+            next.add(neighborId);
+          }
+        }
+      }
+
+      frontier = next;
+    }
+
+    return ids;
   }
 
   function graphHeightForObjects(
@@ -764,6 +828,14 @@
     const neededHeight = 96 + maxLaneCount * 30;
 
     return isDenseNeighborhood ? Math.max(graphMinHeight, neededHeight) : graphMinHeight;
+  }
+
+  function graphScopeLabel(): string {
+    if (graphScope === "local") {
+      return graphFocusId === null ? "Local graph uses the selected memory." : "Local graph uses the graph focus.";
+    }
+
+    return "Overview graph shows matching memories, grouped by type when dense.";
   }
 
   function graphBucketItems(
@@ -856,7 +928,8 @@
     relationList: MemoryRelationSummary[],
     selectedId: string | null,
     focusId: string | null,
-    expandedGroups: string[]
+    expandedGroups: string[],
+    shouldGroup: boolean
   ): GraphNode[] {
     const idsInGraph = new Set(memoryObjects.map((object) => object.id));
     const anchorId = focusId ?? selectedId;
@@ -881,7 +954,9 @@
 
     for (const [lane, bucket] of laneBuckets.entries()) {
       const config = laneConfig.get(lane) ?? laneConfig.get("other")!;
-      const sorted = graphBucketItems(bucket, lane, anchorId, expandedGroups);
+      const sorted = shouldGroup
+        ? graphBucketItems(bucket, lane, anchorId, expandedGroups)
+        : bucket.filter((item): item is MemoryObjectSummary => !isGraphGroup(item)).sort(compareMemoryPriority);
 
       sorted.forEach((item, index) => {
         const y = laneY(index, sorted.length, config.top, config.bottom);
@@ -921,7 +996,8 @@
     relationList: MemoryRelationSummary[],
     nodeLookup: Map<string, GraphNode>,
     nodes: GraphNode[],
-    focusId: string | null
+    focusId: string | null,
+    includeImplicitEdges: boolean
   ): GraphEdge[] {
     const selectedNode = nodes.find((node) => node.selected);
     const anchorId = focusId ?? selectedNode?.id ?? null;
@@ -965,7 +1041,7 @@
     const explicitEdges = [...explicitEdgesByKey.values()].sort((left, right) => left.id.localeCompare(right.id));
     const project = nodes.find((node) => node.lane === "project");
 
-    if (project === undefined) {
+    if (project === undefined || !includeImplicitEdges) {
       return explicitEdges;
     }
 
@@ -1795,9 +1871,29 @@
         </div>
 
         <div class="graph-toolbar" aria-label="Graph controls">
+          <button type="button" class:active={graphScope === "overview"} onclick={() => setGraphScope("overview")}>Overview</button>
+          <button type="button" class:active={graphScope === "local"} onclick={() => setGraphScope("local")}>Local</button>
+          <button type="button" class:active={graphDepth === 1} disabled={graphScope !== "local"} onclick={() => setGraphDepth(1)}>Depth 1</button>
+          <button type="button" class:active={graphDepth === 2} disabled={graphScope !== "local"} onclick={() => setGraphDepth(2)}>Depth 2</button>
           <button type="button" onclick={() => zoomGraph(0.12)}>Zoom in</button>
           <button type="button" onclick={() => zoomGraph(-0.12)}>Zoom out</button>
           <button type="button" onclick={() => fitGraph()}>Fit</button>
+        </div>
+
+        <div class="graph-filterbar" aria-label="Graph filters">
+          <label>
+            <input type="checkbox" bind:checked={showGraphConcepts} />
+            Concepts
+          </label>
+          <label>
+            <input type="checkbox" bind:checked={showImplicitGraphEdges} />
+            Inferred links
+          </label>
+          <label>
+            <input type="checkbox" bind:checked={groupGraphNodes} />
+            Group dense lanes
+          </label>
+          <span>{graphScopeLabel()}</span>
         </div>
 
         <!-- svelte-ignore a11y_no_noninteractive_element_interactions, a11y_no_noninteractive_tabindex -->
@@ -2591,6 +2687,35 @@
     margin-top: 10px;
   }
 
+  .graph-filterbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin: 8px 0 10px;
+    color: #6f6f74;
+    font-size: 13px;
+  }
+
+  .graph-filterbar label {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    min-height: 28px;
+    padding: 4px 8px;
+    background: #fff;
+    border: 1px solid #dedbd4;
+    border-radius: 7px;
+  }
+
+  .graph-filterbar input {
+    margin: 0;
+  }
+
+  .graph-filterbar span {
+    color: #7b7b80;
+  }
+
   .task-filters button,
   .graph-toolbar button,
   .node-preview button {
@@ -2675,6 +2800,17 @@
     color: #fff;
     background: #202124;
     border-color: #202124;
+  }
+
+  .graph-toolbar button.active {
+    color: #fff;
+    background: #202124;
+    border-color: #202124;
+  }
+
+  .graph-toolbar button:disabled {
+    cursor: not-allowed;
+    opacity: 0.45;
   }
 
   .obsidian-export button:hover {
