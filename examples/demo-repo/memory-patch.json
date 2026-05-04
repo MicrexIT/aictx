@@ -1,0 +1,98 @@
+{
+  "source": {
+    "kind": "user",
+    "task": "Seed useful demo memory"
+  },
+  "changes": [
+    {
+      "op": "create_object",
+      "id": "workflow.auth-session-refresh",
+      "type": "workflow",
+      "title": "Auth session refresh workflow",
+      "body": "When changing session refresh behavior, inspect `src/auth/session.ts` first. Keep refresh decisions deterministic and test around the five-minute expiry window.",
+      "tags": ["auth", "sessions", "workflow"],
+      "facets": {
+        "category": "workflow",
+        "applies_to": ["src/auth/session.ts"]
+      },
+      "evidence": [
+        {
+          "kind": "file",
+          "id": "src/auth/session.ts"
+        }
+      ]
+    },
+    {
+      "op": "create_object",
+      "id": "constraint.generated-database-types",
+      "type": "constraint",
+      "title": "Do not hand-edit generated database types",
+      "body": "Never manually edit `src/generated/database.types.ts`. Change the schema source, then regenerate types with `npm run db:types`.",
+      "tags": ["database", "generated", "types"],
+      "facets": {
+        "category": "convention",
+        "applies_to": ["src/generated/database.types.ts", "scripts/generate-types.mjs"]
+      },
+      "evidence": [
+        {
+          "kind": "file",
+          "id": "src/generated/database.types.ts"
+        },
+        {
+          "kind": "file",
+          "id": "scripts/generate-types.mjs"
+        }
+      ]
+    },
+    {
+      "op": "create_object",
+      "id": "fact.tokens-stay-server-side",
+      "type": "fact",
+      "title": "Refresh tokens stay server-side",
+      "body": "Refresh tokens should remain server-side. Do not expose refresh tokens to browser code, logs, screenshots, or memory bodies.",
+      "tags": ["auth", "security", "tokens"],
+      "facets": {
+        "category": "debugging-fact",
+        "applies_to": ["src/auth/session.ts"]
+      },
+      "evidence": [
+        {
+          "kind": "file",
+          "id": "src/auth/session.ts"
+        }
+      ]
+    },
+    {
+      "op": "create_object",
+      "id": "gotcha.local-server-not-required",
+      "type": "gotcha",
+      "title": "Do not start local servers just to inspect memory",
+      "body": "For docs and memory-only changes, prefer `aictx check`, `aictx diff`, and focused tests. Start app servers only when verifying runtime behavior.",
+      "tags": ["workflow", "testing", "local-dev"],
+      "facets": {
+        "category": "convention",
+        "applies_to": ["package.json"]
+      },
+      "evidence": [
+        {
+          "kind": "file",
+          "id": "package.json"
+        }
+      ]
+    },
+    {
+      "op": "create_relation",
+      "from": "workflow.auth-session-refresh",
+      "predicate": "requires",
+      "to": "fact.tokens-stay-server-side",
+      "confidence": "high"
+    },
+    {
+      "op": "create_relation",
+      "from": "constraint.generated-database-types",
+      "predicate": "requires",
+      "to": "workflow.auth-session-refresh",
+      "confidence": "medium"
+    }
+  ]
+}

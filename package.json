@@ -16,6 +16,7 @@
   "files": [
     "dist",
     "docs",
+    "examples",
     "integrations",
     "README.md",
     "LICENSE"

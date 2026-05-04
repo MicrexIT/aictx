@@ -1,20 +1,128 @@
 # Aictx
 
-Aictx is local-first project memory for AI coding agents.
+Aictx is local, Git-reviewable project memory for AI coding agents.
 
-It gives an agent a durable place to store project facts, decisions, warnings,
-and context that should survive beyond a single chat. Memory is stored under
-`.aictx/` as reviewable local files, indexed into SQLite for fast retrieval, and
-kept compatible with Git workflows when the project is inside a Git worktree.
+Coding agents start cold, repeat old mistakes, and lose useful context in chat
+history. Aictx gives every repo a small operating manual that agents can load
+before work and update after meaningful changes.
+
+Memory is stored under `.aictx/` as reviewable local files, indexed into SQLite
+for fast retrieval, and compatible with normal Git diffs and pull requests.
 
 The normal loop is:
 
-```text
-load relevant memory -> do work -> save durable memory -> review .aictx changes
+```bash
+aictx load "change auth routes"
+# code with repo-specific rules and gotchas in view
+aictx save --stdin < memory-patch.json
+aictx diff
 ```
 
 Aictx does not require a cloud account, embeddings, hosted sync, an external
 model API, or network access for core memory commands.
+
+## 30-second demo
+
+```bash
+npm install -g @aictx/memory
+cd your-repo
+
+aictx setup
+aictx setup --apply
+
+aictx load "change authentication"
+aictx view --open
+aictx diff
+```
+
+What you get:
+
+* a task-focused brief before an agent edits code
+* a local handbook of rules, workflows, architecture notes, and gotchas
+* memory changes that can be reviewed in Git instead of hidden in chat history
+
+## Why this exists
+
+AI coding agents are useful, but project knowledge is fragile:
+
+* rules live in old chats, comments, READMEs, and maintainer memory
+* agents rediscover architecture and repeat known failure paths
+* "remember this" is hard to review, correct, stale, or commit
+* switching agents or sessions often means starting over
+
+Aictx makes durable project knowledge explicit, local, and reviewable.
+
+## Agent workflow
+
+Before non-trivial work:
+
+```bash
+aictx load "<task>"
+```
+
+During work, use the loaded brief or local viewer as the repo operating manual.
+
+After meaningful work, save only durable project knowledge:
+
+```bash
+aictx save --stdin < memory-patch.json
+aictx diff
+```
+
+No durable knowledge changed? Save nothing. That is a valid outcome.
+
+## Why not chat memory?
+
+Chat memory is useful for personal preference and short-term continuity. It is
+not enough for repository operations because it is hard to inspect, diff,
+review, stale, supersede, or share with another agent.
+
+Aictx keeps project memory with the project. The source of truth is local files
+that can be reviewed like code.
+
+## Why Git-reviewable?
+
+Project memory can be wrong. It needs the same correction loop as code:
+
+* inspect what changed
+* discuss it in a pull request
+* revert it when needed
+* mark stale or superseded knowledge explicitly
+* keep durable context close to the code it describes
+
+## Works with coding agents
+
+Aictx is not tied to one agent UI. It provides CLI output, MCP tools, and
+copyable guidance for:
+
+* Codex
+* Claude Code
+* Cursor
+* Gemini CLI
+* generic local or hosted coding agents that can run commands
+
+See [`examples/agents`](examples/agents) for copyable setup snippets.
+
+## Local viewer
+
+Run:
+
+```bash
+aictx view --open
+```
+
+The viewer turns `.aictx/` memory into a Notion-like coding handbook with task
+filters, a reviewable memory graph, source toggles, trust metadata, and export
+actions.
+
+## Demo assets
+
+The repo includes:
+
+* [`examples/demo-repo`](examples/demo-repo): a tiny app skeleton with useful
+  starter memory as a reviewable patch
+* [`docs/demo-script.md`](docs/demo-script.md): a short script for recording a
+  GIF or video of `aictx load`, the viewer, and `aictx diff`
 
 ## Install
 

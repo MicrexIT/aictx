@@ -25,6 +25,7 @@ yarn-error.log*
 pnpm-debug.log*
 report.*.json
 *.heapsnapshot
+.tmp-viewer-*.png
 
 # Local environment and secrets
 .env

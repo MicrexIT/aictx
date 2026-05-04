@@ -1,0 +1,12 @@
+{
+  "name": "aictx-demo-repo",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "tsc --noEmit",
+    "db:types": "node scripts/generate-types.mjs"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.3"
+  }
+}
