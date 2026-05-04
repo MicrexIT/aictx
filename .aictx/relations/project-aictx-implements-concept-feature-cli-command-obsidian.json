@@ -1,0 +1,17 @@
+{
+  "confidence": "high",
+  "content_hash": "sha256:1c79515d4065cc1e3074dba15aac970913e5a59c089717e028003c12535d55ae",
+  "created_at": "2026-05-04T18:04:45+02:00",
+  "evidence": [
+    {
+      "id": "src/cli/commands/export.ts",
+      "kind": "file"
+    }
+  ],
+  "from": "project.aictx",
+  "id": "rel.project-aictx-implements-concept-feature-cli-command-obsidian",
+  "predicate": "implements",
+  "status": "active",
+  "to": "concept.feature-cli-command-obsidian",
+  "updated_at": "2026-05-04T18:04:45+02:00"
+}

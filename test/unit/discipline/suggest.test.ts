@@ -375,6 +375,16 @@ describe("suggest discipline packets", () => {
             load_modes: ["coding", "onboarding"]
           },
           evidence: [{ kind: "file", id: "README.md" }]
+        }),
+        expect.objectContaining({
+          op: "create_relation",
+          id: "rel.project-billing-api-implements-concept-feature-customer-dashboard",
+          from: "project.billing-api",
+          predicate: "implements",
+          to: "concept.feature-customer-dashboard",
+          status: "active",
+          confidence: "high",
+          evidence: [{ kind: "file", id: "README.md" }]
         })
       ])
     );
@@ -505,7 +515,11 @@ describe("suggest discipline packets", () => {
         ""
       ].join("\n")
     );
-    await writeProjectFile(projectRoot, "app/dashboard/page.tsx", "export default function Page() {}\n");
+    await writeProjectFile(
+      projectRoot,
+      "app/dashboard/page.tsx",
+      "export default function Page() {}\n"
+    );
     await writeBundledSchemas(projectRoot);
     const storage = storageSnapshot({
       objects: [
@@ -542,6 +556,30 @@ describe("suggest discipline packets", () => {
           id: "concept.feature-route-dashboard",
           type: "concept",
           evidence: [{ kind: "file", id: "app/dashboard/page.tsx" }]
+        }),
+        expect.objectContaining({
+          op: "create_relation",
+          id: "rel.project-billing-app-implements-concept-feature-cli-binary-billing",
+          from: "project.billing-app",
+          predicate: "implements",
+          to: "concept.feature-cli-binary-billing",
+          evidence: [{ kind: "file", id: "package.json" }]
+        }),
+        expect.objectContaining({
+          op: "create_relation",
+          id: "rel.project-billing-app-implements-concept-feature-cli-command-sync",
+          from: "project.billing-app",
+          predicate: "implements",
+          to: "concept.feature-cli-command-sync",
+          evidence: [{ kind: "file", id: "src/cli/commands/sync.ts" }]
+        }),
+        expect.objectContaining({
+          op: "create_relation",
+          id: "rel.project-billing-app-implements-concept-feature-route-dashboard",
+          from: "project.billing-app",
+          predicate: "implements",
+          to: "concept.feature-route-dashboard",
+          evidence: [{ kind: "file", id: "app/dashboard/page.tsx" }]
         })
       ])
     );
@@ -551,6 +589,116 @@ describe("suggest discipline packets", () => {
     if (validators.ok && proposal.patch !== null) {
       expect(validatePatch(validators.data, proposal.patch).valid).toBe(true);
     }
+  });
+
+  it("links existing product-feature concepts during bootstrap when the relation is missing", async () => {
+    const projectRoot = await createTempRoot("aictx-discipline-bootstrap-existing-feature-");
+    await writeProjectFile(
+      projectRoot,
+      "README.md",
+      [
+        "# Billing API",
+        "",
+        "## Features",
+        "",
+        "- Customer dashboard: Shows subscription status and invoices.",
+        ""
+      ].join("\n")
+    );
+    await writeBundledSchemas(projectRoot);
+    const storage = storageSnapshot({
+      objects: [
+        memoryObject({
+          id: "project.billing-api",
+          type: "project",
+          status: "active",
+          title: "Billing API",
+          body: "Existing project memory."
+        }),
+        memoryObject({
+          id: "concept.feature-customer-dashboard",
+          type: "concept",
+          status: "active",
+          title: "Feature: Customer dashboard",
+          body: "Existing feature memory."
+        })
+      ],
+      relations: [],
+      projectId: "project.billing-api",
+      projectName: "Billing API"
+    });
+
+    const proposal = await buildSuggestBootstrapPatchProposal({
+      projectRoot,
+      storage
+    });
+
+    expect(proposal.proposed).toBe(true);
+    expect(proposal.patch?.changes).toEqual([
+      {
+        op: "create_relation",
+        id: "rel.project-billing-api-implements-concept-feature-customer-dashboard",
+        from: "project.billing-api",
+        predicate: "implements",
+        to: "concept.feature-customer-dashboard",
+        status: "active",
+        confidence: "high",
+        evidence: [{ kind: "file", id: "README.md" }]
+      }
+    ]);
+
+    const validators = await compileProjectSchemas(projectRoot);
+    expect(validators.ok).toBe(true);
+    if (validators.ok && proposal.patch !== null) {
+      expect(validatePatch(validators.data, proposal.patch).valid).toBe(true);
+    }
+  });
+
+  it("does not duplicate existing product-feature relations during bootstrap", async () => {
+    const projectRoot = await createTempRoot("aictx-discipline-bootstrap-linked-feature-");
+    await writeProjectFile(
+      projectRoot,
+      "README.md",
+      [
+        "# Billing API",
+        "",
+        "## Features",
+        "",
+        "- Customer dashboard: Shows subscription status and invoices.",
+        ""
+      ].join("\n")
+    );
+    const storage = storageSnapshot({
+      objects: [
+        memoryObject({
+          id: "project.billing-api",
+          type: "project",
+          status: "active",
+          title: "Billing API",
+          body: "Existing project memory."
+        }),
+        memoryObject({
+          id: "concept.feature-customer-dashboard",
+          type: "concept",
+          status: "active",
+          title: "Feature: Customer dashboard",
+          body: "Existing feature memory."
+        })
+      ],
+      relations: [
+        projectFeatureRelation("project.billing-api", "concept.feature-customer-dashboard")
+      ],
+      projectId: "project.billing-api",
+      projectName: "Billing API"
+    });
+
+    const proposal = await buildSuggestBootstrapPatchProposal({
+      projectRoot,
+      storage
+    });
+
+    expect(proposal.proposed).toBe(false);
+    expect(proposal.patch).toBeNull();
   });
 
   it("avoids duplicate bootstrap memories when deterministic objects already exist", async () => {
@@ -777,6 +925,26 @@ function projectArchitectureRelation(projectId: ObjectId): StoredMemoryRelation 
     from: projectId,
     predicate: "related_to",
     to: "architecture.current",
+    status: "active",
+    confidence: "high",
+    content_hash: "sha256:relation",
+    created_at: TIMESTAMP,
+    updated_at: TIMESTAMP
+  };
+
+  return {
+    path: `.aictx/relations/${id.slice("rel.".length)}.json`,
+    relation: relationData
+  };
+}
+
+function projectFeatureRelation(projectId: ObjectId, featureId: ObjectId): StoredMemoryRelation {
+  const id = `rel.${projectId.replace(".", "-")}-implements-${featureId.replace(".", "-")}`;
+  const relationData: MemoryRelation = {
+    id,
+    from: projectId,
+    predicate: "implements",
+    to: featureId,
     status: "active",
     confidence: "high",
     content_hash: "sha256:relation",

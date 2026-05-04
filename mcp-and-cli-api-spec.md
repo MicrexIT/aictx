@@ -626,7 +626,7 @@ Behavior:
 * `--bootstrap` works with or without Git and lists likely files for the agent to inspect before creating seed memory.
 * `--after-task` packages changed files, related memory, duplicate or stale candidates, recommended facets, and a save/no-save checklist for the completed task.
 * `--patch` is valid only with `--bootstrap`; it emits a conservative proposed patch suitable for review and `aictx save --file`.
-* `--bootstrap --patch` updates init-created project and architecture placeholders when deterministic evidence is strong, creates small workflow or constraint memories from package metadata, proposes the starter project-to-architecture relation when it is missing, and otherwise emits no patch when confidence is low.
+* `--bootstrap --patch` updates init-created project and architecture placeholders when deterministic evidence is strong, creates small workflow or constraint memories from package metadata, creates deterministic product-feature concepts and `project implements feature` relations when product feature evidence is strong, proposes the starter project-to-architecture relation when it is missing, and otherwise emits no patch when confidence is low.
 * All suggestion modes must be deterministic, local-only, and read-only for canonical memory.
 * Do not expose an MCP tool for suggestion packets in v1.
 

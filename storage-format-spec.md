@@ -389,6 +389,7 @@ Rules:
 
 * Use facets instead of adding narrower object types.
 * Represent current product capabilities as `concept` objects with `facets.category: "product-feature"`.
+* Link product features from the owning project with `implements` when deterministic evidence shows the project provides the feature.
 * Use `mark_stale` for removed product features and `supersede_object` when a new feature replaces an older one.
 * Represent tried-and-abandoned approaches as active memory with `facets.category: "abandoned-attempt"`.
 * Use `stale` or `superseded` only when the memory object itself is no longer valid.

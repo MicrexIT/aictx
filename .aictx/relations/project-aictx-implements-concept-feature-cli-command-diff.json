@@ -1,0 +1,17 @@
+{
+  "confidence": "high",
+  "content_hash": "sha256:f57df266e4a667bd001bde42a33f2f73e728e2b5831ed48763925d979a725870",
+  "created_at": "2026-05-04T18:04:45+02:00",
+  "evidence": [
+    {
+      "id": "src/cli/commands/diff.ts",
+      "kind": "file"
+    }
+  ],
+  "from": "project.aictx",
+  "id": "rel.project-aictx-implements-concept-feature-cli-command-diff",
+  "predicate": "implements",
+  "status": "active",
+  "to": "concept.feature-cli-command-diff",
+  "updated_at": "2026-05-04T18:04:45+02:00"
+}

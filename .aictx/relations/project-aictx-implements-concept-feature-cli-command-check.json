@@ -1,0 +1,17 @@
+{
+  "confidence": "high",
+  "content_hash": "sha256:22e4d13f71b756d89d8b419f9d065d62551ce7df3c3fbc48c6f20326f96e7515",
+  "created_at": "2026-05-04T18:04:45+02:00",
+  "evidence": [
+    {
+      "id": "src/cli/commands/check.ts",
+      "kind": "file"
+    }
+  ],
+  "from": "project.aictx",
+  "id": "rel.project-aictx-implements-concept-feature-cli-command-check",
+  "predicate": "implements",
+  "status": "active",
+  "to": "concept.feature-cli-command-check",
+  "updated_at": "2026-05-04T18:04:45+02:00"
+}

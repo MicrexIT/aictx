@@ -148,7 +148,9 @@ history and branch/task scope for temporary task context.
 Track product features as `concept` memory with the `product-feature` facet.
 Use tags such as `feature`, `product`, and domain terms; use `active` for
 present features, `mark_stale` for removed features, and `supersede_object`
-when one feature replaces another.
+when one feature replaces another. When deterministic bootstrap evidence
+creates product-feature concepts, link the project to each feature with an
+`implements` relation so graph browsing and one-hop retrieval can reach them.
 
 ## Quickstart
 
@@ -378,7 +380,9 @@ aictx suggest --bootstrap --patch > bootstrap-memory.json
 candidates, and an agent checklist. `--bootstrap` lists likely source files and
 seed memory classes for a first-run project memory pass. Add `--patch` with
 `--bootstrap` to generate a proposed structured patch suitable for review and
-`aictx save --file`; it remains read-only until saved explicitly.
+`aictx save --file`; it remains read-only until saved explicitly. Bootstrap
+product-feature concepts are linked from the project with `implements` when the
+feature evidence is deterministic.
 
 #### `aictx audit`
 

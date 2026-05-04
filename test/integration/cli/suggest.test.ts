@@ -79,6 +79,7 @@ interface SaveSuccessEnvelope {
   data: {
     memory_created: string[];
     memory_updated: string[];
+    relations_created: string[];
   };
 }
 
@@ -360,6 +361,25 @@ describe("aictx suggest CLI", () => {
       load_modes: ["coding", "onboarding"]
     });
     expect(feature?.sidecar.evidence).toEqual([{ kind: "file", id: "README.md" }]);
+    const featureRelation = storage.data.relations.find(
+      (stored) =>
+        stored.relation.from === storage.data.config.project.id &&
+        stored.relation.predicate === "implements" &&
+        stored.relation.to === "concept.feature-customer-dashboard"
+    );
+    expect(featureRelation?.relation).toEqual(
+      expect.objectContaining({
+        from: storage.data.config.project.id,
+        predicate: "implements",
+        to: "concept.feature-customer-dashboard",
+        status: "active",
+        confidence: "high",
+        evidence: [{ kind: "file", id: "README.md" }]
+      })
+    );
+    const featureRelationId = featureRelation?.relation.id;
+    expect(featureRelationId).toBeDefined();
+    expect(envelope.data.save?.relations_created).toContain(featureRelationId);
     expect(envelope.data.check.valid).toBe(true);
   });
 
@@ -406,6 +426,41 @@ describe("aictx suggest CLI", () => {
     expect(verification?.body).toContain("pnpm run typecheck");
     expect(verification?.body).toContain("pnpm run lint");
     expect(verification?.body).not.toContain("pnpm run generated");
+    const binRelation = storage.data.relations.find(
+      (stored) =>
+        stored.relation.from === storage.data.config.project.id &&
+        stored.relation.predicate === "implements" &&
+        stored.relation.to === "concept.feature-cli-binary-billing"
+    );
+    const commandRelation = storage.data.relations.find(
+      (stored) =>
+        stored.relation.from === storage.data.config.project.id &&
+        stored.relation.predicate === "implements" &&
+        stored.relation.to === "concept.feature-cli-command-sync"
+    );
+    expect(binRelation?.relation).toEqual(
+      expect.objectContaining({
+        from: storage.data.config.project.id,
+        predicate: "implements",
+        to: "concept.feature-cli-binary-billing",
+        evidence: [{ kind: "file", id: "package.json" }]
+      })
+    );
+    expect(commandRelation?.relation).toEqual(
+      expect.objectContaining({
+        from: storage.data.config.project.id,
+        predicate: "implements",
+        to: "concept.feature-cli-command-sync",
+        evidence: [{ kind: "file", id: "src/cli/commands/sync.ts" }]
+      })
+    );
+    const relationIds = [binRelation?.relation.id, commandRelation?.relation.id].filter(
+      (id): id is string => id !== undefined
+    );
+    expect(relationIds).toHaveLength(2);
+    expect(envelope.data.save?.relations_created).toEqual(
+      expect.arrayContaining(relationIds)
+    );
     expect(envelope.data.check.valid).toBe(true);
   });
 

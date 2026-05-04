@@ -1,0 +1,17 @@
+{
+  "confidence": "high",
+  "content_hash": "sha256:216657c9f64a835e2247ce0cb9fd007b224ca2b1c7a6f04ea1d47707edb7837d",
+  "created_at": "2026-05-04T18:04:45+02:00",
+  "evidence": [
+    {
+      "id": "package.json",
+      "kind": "file"
+    }
+  ],
+  "from": "project.aictx",
+  "id": "rel.project-aictx-implements-concept-feature-cli-binary-aictx-mcp",
+  "predicate": "implements",
+  "status": "active",
+  "to": "concept.feature-cli-binary-aictx-mcp",
+  "updated_at": "2026-05-04T18:04:45+02:00"
+}

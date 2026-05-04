@@ -1,0 +1,17 @@
+{
+  "confidence": "high",
+  "content_hash": "sha256:da5114f55e76da38d91d8a4b8dcb46ec37ac0d5a01599d612f77866de665df88",
+  "created_at": "2026-05-04T18:04:45+02:00",
+  "evidence": [
+    {
+      "id": "src/cli/commands/audit.ts",
+      "kind": "file"
+    }
+  ],
+  "from": "project.aictx",
+  "id": "rel.project-aictx-implements-concept-feature-cli-command-audit",
+  "predicate": "implements",
+  "status": "active",
+  "to": "concept.feature-cli-command-audit",
+  "updated_at": "2026-05-04T18:04:45+02:00"
+}

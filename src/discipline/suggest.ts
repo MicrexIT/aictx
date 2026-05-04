@@ -87,6 +87,7 @@ export type BootstrapPatchChange =
       to: ObjectId;
       status?: RelationStatus;
       confidence?: RelationConfidence;
+      evidence?: Evidence[];
     };
 
 export interface BootstrapMemoryPatch {
@@ -254,6 +255,7 @@ const LOCK_FILE_MANAGERS = [
 const PACKAGE_MANAGERS = new Set(["npm", "pnpm", "yarn", "bun"]);
 const CURRENT_ARCHITECTURE_ID: ObjectId = "architecture.current";
 const PROJECT_ARCHITECTURE_PREDICATE: Predicate = "related_to";
+const PROJECT_FEATURE_PREDICATE: Predicate = "implements";
 
 export function buildSuggestFromDiffPacket(
   options: BuildSuggestFromDiffPacketOptions
@@ -1015,6 +1017,8 @@ function productFeatureConcepts(
   }
 
   const existingIds = new Set(storage.objects.map((object) => object.sidecar.id));
+  const existingRelationIds = new Set(storage.relations.map((relation) => relation.relation.id));
+  const projectObject = objectById(storage, storage.config.project.id);
   const changes: BootstrapPatchChange[] = [];
 
   for (const feature of features.slice(0, BOOTSTRAP_PRODUCT_FEATURE_LIMIT)) {
@@ -1023,30 +1027,62 @@ function productFeatureConcepts(
       type: "concept",
       title
     });
+    const existingFeature = similarObject(storage, "concept", baseId, title);
+    const featureId =
+      existingFeature?.sidecar.id ??
+      generateObjectId({
+        type: "concept",
+        title,
+        existingIds
+      });
 
-    if (hasSimilarObject(storage, "concept", baseId, title)) {
+    if (existingFeature === undefined) {
+      existingIds.add(featureId);
+
+      changes.push({
+        op: "create_object",
+        id: featureId,
+        type: "concept",
+        title,
+        body: [`# ${title}`, "", feature.description, ""].join("\n"),
+        tags: feature.tags,
+        facets: {
+          category: "product-feature",
+          applies_to: feature.appliesTo,
+          load_modes: ["coding", "onboarding"]
+        },
+        evidence: feature.evidence
+      });
+    }
+
+    if (
+      projectObject === null ||
+      hasEquivalentRelation(
+        storage,
+        projectObject.sidecar.id,
+        PROJECT_FEATURE_PREDICATE,
+        featureId
+      )
+    ) {
       continue;
     }
 
-    const id = generateObjectId({
-      type: "concept",
-      title,
-      existingIds
+    const relationId = generateRelationId({
+      from: projectObject.sidecar.id,
+      predicate: PROJECT_FEATURE_PREDICATE,
+      to: featureId,
+      existingIds: existingRelationIds
     });
-    existingIds.add(id);
+    existingRelationIds.add(relationId);
 
     changes.push({
-      op: "create_object",
-      id,
-      type: "concept",
-      title,
-      body: [`# ${title}`, "", feature.description, ""].join("\n"),
-      tags: feature.tags,
-      facets: {
-        category: "product-feature",
-        applies_to: feature.appliesTo,
-        load_modes: ["coding", "onboarding"]
-      },
+      op: "create_relation",
+      id: relationId,
+      from: projectObject.sidecar.id,
+      predicate: PROJECT_FEATURE_PREDICATE,
+      to: featureId,
+      status: "active",
+      confidence: "high",
       evidence: feature.evidence
     });
   }
@@ -1759,9 +1795,18 @@ function hasSimilarObject(
   id: ObjectId,
   title: string
 ): boolean {
+  return similarObject(storage, type, id, title) !== undefined;
+}
+
+function similarObject(
+  storage: CanonicalStorageSnapshot,
+  type: ObjectType,
+  id: ObjectId,
+  title: string
+): StoredMemoryObject | undefined {
   const normalizedTitle = title.toLowerCase();
 
-  return storage.objects.some(
+  return storage.objects.find(
     (object) =>
       object.sidecar.type === type &&
       (object.sidecar.id === id || object.sidecar.title.toLowerCase() === normalizedTitle)

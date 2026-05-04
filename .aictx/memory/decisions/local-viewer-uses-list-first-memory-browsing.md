@@ -1,1 +1,0 @@
-The local viewer defaults to a centered Memories list with explicit selection into a detail view. The detail view keeps Markdown primary, shows related memories and a direct-neighborhood connection map, and keeps raw JSON, paths, and timestamps in collapsed technical details. Obsidian export lives in the Export navigation section.
