@@ -109,6 +109,7 @@ The v1 agent model is CLI-first and MCP-compatible. CLI handles routine memory w
 | Review patch file | none | `aictx patch review` |
 | Validate storage | none | `aictx check` |
 | Rebuild generated index | none | `aictx rebuild` |
+| Reset local storage | none | `aictx reset` |
 | Show memory history | none | `aictx history` |
 | Restore memory | none | `aictx restore` |
 | Rewind memory | none | `aictx rewind` |

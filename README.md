@@ -218,8 +218,8 @@ Set up fresh Aictx memory for this Aictx source repository.
 First reinstall the current Aictx package globally:
 npm install -g @aictx/memory@0.1.18
 
-Then reset the local `.aictx/` state with the repo script:
-pnpm run reset:aictx
+Then reset the local `.aictx/` state with the Aictx CLI:
+aictx reset
 
 Run the initial onboarding and apply the conservative bootstrap memory patch:
 aictx setup --apply
@@ -337,6 +337,20 @@ aictx rebuild
 
 Use this when the generated SQLite index is missing, stale, or suspected to be
 wrong. Rebuild does not change canonical memory.
+
+#### `aictx reset`
+
+Backs up and clears local `.aictx/` storage.
+
+```bash
+aictx reset
+aictx reset --destroy
+```
+
+Default reset writes a timestamped archive under `.aictx/.backup/`, then clears
+the rest of `.aictx/` while preserving the backup directory. Use `--destroy`
+only when you intentionally want to delete `.aictx/` entirely without creating
+a backup.
 
 ### Routine Memory Work
 
@@ -729,6 +743,7 @@ MCP or CLI. It does not mean MCP and CLI expose identical command lists.
 | Review patch file | none | `aictx patch review` | Patch review remains CLI-only in v1. |
 | Validate storage | none | `aictx check` | Maintenance remains CLI-only in v1. |
 | Rebuild generated index | none | `aictx rebuild` | Maintenance remains CLI-only in v1. |
+| Reset local storage | none | `aictx reset` | Destructive maintenance remains CLI-only in v1. |
 | Show memory history | none | `aictx history` | Recovery and inspection remain CLI-only in v1. |
 | Restore memory | none | `aictx restore` | Recovery remains CLI-only in v1. |
 | Rewind memory | none | `aictx rewind` | Recovery remains CLI-only in v1. |
@@ -808,6 +823,7 @@ Repository commands:
 | `pnpm build:viewer` | Builds the bundled local viewer assets into `dist/viewer/`. |
 | `pnpm dev` | Runs the CLI from TypeScript sources with `tsx`. Pass CLI arguments after `--`, for example `pnpm dev -- load "task"`. |
 | `pnpm dev:mcp` | Runs the MCP stdio server from TypeScript sources with `tsx`. |
+| `npm run version:patch` | Runs `npm version patch --no-git-tag-version`, pins the README setup prompt install command to the new package version, and regenerates `src/generated/version.ts`. |
 | `pnpm test` | Runs the Vitest test suite once. |
 | `pnpm test:package` | Builds and verifies the packed package, including installed CLI, MCP, and viewer assets. |
 | `pnpm test:watch` | Runs Vitest in watch mode for local development. |
@@ -816,7 +832,7 @@ Repository commands:
 Useful local examples:
 
 ```bash
-pnpm dev -- --help
+pnpm dev --help
 pnpm dev -- load "document the restore flow"
 pnpm test
 pnpm typecheck

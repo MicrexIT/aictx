@@ -9,3 +9,4 @@ Use the package scripts in `package.json` for repeated project workflows:
 - `build:viewer`: `vite build --config viewer/vite.config.ts`
 - `dev`: `tsx src/cli/main.ts`
 - `dev:mcp`: `tsx src/mcp/server.ts`
+- `version:patch`: runs `npm version patch --no-git-tag-version`, syncs the README setup-prompt install version, and regenerates `src/generated/version.ts`

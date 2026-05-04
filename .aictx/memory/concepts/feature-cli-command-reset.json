@@ -1,0 +1,47 @@
+{
+  "body_path": "memory/concepts/feature-cli-command-reset.md",
+  "content_hash": "sha256:608f63f93cffe7f8b4c4997309f534f2c5553a9972da4dfc7e73322f7b98334a",
+  "created_at": "2026-05-04T18:33:31+02:00",
+  "evidence": [
+    {
+      "id": "src/cli/commands/reset.ts",
+      "kind": "file"
+    },
+    {
+      "id": "src/app/operations.ts",
+      "kind": "file"
+    }
+  ],
+  "facets": {
+    "applies_to": [
+      "src/cli/commands/reset.ts",
+      "src/app/operations.ts"
+    ],
+    "category": "product-feature",
+    "load_modes": [
+      "coding",
+      "onboarding"
+    ]
+  },
+  "id": "concept.feature-cli-command-reset",
+  "scope": {
+    "branch": null,
+    "kind": "project",
+    "project": "project.aictx",
+    "task": null
+  },
+  "source": {
+    "kind": "agent",
+    "task": "Record CLI placement for version patch and reset maintenance commands"
+  },
+  "status": "active",
+  "tags": [
+    "cli",
+    "feature",
+    "product",
+    "maintenance"
+  ],
+  "title": "Feature: CLI command reset",
+  "type": "concept",
+  "updated_at": "2026-05-04T18:33:31+02:00"
+}

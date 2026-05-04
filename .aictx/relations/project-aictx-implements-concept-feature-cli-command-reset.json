@@ -1,0 +1,17 @@
+{
+  "confidence": "high",
+  "content_hash": "sha256:4f16e9f673af22395595ca71d1e7397db882aa2ccb1392798732e09e5e2a6c46",
+  "created_at": "2026-05-04T18:33:31+02:00",
+  "evidence": [
+    {
+      "id": "src/cli/commands/reset.ts",
+      "kind": "file"
+    }
+  ],
+  "from": "project.aictx",
+  "id": "rel.project-aictx-implements-concept-feature-cli-command-reset",
+  "predicate": "implements",
+  "status": "active",
+  "to": "concept.feature-cli-command-reset",
+  "updated_at": "2026-05-04T18:33:31+02:00"
+}

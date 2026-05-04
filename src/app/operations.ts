@@ -1,3 +1,7 @@
+import { randomUUID } from "node:crypto";
+import { lstat, mkdir, readdir, rm } from "node:fs/promises";
+import { join } from "node:path";
+
 import { systemClock, type Clock } from "../core/clock.js";
 import { aictxError, type AictxError, type JsonValue } from "../core/errors.js";
 import { readUtf8FileInsideRoot } from "../core/fs.js";
@@ -183,6 +187,11 @@ export interface RewindMemoryOptions extends GitWrapperOptions {
   clock?: Clock;
 }
 
+export interface ResetAictxOptions extends GitWrapperOptions {
+  cwd: string;
+  destroy?: boolean;
+}
+
 export interface ExportObsidianProjectionOptions extends GitWrapperOptions {
   cwd: string;
   outDir?: string;
@@ -325,6 +334,12 @@ export interface ViewerBootstrapData {
     active_relations: number;
   };
   storage_warnings: string[];
+}
+
+export interface ResetAictxData {
+  destroyed: boolean;
+  backup_path: string | null;
+  entries_removed: string[];
 }
 
 export type ExportObsidianProjectionData = ObsidianProjectionExportData;
@@ -1438,6 +1453,65 @@ export async function rewindMemory(
   });
 }
 
+export async function resetAictx(options: ResetAictxOptions): Promise<AppResult<ResetAictxData>> {
+  const paths = await resolveProjectPaths({
+    cwd: options.cwd,
+    mode: "init",
+    runner: options.runner
+  });
+
+  if (!paths.ok) {
+    return {
+      ok: false,
+      error: paths.error,
+      warnings: paths.warnings,
+      meta: await buildBestEffortMeta(options)
+    };
+  }
+
+  const meta = await buildMeta(paths.data, options);
+
+  if (!meta.ok) {
+    return meta;
+  }
+
+  if (options.destroy === true) {
+    const destroyed = await removeAictxRoot(paths.data.aictxRoot);
+
+    if (!destroyed.ok) {
+      return appError(destroyed.error, destroyed.warnings, meta.meta);
+    }
+
+    return {
+      ok: true,
+      data: {
+        destroyed: true,
+        backup_path: null,
+        entries_removed: [".aictx"]
+      },
+      warnings: destroyed.warnings,
+      meta: meta.meta
+    };
+  }
+
+  const reset = await backupAndClearAictxRoot(paths.data.projectRoot, paths.data.aictxRoot, options);
+
+  if (!reset.ok) {
+    return appError(reset.error, reset.warnings, meta.meta);
+  }
+
+  return {
+    ok: true,
+    data: {
+      destroyed: false,
+      backup_path: reset.data.backupPath,
+      entries_removed: reset.data.entriesRemoved
+    },
+    warnings: reset.warnings,
+    meta: meta.meta
+  };
+}
+
 export async function saveMemoryPatch(
   options: SaveMemoryPatchOptions
 ): Promise<AppResult<SaveMemoryData>> {
@@ -2458,6 +2532,159 @@ async function readAutoIndexSetting(paths: ProjectPaths): Promise<Result<boolean
   return ok(storage.data.config.memory.autoIndex, storage.warnings);
 }
 
+function appError<T>(error: AictxError, warnings: string[], meta: AictxMeta): AppResult<T> {
+  return {
+    ok: false,
+    error,
+    warnings,
+    meta
+  };
+}
+
+async function removeAictxRoot(aictxRoot: string): Promise<Result<void>> {
+  try {
+    await rm(aictxRoot, { recursive: true, force: true });
+    return ok(undefined);
+  } catch (error) {
+    return err(
+      aictxError("AICtxValidationFailed", "Aictx root could not be deleted.", {
+        aictxRoot,
+        message: messageFromUnknown(error)
+      })
+    );
+  }
+}
+
+async function backupAndClearAictxRoot(
+  projectRoot: string,
+  aictxRoot: string,
+  options: GitWrapperOptions
+): Promise<Result<{ backupPath: string; entriesRemoved: string[] }>> {
+  const existingRoot = await ensureRealDirectory(aictxRoot, ".aictx");
+
+  if (!existingRoot.ok) {
+    return existingRoot;
+  }
+
+  const backupRoot = join(aictxRoot, ".backup");
+
+  try {
+    await mkdir(backupRoot, { recursive: true });
+  } catch (error) {
+    return err(
+      aictxError("AICtxValidationFailed", "Aictx backup directory could not be created.", {
+        path: ".aictx/.backup",
+        message: messageFromUnknown(error)
+      })
+    );
+  }
+
+  const backupDirectory = await ensureRealDirectory(backupRoot, ".aictx/.backup");
+
+  if (!backupDirectory.ok) {
+    return backupDirectory;
+  }
+
+  const archiveName = `aictx-${timestampForFilename()}-${randomUUID()}.tar.gz`;
+  const archivePath = join(backupRoot, archiveName);
+  const archiveRelativePath = toSlash(join(".aictx", ".backup", archiveName));
+  const archived = await runSubprocess(
+    "tar",
+    [
+      "-czf",
+      archivePath,
+      "--exclude",
+      "./.backup",
+      "--exclude",
+      ".backup",
+      "-C",
+      aictxRoot,
+      "."
+    ],
+    {
+      cwd: projectRoot,
+      ...(options.runner === undefined ? {} : { runner: options.runner })
+    }
+  );
+
+  if (!archived.ok) {
+    await rm(archivePath, { force: true });
+    return archived;
+  }
+
+  if (archived.data.exitCode !== 0) {
+    await rm(archivePath, { force: true });
+    return err(
+      aictxError("AICtxInternalError", "Aictx backup archive could not be created.", {
+        command: "tar",
+        exitCode: archived.data.exitCode,
+        signal: archived.data.signal,
+        stderr: archived.data.stderr
+      })
+    );
+  }
+
+  try {
+    const entries = await readdir(aictxRoot);
+    const entriesToRemove = entries.filter((entry) => entry !== ".backup");
+
+    await Promise.all(
+      entriesToRemove.map((entry) => rm(join(aictxRoot, entry), { recursive: true, force: true }))
+    );
+
+    return ok({
+      backupPath: archiveRelativePath,
+      entriesRemoved: entriesToRemove.map((entry) => toSlash(join(".aictx", entry))).sort()
+    });
+  } catch (error) {
+    return err(
+      aictxError("AICtxValidationFailed", "Aictx root could not be cleared after backup.", {
+        aictxRoot,
+        backupPath: archiveRelativePath,
+        message: messageFromUnknown(error)
+      })
+    );
+  }
+}
+
+async function ensureRealDirectory(path: string, label: string): Promise<Result<void>> {
+  let stats;
+
+  try {
+    stats = await lstat(path);
+  } catch (error) {
+    const code = errorCode(error);
+    const message = code === "ENOENT"
+      ? `${label} directory does not exist.`
+      : `${label} directory could not be read.`;
+
+    return err(
+      aictxError(code === "ENOENT" ? "AICtxNotInitialized" : "AICtxValidationFailed", message, {
+        path: label,
+        message: messageFromUnknown(error)
+      })
+    );
+  }
+
+  if (stats.isSymbolicLink() || !stats.isDirectory()) {
+    return err(
+      aictxError("AICtxValidationFailed", `${label} must be a real directory.`, {
+        path: label
+      })
+    );
+  }
+
+  return ok(undefined);
+}
+
+function timestampForFilename(): string {
+  return new Date().toISOString().replace(/[:.]/g, "-");
+}
+
+function toSlash(path: string): string {
+  return path.replace(/\\/gu, "/");
+}
+
 function fallbackMeta(paths: ProjectPaths): AictxMeta {
   return {
     project_root: paths.projectRoot,
@@ -2486,4 +2713,16 @@ function errorToJson(error: { code: string; message: string; details?: JsonValue
 
 function messageFromUnknown(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+function errorCode(error: unknown): string | null {
+  if (isJsonObject(error) && typeof error.code === "string") {
+    return error.code;
+  }
+
+  return null;
+}
+
+function isJsonObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }

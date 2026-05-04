@@ -57,6 +57,7 @@ When a supported MCP or CLI entrypoint exists, agents must use that entrypoint i
 | Review patch file | none | `aictx patch review` | Patch review remains CLI-only in v1. |
 | Validate storage | none | `aictx check` | Maintenance remains CLI-only in v1. |
 | Rebuild generated index | none | `aictx rebuild` | Maintenance remains CLI-only in v1. |
+| Reset local storage | none | `aictx reset` | Destructive maintenance remains CLI-only in v1. |
 | Upgrade storage schema | none | `aictx upgrade` | Migration remains CLI-only in v2. |
 | Show memory history | none | `aictx history` | Recovery/inspection remains CLI-only in v1. |
 | Restore memory | none | `aictx restore` | Recovery remains CLI-only in v1. |
@@ -582,9 +583,10 @@ aictx upgrade [--json]
 aictx patch review <file> [--json]
 aictx setup [--force] [--apply] [--view] [--open] [--json]
 aictx audit [--json]
+aictx reset [--destroy] [--json]
 ```
 
-These commands must not mutate canonical storage. `aictx export obsidian` and the explicit viewer Obsidian export action may write generated projection files only.
+Most optional commands must not mutate canonical storage. `aictx export obsidian` and the explicit viewer Obsidian export action may write generated projection files only. `aictx reset` is the explicit destructive maintenance exception.
 
 Minimum behavior:
 
@@ -602,6 +604,9 @@ Minimum behavior:
 * `aictx setup` orchestrates init, bootstrap proposal, optional save, check, and diff summary.
 * `aictx audit` returns deterministic memory hygiene findings and does not write memory.
 * `aictx upgrade` migrates v1 storage and bundled schemas to v2 without inventing evidence.
+* `aictx reset` defaults to archiving `.aictx/` under `.aictx/.backup/` before clearing the remaining `.aictx/` contents; `--destroy` deletes `.aictx/` without backup.
+
+Source-package version maintenance is intentionally not an `aictx` CLI command. Use the repository npm script `npm run version:patch`, which runs `npm version patch --no-git-tag-version`, pins the README setup prompt install command to the new package version, and regenerates `src/generated/version.ts`.
 
 ### 5.11 `aictx suggest`
 

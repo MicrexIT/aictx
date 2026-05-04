@@ -640,7 +640,7 @@ Design principle:
 * All memory writes should go through structured patch submission.
 * MCP should make Aictx easy to insert into existing coding-agent flows without becoming a spaghetti API.
 * MCP exposes load, search, save, and diff; the CLI also exposes those routine capabilities.
-* Setup, maintenance, recovery, export, inspection, local viewing, suggestion, and audit capabilities remain CLI-only in v1: init, check, rebuild, history, restore, rewind, inspect, stale, graph, export obsidian, view, suggest, and audit.
+* Setup, maintenance, recovery, export, inspection, local viewing, suggestion, and audit capabilities remain CLI-only in v1: init, check, rebuild, reset, history, restore, rewind, inspect, stale, graph, export obsidian, view, suggest, and audit.
 * CLI-first must not mean MCP-unavailable: AI agents may use MCP equivalents when the client has already launched and connected to `aictx-mcp`.
 * Every supported Aictx capability should remain reachable to an AI agent through MCP or CLI without requiring direct `.aictx/` file edits.
 * CLI-only capabilities should not be added to MCP just to create command-list parity.

@@ -20,6 +20,7 @@ Use CLI for v1 setup, maintenance, recovery, export, inspection, local viewing, 
 * `aictx init`
 * `aictx check`
 * `aictx rebuild`
+* `aictx reset`
 * `aictx upgrade`
 * `aictx history`
 * `aictx restore`

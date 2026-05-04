@@ -1,4 +1,4 @@
-import { access, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -37,8 +37,8 @@ describe("repo maintenance scripts", () => {
         "First reinstall the current Aictx package globally:",
         "npm install -g @aictx/memory@latest",
         "",
-        "Then reset the local `.aictx/` state with the repo script:",
-        "pnpm run reset:aictx",
+        "Then reset the local `.aictx/` state with the Aictx CLI:",
+        "aictx reset",
         "",
         "Run the initial onboarding and apply the conservative bootstrap memory patch:",
         "aictx setup --apply",
@@ -58,9 +58,7 @@ describe("repo maintenance scripts", () => {
     await expect(readFile(join(root, "README.md"), "utf8")).resolves.toContain(
       "npm install -g @aictx/memory\n"
     );
-    await expect(readFile(join(root, "README.md"), "utf8")).resolves.toContain(
-      "pnpm run reset:aictx"
-    );
+    await expect(readFile(join(root, "README.md"), "utf8")).resolves.toContain("aictx reset");
     await expect(readFile(join(root, "README.md"), "utf8")).resolves.toContain(
       "aictx setup --apply"
     );
@@ -88,48 +86,6 @@ describe("repo maintenance scripts", () => {
     await expect(readFile(join(root, "README.md"), "utf8")).resolves.toContain(
       "npm install -g @aictx/memory@2.0.1"
     );
-  });
-
-  it("backs up .aictx into .aictx/.backup and clears the remaining contents", async () => {
-    const root = await createTempRoot("aictx-script-reset-");
-    await mkdir(join(root, ".aictx", ".backup"), { recursive: true });
-    await mkdir(join(root, ".aictx", "memory"), { recursive: true });
-    await writeFile(join(root, ".aictx", ".backup", "old.tar.gz"), "old");
-    await writeFile(join(root, ".aictx", "config.json"), "{}\n");
-    await writeFile(join(root, ".aictx", "memory", "note.md"), "# Note\n");
-
-    const result = await runScript("reset-aictx.mjs", ["--root", root]);
-
-    expect(result.exitCode).toBe(0);
-    expect(result.stderr).toBe("");
-    await expect(readdir(join(root, ".aictx"))).resolves.toEqual([".backup"]);
-
-    const backups = await readdir(join(root, ".aictx", ".backup"));
-    const archive = backups.find((file) => file.endsWith(".tar.gz") && file !== "old.tar.gz");
-    expect(archive).toBeDefined();
-
-    const tarList = await runSubprocess("tar", ["-tzf", join(root, ".aictx", ".backup", archive ?? "")]);
-    expect(tarList.ok).toBe(true);
-    if (!tarList.ok) {
-      throw new Error(tarList.error.message);
-    }
-
-    expect(tarList.data.exitCode).toBe(0);
-    expect(tarList.data.stdout).toContain("./config.json");
-    expect(tarList.data.stdout).toContain("./memory/note.md");
-    expect(tarList.data.stdout).not.toContain(".backup");
-  });
-
-  it("deletes .aictx without creating a backup when --destroy is passed", async () => {
-    const root = await createTempRoot("aictx-script-reset-destroy-");
-    await mkdir(join(root, ".aictx", ".backup"), { recursive: true });
-    await writeFile(join(root, ".aictx", "config.json"), "{}\n");
-
-    const result = await runScript("reset-aictx.mjs", ["--root", root, "--destroy"]);
-
-    expect(result.exitCode).toBe(0);
-    expect(result.stderr).toBe("");
-    await expect(access(join(root, ".aictx"))).rejects.toMatchObject({ code: "ENOENT" });
   });
 });
 
