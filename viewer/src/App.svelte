@@ -717,18 +717,23 @@
     linkedIdsForGraph: Set<string>
   ): MemoryObjectSummary[] {
     const ids = new Set<string>();
-    const anchorId = focusId ?? selectedId;
 
-    if (anchorId !== null) {
-      ids.add(anchorId);
-      for (const neighborId of directNeighborIds(anchorId, relationList)) {
+    const focusObject = focusId === null ? null : lookup.get(focusId) ?? null;
+    const shouldUseFocusedNeighborhood = focusId !== null && focusObject !== null && focusObject.type !== "project";
+
+    if (shouldUseFocusedNeighborhood) {
+      const focusedId = focusId;
+      ids.add(focusedId);
+      for (const neighborId of directNeighborIds(focusedId, relationList)) {
         ids.add(neighborId);
       }
     } else {
-      const firstObject = baseObjects[0];
+      for (const object of baseObjects) {
+        ids.add(object.id);
+      }
 
-      if (firstObject !== undefined) {
-        ids.add(firstObject.id);
+      if (selectedId !== null) {
+        ids.add(selectedId);
       }
     }
 
@@ -909,7 +914,7 @@
       });
     }
 
-    return nodes.filter((node) => idsInGraph.has(node.id));
+    return nodes.filter((node) => node.objectIds.some((id) => idsInGraph.has(id)));
   }
 
   function buildGraphEdges(
