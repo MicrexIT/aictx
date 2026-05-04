@@ -36,8 +36,9 @@ V1 API behavior must follow these rules:
 * MCP exposes a small normalized tool set.
 * CLI and MCP must share the same core implementation path.
 * AI agents must be able to reach every supported Aictx capability through either MCP or CLI.
-* MCP is the preferred agent path for routine memory load, search, save, and diff workflows.
-* CLI is the supported fallback and advanced path for setup, maintenance, recovery, export, inspection, local viewing, suggestion, and audit workflows.
+* CLI is the default agent path for routine memory load, search, save, and diff workflows.
+* MCP is a supported integration path when the agent client has already launched and connected to `aictx-mcp`.
+* CLI is the supported path for setup, maintenance, recovery, export, inspection, local viewing, suggestion, and audit workflows.
 * The API must be usable without a cloud account, external API, embeddings, or hosted service.
 
 ### 2.1 Agent Capability Map
@@ -48,10 +49,10 @@ When a supported MCP or CLI entrypoint exists, agents must use that entrypoint i
 
 | Capability | MCP | CLI | Notes |
 | --- | --- | --- | --- |
-| Load task context | `load_memory` | `aictx load` | Preferred routine agent path is MCP. |
-| Search memory | `search_memory` | `aictx search` | Preferred routine agent path is MCP. |
+| Load task context | `load_memory` | `aictx load` | Default routine agent path is CLI; MCP equivalent is supported when configured. |
+| Search memory | `search_memory` | `aictx search` | Default routine agent path is CLI; MCP equivalent is supported when configured. |
 | Save memory patch | `save_memory_patch` | `aictx save` | All writes use structured patches. |
-| Show memory diff | `diff_memory` | `aictx diff` | Git-backed; CLI fallback is supported. |
+| Show memory diff | `diff_memory` | `aictx diff` | Git-backed; CLI is the default review path. |
 | Initialize storage | none | `aictx init`, `aictx setup` | Setup remains CLI-only in v1. |
 | Review patch file | none | `aictx patch review` | Patch review remains CLI-only in v1. |
 | Validate storage | none | `aictx check` | Maintenance remains CLI-only in v1. |
@@ -224,7 +225,7 @@ Success data:
   "next_steps": [
     "Agents are now instructed through `AGENTS.md` and `CLAUDE.md` to load and save Aictx memory.",
     "`aictx init` creates linked starter placeholders only. To seed useful first-run memory, run `aictx setup` for a review summary or `aictx setup --apply` to apply the conservative bootstrap patch. For manual review, run `aictx suggest --bootstrap --patch > bootstrap-memory.json`, `aictx patch review bootstrap-memory.json`, `aictx save --file bootstrap-memory.json`, and `aictx check`.",
-    "`aictx init` does not start MCP; configure agent clients that support MCP to launch `aictx-mcp` so agents can use `load_memory` and `save_memory_patch`. A globally launched MCP server can serve this project when tool calls include this project root as `project_root`. Agents can fall back to `aictx load` and `aictx save --stdin` when MCP is unavailable.",
+    "`aictx init` does not start MCP; agents should use `aictx load`, `aictx save --stdin`, and `aictx diff` by default. Configure agent clients that support MCP to launch `aictx-mcp` only when you want MCP equivalents such as `load_memory` and `save_memory_patch`. A globally launched MCP server can serve this project when tool calls include this project root as `project_root`.",
     "Review memory changes in `.aictx/`; in Git projects, use `aictx diff` before committing because it includes untracked Aictx memory files that plain `git diff -- .aictx/` can omit.",
     "Optional bundled skills are available under `integrations/codex/` and `integrations/claude/`."
   ]

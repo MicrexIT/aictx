@@ -370,7 +370,7 @@ async function expectInstalledMemoryDisciplineDocs(installRoot: string): Promise
   );
 
   expectMemoryDisciplineContent(agentIntegration);
-  expect(agentIntegration).toContain("The v1 agent model is MCP-first and CLI-complete");
+  expect(agentIntegration).toContain("The v1 agent model is CLI-first and MCP-compatible");
 
   for (const relativePath of generatedGuidancePaths) {
     const content = await readInstalledPackageFile(installRoot, relativePath);

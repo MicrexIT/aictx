@@ -52,13 +52,13 @@ const mcpAndCliCapabilities = [
     capability: "Load task context",
     mcp: "`load_memory`",
     cli: "`aictx load`",
-    notes: "Preferred routine agent path is MCP."
+    notes: "Default routine agent path is CLI; MCP equivalent is supported when configured."
   },
   {
     capability: "Search memory",
     mcp: "`search_memory`",
     cli: "`aictx search`",
-    notes: "Preferred routine agent path is MCP."
+    notes: "Default routine agent path is CLI; MCP equivalent is supported when configured."
   },
   {
     capability: "Save memory patch",
@@ -70,7 +70,7 @@ const mcpAndCliCapabilities = [
     capability: "Show memory diff",
     mcp: "`diff_memory`",
     cli: "`aictx diff`",
-    notes: "Git-backed; CLI fallback is supported."
+    notes: "Git-backed; CLI is the default review path."
   }
 ] as const;
 
@@ -409,19 +409,19 @@ describe("agent capability map guardrail", () => {
     expect(generic).toBe(`${generatedNotice}\n\n${template}\n`);
   });
 
-  it("keeps guidance MCP-first while allowing CLI fallback and advanced use", async () => {
+  it("keeps guidance CLI-first while allowing configured MCP equivalents and advanced use", async () => {
     for (const path of guidanceTargets) {
       const guidance = await readProjectFile(path);
 
-      expect(guidance.indexOf("Use MCP first for routine memory work")).toBeLessThan(
+      expect(guidance.indexOf("Use CLI first for routine memory work")).toBeLessThan(
         guidance.indexOf("Use CLI for v1 setup, maintenance, recovery, export, inspection, local viewing, suggestion, and audit capabilities")
       );
-      expect(guidance.indexOf("load_memory({ task: \"<task summary>\"")).toBeLessThan(
-        guidance.indexOf("aictx load \"<task summary>\"")
+      expect(guidance.indexOf("aictx load \"<task summary>\"")).toBeLessThan(
+        guidance.indexOf("load_memory({ task: \"<task summary>\"")
       );
       expect(guidance).toContain("autonomously save a structured patch");
       expect(guidance).toContain("save_memory_patch({ patch: { source, changes } })");
-      expect(guidance).toContain("Use CLI fallback when MCP is unavailable:");
+      expect(guidance).toContain("Use MCP only when the client already exposes Aictx MCP tools:");
       expect(guidance).toContain("CLI-only capabilities are not MCP parity gaps.");
       expect(guidance).toContain(
         "Do not edit `.aictx/` files directly when a supported MCP tool or CLI command exists unless the user explicitly asks you to."

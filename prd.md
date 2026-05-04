@@ -199,7 +199,7 @@ In Git projects, review with:
 
 aictx diff
 
-In the CLI flow, `aictx save --stdin` expects a structured memory patch. In the preferred agent flow, the AI coding agent calls `save_memory_patch` directly through MCP.
+In the default agent flow, `aictx save --stdin` expects a structured memory patch. When the agent client already exposes Aictx MCP tools, the AI coding agent may call `save_memory_patch` directly through MCP instead.
 
 The first user-facing mental model:
 
@@ -468,8 +468,8 @@ aictx save is patch-first in v1.
 
 Accepted v1 entrypoints:
 
-1. Agent-driven mode: the agent calls the MCP tool save_memory_patch with a structured patch. This is the preferred path.
-2. CLI patch mode: aictx save accepts a patch from --file or --stdin and sends it through the same validation/write path.
+1. CLI patch mode: aictx save accepts a patch from --file or --stdin and sends it through the same validation/write path. This is the default path.
+2. Agent-driven MCP mode: when the client already exposes Aictx MCP tools, the agent calls save_memory_patch with a structured patch.
 
 The client AI agent, not Aictx, is responsible for semantic derivation from git diff, conversation history, task description, changed files, and prior context.
 
@@ -641,7 +641,7 @@ Design principle:
 * MCP should make Aictx easy to insert into existing coding-agent flows without becoming a spaghetti API.
 * MCP exposes load, search, save, and diff; the CLI also exposes those routine capabilities.
 * Setup, maintenance, recovery, export, inspection, local viewing, suggestion, and audit capabilities remain CLI-only in v1: init, check, rebuild, history, restore, rewind, inspect, stale, graph, export obsidian, view, suggest, and audit.
-* MCP-first must not mean MCP-only: AI agents may use the CLI for supported setup, maintenance, recovery, export, inspection, local viewing, suggestion, and audit operations that are intentionally outside the MCP contract.
+* CLI-first must not mean MCP-unavailable: AI agents may use MCP equivalents when the client has already launched and connected to `aictx-mcp`.
 * Every supported Aictx capability should remain reachable to an AI agent through MCP or CLI without requiring direct `.aictx/` file edits.
 * CLI-only capabilities should not be added to MCP just to create command-list parity.
 
@@ -2035,7 +2035,7 @@ diff_memory
 
 Avoid exposing too many granular tools.
 
-The agent capability model is MCP-first, CLI-complete. Routine memory work should happen through MCP when available. Commands that are user-facing, diagnostic, or recovery-oriented can remain CLI-only as long as agents are explicitly allowed to run them and receive stable `--json` output where automation benefits from it.
+The agent capability model is CLI-first, MCP-compatible. Routine memory work should happen through CLI by default, with MCP equivalents available when the client has already launched and connected to `aictx-mcp`. Commands that are user-facing, diagnostic, or recovery-oriented can remain CLI-only as long as agents are explicitly allowed to run them and receive stable `--json` output where automation benefits from it.
 
 The MCP adapter may declare Zod directly and use it for tool input shape validation, but service-level validation must remain shared with the CLI so MCP behavior does not fork from CLI behavior.
 

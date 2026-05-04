@@ -127,11 +127,19 @@ describe("agent guidance content", () => {
       expect(content).toContain(
         "Before non-trivial coding, architecture, debugging, dependency, or configuration work:"
       );
+      expect(content).toContain('aictx load "<task summary>"');
       expect(content).toContain("load_memory({ task: \"<task summary>\"");
       expect(content).toContain(
         "After meaningful work, autonomously save a structured patch only for durable memory that future agents should know:"
       );
+      expect(content).toContain("aictx save --stdin");
       expect(content).toContain("save_memory_patch({ patch: { source, changes } })");
+      expect(content.indexOf('aictx load "<task summary>"')).toBeLessThan(
+        content.indexOf("load_memory({ task: \"<task summary>\"")
+      );
+      expect(content.indexOf("aictx save --stdin")).toBeLessThan(
+        content.indexOf("save_memory_patch({ patch: { source, changes } })")
+      );
       expect(content).toContain(nonBlockingDirtySaveGuidance);
     }
   });

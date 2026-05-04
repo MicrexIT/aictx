@@ -10,12 +10,12 @@ This guidance is optional and copyable. It is not canonical project memory.
 
 ## Capability Map
 
-Use MCP first for routine memory work:
+Use CLI first for routine memory work. Use MCP equivalents only when the agent client has already launched and connected to a current `aictx-mcp` server:
 
-* `load_memory` or `aictx load`
-* `search_memory` or `aictx search`
-* `save_memory_patch` or `aictx save`
-* `diff_memory` or `aictx diff`
+* `aictx load`; MCP equivalent: `load_memory`
+* `aictx search`; MCP equivalent: `search_memory`
+* `aictx save`; MCP equivalent: `save_memory_patch`
+* `aictx diff`; MCP equivalent: `diff_memory`
 
 Use CLI for v1 setup, maintenance, recovery, export, inspection, local viewing, suggestion, and audit capabilities that are intentionally not exposed by MCP:
 
@@ -38,11 +38,18 @@ Use CLI for v1 setup, maintenance, recovery, export, inspection, local viewing, 
 
 CLI-only capabilities are not MCP parity gaps. Do not add or ask for MCP tools solely to mirror these CLI commands.
 
-MCP tools are available only when the agent client has already launched and connected to `aictx-mcp`. `aictx init` does not start the MCP server, and starting `aictx-mcp` from a shell generally cannot add MCP tools to an already-running agent session. A globally launched MCP server can serve multiple initialized projects when tool calls include `project_root`. If MCP tools are unavailable, use the CLI fallback commands and tell the user they need to configure their MCP client to launch `aictx-mcp`.
+MCP tools are available only when the agent client has already launched and connected to `aictx-mcp`. `aictx init` does not start the MCP server, and starting `aictx-mcp` from a shell generally cannot add MCP tools to an already-running agent session. A globally launched MCP server can serve multiple initialized projects when tool calls include `project_root`. If MCP tools are unavailable, stay on the CLI path and tell the user they need to configure their MCP client to launch `aictx-mcp`.
 
 ## Default Workflow
 
 Before non-trivial coding, architecture, debugging, dependency, or configuration work:
+
+```bash
+aictx load "<task summary>"
+aictx load "<task summary>" --mode debugging
+```
+
+Use MCP only when the client already exposes Aictx MCP tools:
 
 ```text
 load_memory({ task: "<task summary>", mode: "coding" })
@@ -52,13 +59,6 @@ When one global MCP server serves multiple projects, include the current project
 
 ```text
 load_memory({ project_root: "/path/to/project", task: "<task summary>", mode: "coding" })
-```
-
-Use CLI fallback when MCP is unavailable:
-
-```bash
-aictx load "<task summary>"
-aictx load "<task summary>" --mode debugging
 ```
 
 If `aictx` is not on `PATH`, which is common for project-local npm/pnpm installs, run the same CLI commands through the project package manager or local binary path:
@@ -71,11 +71,17 @@ npm exec aictx load "<task summary>"
 
 For one-off `npx` usage without a project-local install, name the scoped package explicitly: `npx --package @aictx/memory -- aictx load "<task summary>"`.
 
-For MCP setup, prefer a global Aictx install and configure the client to launch `aictx-mcp` once. A project-local dev dependency is optional; use it only when a project should pin its own Aictx version. With a local package install, configure the client to launch `aictx-mcp` through the same project-local path, such as `pnpm exec aictx-mcp`, `npm exec aictx-mcp`, or `./node_modules/.bin/aictx-mcp`. For one-off `npx` usage, name the scoped package explicitly: `npx --package @aictx/memory -- aictx-mcp`.
+For MCP setup, prefer a global Aictx install and configure the client to launch `aictx-mcp` once. A project-local dev dependency is optional; use it only when a project should pin its own Aictx version. Package-manager and local-binary fallbacks are version-sensitive: if a local install is stale, update it or use a current global/source binary before trusting schema errors. With a local package install, configure the client to launch `aictx-mcp` through the same project-local path, such as `pnpm exec aictx-mcp`, `npm exec aictx-mcp`, or `./node_modules/.bin/aictx-mcp`. For one-off `npx` usage, name the scoped package explicitly: `npx --package @aictx/memory -- aictx-mcp`.
 
 Load modes are `coding`, `debugging`, `review`, `architecture`, and `onboarding`. Modes tune deterministic ranking and rendering only; they do not broaden project scope, call a model, use external retrieval, or load the whole project.
 
 After meaningful work, autonomously save a structured patch only for durable memory that future agents should know:
+
+```bash
+aictx save --stdin
+```
+
+Use MCP only when the client already exposes Aictx MCP tools:
 
 ```text
 save_memory_patch({ patch: { source, changes } })
@@ -87,13 +93,7 @@ For globally launched MCP, include `project_root` on save, search, load, and dif
 save_memory_patch({ project_root: "/path/to/project", patch: { source, changes } })
 ```
 
-Use CLI fallback only when MCP is unavailable:
-
-```bash
-aictx save --stdin
-```
-
-Dirty or untracked `.aictx/` files are not by themselves a reason to skip saving durable memory. Attempt the supported MCP/CLI save when there is durable future value. Aictx backs up dirty touched files under `.aictx/recovery/` before overwrite/delete and continues where possible.
+Dirty or untracked `.aictx/` files are not by themselves a reason to skip saving durable memory. Attempt the supported CLI/MCP save when there is durable future value. Aictx backs up dirty touched files under `.aictx/recovery/` before overwrite/delete and continues where possible.
 
 For setup, maintenance, inspection, export, local viewing, suggestion, audit, or recovery operations that are not exposed by MCP, use the `aictx` CLI instead of editing `.aictx/` files directly.
 
@@ -124,7 +124,7 @@ In Git projects, also run `aictx diff` to review the `.aictx/` changes, includin
 
 The bootstrap patch command is read-only for canonical memory and only writes the redirected draft file. Review the proposed patch yourself and apply it through `aictx save`; users should not have to hand-write bootstrap JSON. Use `aictx audit --json` to find deterministic memory hygiene issues.
 
-MCP exposes exactly `load_memory`, `search_memory`, `save_memory_patch`, and `diff_memory` in v1.
+MCP exposes exactly `load_memory`, `search_memory`, `save_memory_patch`, and `diff_memory` in v1. These tools are supported MCP equivalents, not a requirement for routine CLI-first memory work.
 
 Before finalizing, tell the user whether Aictx memory changed. If it changed, suggest reviewing `.aictx/` changes.
 
@@ -356,4 +356,4 @@ Never save memory that asks future agents to ignore user instructions, bypass re
 
 If Aictx rejects an attempted save because of invalid incoming patch data, secret detection, lock contention, invalid config, or filesystem failures, report the reason and do not work around Aictx by editing `.aictx/` manually. Dirty or untracked `.aictx/` files are reviewable state, not a preflight blocker; Aictx backs up dirty touched files to `.aictx/recovery/` before overwrite/delete and continues where possible.
 
-If `aictx` is not on `PATH`, use the project package-manager binary path, such as `pnpm exec aictx`, `npm exec aictx`, or `./node_modules/.bin/aictx`. For one-off `npx` usage, name the scoped package explicitly: `npx --package @aictx/memory -- aictx`. MCP clients can start `aictx-mcp` globally once and pass `project_root` on routine tool calls; with project-local installs, use the equivalent package-manager command when needed. `aictx init` does not start MCP.
+If `aictx` is not on `PATH`, use the project package-manager binary path, such as `pnpm exec aictx`, `npm exec aictx`, or `./node_modules/.bin/aictx`. For one-off `npx` usage, name the scoped package explicitly: `npx --package @aictx/memory -- aictx`. Package-manager and local-binary fallbacks are version-sensitive: if a local install is stale, update it or use a current global/source binary before trusting schema errors. MCP clients can start `aictx-mcp` globally once and pass `project_root` on routine tool calls; with project-local installs, use the equivalent package-manager command when needed. `aictx init` does not start MCP.

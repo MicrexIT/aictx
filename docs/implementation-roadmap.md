@@ -1910,7 +1910,7 @@ Acceptance:
 
 Goal:
 
-Lock in the MCP-first, CLI-complete capability model after MCP implementation is working.
+Lock in the CLI-first, MCP-compatible capability model after MCP implementation is working.
 
 Write scope:
 
@@ -1939,18 +1939,19 @@ Implementation:
 * Add or verify a capability map that states:
   * `load`, `search`, `save`, and `diff` are available through both MCP and CLI.
   * `init`, `check`, `rebuild`, `history`, `restore`, `rewind`, `inspect`, `stale`, `graph`, and `export obsidian` are CLI-only in v1.
-* Document that agents should use MCP for routine memory load, search, save, and diff when available.
+* Document that agents should use CLI for routine memory load, search, save, and diff by default.
+* Document that agents may use MCP equivalents for routine memory work when the client has already launched and connected to `aictx-mcp`.
 * Document that agents may use CLI for setup, maintenance, recovery, export, inspection, local viewing, suggestion, and audit workflows.
 * Regenerate generated agent guidance from the shared template.
 * Keep root-level spec mirrors in sync with their `docs/` copies while both exist.
-* Add a unit test that fails if the capability-map docs or generated guidance drift from the MCP-first, CLI-complete model.
+* Add a unit test that fails if the capability-map docs or generated guidance drift from the CLI-first, MCP-compatible model.
 
 Acceptance:
 
 * Docs do not imply CLI-only commands should be added to MCP for parity.
 * Docs do not imply agents should edit `.aictx/` directly when a supported CLI command exists.
 * Root-level spec mirrors match their `docs/` copies for touched specs.
-* Generated guidance leads with MCP for routine memory work and clearly allows CLI fallback/advanced use.
+* Generated guidance leads with CLI for routine memory work and clearly allows configured MCP equivalents/advanced use.
 * Test coverage locks the exact v1 MCP tool set and the CLI-only capability list.
 
 ### T047: Add Security and Safety Regression Tests
@@ -2061,7 +2062,7 @@ Implementation:
 * Show how to review `.aictx/` files.
 * Show `aictx diff` for Git projects.
 * Show MCP setup conceptually.
-* Include or link to the MCP-first, CLI-complete capability map.
+* Include or link to the CLI-first, MCP-compatible capability map.
 * Link to the optional generated agent guidance and agent integration guide.
 
 Assignable subtasks:
@@ -2109,7 +2110,7 @@ Implementation:
 * Explain that the agent creates the semantic patch.
 * Include patch examples.
 * Include MCP tool list.
-* Include the MCP-first, CLI-complete capability map.
+* Include the CLI-first, MCP-compatible capability map.
 * Include safety warning about reviewing Git diffs.
 * Add one canonical guidance template under `integrations/templates/`.
 * Add a generator script that produces Codex, Claude, and generic guidance files from the template.
@@ -2118,7 +2119,7 @@ Implementation:
 
 Assignable subtasks:
 
-* `T050A`: Write `docs/agent-integration.md` with MCP-first and CLI-fallback workflows.
+* `T050A`: Write `docs/agent-integration.md` with CLI-first and MCP-compatible workflows.
 * `T050B`: Add `integrations/templates/agent-guidance.md` with concise shared agent instructions.
 * `T050C`: Finalize `scripts/generate-agent-guidance.mjs`, generated Codex/Claude/generic outputs, package build integration, and drift tests.
 
@@ -2914,7 +2915,7 @@ V1 implementation is complete when:
 * MCP exposes only `load_memory`, `search_memory`, `save_memory_patch`, and `diff_memory`.
 * MCP declares and uses `zod` directly for transport-level tool input shape validation only.
 * Every supported Aictx capability is reachable to AI agents through MCP or CLI.
-* Docs and generated guidance describe the MCP-first, CLI-complete model.
+* Docs and generated guidance describe the CLI-first, MCP-compatible model.
 * Memory discipline guidance teaches agents short linked memories, update-before-create, stale/supersede behavior, diff review, and save-nothing-is-valid.
 * `gotcha` and `workflow` are first-class memory object types.
 * `aictx load` and `load_memory` support deterministic mode-aware retrieval for coding, debugging, review, architecture, and onboarding.

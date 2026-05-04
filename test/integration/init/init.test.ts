@@ -93,7 +93,7 @@ describe("initProject", () => {
       expect(guidance).toContain("Do not save task diaries");
       expect(guidance).toContain("Before finalizing, say whether Aictx memory changed");
       expect(guidance).toContain("If it changed, suggest reviewing `.aictx/` changes");
-      expect(guidance).toContain("use `diff_memory` or `aictx diff`");
+      expect(guidance).toContain("use `aictx diff` or MCP `diff_memory` when available");
       expect(guidance).not.toMatch(/install .*skill/i);
     }
     expect(result.data.agent_guidance).toEqual({

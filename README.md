@@ -20,15 +20,15 @@ model API, or network access for core memory commands.
 
 Aictx requires Node.js `>=22`.
 
-Install it globally for the best MCP experience:
+Install it globally for the simplest CLI and MCP setup:
 
 ```bash
 npm install -g @aictx/memory
 ```
 
-Global install is the recommended default for regular CLI and MCP use. You do
-not need to add Aictx to each project's `package.json` unless you want that
-project to pin its own Aictx version.
+Global install is the recommended default for regular CLI use and optional MCP
+use. You do not need to add Aictx to each project's `package.json` unless you
+want that project to pin its own Aictx version.
 
 For project-local version pinning, install Aictx as a dev dependency:
 
@@ -71,6 +71,9 @@ The examples below use `aictx` directly for readability. If `aictx` is not on
 `PATH`, use the project package-manager form, such as `pnpm exec aictx`,
 `npm exec aictx`, or `./node_modules/.bin/aictx`. For one-off `npx` usage, name
 the package explicitly with `npx --package @aictx/memory -- aictx`.
+Package-manager and local-binary fallbacks are version-sensitive: if a local
+install is stale, update it or use a current global/source binary before
+trusting schema errors.
 
 ## Local Package Testing
 
@@ -114,9 +117,10 @@ that says what memory should be created, updated, deleted, or linked. Aictx
 validates the patch, checks safety rules, writes canonical files, appends
 events, and updates generated indexes.
 
-MCP is the preferred path for routine agent memory work. The CLI is the
-complete path for setup, maintenance, inspection, recovery, suggestion, audit,
-local viewing, and export workflows.
+The CLI is the default path for routine agent memory work. MCP is a supported
+integration path when the agent client has already launched and connected to
+`aictx-mcp`. The CLI is also the complete path for setup, maintenance,
+inspection, recovery, suggestion, audit, local viewing, and export workflows.
 CLI-only commands are intentional; they are not MCP parity gaps.
 MCP exposes exactly `load_memory`, `search_memory`, `save_memory_patch`, and
 `diff_memory` in v1.
@@ -584,7 +588,7 @@ server switches projects only for the specific tool call that names a
 `aictx-mcp` is an MCP stdio server: the MCP client must launch it and connect to
 its stdin/stdout. An agent generally cannot start `aictx-mcp` in a shell and
 then use it as MCP tools in an already-running session. When MCP is not
-configured, agents should use the CLI fallback commands.
+configured, agents should stay on the CLI path.
 
 Example command configuration:
 
@@ -687,7 +691,7 @@ Inputs:
 * `project_root`: optional project root for globally launched MCP servers
 
 Use this after meaningful work to save durable facts, decisions, constraints,
-or stale-memory updates. This is the preferred routine write path for agents.
+or stale-memory updates when the agent client already exposes Aictx MCP tools.
 
 #### `diff_memory`
 
@@ -711,10 +715,10 @@ MCP or CLI. It does not mean MCP and CLI expose identical command lists.
 
 | Capability | MCP | CLI | Notes |
 | --- | --- | --- | --- |
-| Load task context | `load_memory` | `aictx load` | Preferred routine agent path is MCP. |
-| Search memory | `search_memory` | `aictx search` | Preferred routine agent path is MCP. |
+| Load task context | `load_memory` | `aictx load` | Default routine agent path is CLI; MCP equivalent is supported when configured. |
+| Search memory | `search_memory` | `aictx search` | Default routine agent path is CLI; MCP equivalent is supported when configured. |
 | Save memory patch | `save_memory_patch` | `aictx save` | All writes use structured patches. |
-| Show memory diff | `diff_memory` | `aictx diff` | Git-backed; CLI fallback is supported. |
+| Show memory diff | `diff_memory` | `aictx diff` | Git-backed; CLI is the default review path. |
 | Initialize storage | none | `aictx init`, `aictx setup` | Setup remains CLI-only in v1. |
 | Review patch file | none | `aictx patch review` | Patch review remains CLI-only in v1. |
 | Validate storage | none | `aictx check` | Maintenance remains CLI-only in v1. |
@@ -772,9 +776,12 @@ configuration. Claude Code users can use a project skill under
 `.claude/skills/aictx-memory/SKILL.md`. Aictx does not install client-specific
 skills or edit user-global agent configuration by default.
 
-Generated guidance tells agents to use package-manager fallbacks when `aictx`
-or `aictx-mcp` is not on `PATH`, including `pnpm exec`, `npm exec`,
-`./node_modules/.bin/`, and explicit scoped-package `npx --package` commands.
+Generated guidance tells agents to use CLI commands by default and to use MCP
+only when the client already exposes Aictx MCP tools. It also documents
+package-manager fallbacks when `aictx` or `aictx-mcp` is not on `PATH`,
+including `pnpm exec`, `npm exec`, `./node_modules/.bin/`, and explicit
+scoped-package `npx --package` commands, with a warning that stale local
+installs can produce misleading schema errors.
 
 ## Development
 

@@ -14,7 +14,15 @@ The normal agent loop should be one load call before work and one save call afte
 
 ## Routine Workflow
 
-Use MCP first when the client has Aictx MCP configured and connected:
+Use CLI first for routine memory work:
+
+```bash
+aictx load "<task summary>"
+aictx load "<task summary>" --mode debugging
+aictx load "<task summary>" --file src/context/rank.ts --changed-file src/index/search.ts --history-window 30d
+```
+
+Use MCP equivalents only when the client has Aictx MCP configured and connected:
 
 ```text
 load_memory({ task: "<task summary>", mode: "coding" })
@@ -39,20 +47,17 @@ load_memory({ project_root: "/path/to/project", task: "<task summary>", mode: "c
 
 After meaningful work:
 
+```bash
+aictx save --stdin
+```
+
+MCP equivalent when available:
+
 ```text
 save_memory_patch({ patch: { source, changes } })
 ```
 
-Dirty or untracked `.aictx/` files are not by themselves a reason to skip saving durable memory. Attempt the supported MCP/CLI save when there is durable future value, and stop only if Aictx rejects the update.
-
-Use CLI fallback when MCP is unavailable:
-
-```bash
-aictx load "<task summary>"
-aictx load "<task summary>" --mode debugging
-aictx load "<task summary>" --file src/context/rank.ts --changed-file src/index/search.ts --history-window 30d
-aictx save --stdin
-```
+Dirty or untracked `.aictx/` files are not by themselves a reason to skip saving durable memory. Attempt the supported CLI/MCP save when there is durable future value, and stop only if Aictx rejects the update.
 
 If `aictx` is not on `PATH`, run the same commands through the project package manager or local binary path:
 
@@ -62,7 +67,7 @@ npm exec aictx load "<task summary>"
 ./node_modules/.bin/aictx load "<task summary>"
 ```
 
-For one-off `npx` usage without a project-local install, name the scoped package explicitly: `npx --package @aictx/memory -- aictx load "<task summary>"`.
+For one-off `npx` usage without a project-local install, name the scoped package explicitly: `npx --package @aictx/memory -- aictx load "<task summary>"`. Package-manager and local-binary fallbacks are version-sensitive: if a local install is stale, update it or use a current global/source binary before trusting schema errors.
 
 Load modes are `coding`, `debugging`, `review`, `architecture`, and
 `onboarding`. Modes tune deterministic ranking and rendering only; they do not
@@ -77,7 +82,7 @@ aictx diff
 
 `aictx diff` shows tracked and untracked Aictx memory changes. Git remains the source of truth for history and rollback, but plain `git diff -- .aictx/` can omit untracked memory files before staging. Aictx writes local files and never commits automatically. The user decides whether to edit, commit, or revert memory changes.
 
-`aictx-mcp` is an MCP stdio server. The MCP client must launch it and connect to its stdin/stdout; an agent generally cannot start `aictx-mcp` in a shell and then use it as MCP tools in an already-running session. If MCP tools are not available, use the CLI fallback commands.
+`aictx-mcp` is an MCP stdio server. The MCP client must launch it and connect to its stdin/stdout; an agent generally cannot start `aictx-mcp` in a shell and then use it as MCP tools in an already-running session. If MCP tools are not available, stay on the CLI path.
 
 For the smoothest MCP setup, install Aictx globally and configure the client to
 launch `aictx-mcp` once. A project-local dev dependency is optional; use it only
@@ -92,7 +97,7 @@ Use `aictx setup` for guided first-run onboarding, or `aictx setup --apply` when
 
 ## Capability Map
 
-The v1 agent model is MCP-first and CLI-complete. MCP handles routine memory work; the CLI remains the supported path for setup, maintenance, recovery, export, inspection, local viewing, suggestion, and audit operations.
+The v1 agent model is CLI-first and MCP-compatible. CLI handles routine memory work by default; MCP remains a supported integration path when the agent client has already launched and connected to `aictx-mcp`. The CLI remains the supported path for setup, maintenance, recovery, export, inspection, local viewing, suggestion, and audit operations.
 
 | Capability | MCP | CLI |
 | --- | --- | --- |
@@ -312,7 +317,7 @@ Use whichever target fits the agent client:
 
 Codex users can enable a skill folder through `skills.config[].path` in Codex configuration. Claude Code supports project skills under `.claude/skills/<skill-name>/SKILL.md`; for Aictx, use the shared skill name `aictx-memory`.
 
-If `aictx` is not on `PATH`, use the package manager binary path for the project, such as `pnpm exec aictx`, `npm exec aictx`, or `./node_modules/.bin/aictx`. For one-off `npx` usage, name the scoped package explicitly: `npx --package @aictx/memory -- aictx`. MCP clients can start `aictx-mcp` globally once and pass `project_root` on routine tool calls; with project-local installs, use the equivalent package-manager command when needed. `aictx init` does not start MCP.
+If `aictx` is not on `PATH`, use the package manager binary path for the project, such as `pnpm exec aictx`, `npm exec aictx`, or `./node_modules/.bin/aictx`. For one-off `npx` usage, name the scoped package explicitly: `npx --package @aictx/memory -- aictx`. Package-manager and local-binary fallbacks are version-sensitive: if a local install is stale, update it or use a current global/source binary before trusting schema errors. MCP clients can start `aictx-mcp` globally once and pass `project_root` on routine tool calls; with project-local installs, use the equivalent package-manager command when needed. `aictx init` does not start MCP.
 
 Generated guidance is not canonical memory. It is a setup aid for instructing agents how to use Aictx in projects that have opted into it.
 

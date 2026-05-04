@@ -1,0 +1,3 @@
+# pnpm exec aictx can use the old dev dependency
+
+In this source repo, `pnpm exec aictx` resolves to the installed dev dependency `@aictx/memory@0.1.10` from `node_modules`, not the current source package. That old reader rejects the repo's version 2 `.aictx/config.json` with `AICtxSchemaValidationFailed`. Use the PATH/global `aictx` when it is current, or the source CLI via `pnpm dev -- load <task>` / `pnpm dev -- save --stdin` while developing this repo.
