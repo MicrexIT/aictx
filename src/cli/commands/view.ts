@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import { CommanderError, type Command } from "commander";
 
 import {
-  getViewerBootstrap,
+  getViewerProjects,
   type AppResult
 } from "../../app/operations.js";
 import { aictxError, type AictxError } from "../../core/errors.js";
@@ -27,6 +27,7 @@ export type ViewerDetacher = (options: DetachViewerOptions) => Promise<Result<De
 export interface DetachViewerOptions {
   port?: number;
   open: boolean;
+  aictxHome?: string;
 }
 
 export interface DetachedViewer {
@@ -41,6 +42,7 @@ export interface RegisterViewCommandOptions {
   stdout: CliOutputWriter;
   stderr: CliOutputWriter;
   assetsDir?: string;
+  aictxHome?: string;
   opener?: ViewerUrlOpener;
   detacher?: ViewerDetacher;
   shutdownSignal?: AbortSignal;
@@ -54,6 +56,9 @@ export interface ViewServerData {
   open_attempted: boolean;
   detached: boolean;
   log_path: string | null;
+  registry_path: string;
+  projects_count: number;
+  initial_project_registry_id: string | null;
 }
 
 interface ViewCommandFlags {
@@ -73,7 +78,10 @@ export function registerViewCommand(
     .option("--open", "Open the viewer URL in the default browser.")
     .option("--detach", "Start the viewer in a background process and print its URL.")
     .action(async (flags: ViewCommandFlags, command: Command) => {
-      const preflight = await getViewerBootstrap({ cwd: options.cwd });
+      const preflight = await getViewerProjects({
+        cwd: options.cwd,
+        ...(options.aictxHome === undefined ? {} : { aictxHome: options.aictxHome })
+      });
 
       if (!preflight.ok) {
         renderAndThrowOnFailure(preflight, command, options);
@@ -91,7 +99,8 @@ export function registerViewCommand(
         const detached = await detachViewer(
           {
             ...(port.data === undefined ? {} : { port: port.data }),
-            open: flags.open === true
+            open: flags.open === true,
+            ...(options.aictxHome === undefined ? {} : { aictxHome: options.aictxHome })
           },
           options.detacher
         );
@@ -110,7 +119,10 @@ export function registerViewCommand(
             token_required: true,
             open_attempted: flags.open === true,
             detached: true,
-            log_path: detached.data.log_path
+            log_path: detached.data.log_path,
+            registry_path: preflight.data.registry_path,
+            projects_count: preflight.data.counts.projects,
+            initial_project_registry_id: preflight.data.current_project_registry_id
           },
           warnings: [...preflight.warnings, ...detached.warnings],
           meta: preflight.meta
@@ -128,7 +140,8 @@ export function registerViewCommand(
       const started = await startViewerServer({
         cwd: options.cwd,
         ...(port.data === undefined ? {} : { port: port.data }),
-        ...(options.assetsDir === undefined ? {} : { assetsDir: options.assetsDir })
+        ...(options.assetsDir === undefined ? {} : { assetsDir: options.assetsDir }),
+        ...(options.aictxHome === undefined ? {} : { aictxHome: options.aictxHome })
       });
 
       if (!started.ok) {
@@ -149,7 +162,10 @@ export function registerViewCommand(
           token_required: true,
           open_attempted: openAttempted,
           detached: false,
-          log_path: null
+          log_path: null,
+          registry_path: preflight.data.registry_path,
+          projects_count: preflight.data.counts.projects,
+          initial_project_registry_id: preflight.data.current_project_registry_id
         },
         warnings: [...preflight.warnings, ...openWarnings],
         meta: preflight.meta
@@ -216,6 +232,8 @@ function parsePort(value: string | undefined): Result<number | undefined> {
 function renderViewData(data: ViewServerData): string {
   return [
     `Aictx viewer: ${data.url}`,
+    `Aictx project registry: ${data.registry_path}`,
+    `Aictx viewer projects: ${data.projects_count}`,
     ...(data.log_path === null ? [] : [`Aictx viewer log: ${data.log_path}`])
   ].join("\n");
 }
@@ -274,7 +292,11 @@ export async function detachViewer(
   ];
   const child = spawn(process.execPath, args, {
     detached: true,
-    stdio: ["ignore", log.fd, log.fd]
+    stdio: ["ignore", log.fd, log.fd],
+    env: {
+      ...process.env,
+      ...(options.aictxHome === undefined ? {} : { AICTX_HOME: options.aictxHome })
+    }
   });
 
   child.unref();

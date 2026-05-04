@@ -1,0 +1,17 @@
+{
+  "confidence": "high",
+  "content_hash": "sha256:bced25b36b370072ed03b64030a068811a1325d3328e0fd07268f12881bdf335",
+  "created_at": "2026-05-04T20:07:14+02:00",
+  "evidence": [
+    {
+      "id": "viewer/src/App.svelte",
+      "kind": "file"
+    }
+  ],
+  "from": "project.aictx",
+  "id": "rel.project-aictx-implements-concept-feature-multi-project-viewer",
+  "predicate": "implements",
+  "status": "active",
+  "to": "concept.feature-multi-project-viewer",
+  "updated_at": "2026-05-04T20:07:14+02:00"
+}

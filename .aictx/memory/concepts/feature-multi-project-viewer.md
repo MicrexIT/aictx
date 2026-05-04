@@ -1,0 +1,3 @@
+# Feature: Multi-Project Viewer
+
+`aictx view` starts even when the current directory is not initialized if the project registry can be read, and the Svelte viewer opens on a Projects dashboard. Selecting a project calls `/api/projects/:registryId/bootstrap` and reuses the existing memory list, detail graph, and Obsidian export UI scoped to that registry entry. The viewer also exposes `/api/projects` and `/api/projects/:registryId/export/obsidian`; legacy `/api/bootstrap` and `/api/export/obsidian` remain current-cwd aliases where possible. The first version is a project picker plus per-project detail, not merged cross-project search.

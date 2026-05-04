@@ -38,13 +38,13 @@ V1 API behavior must follow these rules:
 * AI agents must be able to reach every supported Aictx capability through either MCP or CLI.
 * CLI is the default agent path for routine memory load, search, save, and diff workflows.
 * MCP is a supported integration path when the agent client has already launched and connected to `aictx-mcp`.
-* CLI is the supported path for setup, maintenance, recovery, export, inspection, local viewing, suggestion, and audit workflows.
+* CLI is the supported path for setup, maintenance, recovery, export, inspection, registry management, local viewing, suggestion, and audit workflows.
 * The API must be usable without a cloud account, external API, embeddings, or hosted service.
 
 ### 2.1 Agent Capability Map
 
 V1 parity means agent reachability through MCP or CLI, not identical command lists.
-CLI-only capabilities are intentionally not MCP parity gaps; do not add setup, maintenance, recovery, export, inspection, local viewing, suggestion, or audit tools to MCP just to mirror CLI commands.
+CLI-only capabilities are intentionally not MCP parity gaps; do not add setup, maintenance, recovery, export, inspection, registry management, local viewing, suggestion, or audit tools to MCP just to mirror CLI commands.
 When a supported MCP or CLI entrypoint exists, agents must use that entrypoint instead of editing `.aictx/` files directly.
 
 | Capability | MCP | CLI | Notes |
@@ -66,6 +66,7 @@ When a supported MCP or CLI entrypoint exists, agents must use that entrypoint i
 | List stale memory | none | `aictx stale` | Debug inspection remains CLI-only in v1. |
 | Show graph neighborhood | none | `aictx graph` | Debug inspection remains CLI-only in v1. |
 | Export Obsidian projection | none | `aictx export obsidian` | Generated projection remains CLI-only in v1. |
+| Manage project registry | none | `aictx projects` | Registry management remains CLI-only in v1. |
 | View local memory | none | `aictx view` | Local read-only viewer remains CLI-only in v1. |
 | Suggest memory review packet | none | `aictx suggest` | Agent assistance remains CLI-only in v1. |
 | Audit memory hygiene | none | `aictx audit` | Deterministic hygiene review remains CLI-only in v1. |
@@ -577,6 +578,7 @@ aictx stale [--json]
 aictx inspect <id> [--json]
 aictx graph <id> [--json]
 aictx export obsidian [--out <dir>] [--json]
+aictx projects (list | add [path] | remove <identifier> | prune) [--json]
 aictx view [--port <number>] [--open] [--detach] [--json]
 aictx suggest (--from-diff | --bootstrap | --after-task "<task>") [--patch] [--json]
 aictx upgrade [--json]
@@ -595,6 +597,7 @@ Minimum behavior:
 * `aictx inspect <id>` shows one memory object plus direct relations.
 * `aictx graph <id>` shows relation neighborhoods for debugging only.
 * `aictx export obsidian` writes a one-way generated Obsidian projection from canonical memory.
+* `aictx projects` manages the user-level project registry used by the multi-project viewer.
 * `aictx view` starts a loopback-only read-only web viewer for human memory inspection.
 * `aictx suggest --from-diff` returns a Git-backed deterministic memory review packet for the current diff and does not write memory.
 * `aictx suggest --bootstrap` returns a deterministic first-run memory review packet and does not write memory.
@@ -760,7 +763,34 @@ Success data:
 }
 ```
 
-### 5.14 `aictx view`
+### 5.14 `aictx projects`
+
+Purpose:
+
+Manage the user-level project registry used by the multi-project viewer.
+
+Syntax:
+
+```bash
+aictx projects list [--json]
+aictx projects add [path] [--json]
+aictx projects remove <registry-id|project-id|path> [--json]
+aictx projects prune [--json]
+```
+
+Behavior:
+
+* Store registry state at `$AICTX_HOME/projects.json`, defaulting to `~/.aictx/projects.json`.
+* Store only project metadata and roots: registry id, local project id/name, project root, Aictx root, source, registration time, and last-seen time.
+* Derive `registry_id` from the canonical project root path hash, not from `project.id`.
+* Keep canonical memory isolated in each selected project's `.aictx/` directory.
+* Successful project-scoped CLI commands may upsert the current project automatically.
+* `remove` must reject ambiguous `project-id` matches.
+* `prune` removes entries whose `.aictx/config.json` or canonical storage is no longer available.
+* Registry writes must be serialized with a registry lock and written atomically.
+* Do not expose MCP project-registry tools in v1.
+
+### 5.15 `aictx view`
 
 Purpose:
 
@@ -774,7 +804,7 @@ aictx view [--port <number>] [--open] [--detach] [--json]
 
 Behavior:
 
-* Require initialized `.aictx/`.
+* Do not require initialized `.aictx/` in the launch cwd.
 * Bind only to loopback.
 * Use an available random port by default.
 * If `--port <number>` is provided, bind only that port and fail if it is unavailable.
@@ -785,6 +815,8 @@ Behavior:
 * With `--detach`, start a background viewer process, verify it reports a URL, print the URL and log path, then exit.
 * `--open` may launch the user's default browser after the server starts.
 * Do not mutate canonical memory while starting or serving the viewer.
+* Read the user-level project registry to populate the Projects dashboard.
+* Include the current project as a dashboard entry when the launch cwd resolves to initialized storage, even if it is not yet persisted in the registry.
 * Do not expose an MCP tool for local viewing.
 * Follow `local-viewer-spec.md` for the local API, UI behavior, security boundary, and packaging details.
 
@@ -796,7 +828,10 @@ Success data:
   "host": "127.0.0.1",
   "port": 49152,
   "token_required": true,
-  "open_attempted": false
+  "open_attempted": false,
+  "registry_path": "/Users/user/.aictx/projects.json",
+  "projects_count": 3,
+  "initial_project_registry_id": "prj_0123456789abcdef"
 }
 ```
 
@@ -810,7 +845,7 @@ V1 MCP must expose only these required tools:
 * `diff_memory`
 
 The MCP server must not expose arbitrary shell access, arbitrary filesystem writes, or low-level graph mutation tools.
-Do not add MCP tools for load-mode management, suggestion packets, audits, setup, maintenance, recovery, export, inspection, or local viewing. `aictx suggest` and `aictx audit` remain CLI-only read-only support surfaces in v1.
+Do not add MCP tools for load-mode management, suggestion packets, audits, setup, maintenance, recovery, export, inspection, registry management, or local viewing. `aictx suggest` and `aictx audit` remain CLI-only read-only support surfaces in v1.
 
 ### 6.1 `load_memory`
 

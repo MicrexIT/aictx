@@ -116,16 +116,24 @@ describe("viewer local server", () => {
     try {
       const base = `http://${started.host}:${started.port}`;
       const missing = await fetch(`${base}/api/bootstrap`);
+      const missingProjects = await fetch(`${base}/api/projects`);
       const wrong = await fetch(`${base}/api/bootstrap?token=wrong`);
       const authorized = await fetch(`${base}/api/bootstrap`, {
         headers: {
           authorization: `Bearer ${started.token}`
         }
       });
+      const authorizedProjects = await fetch(`${base}/api/projects`, {
+        headers: {
+          authorization: `Bearer ${started.token}`
+        }
+      });
 
       expect(missing.status).toBe(401);
+      expect(missingProjects.status).toBe(401);
       expect(wrong.status).toBe(401);
       expect(authorized.status).toBe(200);
+      expect(authorizedProjects.status).toBe(200);
       expect(authorized.headers.get("access-control-allow-origin")).toBeNull();
       await expect(authorized.json()).resolves.toMatchObject({
         ok: true,
@@ -135,8 +143,114 @@ describe("viewer local server", () => {
           }
         }
       });
+      await expect(authorizedProjects.json()).resolves.toMatchObject({
+        ok: true,
+        data: {
+          counts: {
+            projects: 1,
+            available: 1
+          }
+        }
+      });
     } finally {
       await started.close();
+    }
+  });
+
+  it("serves an empty project dashboard outside initialized projects", async () => {
+    const cwd = await createTempRoot("aictx-viewer-empty-cwd-");
+    const aictxHome = await createTempRoot("aictx-viewer-empty-home-");
+    const assetsDir = await createViewerAssets("aictx-viewer-empty-assets-");
+    const started = await startViewerServer({
+      cwd,
+      assetsDir,
+      aictxHome,
+      token: "empty-token"
+    });
+
+    expect(started.ok).toBe(true);
+    if (!started.ok) {
+      throw new Error(started.error.message);
+    }
+
+    try {
+      const response = await fetch(
+        `http://${started.data.host}:${started.data.port}/api/projects?token=${started.data.token}`
+      );
+      const envelope = await response.json() as {
+        ok: true;
+        data: { projects: unknown[]; counts: { projects: number } };
+      };
+
+      expect(response.status).toBe(200);
+      expect(envelope.ok).toBe(true);
+      expect(envelope.data.projects).toEqual([]);
+      expect(envelope.data.counts.projects).toBe(0);
+    } finally {
+      await started.data.close();
+    }
+  });
+
+  it("returns project-scoped bootstrap data and export responses", async () => {
+    const projectRoot = await createInitializedProject("aictx-viewer-project-route-");
+    const aictxHome = await createTempRoot("aictx-viewer-project-route-home-");
+    const assetsDir = await createViewerAssets("aictx-viewer-project-route-assets-");
+    const started = await startViewerServer({
+      cwd: projectRoot,
+      assetsDir,
+      aictxHome,
+      token: "project-route-token"
+    });
+
+    expect(started.ok).toBe(true);
+    if (!started.ok) {
+      throw new Error(started.error.message);
+    }
+
+    try {
+      const base = `http://${started.data.host}:${started.data.port}`;
+      const projectsResponse = await fetch(`${base}/api/projects?token=${started.data.token}`);
+      const projectsEnvelope = await projectsResponse.json() as {
+        ok: true;
+        data: { projects: Array<{ registry_id: string }> };
+      };
+      const registryId = projectsEnvelope.data.projects[0]?.registry_id;
+
+      expect(registryId).toBeTruthy();
+
+      const bootstrapResponse = await fetch(
+        `${base}/api/projects/${encodeURIComponent(registryId ?? "")}/bootstrap?token=${started.data.token}`
+      );
+      const bootstrapEnvelope = await bootstrapResponse.json() as {
+        ok: true;
+        data: { counts: { objects: number } };
+      };
+
+      expect(bootstrapResponse.status).toBe(200);
+      expect(bootstrapEnvelope.ok).toBe(true);
+      expect(bootstrapEnvelope.data.counts.objects).toBeGreaterThan(0);
+
+      const exportResponse = await fetch(
+        `${base}/api/projects/${encodeURIComponent(registryId ?? "")}/export/obsidian`,
+        {
+          method: "POST",
+          headers: {
+            authorization: `Bearer ${started.data.token}`,
+            "content-type": "application/json"
+          },
+          body: JSON.stringify({ outDir: "project-route-export" })
+        }
+      );
+      const exportEnvelope = await exportResponse.json() as {
+        ok: true;
+        data: { manifest_path: string };
+      };
+
+      expect(exportResponse.status).toBe(200);
+      expect(exportEnvelope.ok).toBe(true);
+      expect(exportEnvelope.data.manifest_path).toBe("project-route-export/.aictx-obsidian-export.json");
+    } finally {
+      await started.data.close();
     }
   });
 
@@ -271,9 +385,11 @@ describe("viewer local server", () => {
 async function startProjectViewer(prefix: string): Promise<StartedViewerServer> {
   const projectRoot = await createInitializedProject(`${prefix}project-`);
   const assetsDir = await createViewerAssets(`${prefix}assets-`);
+  const aictxHome = await createTempRoot(`${prefix}home-`);
   const started = await startViewerServer({
     cwd: projectRoot,
     assetsDir,
+    aictxHome,
     token: "api-token"
   });
 

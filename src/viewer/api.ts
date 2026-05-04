@@ -2,10 +2,14 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 
 import {
   exportObsidianProjection,
+  exportViewerProjectObsidian,
+  getViewerProjectBootstrap,
   getViewerBootstrap,
+  getViewerProjects,
   type AppResult,
   type ExportObsidianProjectionData,
-  type ViewerBootstrapData
+  type ViewerBootstrapData,
+  type ViewerProjectsData
 } from "../app/operations.js";
 import { aictxError, type AictxError, type JsonValue } from "../core/errors.js";
 import { err, ok, type Result } from "../core/result.js";
@@ -15,10 +19,12 @@ const MAX_API_BODY_BYTES = 64 * 1024;
 export interface ViewerApiContext {
   cwd: string;
   token: string;
+  aictxHome?: string;
 }
 
 type ViewerApiResult =
   | AppResult<ViewerBootstrapData>
+  | AppResult<ViewerProjectsData>
   | AppResult<ExportObsidianProjectionData>;
 
 export async function handleViewerApiRequest(
@@ -36,6 +42,25 @@ export async function handleViewerApiRequest(
 
   if (url.pathname === "/api/bootstrap") {
     await handleBootstrapRequest(request, response, context);
+    return;
+  }
+
+  if (url.pathname === "/api/projects") {
+    await handleProjectsRequest(request, response, context);
+    return;
+  }
+
+  const projectBootstrap = matchProjectRoute(url.pathname, "bootstrap");
+
+  if (projectBootstrap !== null) {
+    await handleProjectBootstrapRequest(request, response, context, projectBootstrap);
+    return;
+  }
+
+  const projectExport = matchProjectRoute(url.pathname, "export/obsidian");
+
+  if (projectExport !== null) {
+    await handleProjectExportObsidianRequest(request, response, context, projectExport);
     return;
   }
 
@@ -97,6 +122,42 @@ async function handleBootstrapRequest(
   writeAppResult(response, result);
 }
 
+async function handleProjectsRequest(
+  request: IncomingMessage,
+  response: ServerResponse,
+  context: ViewerApiContext
+): Promise<void> {
+  if (request.method !== "GET") {
+    writeMethodNotAllowed(response, "GET");
+    return;
+  }
+
+  const result = await getViewerProjects({
+    cwd: context.cwd,
+    ...(context.aictxHome === undefined ? {} : { aictxHome: context.aictxHome })
+  });
+  writeAppResult(response, result);
+}
+
+async function handleProjectBootstrapRequest(
+  request: IncomingMessage,
+  response: ServerResponse,
+  context: ViewerApiContext,
+  registryId: string
+): Promise<void> {
+  if (request.method !== "GET") {
+    writeMethodNotAllowed(response, "GET");
+    return;
+  }
+
+  const result = await getViewerProjectBootstrap({
+    cwd: context.cwd,
+    registryId,
+    ...(context.aictxHome === undefined ? {} : { aictxHome: context.aictxHome })
+  });
+  writeAppResult(response, result);
+}
+
 async function handleExportObsidianRequest(
   request: IncomingMessage,
   response: ServerResponse,
@@ -124,6 +185,41 @@ async function handleExportObsidianRequest(
   const result = await exportObsidianProjection({
     cwd: context.cwd,
     ...(outDir.data === undefined ? {} : { outDir: outDir.data })
+  });
+
+  writeAppResult(response, result);
+}
+
+async function handleProjectExportObsidianRequest(
+  request: IncomingMessage,
+  response: ServerResponse,
+  context: ViewerApiContext,
+  registryId: string
+): Promise<void> {
+  if (request.method !== "POST") {
+    writeMethodNotAllowed(response, "POST");
+    return;
+  }
+
+  const body = await readJsonBody(request);
+
+  if (!body.ok) {
+    writeViewerJsonResponse(response, 400, viewerErrorBody(body.error));
+    return;
+  }
+
+  const outDir = parseExportOutDir(body.data);
+
+  if (!outDir.ok) {
+    writeViewerJsonResponse(response, 400, viewerErrorBody(outDir.error));
+    return;
+  }
+
+  const result = await exportViewerProjectObsidian({
+    cwd: context.cwd,
+    registryId,
+    ...(outDir.data === undefined ? {} : { outDir: outDir.data }),
+    ...(context.aictxHome === undefined ? {} : { aictxHome: context.aictxHome })
   });
 
   writeAppResult(response, result);
@@ -165,6 +261,23 @@ function statusCodeForAppResult(result: ViewerApiResult): number {
       return 500;
     default:
       return 400;
+  }
+}
+
+function matchProjectRoute(pathname: string, suffix: string): string | null {
+  const prefix = "/api/projects/";
+
+  if (!pathname.startsWith(prefix) || !pathname.endsWith(`/${suffix}`)) {
+    return null;
+  }
+
+  const encoded = pathname.slice(prefix.length, pathname.length - suffix.length - 1);
+
+  try {
+    const registryId = decodeURIComponent(encoded);
+    return registryId === "" || registryId.includes("/") ? null : registryId;
+  } catch {
+    return null;
   }
 }
 

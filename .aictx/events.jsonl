@@ -31,3 +31,7 @@
 {"actor":"agent","event":"memory.deleted","id":"decision.maintenance-commands-live-in-cli","timestamp":"2026-05-04T18:39:34+02:00"}
 {"actor":"agent","event":"memory.created","id":"decision.maintenance-command-surface-split","timestamp":"2026-05-04T18:39:34+02:00"}
 {"actor":"agent","event":"memory.updated","id":"workflow.package-scripts","timestamp":"2026-05-04T18:39:34+02:00"}
+{"actor":"agent","event":"memory.created","id":"concept.feature-project-registry","timestamp":"2026-05-04T20:07:14+02:00"}
+{"actor":"agent","event":"memory.created","id":"concept.feature-multi-project-viewer","timestamp":"2026-05-04T20:07:14+02:00"}
+{"actor":"agent","event":"relation.created","relation_id":"rel.project-aictx-implements-concept-feature-project-registry","timestamp":"2026-05-04T20:07:14+02:00"}
+{"actor":"agent","event":"relation.created","relation_id":"rel.project-aictx-implements-concept-feature-multi-project-viewer","timestamp":"2026-05-04T20:07:14+02:00"}

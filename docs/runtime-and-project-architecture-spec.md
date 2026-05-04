@@ -137,6 +137,8 @@ Repository layout:
         diff-memory.ts
     app/
       operations.ts
+    registry/
+      projects.ts
     core/
       config.ts
       errors.ts
@@ -234,7 +236,8 @@ Allowed import direction:
 cli/*      -> app/*, core/*
 mcp/*      -> app/*, core/*
 viewer/*   -> app/*, core/*
-app/*      -> core/*, storage/*, validation/*, index/*, context/*, export/*
+app/*      -> core/*, registry/*, storage/*, validation/*, index/*, context/*, export/*
+registry/* -> core/*, storage/*
 context/*  -> index/*, storage/*, core/*
 index/*    -> storage/*, validation/*, core/*
 export/*   -> storage/*, validation/*, core/*
@@ -762,7 +765,8 @@ Project resolution:
 * `project_root` must be treated only as a project selection input; the storage boundary remains the resolved `<projectRoot>/.aictx` directory.
 * MCP tools must not accept `aictxRoot`, arbitrary filesystem root, or low-level file path parameters.
 * Users may configure one globally installed MCP server instance and target multiple initialized projects by passing `project_root` per tool call.
-* Project memory remains isolated by default; cross-project or shared memory behavior requires an explicit future design and must not happen implicitly.
+* Project memory remains isolated by default. The user-level registry at `$AICTX_HOME/projects.json` may list multiple local projects for the viewer, but it stores only roots and metadata and does not merge canonical memory.
+* Cross-project or shared memory loading/search behavior requires an explicit future design and must not happen implicitly.
 
 Concurrency rule:
 

@@ -15,6 +15,7 @@ import { registerInitCommand } from "./commands/init.js";
 import { registerInspectCommand } from "./commands/inspect.js";
 import { registerLoadCommand } from "./commands/load.js";
 import { registerPatchCommand } from "./commands/patch.js";
+import { registerProjectsCommand } from "./commands/projects.js";
 import { registerRebuildCommand } from "./commands/rebuild.js";
 import { registerResetCommand } from "./commands/reset.js";
 import { registerRestoreCommand } from "./commands/restore.js";
@@ -35,6 +36,7 @@ import {
   CLI_EXIT_USAGE,
   type CliExitCode
 } from "./exit.js";
+import { registerCurrentProject } from "../app/operations.js";
 
 export type CliOutputWriter = (text: string) => void;
 
@@ -48,6 +50,10 @@ export interface CliMainOptions {
     opener?: ViewerUrlOpener;
     detacher?: ViewerDetacher;
     shutdownSignal?: AbortSignal;
+  };
+  registry?: {
+    enabled?: boolean;
+    aictxHome?: string;
   };
 }
 
@@ -117,6 +123,14 @@ export function createCliProgram(options: CliMainOptions = {}): Command {
     stdout: writeOut,
     stderr: writeErr
   });
+  registerProjectsCommand(program, {
+    cwd: options.cwd ?? process.cwd(),
+    stdout: writeOut,
+    stderr: writeErr,
+    ...(options.registry?.aictxHome === undefined
+      ? {}
+      : { aictxHome: options.registry.aictxHome })
+  });
   registerSetupCommand(program, {
     cwd: options.cwd ?? process.cwd(),
     stdout: writeOut,
@@ -147,6 +161,9 @@ export function createCliProgram(options: CliMainOptions = {}): Command {
     cwd: options.cwd ?? process.cwd(),
     stdout: writeOut,
     stderr: writeErr,
+    ...(options.registry?.aictxHome === undefined
+      ? {}
+      : { aictxHome: options.registry.aictxHome }),
     ...(options.viewer?.assetsDir === undefined
       ? {}
       : { assetsDir: options.viewer.assetsDir }),
@@ -179,13 +196,26 @@ export function createCliProgram(options: CliMainOptions = {}): Command {
   registerResetCommand(program, {
     cwd: options.cwd ?? process.cwd(),
     stdout: writeOut,
-    stderr: writeErr
+    stderr: writeErr,
+    registryEnabled: registryAutoRegistrationEnabled(options),
+    ...(options.registry?.aictxHome === undefined
+      ? {}
+      : { aictxHome: options.registry.aictxHome })
   });
   registerSaveCommand(program, {
     cwd: options.cwd ?? process.cwd(),
     stdin: options.stdin ?? process.stdin,
     stdout: writeOut,
     stderr: writeErr
+  });
+
+  installProjectRegistryHook(program, {
+    cwd: options.cwd ?? process.cwd(),
+    stderr: writeErr,
+    enabled: registryAutoRegistrationEnabled(options),
+    ...(options.registry?.aictxHome === undefined
+      ? {}
+      : { aictxHome: options.registry.aictxHome })
   });
 
   return program;
@@ -221,6 +251,84 @@ function exitCodeForCommanderError(error: CommanderError): CliExitCode {
 
 function isCliExitCode(exitCode: number): exitCode is CliExitCode {
   return exitCode === 0 || exitCode === 1 || exitCode === 2 || exitCode === 3;
+}
+
+interface ProjectRegistryHookOptions {
+  cwd: string;
+  stderr: CliOutputWriter;
+  enabled: boolean;
+  aictxHome?: string;
+}
+
+function installProjectRegistryHook(
+  program: Command,
+  options: ProjectRegistryHookOptions
+): void {
+  if (!options.enabled) {
+    return;
+  }
+
+  program.hook("postAction", async (_thisCommand, actionCommand) => {
+    if (!shouldAutoRegisterProject(actionCommand)) {
+      return;
+    }
+
+    const registered = await registerCurrentProject({
+      cwd: options.cwd,
+      ...(options.aictxHome === undefined ? {} : { aictxHome: options.aictxHome })
+    });
+
+    if (!registered.ok && registered.error.code !== "AICtxNotInitialized") {
+      options.stderr(`warning: Project registry was not updated: ${registered.error.message}\n`);
+    }
+  });
+}
+
+function shouldAutoRegisterProject(command: Command): boolean {
+  const path = commandPath(command);
+
+  return AUTO_REGISTER_COMMANDS.has(path);
+}
+
+function commandPath(command: Command): string {
+  const names: string[] = [];
+  let current: Command | null = command;
+
+  while (current !== null && current.name() !== "aictx") {
+    names.unshift(current.name());
+    current = current.parent ?? null;
+  }
+
+  return names.join(" ");
+}
+
+const AUTO_REGISTER_COMMANDS = new Set([
+  "init",
+  "check",
+  "rebuild",
+  "load",
+  "search",
+  "inspect",
+  "stale",
+  "suggest",
+  "setup",
+  "audit",
+  "upgrade",
+  "graph",
+  "export obsidian",
+  "diff",
+  "history",
+  "restore",
+  "rewind",
+  "save"
+]);
+
+function registryAutoRegistrationEnabled(options: CliMainOptions): boolean {
+  if (options.registry?.enabled !== undefined) {
+    return options.registry.enabled;
+  }
+
+  return process.env.VITEST !== "true";
 }
 
 if (isEntrypoint()) {

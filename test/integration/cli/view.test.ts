@@ -20,6 +20,7 @@ describe("aictx view CLI", () => {
   it("prints a usable local URL and keeps running until shutdown", async () => {
     const projectRoot = await createInitializedProject("aictx-cli-view-project-");
     const assetsDir = await createViewerAssets("aictx-cli-view-assets-");
+    const aictxHome = await createTempRoot("aictx-cli-view-home-");
     const output = createCapturedOutput();
     const shutdown = new AbortController();
     const running = main(["node", "aictx", "view"], {
@@ -28,6 +29,10 @@ describe("aictx view CLI", () => {
       viewer: {
         assetsDir,
         shutdownSignal: shutdown.signal
+      },
+      registry: {
+        enabled: false,
+        aictxHome
       }
     });
     const url = await waitForHumanViewerUrl(output.stdout);
@@ -45,6 +50,7 @@ describe("aictx view CLI", () => {
   it("prints the JSON startup envelope and protects API requests with the token", async () => {
     const projectRoot = await createInitializedProject("aictx-cli-view-json-project-");
     const assetsDir = await createViewerAssets("aictx-cli-view-json-assets-");
+    const aictxHome = await createTempRoot("aictx-cli-view-json-home-");
     const output = createCapturedOutput();
     const shutdown = new AbortController();
     const running = main(["node", "aictx", "view", "--json"], {
@@ -53,6 +59,10 @@ describe("aictx view CLI", () => {
       viewer: {
         assetsDir,
         shutdownSignal: shutdown.signal
+      },
+      registry: {
+        enabled: false,
+        aictxHome
       }
     });
     const envelope = await waitForJsonOutput<{
@@ -90,6 +100,7 @@ describe("aictx view CLI", () => {
   it("starts on an explicit available loopback port", async () => {
     const projectRoot = await createInitializedProject("aictx-cli-view-port-project-");
     const assetsDir = await createViewerAssets("aictx-cli-view-port-assets-");
+    const aictxHome = await createTempRoot("aictx-cli-view-port-home-");
     const port = await getAvailableLoopbackPort();
     const output = createCapturedOutput();
     const shutdown = new AbortController();
@@ -99,6 +110,10 @@ describe("aictx view CLI", () => {
       viewer: {
         assetsDir,
         shutdownSignal: shutdown.signal
+      },
+      registry: {
+        enabled: false,
+        aictxHome
       }
     });
     const envelope = await waitForJsonOutput<{
@@ -127,6 +142,7 @@ describe("aictx view CLI", () => {
   it("fails clearly for an unavailable explicit port", async () => {
     const projectRoot = await createInitializedProject("aictx-cli-view-busy-project-");
     const assetsDir = await createViewerAssets("aictx-cli-view-busy-assets-");
+    const aictxHome = await createTempRoot("aictx-cli-view-busy-home-");
     const busy = createServer();
     const output = createCapturedOutput();
 
@@ -143,6 +159,10 @@ describe("aictx view CLI", () => {
           viewer: {
             assetsDir,
             shutdownSignal: AbortSignal.abort()
+          },
+          registry: {
+            enabled: false,
+            aictxHome
           }
         }
       );
@@ -174,6 +194,7 @@ describe("aictx view CLI", () => {
 
   it("prints a detached viewer URL and exits", async () => {
     const projectRoot = await createInitializedProject("aictx-cli-view-detach-project-");
+    const aictxHome = await createTempRoot("aictx-cli-view-detach-home-");
     const output = createCapturedOutput();
     const exitCode = await main(["node", "aictx", "view", "--detach", "--open", "--json"], {
       ...output.writers,
@@ -189,6 +210,10 @@ describe("aictx view CLI", () => {
           },
           warnings: []
         })
+      },
+      registry: {
+        enabled: false,
+        aictxHome
       }
     });
     const envelope = JSON.parse(output.stdout()) as {

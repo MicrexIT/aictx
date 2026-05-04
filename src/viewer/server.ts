@@ -25,6 +25,7 @@ export interface StartViewerServerOptions {
   port?: number;
   assetsDir?: string;
   token?: string;
+  aictxHome?: string;
 }
 
 export interface StartedViewerServer {
@@ -39,6 +40,7 @@ interface ViewerRequestContext {
   cwd: string;
   assetsDir: string;
   token: string;
+  aictxHome?: string;
 }
 
 export async function startViewerServer(
@@ -65,7 +67,8 @@ export async function startViewerServer(
   const context: ViewerRequestContext = {
     cwd: options.cwd,
     assetsDir,
-    token
+    token,
+    ...(options.aictxHome === undefined ? {} : { aictxHome: options.aictxHome })
   };
   const server = createServer((request, response) => {
     void handleViewerRequest(request, response, context).catch((error: unknown) => {
@@ -177,7 +180,8 @@ async function handleViewerRequest(
   if (url.pathname.startsWith("/api/")) {
     await handleViewerApiRequest(request, response, url, {
       cwd: context.cwd,
-      token: context.token
+      token: context.token,
+      ...(context.aictxHome === undefined ? {} : { aictxHome: context.aictxHome })
     });
     return;
   }

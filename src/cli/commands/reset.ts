@@ -2,6 +2,7 @@ import { CommanderError, type Command } from "commander";
 
 import {
   resetAictx,
+  unregisterProjectRoot,
   type ResetAictxData,
   type ResetAictxOptions
 } from "../../app/operations.js";
@@ -14,6 +15,8 @@ export interface RegisterResetCommandOptions {
   cwd: string;
   stdout: CliOutputWriter;
   stderr: CliOutputWriter;
+  aictxHome?: string;
+  registryEnabled?: boolean;
 }
 
 export function registerResetCommand(
@@ -40,6 +43,18 @@ export function registerResetCommand(
           "aictx.command.failed",
           "Aictx command failed."
         );
+      }
+
+      if (result.ok && options.registryEnabled !== false) {
+        const unregistered = await unregisterProjectRoot({
+          cwd: options.cwd,
+          projectRoot: result.meta.project_root,
+          ...(options.aictxHome === undefined ? {} : { aictxHome: options.aictxHome })
+        });
+
+        if (!unregistered.ok) {
+          options.stderr(`warning: Project registry was not updated: ${unregistered.error.message}\n`);
+        }
       }
     });
 }

@@ -88,6 +88,38 @@
     storage_warnings: string[];
   }
 
+  interface RegisteredProjectSummary {
+    registry_id: string;
+    project: {
+      id: string;
+      name: string;
+    };
+    project_root: string;
+    aictx_root: string;
+    source: "auto" | "manual";
+    registered_at: string;
+    last_seen_at: string;
+  }
+
+  interface ViewerProjectSummary extends RegisteredProjectSummary {
+    current: boolean;
+    available: boolean;
+    counts: ViewerBootstrapData["counts"] | null;
+    git: ViewerSuccessEnvelope["meta"]["git"] | null;
+    warnings: string[];
+  }
+
+  interface ViewerProjectsData {
+    registry_path: string;
+    projects: ViewerProjectSummary[];
+    counts: {
+      projects: number;
+      available: number;
+      unavailable: number;
+    };
+    current_project_registry_id: string | null;
+  }
+
   interface ExportObsidianProjectionData {
     format: "obsidian";
     output_dir: string;
@@ -125,9 +157,10 @@
   }
 
   type ViewerEnvelope = ViewerSuccessEnvelope<ViewerBootstrapData> | ViewerErrorEnvelope;
+  type ViewerProjectsEnvelope = ViewerSuccessEnvelope<ViewerProjectsData> | ViewerErrorEnvelope;
   type ExportEnvelope = ViewerSuccessEnvelope<ExportObsidianProjectionData> | ViewerErrorEnvelope;
   type ViewerState = "loading" | "ready" | "error";
-  type ViewerScreen = "memories" | "detail" | "export";
+  type ViewerScreen = "projects" | "memories" | "detail" | "export";
   type ExportState = "idle" | "running" | "success" | "error";
 
   interface MarkdownBlock {
@@ -156,10 +189,14 @@
   }
 
   let loadState = $state<ViewerState>("loading");
+  let projectLoadState = $state<ViewerState>("loading");
+  let projectsData = $state<ViewerProjectsData | null>(null);
   let bootstrap = $state<ViewerBootstrapData | null>(null);
   let warnings = $state<string[]>([]);
   let errorMessage = $state("");
-  let currentScreen = $state<ViewerScreen>("memories");
+  let projectErrorMessage = $state("");
+  let currentScreen = $state<ViewerScreen>("projects");
+  let selectedProjectId = $state<string | null>(null);
   let searchQuery = $state("");
   let typeFilter = $state("all");
   let statusFilter = $state("all");
@@ -176,6 +213,12 @@
   const graphWidth = 960;
   const graphHeight = 420;
   const token = new URLSearchParams(window.location.search).get("token") ?? "";
+  const projects = $derived(projectsData?.projects ?? []);
+  const selectedProject = $derived.by(() =>
+    selectedProjectId === null
+      ? null
+      : projects.find((project) => project.registry_id === selectedProjectId) ?? null
+  );
   const objects = $derived(bootstrap?.objects ?? []);
   const relations = $derived(bootstrap?.relations ?? []);
   const objectById = $derived(new Map(objects.map((object) => [object.id, object])));
@@ -222,14 +265,18 @@
     }))
   );
   const graphNodeById = $derived(new Map(graphNodes.map((node) => [node.id, node])));
-  const visibleWarnings = $derived(uniqueSorted([...(bootstrap?.storage_warnings ?? []), ...warnings]));
+  const visibleWarnings = $derived(uniqueSorted([
+    ...(bootstrap?.storage_warnings ?? []),
+    ...(selectedProject?.warnings ?? []),
+    ...warnings
+  ]));
   const hasStarterMemoryOnly = $derived.by(() => isStarterMemoryOnly(objects));
 
   onMount(() => {
-    void loadBootstrap();
+    void loadProjects();
   });
 
-  async function loadBootstrap(): Promise<void> {
+  async function loadProjects(): Promise<void> {
     if (token === "") {
       loadState = "error";
       errorMessage = "Viewer API token is missing from the local URL.";
@@ -237,12 +284,12 @@
     }
 
     try {
-      const response = await fetch(`/api/bootstrap?token=${encodeURIComponent(token)}`, {
+      const response = await fetch(`/api/projects?token=${encodeURIComponent(token)}`, {
         headers: {
           accept: "application/json"
         }
       });
-      const envelope = (await response.json()) as ViewerEnvelope;
+      const envelope = (await response.json()) as ViewerProjectsEnvelope;
 
       warnings = envelope.warnings ?? [];
 
@@ -254,11 +301,48 @@
         return;
       }
 
-      bootstrap = envelope.data;
+      projectsData = envelope.data;
       loadState = "ready";
     } catch (error) {
       loadState = "error";
       errorMessage = error instanceof Error ? error.message : String(error);
+    }
+  }
+
+  async function loadBootstrap(registryId: string): Promise<void> {
+    if (token === "") {
+      projectLoadState = "error";
+      projectErrorMessage = "Viewer API token is missing from the local URL.";
+      return;
+    }
+
+    projectLoadState = "loading";
+    projectErrorMessage = "";
+    bootstrap = null;
+
+    try {
+      const response = await fetch(`/api/projects/${encodeURIComponent(registryId)}/bootstrap?token=${encodeURIComponent(token)}`, {
+        headers: {
+          accept: "application/json"
+        }
+      });
+      const envelope = (await response.json()) as ViewerEnvelope;
+
+      warnings = envelope.warnings ?? [];
+
+      if (!response.ok || !envelope.ok) {
+        projectLoadState = "error";
+        projectErrorMessage = envelope.ok
+          ? `Viewer API request failed with HTTP ${response.status}.`
+          : `${envelope.error.code}: ${envelope.error.message}`;
+        return;
+      }
+
+      bootstrap = envelope.data;
+      projectLoadState = "ready";
+    } catch (error) {
+      projectLoadState = "error";
+      projectErrorMessage = error instanceof Error ? error.message : String(error);
     }
   }
 
@@ -280,7 +364,14 @@
     const requestBody = trimmedOutDir === "" ? {} : { outDir: trimmedOutDir };
 
     try {
-      const response = await fetch(`/api/export/obsidian?token=${encodeURIComponent(token)}`, {
+      if (selectedProjectId === null) {
+        exportState = "error";
+        exportErrorCode = "AICtxValidationFailed";
+        exportMessage = "Select a project before exporting.";
+        return;
+      }
+
+      const response = await fetch(`/api/projects/${encodeURIComponent(selectedProjectId)}/export/obsidian?token=${encodeURIComponent(token)}`, {
         method: "POST",
         headers: {
           accept: "application/json",
@@ -380,16 +471,64 @@
     currentScreen = "detail";
   }
 
+  function selectProject(registryId: string): void {
+    selectedProjectId = registryId;
+    selectedObjectId = null;
+    searchQuery = "";
+    typeFilter = allOption;
+    statusFilter = allOption;
+    tagFilter = allOption;
+    exportState = "idle";
+    exportMessage = "";
+    currentScreen = "memories";
+    void loadBootstrap(registryId);
+  }
+
   function openRelatedObject(id: string): void {
     selectObject(id);
   }
 
+  function showProjects(): void {
+    currentScreen = "projects";
+    selectedObjectId = null;
+  }
+
   function showMemories(): void {
+    if (selectedProjectId === null) {
+      currentScreen = "projects";
+      return;
+    }
+
     currentScreen = "memories";
   }
 
   function showExport(): void {
+    if (selectedProjectId === null) {
+      currentScreen = "projects";
+      return;
+    }
+
     currentScreen = "export";
+  }
+
+  function gitLabel(project: ViewerProjectSummary): string {
+    if (!project.available) {
+      return "Unavailable";
+    }
+
+    if (project.git === null || !project.git.available) {
+      return "No Git";
+    }
+
+    if (project.git.dirty === true) {
+      return "Memory dirty";
+    }
+
+    if (project.git.dirty === false) {
+      return "Memory clean";
+    }
+
+    return "Git available";
   }
 
   function relationCounterpart(relation: MemoryRelationSummary, objectId: string): string {
@@ -736,7 +875,7 @@
   }
 </script>
 
-<main class:ready-shell={loadState === "ready" && bootstrap !== null} class="viewer-shell" aria-labelledby="viewer-title">
+<main class:ready-shell={loadState === "ready" && projectsData !== null} class="viewer-shell" aria-labelledby="viewer-title">
   {#if loadState === "loading"}
     <section class="system-panel" aria-live="polite">
       <p class="eyebrow">Aictx local viewer</p>
@@ -750,20 +889,30 @@
       <h2>Viewer failed to load</h2>
       <p>{errorMessage}</p>
     </section>
-  {:else if bootstrap !== null}
+  {:else if projectsData !== null}
     <aside class="nav-rail" aria-label="Viewer navigation">
       <div class="brand-block">
         <p class="eyebrow">Aictx local viewer</p>
         <h1 id="viewer-title">Memory Viewer</h1>
-        <p class="project-name">{bootstrap.project.name}</p>
-        <p class="project-id">{bootstrap.project.id}</p>
+        <p class="project-name">{selectedProject?.project.name ?? "Projects"}</p>
+        <p class="project-id">{selectedProject?.project.id ?? projectsData.registry_path}</p>
       </div>
 
       <nav class="nav-list">
         <button
           type="button"
+          class:active={currentScreen === "projects"}
+          aria-current={currentScreen === "projects" ? "page" : undefined}
+          onclick={showProjects}
+          data-testid="nav-projects"
+        >
+          Projects
+        </button>
+        <button
+          type="button"
           class:active={currentScreen === "memories" || currentScreen === "detail"}
           aria-current={currentScreen === "memories" || currentScreen === "detail" ? "page" : undefined}
+          disabled={selectedProjectId === null}
           onclick={showMemories}
           data-testid="nav-memories"
         >
@@ -773,6 +922,7 @@
           type="button"
           class:active={currentScreen === "export"}
           aria-current={currentScreen === "export" ? "page" : undefined}
+          disabled={selectedProjectId === null}
           onclick={showExport}
           data-testid="nav-export"
         >
@@ -781,23 +931,115 @@
       </nav>
 
       <dl class="project-stats" aria-label="Project memory counts">
-        <div>
-          <dt>Memories</dt>
-          <dd>{bootstrap.counts.objects}</dd>
-        </div>
-        <div>
-          <dt>Connections</dt>
-          <dd>{bootstrap.counts.relations}</dd>
-        </div>
-        <div>
-          <dt>Active</dt>
-          <dd>{bootstrap.counts.active_relations}</dd>
-        </div>
+        {#if currentScreen === "projects" || bootstrap === null}
+          <div>
+            <dt>Projects</dt>
+            <dd>{projectsData.counts.projects}</dd>
+          </div>
+          <div>
+            <dt>Available</dt>
+            <dd>{projectsData.counts.available}</dd>
+          </div>
+          <div>
+            <dt>Missing</dt>
+            <dd>{projectsData.counts.unavailable}</dd>
+          </div>
+        {:else}
+          <div>
+            <dt>Memories</dt>
+            <dd>{bootstrap.counts.objects}</dd>
+          </div>
+          <div>
+            <dt>Connections</dt>
+            <dd>{bootstrap.counts.relations}</dd>
+          </div>
+          <div>
+            <dt>Active</dt>
+            <dd>{bootstrap.counts.active_relations}</dd>
+          </div>
+        {/if}
       </dl>
     </aside>
 
     <section class="main-stage" aria-label="Read-only memory browser">
-      {#if currentScreen === "export"}
+      {#if currentScreen === "projects"}
+        <section class="projects-page" aria-labelledby="projects-title" data-testid="projects-view">
+          <header class="page-header">
+            <p class="eyebrow">Registered memory roots</p>
+            <h2 id="projects-title">Projects</h2>
+            <p>{countLabel(projects.length, "registered project", "registered projects")}</p>
+          </header>
+
+          {#if projects.length === 0}
+            <section class="empty-projects" data-testid="empty-projects">
+              <h3>No projects registered</h3>
+              <p>Run <code>aictx projects add</code> inside an initialized project, or run any successful Aictx project command to register it automatically.</p>
+              <p class="object-id">{projectsData.registry_path}</p>
+            </section>
+          {:else}
+            <div class="project-grid" data-testid="project-list">
+              {#each projects as project (project.registry_id)}
+                <article
+                  class:unavailable-project={!project.available}
+                  class:current-project={project.current}
+                  class="project-card"
+                  data-testid={`project-card-${project.registry_id}`}
+                >
+                  <div class="project-card-topline">
+                    <span>{project.source}</span>
+                    <strong>{gitLabel(project)}</strong>
+                  </div>
+                  <h3>{project.project.name}</h3>
+                  <p class="project-id">{project.project.id}</p>
+                  <p class="project-root">{project.project_root}</p>
+
+                  <dl class="project-card-stats">
+                    <div>
+                      <dt>Memories</dt>
+                      <dd>{project.counts?.objects ?? 0}</dd>
+                    </div>
+                    <div>
+                      <dt>Connections</dt>
+                      <dd>{project.counts?.relations ?? 0}</dd>
+                    </div>
+                    <div>
+                      <dt>Active</dt>
+                      <dd>{project.counts?.active_relations ?? 0}</dd>
+                    </div>
+                  </dl>
+
+                  {#if project.warnings.length > 0}
+                    <p class="project-warning">{project.warnings[0]}</p>
+                  {/if}
+
+                  <button
+                    type="button"
+                    class="primary-action"
+                    disabled={!project.available}
+                    onclick={() => selectProject(project.registry_id)}
+                    data-testid={`project-open-${project.registry_id}`}
+                  >
+                    Open project
+                  </button>
+                </article>
+              {/each}
+            </div>
+          {/if}
+        </section>
+      {:else if projectLoadState === "error"}
+        <section class="system-panel error-panel" role="alert" data-testid="project-load-error">
+          <p class="eyebrow">Aictx local viewer</p>
+          <h2>Project failed to load</h2>
+          <p>{projectErrorMessage}</p>
+          <button type="button" class="back-action" onclick={showProjects}>Back to projects</button>
+        </section>
+      {:else if projectLoadState === "loading" || bootstrap === null}
+        <section class="system-panel" aria-live="polite" data-testid="project-loading">
+          <p class="eyebrow">Aictx local viewer</p>
+          <h2>Loading Project</h2>
+          <p>{selectedProject?.project.name ?? "Selected project"}</p>
+        </section>
+      {:else if currentScreen === "export"}
         <section class="export-page" aria-labelledby="export-title" data-testid="export-view">
           <header class="page-header compact-header">
             <p class="eyebrow">Generated projection</p>
@@ -1418,7 +1660,8 @@
 
   .memory-list-page,
   .detail-page,
-  .export-page {
+  .export-page,
+  .projects-page {
     width: min(100%, 1080px);
     margin: 0 auto;
   }
@@ -1430,6 +1673,98 @@
 
   .export-page {
     width: min(100%, 760px);
+  }
+
+  .project-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 14px;
+  }
+
+  .project-card,
+  .empty-projects {
+    display: grid;
+    gap: 12px;
+    min-width: 0;
+    border: 1px solid #d9ded7;
+    border-radius: 8px;
+    padding: 16px;
+    background: #ffffff;
+    box-shadow: 0 8px 20px rgb(16 24 40 / 5%);
+  }
+
+  .project-card.current-project {
+    border-color: #8fb5ad;
+    background: #f5faf8;
+  }
+
+  .project-card.unavailable-project {
+    border-color: #e3c1b6;
+    background: #fff8f5;
+  }
+
+  .project-card h3,
+  .empty-projects h3 {
+    margin: 0;
+  }
+
+  .project-card-topline {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    color: #667085;
+    font-size: 0.74rem;
+    font-weight: 900;
+    text-transform: uppercase;
+  }
+
+  .project-card-topline strong {
+    color: #28514b;
+  }
+
+  .project-root {
+    margin: 0;
+    overflow-wrap: anywhere;
+    color: #52615d;
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+    font-size: 0.78rem;
+    line-height: 1.45;
+  }
+
+  .project-card-stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    margin: 0;
+  }
+
+  .project-card-stats div {
+    border: 1px solid #e1e6df;
+    border-radius: 6px;
+    padding: 8px;
+    background: #fbfcfa;
+  }
+
+  .project-card-stats dt {
+    color: #667085;
+    font-size: 0.68rem;
+    font-weight: 900;
+    text-transform: uppercase;
+  }
+
+  .project-card-stats dd {
+    margin: 3px 0 0;
+    color: #101828;
+    font-size: 1.05rem;
+    font-weight: 900;
+  }
+
+  .project-warning {
+    margin: 0;
+    color: #8a3d22;
+    font-size: 0.84rem;
+    line-height: 1.45;
   }
 
   .page-header,
@@ -2020,7 +2355,7 @@
     }
 
     .nav-list {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 
     .project-stats {
@@ -2061,6 +2396,7 @@
 
     .filter-grid,
     .relation-columns,
+    .project-card-stats,
     .technical-details dl {
       grid-template-columns: 1fr;
     }

@@ -120,7 +120,7 @@ events, and updates generated indexes.
 The CLI is the default path for routine agent memory work. MCP is a supported
 integration path when the agent client has already launched and connected to
 `aictx-mcp`. The CLI is also the complete path for setup, maintenance,
-inspection, recovery, suggestion, audit, local viewing, and export workflows.
+inspection, recovery, suggestion, audit, registry management, local viewing, and export workflows.
 CLI-only commands are intentional; they are not MCP parity gaps.
 MCP exposes exactly `load_memory`, `search_memory`, `save_memory_patch`, and
 `diff_memory` in v1.
@@ -560,6 +560,26 @@ does not mutate canonical memory.
 
 ### Local Viewer
 
+#### `aictx projects`
+
+Manages the user-level project registry used by the multi-project viewer.
+
+```bash
+aictx projects list
+aictx projects add
+aictx projects add /path/to/project
+aictx projects remove <registry-id|project-id|path>
+aictx projects prune
+```
+
+The registry lives at `$AICTX_HOME/projects.json`, defaulting to
+`~/.aictx/projects.json`. It stores only project metadata and roots; canonical
+memory stays isolated in each project's own `.aictx/` directory. Successful
+project-scoped CLI commands refresh the current project in the registry
+automatically. Use `projects add` for explicit registration, `remove` to forget
+an entry, and `prune` to remove entries whose `.aictx/` storage is no longer
+available.
+
 #### `aictx view`
 
 Starts the local read-only memory viewer.
@@ -571,17 +591,20 @@ aictx view --port 4888
 aictx view --json
 ```
 
-The command requires an initialized `.aictx/` directory, binds only to
-`127.0.0.1`, chooses an available random port by default, and prints a local URL
-that includes a per-run API token. Open that URL in a browser to inspect memory.
-Use `--port <number>` when you need a fixed loopback port, and `--open` when you
-want Aictx to try launching the default browser after the server starts.
+The command binds only to `127.0.0.1`, chooses an available random port by
+default, and prints a local URL that includes a per-run API token. It can start
+outside an initialized project and opens to a Projects dashboard populated from
+the user-level registry, plus the current project when the launch directory is
+initialized. Use `--port <number>` when you need a fixed loopback port, and
+`--open` when you want Aictx to try launching the default browser.
 
-Inside the viewer, the default Memories screen shows a centered searchable list
-with type, status, and tag filters. Selecting an object opens a focused detail
-view with its canonical Markdown body, readable incoming and outgoing related
-memories, a direct-neighborhood connection map, and collapsed technical details
-for raw JSON, paths, and timestamps. Use Back to return to the filtered list.
+Inside the viewer, the Projects screen lists registered project roots with
+memory counts and Git/Aictx availability. Selecting a project opens the existing
+Memories screen for that project, with search plus type, status, and tag
+filters. Selecting an object opens a focused detail view with its canonical
+Markdown body, readable incoming and outgoing related memories, a
+direct-neighborhood connection map, and collapsed technical details for raw JSON,
+paths, and timestamps.
 
 The viewer does not edit canonical memory. The only write action in the viewer
 is the explicit Obsidian export screen, which calls the same generated
@@ -589,8 +612,9 @@ projection service as `aictx export obsidian` and writes generated projection
 files only.
 
 `aictx view --json` prints the shared startup envelope after the server is
-listening. The command remains a long-running local server process until it is
-interrupted.
+listening, including the registry path, project count, and current project
+registry id when available. The command remains a long-running local server
+process until it is interrupted.
 
 ## MCP Setup
 
@@ -751,6 +775,7 @@ MCP or CLI. It does not mean MCP and CLI expose identical command lists.
 | List stale memory | none | `aictx stale` | Debug inspection remains CLI-only in v1. |
 | Show graph neighborhood | none | `aictx graph` | Debug inspection remains CLI-only in v1. |
 | Export Obsidian projection | none | `aictx export obsidian` | Generated projection remains CLI-only in v1. |
+| Manage project registry | none | `aictx projects` | Registry management remains CLI-only in v1. |
 | View local memory | none | `aictx view` | Local read-only viewer remains CLI-only in v1. |
 | Suggest memory review packet | none | `aictx suggest` | Agent assistance remains CLI-only in v1. |
 | Audit memory hygiene | none | `aictx audit` | Deterministic hygiene review remains CLI-only in v1. |

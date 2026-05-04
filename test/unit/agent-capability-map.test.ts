@@ -154,6 +154,12 @@ const cliOnlyCapabilities = [
     notes: "Generated projection remains CLI-only in v1."
   },
   {
+    capability: "Manage project registry",
+    mcp: "none",
+    cli: "`aictx projects`",
+    notes: "Registry management remains CLI-only in v1."
+  },
+  {
     capability: "View local memory",
     mcp: "none",
     cli: "`aictx view`",
@@ -194,6 +200,7 @@ const exactCliOnlyCommands = [
   "`aictx stale`",
   "`aictx graph`",
   "`aictx export obsidian`",
+  "`aictx projects`",
   "`aictx view`",
   "`aictx suggest`",
   "`aictx audit`"
@@ -214,6 +221,7 @@ const exactCliOnlyGuidanceCommands = [
   "`aictx stale`",
   "`aictx graph`",
   "`aictx export obsidian`",
+  "`aictx projects`",
   "`aictx view`",
   "`aictx suggest`",
   "`aictx audit`"
@@ -422,7 +430,7 @@ describe("agent capability map guardrail", () => {
       const guidance = await readProjectFile(path);
 
       expect(guidance.indexOf("Use CLI first for routine memory work")).toBeLessThan(
-        guidance.indexOf("Use CLI for v1 setup, maintenance, recovery, export, inspection, local viewing, suggestion, and audit capabilities")
+        guidance.indexOf("Use CLI for v1 setup, maintenance, recovery, export, inspection, registry management, local viewing, suggestion, and audit capabilities")
       );
       expect(guidance.indexOf("aictx load \"<task summary>\"")).toBeLessThan(
         guidance.indexOf("load_memory({ task: \"<task summary>\"")
@@ -488,7 +496,7 @@ describe("agent capability map guardrail", () => {
     }
 
     expect(prd).toContain(
-      "Setup, maintenance, recovery, export, inspection, local viewing, suggestion, and audit capabilities remain CLI-only in v1"
+      "Setup, maintenance, recovery, export, inspection, registry management, local viewing, suggestion, and audit capabilities remain CLI-only in v1"
     );
     expect(apiSpec).toContain("Do not expose an MCP tool for local viewing.");
     expect(localViewerSpec).toContain("Do not add `aictx view` to MCP.");

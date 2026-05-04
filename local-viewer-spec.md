@@ -39,6 +39,7 @@ Rules:
 * The viewer must not edit canonical `.aictx/memory/`, `.aictx/relations/`, `.aictx/events.jsonl`, config, schemas, hashes, or generated SQLite indexes.
 * The only allowed write from the viewer is an explicit Obsidian export action that calls the same generated projection service as `aictx export obsidian`.
 * The viewer must run locally, bind only to loopback, and require no cloud account, hosted service, telemetry, embeddings, external model API, or network dependency.
+* The viewer may read the user-level project registry at `$AICTX_HOME/projects.json`, defaulting to `~/.aictx/projects.json`, to list initialized projects. The registry stores project roots and metadata only; canonical memory remains isolated per project.
 * `aictx view` is CLI-only in v1. CLI-only capabilities are intentionally not MCP parity gaps.
 * Do not add `aictx view` to MCP.
 * Agents and integrations must use supported MCP or CLI entrypoints instead of editing `.aictx/` files directly when a supported entrypoint exists.
@@ -54,7 +55,7 @@ aictx view [--port <number>] [--open] [--detach] [--json]
 
 Behavior:
 
-* Require initialized `.aictx/`; if missing, return `AICtxNotInitialized`.
+* Do not require the launch cwd to be initialized. If it is initialized, include it as the current project in the dashboard even when it is not yet persisted in the registry.
 * Resolve the same project root and Git metadata as other CLI commands.
 * Bind the HTTP server to loopback only, using `127.0.0.1` by default.
 * Use an available random port by default.
@@ -68,7 +69,7 @@ Behavior:
 `--json` behavior:
 
 * `aictx view --json` should print the same shared response envelope after the server is listening.
-* Success data must include `url`, `host`, `port`, `token_required`, and `open_attempted`.
+* Success data must include `url`, `host`, `port`, `token_required`, `open_attempted`, `registry_path`, `projects_count`, and `initial_project_registry_id`.
 * The command still remains a long-running server process after printing the startup result.
 
 ## 4. Local Server API
@@ -88,9 +89,21 @@ Rules:
 Required routes:
 
 ```text
+GET /api/projects
+GET /api/projects/:registryId/bootstrap
+POST /api/projects/:registryId/export/obsidian
 GET /api/bootstrap
 POST /api/export/obsidian
 ```
+
+`GET /api/projects` returns:
+
+* Registry path.
+* Registered project summaries including registry id, local project id/name, roots, source, timestamps, availability, counts, Git state, and warnings.
+* Aggregate project counts.
+* Current project registry id when the launch cwd is initialized.
+
+Project-scoped bootstrap and export routes behave like their legacy routes but resolve the target project from the registry id.
 
 `GET /api/bootstrap` returns:
 
@@ -114,10 +127,9 @@ The bundled app is a Svelte/Vite app packaged with the CLI.
 
 Required first-screen layout:
 
-* Persistent viewer navigation with Memories and Export sections.
-* Search/filter area.
-* Centered memory object list.
-* No selected document by default.
+* Persistent viewer navigation with Projects, Memories, and Export sections.
+* Projects dashboard listing registered projects.
+* No selected project or document by default.
 
 Required features:
 
@@ -131,6 +143,7 @@ Required features:
 * Show incoming and outgoing related memories before raw relation details.
 * Provide a direct-neighborhood map only: selected object plus direct incoming/outgoing neighbor objects and relations.
 * Let users trigger the Obsidian projection export and see success/failure output.
+* Let users return from a selected project to the Projects dashboard.
 
 Non-goals:
 
@@ -138,6 +151,7 @@ Non-goals:
 * Creating, deleting, superseding, or marking memory stale.
 * Full-project graph visualization as the primary UX.
 * File watching or live reload of canonical memory.
+* Cross-project merged search or combined memory browsing.
 * Hosted sharing or team review workflows.
 * Obsidian plugin installation or two-way Obsidian sync.
 

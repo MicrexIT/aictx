@@ -92,6 +92,7 @@ describe("viewer Obsidian export action", () => {
       const consoleErrors = collectPageErrors(page);
 
       await page.goto(started.data.url, { waitUntil: "domcontentloaded" });
+      await openFirstProject(page);
       await page.locator('[data-testid="nav-export"]').click();
       await page.locator('[data-testid="obsidian-export-submit"]').waitFor();
       await page.locator('[data-testid="obsidian-export-submit"]').click();
@@ -151,6 +152,7 @@ describe("viewer Obsidian export action", () => {
       const page = await browser.newPage();
 
       await page.goto(started.data.url, { waitUntil: "domcontentloaded" });
+      await openFirstProject(page);
       await page.locator('[data-testid="nav-export"]').click();
       await page.locator('[data-testid="obsidian-export-out-dir"]').fill("unsafe-export");
       await page.locator('[data-testid="obsidian-export-submit"]').click();
@@ -170,6 +172,12 @@ describe("viewer Obsidian export action", () => {
     }
   });
 });
+
+async function openFirstProject(page: Page): Promise<void> {
+  await page.locator('[data-testid="projects-view"]').waitFor();
+  await page.locator('[data-testid^="project-open-"]').first().click();
+  await page.locator('[data-testid="viewer-search"]').waitFor();
+}
 
 async function writeViewerExportFixtures(projectRoot: string): Promise<void> {
   await writeMemoryObject(projectRoot, {

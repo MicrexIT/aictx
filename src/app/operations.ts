@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { lstat, mkdir, readdir, rm } from "node:fs/promises";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 
 import { systemClock, type Clock } from "../core/clock.js";
 import { aictxError, type AictxError, type JsonValue } from "../core/errors.js";
@@ -79,6 +79,19 @@ import {
   hintedFiles,
   normalizeRetrievalHints
 } from "../retrieval/hints.js";
+import {
+  currentProjectRegistryEntry,
+  findRegisteredProject,
+  pruneProjectRegistry,
+  readProjectRegistry,
+  removeProjectFromRegistry,
+  removeProjectRootFromRegistry,
+  resolveProjectRegistryLocation,
+  upsertCurrentProjectInRegistry,
+  type ProjectRegistryEntry,
+  type ProjectRegistrySource,
+  type ResolvedProjectRegistryEntry
+} from "../registry/projects.js";
 import { openSqliteDatabase } from "../index/sqlite-driver.js";
 import { resolveIndexDatabasePath } from "../index/sqlite.js";
 import {
@@ -200,6 +213,31 @@ export interface ExportObsidianProjectionOptions extends GitWrapperOptions {
 
 export interface GetViewerBootstrapOptions extends GitWrapperOptions {
   cwd: string;
+}
+
+export interface ProjectRegistryOperationOptions extends GitWrapperOptions {
+  cwd: string;
+  aictxHome?: string;
+  clock?: Clock;
+}
+
+export interface AddRegisteredProjectOptions extends ProjectRegistryOperationOptions {
+  path?: string;
+}
+
+export interface RemoveRegisteredProjectOptions extends ProjectRegistryOperationOptions {
+  identifier: string;
+}
+
+export interface GetViewerProjectsOptions extends ProjectRegistryOperationOptions {}
+
+export interface GetViewerProjectBootstrapOptions extends ProjectRegistryOperationOptions {
+  registryId: string;
+}
+
+export interface ExportViewerProjectObsidianOptions extends ProjectRegistryOperationOptions {
+  registryId: string;
+  outDir?: string;
 }
 
 export interface SaveMemoryPatchOptions extends GitWrapperOptions {
@@ -334,6 +372,59 @@ export interface ViewerBootstrapData {
     active_relations: number;
   };
   storage_warnings: string[];
+}
+
+export interface RegisteredProjectSummary {
+  registry_id: string;
+  project: {
+    id: string;
+    name: string;
+  };
+  project_root: string;
+  aictx_root: string;
+  source: ProjectRegistrySource;
+  registered_at: string;
+  last_seen_at: string;
+}
+
+export interface ProjectRegistryListData {
+  registry_path: string;
+  projects: RegisteredProjectSummary[];
+}
+
+export interface ProjectRegistryAddData {
+  registry_path: string;
+  project: RegisteredProjectSummary;
+}
+
+export interface ProjectRegistryRemoveData {
+  registry_path: string;
+  removed: RegisteredProjectSummary;
+}
+
+export interface ProjectRegistryPruneData {
+  registry_path: string;
+  projects: RegisteredProjectSummary[];
+  removed: RegisteredProjectSummary[];
+}
+
+export interface ViewerProjectSummary extends RegisteredProjectSummary {
+  current: boolean;
+  available: boolean;
+  counts: ViewerBootstrapData["counts"] | null;
+  git: AictxMeta["git"] | null;
+  warnings: string[];
+}
+
+export interface ViewerProjectsData {
+  registry_path: string;
+  projects: ViewerProjectSummary[];
+  counts: {
+    projects: number;
+    available: number;
+    unavailable: number;
+  };
+  current_project_registry_id: string | null;
 }
 
 export interface ResetAictxData {
@@ -1012,6 +1103,265 @@ export async function getViewerBootstrap(
   };
 }
 
+export async function listRegisteredProjects(
+  options: ProjectRegistryOperationOptions
+): Promise<AppResult<ProjectRegistryListData>> {
+  const registry = await readProjectRegistry(options);
+  const meta = await buildBestEffortMeta(options);
+
+  if (!registry.ok) {
+    return {
+      ok: false,
+      error: registry.error,
+      warnings: registry.warnings,
+      meta
+    };
+  }
+
+  return {
+    ok: true,
+    data: {
+      registry_path: registry.data.location.registryPath,
+      projects: registry.data.registry.projects.map(summarizeRegisteredProject)
+    },
+    warnings: registry.warnings,
+    meta
+  };
+}
+
+export async function addRegisteredProject(
+  options: AddRegisteredProjectOptions
+): Promise<AppResult<ProjectRegistryAddData>> {
+  const cwd = options.path === undefined ? options.cwd : resolve(options.cwd, options.path);
+  const registered = await upsertCurrentProjectInRegistry({
+    ...options,
+    cwd,
+    source: "manual"
+  });
+  const meta = await buildBestEffortMeta({ ...options, cwd });
+  const registryPath = resolveProjectRegistryLocation(options).registryPath;
+
+  if (!registered.ok) {
+    return {
+      ok: false,
+      error: registered.error,
+      warnings: registered.warnings,
+      meta
+    };
+  }
+
+  return {
+    ok: true,
+    data: {
+      registry_path: registryPath,
+      project: summarizeRegisteredProject(registered.data)
+    },
+    warnings: registered.warnings,
+    meta
+  };
+}
+
+export async function removeRegisteredProject(
+  options: RemoveRegisteredProjectOptions
+): Promise<AppResult<ProjectRegistryRemoveData>> {
+  const removed = await removeProjectFromRegistry(options);
+  const meta = await buildBestEffortMeta(options);
+  const registryPath = resolveProjectRegistryLocation(options).registryPath;
+
+  if (!removed.ok) {
+    return {
+      ok: false,
+      error: removed.error,
+      warnings: removed.warnings,
+      meta
+    };
+  }
+
+  return {
+    ok: true,
+    data: {
+      registry_path: registryPath,
+      removed: summarizeRegisteredProject(removed.data)
+    },
+    warnings: removed.warnings,
+    meta
+  };
+}
+
+export async function pruneRegisteredProjects(
+  options: ProjectRegistryOperationOptions
+): Promise<AppResult<ProjectRegistryPruneData>> {
+  const pruned = await pruneProjectRegistry(options);
+  const meta = await buildBestEffortMeta(options);
+  const registryPath = resolveProjectRegistryLocation(options).registryPath;
+
+  if (!pruned.ok) {
+    return {
+      ok: false,
+      error: pruned.error,
+      warnings: pruned.warnings,
+      meta
+    };
+  }
+
+  return {
+    ok: true,
+    data: {
+      registry_path: registryPath,
+      projects: pruned.data.projects.map(summarizeRegisteredProject),
+      removed: pruned.data.removed.map(summarizeRegisteredProject)
+    },
+    warnings: pruned.warnings,
+    meta
+  };
+}
+
+export async function registerCurrentProject(
+  options: ProjectRegistryOperationOptions & { source?: ProjectRegistrySource }
+): Promise<AppResult<ProjectRegistryAddData>> {
+  const registered = await upsertCurrentProjectInRegistry({
+    ...options,
+    source: options.source ?? "auto"
+  });
+  const meta = await buildBestEffortMeta(options);
+  const registryPath = resolveProjectRegistryLocation(options).registryPath;
+
+  if (!registered.ok) {
+    return {
+      ok: false,
+      error: registered.error,
+      warnings: registered.warnings,
+      meta
+    };
+  }
+
+  return {
+    ok: true,
+    data: {
+      registry_path: registryPath,
+      project: summarizeRegisteredProject(registered.data)
+    },
+    warnings: registered.warnings,
+    meta
+  };
+}
+
+export async function unregisterProjectRoot(
+  options: ProjectRegistryOperationOptions & { projectRoot: string }
+): Promise<AppResult<ProjectRegistryRemoveData | { registry_path: string; removed: null }>> {
+  const removed = await removeProjectRootFromRegistry(options);
+  const meta = await buildBestEffortMeta(options);
+  const registryPath = resolveProjectRegistryLocation(options).registryPath;
+
+  if (!removed.ok) {
+    return {
+      ok: false,
+      error: removed.error,
+      warnings: removed.warnings,
+      meta
+    };
+  }
+
+  return {
+    ok: true,
+    data: removed.data === null
+      ? { registry_path: registryPath, removed: null }
+      : { registry_path: registryPath, removed: summarizeRegisteredProject(removed.data) },
+    warnings: removed.warnings,
+    meta
+  };
+}
+
+export async function getViewerProjects(
+  options: GetViewerProjectsOptions
+): Promise<AppResult<ViewerProjectsData>> {
+  const registry = await readProjectRegistry(options);
+  const meta = await buildBestEffortMeta(options);
+
+  if (!registry.ok) {
+    return {
+      ok: false,
+      error: registry.error,
+      warnings: registry.warnings,
+      meta
+    };
+  }
+
+  const current = await currentProjectRegistryEntry(options);
+  const currentWarnings = current.ok ? current.warnings : [];
+  const entries = mergeRegistryEntries(
+    registry.data.registry.projects,
+    current.ok ? current.data : null,
+    options.clock ?? systemClock
+  );
+  const projects: ViewerProjectSummary[] = [];
+
+  for (const entry of entries) {
+    projects.push(await summarizeViewerProject(entry, current.ok ? current.data : null, options));
+  }
+
+  const sortedProjects = projects.sort(compareViewerProjects);
+  const available = sortedProjects.filter((project) => project.available).length;
+
+  return {
+    ok: true,
+    data: {
+      registry_path: registry.data.location.registryPath,
+      projects: sortedProjects,
+      counts: {
+        projects: sortedProjects.length,
+        available,
+        unavailable: sortedProjects.length - available
+      },
+      current_project_registry_id: current.ok ? current.data?.registry_id ?? null : null
+    },
+    warnings: [...registry.warnings, ...currentWarnings],
+    meta
+  };
+}
+
+export async function getViewerProjectBootstrap(
+  options: GetViewerProjectBootstrapOptions
+): Promise<AppResult<ViewerBootstrapData>> {
+  const resolved = await resolveViewerProjectCwd(options);
+
+  if (!resolved.ok) {
+    return {
+      ok: false,
+      error: resolved.error,
+      warnings: resolved.warnings,
+      meta: await buildBestEffortMeta(options)
+    };
+  }
+
+  return getViewerBootstrap({
+    cwd: resolved.data.project_root,
+    runner: options.runner
+  });
+}
+
+export async function exportViewerProjectObsidian(
+  options: ExportViewerProjectObsidianOptions
+): Promise<AppResult<ExportObsidianProjectionData>> {
+  const resolved = await resolveViewerProjectCwd(options);
+
+  if (!resolved.ok) {
+    return {
+      ok: false,
+      error: resolved.error,
+      warnings: resolved.warnings,
+      meta: await buildBestEffortMeta(options)
+    };
+  }
+
+  return exportObsidianProjection({
+    cwd: resolved.data.project_root,
+    ...(options.outDir === undefined ? {} : { outDir: options.outDir }),
+    ...(options.runner === undefined ? {} : { runner: options.runner }),
+    ...(options.clock === undefined ? {} : { clock: options.clock })
+  });
+}
+
 export async function exportObsidianProjection(
   options: ExportObsidianProjectionOptions
 ): Promise<AppResult<ExportObsidianProjectionData>> {
@@ -1644,24 +1994,154 @@ export async function saveMemoryPatch(
   };
 }
 
+function summarizeRegisteredProject(entry: ProjectRegistryEntry): RegisteredProjectSummary {
+  return {
+    registry_id: entry.registry_id,
+    project: {
+      id: entry.project.id,
+      name: entry.project.name
+    },
+    project_root: entry.project_root,
+    aictx_root: entry.aictx_root,
+    source: entry.source,
+    registered_at: entry.registered_at,
+    last_seen_at: entry.last_seen_at
+  };
+}
+
+function mergeRegistryEntries(
+  registered: readonly ProjectRegistryEntry[],
+  current: ResolvedProjectRegistryEntry | null,
+  clock: Clock
+): ProjectRegistryEntry[] {
+  const entries = [...registered];
+
+  if (current === null || entries.some((entry) => entry.registry_id === current.registry_id)) {
+    return entries;
+  }
+
+  const now = clock.nowIso();
+
+  entries.push({
+    ...current,
+    source: "auto",
+    registered_at: now,
+    last_seen_at: now
+  });
+
+  return entries;
+}
+
+async function summarizeViewerProject(
+  entry: ProjectRegistryEntry,
+  current: ResolvedProjectRegistryEntry | null,
+  options: ProjectRegistryOperationOptions
+): Promise<ViewerProjectSummary> {
+  const bootstrap = await getViewerBootstrap({
+    cwd: entry.project_root,
+    runner: options.runner
+  });
+  const base = summarizeRegisteredProject(entry);
+
+  if (!bootstrap.ok) {
+    return {
+      ...base,
+      current: current?.registry_id === entry.registry_id,
+      available: false,
+      counts: null,
+      git: null,
+      warnings: [...bootstrap.warnings, bootstrap.error.message]
+    };
+  }
+
+  return {
+    ...base,
+    project: bootstrap.data.project,
+    current: current?.registry_id === entry.registry_id,
+    available: true,
+    counts: bootstrap.data.counts,
+    git: bootstrap.meta.git,
+    warnings: [...bootstrap.warnings, ...bootstrap.data.storage_warnings]
+  };
+}
+
+function compareViewerProjects(left: ViewerProjectSummary, right: ViewerProjectSummary): number {
+  if (left.current !== right.current) {
+    return left.current ? -1 : 1;
+  }
+
+  if (left.available !== right.available) {
+    return left.available ? -1 : 1;
+  }
+
+  return left.project.name.localeCompare(right.project.name) ||
+    left.project.id.localeCompare(right.project.id) ||
+    left.project_root.localeCompare(right.project_root);
+}
+
+async function resolveViewerProjectCwd(
+  options: ProjectRegistryOperationOptions & { registryId: string }
+): Promise<Result<ProjectRegistryEntry>> {
+  const current = await currentProjectRegistryEntry(options);
+
+  if (current.ok && current.data?.registry_id === options.registryId) {
+    const now = (options.clock ?? systemClock).nowIso();
+
+    return ok({
+      ...current.data,
+      source: "auto",
+      registered_at: now,
+      last_seen_at: now
+    });
+  }
+
+  const registered = await findRegisteredProject({
+    ...options,
+    registryId: options.registryId
+  });
+
+  if (!registered.ok) {
+    return registered;
+  }
+
+  if (registered.data === null) {
+    return err(
+      aictxError("AICtxValidationFailed", "Registered Aictx project was not found.", {
+        registry_id: options.registryId
+      })
+    );
+  }
+
+  return ok(registered.data, registered.warnings);
+}
+
 export const applicationOperations = {
+  addRegisteredProject,
   auditMemory,
   checkProject,
   diffMemory,
   exportObsidianProjection,
+  exportViewerProjectObsidian,
+  getViewerProjectBootstrap,
   getViewerBootstrap,
+  getViewerProjects,
   graphMemory,
   initProject,
   inspectMemory,
+  listRegisteredProjects,
   listMemoryHistory,
   listStaleMemory,
   loadMemory,
+  pruneRegisteredProjects,
   rebuildIndex,
+  registerCurrentProject,
+  removeRegisteredProject,
   restoreMemory,
   rewindMemory,
   saveMemoryPatch,
   searchMemory,
   suggestMemory,
+  unregisterProjectRoot,
   upgradeStorage
 };
 

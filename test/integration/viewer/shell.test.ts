@@ -60,9 +60,11 @@ describe("read-only viewer shell", () => {
 
     const projectRoot = await createInitializedProject("aictx-viewer-shell-project-");
     await writeViewerFixtures(projectRoot);
+    const aictxHome = await createTempRoot("aictx-viewer-shell-home-");
     const started = await startViewerServer({
       cwd: projectRoot,
       assetsDir: viewerAssetsDir,
+      aictxHome,
       token: "viewer-shell-token"
     });
 
@@ -80,6 +82,9 @@ describe("read-only viewer shell", () => {
 
       await page.setViewportSize({ width: 1280, height: 900 });
       await page.goto(started.data.url, { waitUntil: "domcontentloaded" });
+      await page.locator('[data-testid="projects-view"]').waitFor();
+      await expectText(page, '[data-testid="project-list"]', "Aictx Viewer Shell Project");
+      await page.locator('[data-testid^="project-open-"]').first().click();
       await page.locator('[data-testid="viewer-search"]').waitFor();
       await expectText(page, '[data-testid="memory-list-view"]', "Memories");
       await expectCount(page, '[data-testid="selected-object"]', 0);
@@ -158,6 +163,10 @@ describe("read-only viewer shell", () => {
       await expectText(page, '[data-testid="relation-graph-empty"]', "No direct relations for this object.");
       await expectCount(page, '[data-testid="relation-graph-svg"] [data-testid^="relation-graph-edge-"]', 0);
 
+      await page.locator('[data-testid="nav-projects"]').click();
+      await expectText(page, '[data-testid="projects-view"]', "Projects");
+      await expectCount(page, '[data-testid="selected-object"]', 0);
+
       expect(await page.evaluate("window.__AICTX_HTML_EXECUTED")).toBeUndefined();
       expect(consoleErrors()).toEqual([]);
     } finally {
@@ -172,9 +181,11 @@ describe("read-only viewer shell", () => {
     expect(assets.isFile()).toBe(true);
 
     const projectRoot = await createInitializedProject("aictx-viewer-starter-project-");
+    const aictxHome = await createTempRoot("aictx-viewer-starter-home-");
     const started = await startViewerServer({
       cwd: projectRoot,
       assetsDir: viewerAssetsDir,
+      aictxHome,
       token: "viewer-starter-token"
     });
 
@@ -192,6 +203,8 @@ describe("read-only viewer shell", () => {
 
       await page.setViewportSize({ width: 390, height: 780 });
       await page.goto(started.data.url, { waitUntil: "domcontentloaded" });
+      await page.locator('[data-testid="projects-view"]').waitFor();
+      await page.locator('[data-testid^="project-open-"]').first().click();
       await page.locator('[data-testid="viewer-search"]').waitFor();
 
       await expectText(page, '[data-testid="starter-memory-notice"]', "Starter memory only.");
