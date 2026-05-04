@@ -316,6 +316,7 @@ const AUTO_REGISTER_COMMANDS = new Set([
   "upgrade",
   "graph",
   "export obsidian",
+  "patch review",
   "diff",
   "history",
   "restore",

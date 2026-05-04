@@ -1,4 +1,4 @@
-import { mkdtemp, realpath, rm } from "node:fs/promises";
+import { mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -90,6 +90,33 @@ describe("aictx projects CLI", () => {
 
     const load = await runCli(["node", "aictx", "load", "project context", "--json"], projectRoot, aictxHome, true);
     expect(load.exitCode).toBe(0);
+    await expectRegisteredProjectCount(projectRoot, aictxHome, 1);
+
+    const registryIdAfterLoad = parseJson<{
+      ok: true;
+      data: { projects: Array<{ registry_id: string }> };
+    }>((await runCli(["node", "aictx", "projects", "list", "--json"], projectRoot, aictxHome)).stdout)
+      .data.projects[0]?.registry_id;
+
+    await runCli(["node", "aictx", "projects", "remove", registryIdAfterLoad ?? "", "--json"], projectRoot, aictxHome);
+    await expectRegisteredProjectCount(projectRoot, aictxHome, 0);
+
+    await writeFile(
+      join(projectRoot, "noop-memory.json"),
+      JSON.stringify({
+        proposed: false,
+        reason: "No patch needed.",
+        packet: {}
+      }),
+      "utf8"
+    );
+    const patchReview = await runCli(
+      ["node", "aictx", "patch", "review", "noop-memory.json", "--json"],
+      projectRoot,
+      aictxHome,
+      true
+    );
+    expect(patchReview.exitCode).toBe(0);
     await expectRegisteredProjectCount(projectRoot, aictxHome, 1);
   });
 });
