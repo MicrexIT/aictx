@@ -269,8 +269,8 @@
   let graphOffsetX = $state(0);
   let graphOffsetY = $state(0);
   let expandedGraphGroups = $state<string[]>([]);
-  let graphScope = $state<GraphScope>("overview");
-  let graphDepth = $state<GraphDepth>(1);
+  let graphScope = $state<GraphScope>("local");
+  let graphDepth = $state<GraphDepth>(2);
   let showGraphConcepts = $state(true);
   let showImplicitGraphEdges = $state(true);
   let groupGraphNodes = $state(true);
@@ -282,8 +282,8 @@
   let pendingOpenObjectId = $state<string | null>(null);
   let githubStars = $state<number | null>(null);
 
-  const graphWidth = 420;
-  const graphMinHeight = 300;
+  const graphWidth = 480;
+  const graphMinHeight = 420;
   const graphGroupThreshold = 5;
   const token = new URLSearchParams(window.location.search).get("token") ?? "";
   const githubRepoUrl = "https://github.com/MicrexIT/aictx";
@@ -770,7 +770,9 @@
       }
 
       if (selectedId !== null) {
-        ids.add(selectedId);
+        for (const neighborId of directNeighborIds(selectedId, relationList)) {
+          ids.add(neighborId);
+        }
       }
     }
 
@@ -815,17 +817,8 @@
     selectedId: string | null,
     focusId: string | null
   ): number {
-    const project = memoryObjects.find((object) => object.type === "project") ?? memoryObjects[0];
-    const laneCounts = new Map<string, number>();
-
-    for (const object of memoryObjects) {
-      const lane = laneForObject(object, project?.id ?? null);
-      laneCounts.set(lane, (laneCounts.get(lane) ?? 0) + 1);
-    }
-
-    const maxLaneCount = Math.max(1, ...laneCounts.values());
     const isDenseNeighborhood = (focusId ?? selectedId) !== null && memoryObjects.length > 10;
-    const neededHeight = 96 + maxLaneCount * 30;
+    const neededHeight = isDenseNeighborhood ? 470 : 420;
 
     return isDenseNeighborhood ? Math.max(graphMinHeight, neededHeight) : graphMinHeight;
   }
@@ -836,6 +829,19 @@
     }
 
     return "Overview graph shows matching memories, grouped by type when dense.";
+  }
+
+  function graphNodeConnectionCount(node: GraphNode, edges: GraphEdge[]): number {
+    return edges.filter((edge) => edge.from.id === node.id || edge.to.id === node.id)
+      .reduce((total, edge) => total + edge.count, 0);
+  }
+
+  function graphNodeActionLabel(node: GraphNode): string {
+    if (node.grouped) {
+      return expandedGraphGroups.includes(node.groupKey ?? "") ? "Collapse" : "Expand";
+    }
+
+    return node.selected ? "Focused" : "Focus";
   }
 
   function graphBucketItems(
@@ -942,26 +948,37 @@
       laneBuckets.set(lane, [...(laneBuckets.get(lane) ?? []), object]);
     }
 
-    const laneConfig = new Map<string, { x: number; top: number; bottom: number; anchor: "start" | "end"; labelOffset: number; labelWidth: number }>([
-      ["other", { x: 82, top: 44, bottom: Math.max(126, graphHeight - 174), anchor: "start", labelOffset: 18, labelWidth: 126 }],
-      ["architecture", { x: 280, top: 62, bottom: Math.max(116, graphHeight - 190), anchor: "start", labelOffset: 18, labelWidth: 112 }],
-      ["project", { x: 182, top: graphHeight / 2, bottom: graphHeight / 2, anchor: "start", labelOffset: 22, labelWidth: 104 }],
-      ["rules", { x: 278, top: Math.min(128, graphHeight * 0.38), bottom: graphHeight - 76, anchor: "start", labelOffset: 18, labelWidth: 118 }],
-      ["facts", { x: 82, top: Math.min(174, graphHeight * 0.5), bottom: graphHeight - 80, anchor: "start", labelOffset: 18, labelWidth: 126 }],
-      ["workflows", { x: 182, top: graphHeight - 68, bottom: graphHeight - 36, anchor: "start", labelOffset: 18, labelWidth: 112 }]
-    ]);
     const nodes: GraphNode[] = [];
+    const graphItems: Array<{ item: MemoryObjectSummary | GraphGroup; lane: string }> = [];
 
     for (const [lane, bucket] of laneBuckets.entries()) {
-      const config = laneConfig.get(lane) ?? laneConfig.get("other")!;
       const sorted = shouldGroup
         ? graphBucketItems(bucket, lane, anchorId, expandedGroups)
         : bucket.filter((item): item is MemoryObjectSummary => !isGraphGroup(item)).sort(compareMemoryPriority);
 
-      sorted.forEach((item, index) => {
-        const y = laneY(index, sorted.length, config.top, config.bottom);
+      for (const item of sorted) {
+        graphItems.push({ item, lane });
+      }
+    }
+
+    const degreeById = graphDegreeByObjectId(relationList, idsInGraph);
+    const itemCountByLane = new Map<string, number>();
+    const itemIndexByLane = new Map<string, number>();
+
+    for (const { lane } of graphItems) {
+      itemCountByLane.set(lane, (itemCountByLane.get(lane) ?? 0) + 1);
+    }
+
+    graphItems
+      .sort((left, right) => compareGraphItems(left.item, right.item))
+      .forEach(({ item, lane }) => {
+        const index = itemIndexByLane.get(lane) ?? 0;
+        const total = itemCountByLane.get(lane) ?? 1;
+        itemIndexByLane.set(lane, index + 1);
+        const position = graphClusterPosition(lane, index, total);
         const ids = graphItemObjectIds(item);
         const primaryObject = graphItemPrimaryObject(item);
+        const degree = ids.reduce((totalDegree, id) => totalDegree + (degreeById.get(id) ?? 0), 0);
         const isFocus = anchorId !== null && ids.includes(anchorId);
         const isNeighbor = anchorId !== null && ids.some((id) => neighborIds.has(id));
         const isSelected = selectedId !== null && ids.includes(selectedId);
@@ -974,22 +991,121 @@
           lane,
           groupKey: isGraphGroup(item) ? item.key : null,
           grouped: isGraphGroup(item),
-          x: config.x,
-          y,
-          labelX: config.x + config.labelOffset,
-          labelY: y + 4,
-          labelWidth: isGraphGroup(item) ? Math.max(config.labelWidth, 136) : config.labelWidth,
-          textAnchor: config.anchor,
-          radius: isGraphGroup(item) ? 12 : lane === "project" ? 14 : 9,
+          x: position.x,
+          y: position.y,
+          labelX: position.x + position.labelOffset,
+          labelY: position.y + 4,
+          labelWidth: isGraphGroup(item) ? Math.max(position.labelWidth, 136) : position.labelWidth,
+          textAnchor: position.anchor,
+          radius: graphNodeRadius(lane, isGraphGroup(item), degree),
           color: graphColor(primaryObject, lane),
           selected: isSelected || isFocus,
           neighbor: isNeighbor,
           dimmed: anchorId !== null && !isFocus && !isNeighbor
         });
       });
-    }
 
     return nodes.filter((node) => node.objectIds.some((id) => idsInGraph.has(id)));
+  }
+
+  function graphDegreeByObjectId(
+    relationList: MemoryRelationSummary[],
+    idsInGraph: Set<string>
+  ): Map<string, number> {
+    const degree = new Map<string, number>();
+
+    for (const relation of relationList) {
+      if (idsInGraph.has(relation.from)) {
+        degree.set(relation.from, (degree.get(relation.from) ?? 0) + 1);
+      }
+      if (idsInGraph.has(relation.to)) {
+        degree.set(relation.to, (degree.get(relation.to) ?? 0) + 1);
+      }
+    }
+
+    return degree;
+  }
+
+  function graphClusterPosition(
+    lane: string,
+    index: number,
+    total: number
+  ): { x: number; y: number; labelOffset: number; labelWidth: number; anchor: "start" | "end" } {
+    const centerX = graphWidth / 2;
+    const centerY = graphHeight / 2;
+
+    if (lane === "project") {
+      return { x: centerX, y: centerY, labelOffset: 24, labelWidth: 132, anchor: "start" };
+    }
+
+    const cluster = graphClusterForLane(lane);
+    const angle = cluster.angle + graphSpreadAngle(index, total);
+    const radius = cluster.radius + graphRadiusJitter(index, total);
+    const x = clamp(centerX + Math.cos(angle) * radius, 46, graphWidth - 150);
+    const y = clamp(centerY + Math.sin(angle) * radius, 46, graphHeight - 46);
+    const isLeft = x < centerX;
+
+    return {
+      x,
+      y,
+      labelOffset: isLeft ? -cluster.labelWidth - 18 : 18,
+      labelWidth: cluster.labelWidth,
+      anchor: isLeft ? "end" : "start"
+    };
+  }
+
+  function graphClusterForLane(lane: string): { angle: number; radius: number; labelWidth: number } {
+    if (lane === "architecture") {
+      return { angle: -0.22, radius: 122, labelWidth: 138 };
+    }
+    if (lane === "rules") {
+      return { angle: 0.45, radius: 150, labelWidth: 142 };
+    }
+    if (lane === "workflows") {
+      return { angle: 1.55, radius: 136, labelWidth: 136 };
+    }
+    if (lane === "facts") {
+      return { angle: 2.48, radius: 140, labelWidth: 136 };
+    }
+
+    return { angle: -2.5, radius: 152, labelWidth: 150 };
+  }
+
+  function graphSpreadAngle(index: number, total: number): number {
+    if (total <= 1) {
+      return 0;
+    }
+
+    const centeredIndex = index - (total - 1) / 2;
+    const spread = Math.min(0.9, 0.22 * (total - 1));
+
+    return centeredIndex * (spread / Math.max(1, total - 1));
+  }
+
+  function graphRadiusJitter(index: number, total: number): number {
+    if (total <= 2) {
+      return 0;
+    }
+
+    return (index % 2 === 0 ? 1 : -1) * Math.min(30, 7 * total);
+  }
+
+  function graphNodeRadius(lane: string, grouped: boolean, degree: number): number {
+    const centralityBoost = clamp(degree, 0, 8) * 0.85;
+
+    if (grouped) {
+      return 13 + Math.min(5, centralityBoost);
+    }
+
+    if (lane === "project") {
+      return 17 + Math.min(5, centralityBoost);
+    }
+
+    if (lane === "architecture") {
+      return 11 + Math.min(4, centralityBoost);
+    }
+
+    return 9 + Math.min(4, centralityBoost);
   }
 
   function buildGraphEdges(
@@ -1066,6 +1182,33 @@
       });
 
     return [...explicitEdges, ...implicitEdges];
+  }
+
+  function graphEdgePath(edge: GraphEdge): string {
+    const midX = (edge.from.x + edge.to.x) / 2;
+    const midY = (edge.from.y + edge.to.y) / 2;
+    const dx = edge.to.x - edge.from.x;
+    const dy = edge.to.y - edge.from.y;
+    const length = Math.max(1, Math.hypot(dx, dy));
+    const curve = edge.implicit ? 16 : 26;
+    const controlX = midX - (dy / length) * curve;
+    const controlY = midY + (dx / length) * curve;
+
+    return `M ${edge.from.x} ${edge.from.y} Q ${controlX} ${controlY} ${edge.to.x} ${edge.to.y}`;
+  }
+
+  function graphEdgeLabelPosition(edge: GraphEdge): { x: number; y: number } {
+    const midX = (edge.from.x + edge.to.x) / 2;
+    const midY = (edge.from.y + edge.to.y) / 2;
+    const dx = edge.to.x - edge.from.x;
+    const dy = edge.to.y - edge.from.y;
+    const length = Math.max(1, Math.hypot(dx, dy));
+    const curve = edge.implicit ? 9 : 15;
+
+    return {
+      x: midX - (dy / length) * curve,
+      y: midY + (dx / length) * curve - 6
+    };
   }
 
   function laneY(index: number, total: number, top: number, bottom: number): number {
@@ -1926,9 +2069,10 @@
                   class="graph-edge"
                   data-testid={edge.implicit ? undefined : `relation-graph-edge-${edge.id}`}
                 >
-                  <line x1={edge.from.x} y1={edge.from.y} x2={edge.to.x} y2={edge.to.y} />
+                  <line class="graph-edge-measure" x1={edge.from.x} y1={edge.from.y} x2={edge.to.x} y2={edge.to.y} />
+                  <path d={graphEdgePath(edge)} />
                   {#if graphNodeList.length <= 8 || edge.highlighted}
-                    <text x={(edge.from.x + edge.to.x) / 2} y={(edge.from.y + edge.to.y) / 2 - 6}>
+                    <text x={graphEdgeLabelPosition(edge).x} y={graphEdgeLabelPosition(edge).y}>
                       {edge.predicate}{edge.count > 1 ? ` ×${edge.count}` : ""}
                     </text>
                   {/if}
@@ -1986,6 +2130,40 @@
           <p class="graph-note">
             {groupedGraphObjectCount} related memories grouped in the map. Activate a grouped node to expand it.
           </p>
+        {/if}
+
+        {#if graphNodeList.length > 0}
+          <div class="graph-table-wrap">
+            <table class="graph-table" aria-label="Structured graph items">
+              <thead>
+                <tr>
+                  <th scope="col">Item</th>
+                  <th scope="col">Type</th>
+                  <th scope="col">Links</th>
+                  <th scope="col">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {#each graphNodeList as node (node.id)}
+                  <tr class:selected-row={node.selected}>
+                    <td>
+                      <span class="graph-table-title">{node.title}</span>
+                      {#if node.grouped}
+                        <span class="graph-table-meta">{node.objectIds.length} memories</span>
+                      {/if}
+                    </td>
+                    <td>{laneLabel(node.lane)}</td>
+                    <td>{graphNodeConnectionCount(node, graphEdgeList)}</td>
+                    <td>
+                      <button type="button" disabled={!node.grouped && node.selected} onclick={() => activateGraphNode(node)}>
+                        {graphNodeActionLabel(node)}
+                      </button>
+                    </td>
+                  </tr>
+                {/each}
+              </tbody>
+            </table>
+          </div>
         {/if}
 
         {#if graphPreview !== null}
@@ -2851,9 +3029,15 @@
     cursor: grabbing;
   }
 
-  .graph-edge line {
+  .graph-edge path {
+    fill: none;
     stroke: #cbd3d2;
     stroke-width: 1.15;
+  }
+
+  .graph-edge-measure {
+    stroke: transparent;
+    stroke-width: 0;
   }
 
   .graph-edge text {
@@ -2867,7 +3051,11 @@
     display: none;
   }
 
-  .graph-edge.highlighted line {
+  .graph-edge.implicit path {
+    stroke-dasharray: 4 4;
+  }
+
+  .graph-edge.highlighted path {
     stroke: #8f9898;
     stroke-width: 1.8;
   }
@@ -2921,6 +3109,72 @@
     margin: 10px 0 0;
     color: #6b645a;
     font-size: 13px;
+  }
+
+  .graph-table-wrap {
+    overflow-x: auto;
+    margin: 10px 0 0;
+    border: 1px solid #dedbd4;
+    border-radius: 8px;
+  }
+
+  .graph-table {
+    width: 100%;
+    min-width: 520px;
+    border-collapse: collapse;
+    background: #fff;
+    font-size: 13px;
+  }
+
+  .graph-table th,
+  .graph-table td {
+    padding: 8px 10px;
+    border-bottom: 1px solid #ece8df;
+    text-align: left;
+    vertical-align: middle;
+  }
+
+  .graph-table th {
+    color: #6f6f74;
+    background: #faf9f5;
+    font-size: 12px;
+    font-weight: 760;
+  }
+
+  .graph-table tr:last-child td {
+    border-bottom: 0;
+  }
+
+  .graph-table tr.selected-row td {
+    background: #f4f8f9;
+  }
+
+  .graph-table-title {
+    display: block;
+    color: #242424;
+    font-weight: 720;
+  }
+
+  .graph-table-meta {
+    display: block;
+    margin-top: 2px;
+    color: #77777d;
+    font-size: 12px;
+  }
+
+  .graph-table button {
+    min-height: 28px;
+    padding: 4px 9px;
+    color: #242424;
+    background: #fff;
+    border: 1px solid #dedbd4;
+    border-radius: 7px;
+    font: inherit;
+  }
+
+  .graph-table button:disabled {
+    color: #8b8b91;
+    background: #f4f2ed;
   }
 
   .node-preview {
