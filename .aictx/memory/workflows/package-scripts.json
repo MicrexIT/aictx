@@ -1,8 +1,29 @@
 {
   "body_path": "memory/workflows/package-scripts.md",
-  "content_hash": "sha256:de9e9f321c0e20cb892a6f217084a960f31889a54c50f6f65c2b79c2b271a622",
+  "content_hash": "sha256:1dbaa47c472601457a121872355aa34f65b4946abb253c4023a54ad3230acc26",
   "created_at": "2026-05-02T21:38:00+02:00",
-  "evidence": [],
+  "evidence": [
+    {
+      "id": "package.json",
+      "kind": "file"
+    },
+    {
+      "id": "scripts/reset-aictx.mjs",
+      "kind": "file"
+    },
+    {
+      "id": "scripts/sync-readme-install-version.mjs",
+      "kind": "file"
+    }
+  ],
+  "facets": {
+    "applies_to": [
+      "package.json",
+      "scripts/reset-aictx.mjs",
+      "scripts/sync-readme-install-version.mjs"
+    ],
+    "category": "workflow"
+  },
   "id": "workflow.package-scripts",
   "scope": {
     "branch": null,
@@ -21,5 +42,5 @@
   ],
   "title": "Package scripts",
   "type": "workflow",
-  "updated_at": "2026-05-02T21:38:00+02:00"
+  "updated_at": "2026-05-04T17:03:31+02:00"
 }

@@ -38,6 +38,7 @@ report.*.json
 # Aictx generated local state
 .aictx/index/
 .aictx/context/
+.aictx/.backup/
 .aictx/.lock
 
 # OS files
