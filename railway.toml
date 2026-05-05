@@ -1,6 +1,6 @@
 [build]
 builder = "RAILPACK"
-buildCommand = "pnpm build:site"
+buildCommand = "npm install -g pnpm@10.11.0 && pnpm build:site"
 watchPatterns = [
   "/package.json",
   "/pnpm-lock.yaml",
@@ -10,7 +10,7 @@ watchPatterns = [
 ]
 
 [deploy]
-startCommand = "pnpm serve:site"
+startCommand = "node scripts/serve-site.mjs"
 healthcheckPath = "/"
 healthcheckTimeout = 30
 restartPolicyType = "ON_FAILURE"
