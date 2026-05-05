@@ -1,6 +1,6 @@
 {
   "body_path": "memory/workflows/vercel-public-site-deployment.md",
-  "content_hash": "sha256:cb7014740c488a7af406da73c9bf214b6bccdf5e6f98177fd93286b0cbb8cd6a",
+  "content_hash": "sha256:1a15983a4a75c7c4c927241989fe014db21fa7d3112f2be5ba4728aa7ab1389b",
   "created_at": "2026-05-05T22:19:29+02:00",
   "evidence": [
     {
@@ -55,7 +55,8 @@
     "kind": "agent",
     "task": "Record Vercel custom domain DNS records"
   },
-  "status": "active",
+  "status": "superseded",
+  "superseded_by": "workflow.cloudflare-public-site-deployment",
   "tags": [
     "site",
     "vercel",
@@ -65,5 +66,5 @@
   ],
   "title": "Vercel public site deployment",
   "type": "workflow",
-  "updated_at": "2026-05-05T22:21:08+02:00"
+  "updated_at": "2026-05-05T22:56:56+02:00"
 }

@@ -30,6 +30,7 @@
     "build:version": "node scripts/generate-version.mjs",
     "build:viewer": "vite build --config viewer/vite.config.ts",
     "build:guidance": "node scripts/generate-agent-guidance.mjs",
+    "deploy:site:cloudflare": "wrangler deploy",
     "dev": "tsx src/cli/main.ts",
     "dev:docs": "astro dev --root docs",
     "dev:mcp": "tsx src/mcp/server.ts",
@@ -66,6 +67,7 @@
     "tsx": "^4.21.0",
     "typescript": "^6.0.3",
     "vite": "^6.3.7",
-    "vitest": "^4.1.5"
+    "vitest": "^4.1.5",
+    "wrangler": "4.88.0"
   }
 }

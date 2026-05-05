@@ -74,3 +74,5 @@
 {"actor":"agent","event":"memory.created","id":"workflow.vercel-public-site-deployment","timestamp":"2026-05-05T22:19:29+02:00"}
 {"actor":"agent","event":"memory.superseded","id":"workflow.railway-public-site-deployment","reason":"Railway deployment was abandoned after repeated dashboard/runtime/DNS friction; the public site now deploys through Vercel.","timestamp":"2026-05-05T22:19:29+02:00"}
 {"actor":"agent","event":"memory.updated","id":"workflow.vercel-public-site-deployment","timestamp":"2026-05-05T22:21:08+02:00"}
+{"actor":"agent","event":"memory.created","id":"workflow.cloudflare-public-site-deployment","timestamp":"2026-05-05T22:56:56+02:00"}
+{"actor":"agent","event":"memory.superseded","id":"workflow.vercel-public-site-deployment","reason":"The Vercel project was created under the wrong account scope and deleted; Cloudflare Workers is now the intended deployment target.","timestamp":"2026-05-05T22:56:56+02:00"}

@@ -1,5 +1,0 @@
-{
-  "buildCommand": "pnpm build:site",
-  "installCommand": "npm install -g pnpm@10.11.0 && pnpm install --frozen-lockfile",
-  "outputDirectory": "site/dist"
-}
