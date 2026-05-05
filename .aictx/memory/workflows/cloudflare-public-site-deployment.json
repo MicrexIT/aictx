@@ -1,6 +1,6 @@
 {
   "body_path": "memory/workflows/cloudflare-public-site-deployment.md",
-  "content_hash": "sha256:3499a80b5d10aaa52e12b4f8a674eca02e77379594e16c12be91cb7c3b6fef2a",
+  "content_hash": "sha256:6598d99117fe1a8a090077f856c8993c5a3bb9801a3a93dc02cff0bfd0eefc44",
   "created_at": "2026-05-05T22:56:56+02:00",
   "evidence": [
     {
@@ -8,19 +8,11 @@
       "kind": "file"
     },
     {
-      "id": "package.json",
-      "kind": "file"
+      "id": "dig +trace showed aictx.dev delegated to Cloudflare but authoritative A/AAAA for apex was empty on 2026-05-05",
+      "kind": "task"
     },
     {
-      "id": "pnpm-lock.yaml",
-      "kind": "file"
-    },
-    {
-      "id": ".node-version",
-      "kind": "file"
-    },
-    {
-      "id": "pnpm build:site and pnpm exec wrangler deploy --dry-run verified on 2026-05-05",
+      "id": "forced-edge curl returned 200 for https://aictx.dev/ but 530 for https://aictx.dev/blog/ on 2026-05-05",
       "kind": "task"
     }
   ],
@@ -51,7 +43,7 @@
   },
   "source": {
     "kind": "agent",
-    "task": "Switch public site deployment from Vercel to Cloudflare Workers static assets"
+    "task": "Record Cloudflare custom domain routing gotcha"
   },
   "status": "active",
   "tags": [
@@ -65,5 +57,5 @@
   ],
   "title": "Cloudflare public site deployment",
   "type": "workflow",
-  "updated_at": "2026-05-05T22:56:56+02:00"
+  "updated_at": "2026-05-05T23:20:04+02:00"
 }
