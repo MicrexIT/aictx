@@ -67,3 +67,6 @@
 {"actor":"agent","event":"memory.created","id":"synthesis.public-landing-site-architecture","timestamp":"2026-05-05T17:11:24+02:00"}
 {"actor":"agent","event":"memory.updated","id":"synthesis.agent-memory-guidance","timestamp":"2026-05-05T17:26:27+02:00"}
 {"actor":"agent","event":"memory.updated","id":"source.agent-integration-guidance","timestamp":"2026-05-05T17:26:27+02:00"}
+{"actor":"agent","event":"memory.created","id":"workflow.railway-public-site-deployment","timestamp":"2026-05-05T17:54:48+02:00"}
+{"actor":"agent","event":"relation.created","relation_id":"rel.railway-public-site-deployment-documents-public-site-architecture","timestamp":"2026-05-05T17:54:48+02:00"}
+{"actor":"agent","event":"memory.updated","id":"workflow.railway-public-site-deployment","timestamp":"2026-05-05T18:18:34+02:00"}

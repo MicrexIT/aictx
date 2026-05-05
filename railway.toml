@@ -1,0 +1,17 @@
+[build]
+builder = "RAILPACK"
+buildCommand = "pnpm build:site"
+watchPatterns = [
+  "/package.json",
+  "/pnpm-lock.yaml",
+  "/railway.toml",
+  "/scripts/serve-site.mjs",
+  "/site/**"
+]
+
+[deploy]
+startCommand = "pnpm serve:site"
+healthcheckPath = "/"
+healthcheckTimeout = 30
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 3
