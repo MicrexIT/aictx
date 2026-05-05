@@ -71,3 +71,5 @@
 {"actor":"agent","event":"relation.created","relation_id":"rel.railway-public-site-deployment-documents-public-site-architecture","timestamp":"2026-05-05T17:54:48+02:00"}
 {"actor":"agent","event":"memory.updated","id":"workflow.railway-public-site-deployment","timestamp":"2026-05-05T18:18:34+02:00"}
 {"actor":"agent","event":"memory.updated","id":"workflow.railway-public-site-deployment","timestamp":"2026-05-05T20:47:15+02:00"}
+{"actor":"agent","event":"memory.created","id":"workflow.vercel-public-site-deployment","timestamp":"2026-05-05T22:19:29+02:00"}
+{"actor":"agent","event":"memory.superseded","id":"workflow.railway-public-site-deployment","reason":"Railway deployment was abandoned after repeated dashboard/runtime/DNS friction; the public site now deploys through Vercel.","timestamp":"2026-05-05T22:19:29+02:00"}

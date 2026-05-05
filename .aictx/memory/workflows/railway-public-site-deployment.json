@@ -1,6 +1,6 @@
 {
   "body_path": "memory/workflows/railway-public-site-deployment.md",
-  "content_hash": "sha256:0d90f87029fe344b7d41b02bbd5afe4e43164d1222e3a523308920b8cc0b9e6d",
+  "content_hash": "sha256:baaf0e7b3263e24f24baffa6411e35b20eddbd3792623e6ddfc9065c84a0dd92",
   "created_at": "2026-05-05T17:54:48+02:00",
   "evidence": [
     {
@@ -56,7 +56,8 @@
     "kind": "agent",
     "task": "Update Railway deployment workflow after pnpm startup fix"
   },
-  "status": "active",
+  "status": "superseded",
+  "superseded_by": "workflow.vercel-public-site-deployment",
   "tags": [
     "site",
     "railway",
@@ -67,5 +68,5 @@
   ],
   "title": "Railway public site deployment",
   "type": "workflow",
-  "updated_at": "2026-05-05T20:47:15+02:00"
+  "updated_at": "2026-05-05T22:19:29+02:00"
 }
