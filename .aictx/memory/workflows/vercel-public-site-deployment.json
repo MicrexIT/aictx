@@ -1,6 +1,6 @@
 {
   "body_path": "memory/workflows/vercel-public-site-deployment.md",
-  "content_hash": "sha256:99afcef86e548f93128bcf37142ee477e9b8c9abd2d21ada914360e2ed124b99",
+  "content_hash": "sha256:cb7014740c488a7af406da73c9bf214b6bccdf5e6f98177fd93286b0cbb8cd6a",
   "created_at": "2026-05-05T22:19:29+02:00",
   "evidence": [
     {
@@ -16,7 +16,11 @@
       "kind": "file"
     },
     {
-      "id": "Vercel production deployment dpl_6AjhtAfFHpu7PmaZcDBhgQePW6uR verified on 2026-05-05",
+      "id": "Vercel production deployment dpl_8qz4eAMhf2oB5C8nPc6fWY6fyA5E verified on 2026-05-05",
+      "kind": "task"
+    },
+    {
+      "id": "Vercel domains inspect aictx.dev and www.aictx.dev on 2026-05-05",
       "kind": "task"
     },
     {
@@ -49,7 +53,7 @@
   },
   "source": {
     "kind": "agent",
-    "task": "Switch public site deployment from Railway to Vercel"
+    "task": "Record Vercel custom domain DNS records"
   },
   "status": "active",
   "tags": [
@@ -61,5 +65,5 @@
   ],
   "title": "Vercel public site deployment",
   "type": "workflow",
-  "updated_at": "2026-05-05T22:19:29+02:00"
+  "updated_at": "2026-05-05T22:21:08+02:00"
 }
