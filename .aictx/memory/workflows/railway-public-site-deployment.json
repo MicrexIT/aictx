@@ -1,6 +1,6 @@
 {
   "body_path": "memory/workflows/railway-public-site-deployment.md",
-  "content_hash": "sha256:f96bed1461a9f47d9a605dd88e3b8a872db9ae0261ae8256ed70fa54fae991ca",
+  "content_hash": "sha256:0d90f87029fe344b7d41b02bbd5afe4e43164d1222e3a523308920b8cc0b9e6d",
   "created_at": "2026-05-05T17:54:48+02:00",
   "evidence": [
     {
@@ -20,20 +20,12 @@
       "kind": "file"
     },
     {
-      "id": "site/astro.config.mjs",
-      "kind": "file"
-    },
-    {
-      "id": "site/src/pages/blog/index.astro",
-      "kind": "file"
-    },
-    {
-      "id": "site/src/pages/blog/[...slug].astro",
-      "kind": "file"
-    },
-    {
-      "id": "pnpm build:site and PORT=4177 pnpm serve:site verified on 2026-05-05",
+      "id": "pnpm build:site and PORT=4178 node scripts/serve-site.mjs verified on 2026-05-05",
       "kind": "task"
+    },
+    {
+      "id": "39497f959ff36be908a2c45fd5c68c6addf0086b",
+      "kind": "commit"
     }
   ],
   "facets": {
@@ -62,7 +54,7 @@
   },
   "source": {
     "kind": "agent",
-    "task": "Update Railway deployment workflow after adding config-as-code and static server"
+    "task": "Update Railway deployment workflow after pnpm startup fix"
   },
   "status": "active",
   "tags": [
@@ -70,9 +62,10 @@
     "railway",
     "astro",
     "deployment",
-    "blog"
+    "blog",
+    "pnpm"
   ],
   "title": "Railway public site deployment",
   "type": "workflow",
-  "updated_at": "2026-05-05T18:18:34+02:00"
+  "updated_at": "2026-05-05T20:47:15+02:00"
 }
