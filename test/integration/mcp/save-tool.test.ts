@@ -203,7 +203,7 @@ describe("aictx MCP save_memory_patch tool", () => {
     expect(started.stderr()).toBe("");
   });
 
-  it("saves v2 object facets and object evidence through MCP", async () => {
+  it("saves object facets and object evidence through MCP", async () => {
     const projectRoot = await createInitializedProject("aictx-mcp-save-facets-");
     const started = await startMcpClient(projectRoot);
 

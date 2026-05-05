@@ -284,7 +284,8 @@ describe("viewer local server", () => {
             relations: number;
             stale_objects: number;
             superseded_objects: number;
-            rejected_objects: number;
+            source_objects: number;
+            synthesis_objects: number;
             active_relations: number;
           };
         };
@@ -298,7 +299,8 @@ describe("viewer local server", () => {
       expect(envelope.data.counts).toMatchObject({
         stale_objects: expect.any(Number),
         superseded_objects: expect.any(Number),
-        rejected_objects: expect.any(Number),
+        source_objects: expect.any(Number),
+        synthesis_objects: expect.any(Number),
         active_relations: expect.any(Number)
       });
       await expect(readCanonicalAndIndexFiles(projectRoot)).resolves.toEqual(before);

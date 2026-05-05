@@ -58,7 +58,7 @@ When a supported MCP or CLI entrypoint exists, agents must use that entrypoint i
 | Validate storage | none | `aictx check` | Maintenance remains CLI-only in v1. |
 | Rebuild generated index | none | `aictx rebuild` | Maintenance remains CLI-only in v1. |
 | Reset local storage | none | `aictx reset` | Destructive maintenance remains CLI-only in v1. |
-| Upgrade storage schema | none | `aictx upgrade` | Migration remains CLI-only in v2. |
+| Upgrade storage schema | none | `aictx upgrade` | Migration remains CLI-only for storage v3. |
 | Show memory history | none | `aictx history` | Recovery/inspection remains CLI-only in v1. |
 | Restore memory | none | `aictx restore` | Recovery remains CLI-only in v1. |
 | Rewind memory | none | `aictx rewind` | Recovery remains CLI-only in v1. |
@@ -275,7 +275,8 @@ Behavior:
 * Return a Markdown context pack by default.
 * Include Git provenance in the context pack when Git is available.
 * If Git is unavailable, include local project provenance and mark Git provenance as unavailable.
-* Exclude stale, superseded, rejected, and conflicted memory from `Must know` by default.
+* Exclude stale, superseded, and conflicted memory from `Must know` by default.
+* Retrieve and render relevant atomic memories, source records, and syntheses; syntheses should help answer broad product, architecture, roadmap, convention, and guidance questions quickly while source records preserve provenance.
 * Use `--mode` to tune deterministic ranking and rendering.
 * Use repeated `--file`, `--changed-file`, `--symbol`, and `--subsystem` flags as deterministic retrieval hints.
 * Use `--history-window` with a compact value such as `30d`, `12w`, `6m`, or `1y` to bound linked Git history for hinted files.
@@ -593,7 +594,7 @@ Most optional commands must not mutate canonical storage. `aictx export obsidian
 Minimum behavior:
 
 * `aictx search` is the CLI equivalent of `search_memory`.
-* `aictx stale` lists stale, superseded, and rejected memory objects.
+* `aictx stale` lists stale and superseded memory objects.
 * `aictx inspect <id>` shows one memory object plus direct relations.
 * `aictx graph <id>` shows relation neighborhoods for debugging only.
 * `aictx export obsidian` writes a one-way generated Obsidian projection from canonical memory.
@@ -606,7 +607,7 @@ Minimum behavior:
 * `aictx patch review <file>` validates and summarizes a patch file without writing canonical memory.
 * `aictx setup` orchestrates init, bootstrap proposal, optional save, check, and diff summary.
 * `aictx audit` returns deterministic memory hygiene findings and does not write memory.
-* `aictx upgrade` migrates v1 storage and bundled schemas to v2 without inventing evidence.
+* `aictx upgrade` migrates legacy storage and bundled schemas to storage v3 without inventing evidence.
 * `aictx reset` defaults to archiving `.aictx/` under `.aictx/.backup/` before clearing the remaining `.aictx/` contents; `--destroy` deletes `.aictx/` without backup.
 
 Source-package version maintenance is intentionally not an `aictx` CLI command. Use the repository npm script `npm run version:patch`, which runs `npm version patch --no-git-tag-version`, pins the README setup prompt install command to the new package version, and regenerates `src/generated/version.ts`.
@@ -615,7 +616,7 @@ Source-package version maintenance is intentionally not an `aictx` CLI command. 
 
 Purpose:
 
-Create deterministic evidence packets that help an agent draft memory patches.
+Create deterministic evidence packets that help an agent decide whether to save, update, stale, supersede, delete, or skip memory.
 
 Syntax:
 
@@ -634,7 +635,7 @@ Behavior:
 * `--bootstrap` works with or without Git and lists likely files for the agent to inspect before creating seed memory.
 * `--after-task` packages changed files, related memory, duplicate or stale candidates, recommended facets, and a save/no-save checklist for the completed task.
 * `--patch` is valid only with `--bootstrap`; it emits a conservative proposed patch suitable for review and `aictx save --file`.
-* `--bootstrap --patch` updates init-created project and architecture placeholders when deterministic evidence is strong, creates small workflow or constraint memories from package metadata, creates deterministic product-feature concepts and `project implements feature` relations when product feature evidence is strong, proposes the starter project-to-architecture relation when it is missing, and otherwise emits no patch when confidence is low.
+* `--bootstrap --patch` updates init-created project and architecture placeholders when deterministic evidence is strong, creates source records for important repo files and guidance, creates maintained syntheses for product intent, feature map, and agent guidance when evidence supports them, creates small workflow or constraint memories from package metadata when useful, proposes provenance relations such as `derived_from`, `summarizes`, and `documents`, proposes the starter project-to-architecture relation when it is missing, and emits no patch only when there is no deterministic source, synthesis, workflow, constraint, or starter relation to create.
 * All suggestion modes must be deterministic, local-only, and read-only for canonical memory.
 * Do not expose an MCP tool for suggestion packets in v1.
 
@@ -646,7 +647,7 @@ JSON success data:
   "changed_files": ["src/billing/webhook.ts"],
   "related_memory_ids": ["constraint.webhook-idempotency"],
   "possible_stale_ids": ["decision.old-webhook-retries"],
-  "recommended_memory": ["decision", "constraint", "gotcha"],
+  "recommended_memory": ["source", "synthesis", "decision", "constraint", "gotcha"],
   "agent_checklist": [
     "Create memory only for durable future value.",
     "Prefer updating or marking stale existing memory over creating duplicates."
@@ -677,7 +678,7 @@ Bootstrap patch JSON success data with `--json`:
     "changed_files": ["README.md", "package.json"],
     "related_memory_ids": [],
     "possible_stale_ids": [],
-    "recommended_memory": ["project", "architecture", "workflow"],
+    "recommended_memory": ["source", "synthesis", "project", "architecture", "workflow"],
     "agent_checklist": []
   },
   "reason": null

@@ -278,16 +278,11 @@ describe("context pack rendering", () => {
     ]);
   });
 
-  it("keeps rejected and conflicted exclusions out of rendered content", () => {
+  it("keeps conflicted exclusions out of rendered content", () => {
     const active = item({
       id: "constraint.active-webhook",
       type: "constraint",
       title: "Active webhook behavior"
-    });
-    const rejected = item({
-      id: "note.rejected-webhook",
-      status: "rejected",
-      title: "Rejected webhook behavior"
     });
     const conflicted = item({
       id: "constraint.conflicted-webhook",
@@ -298,24 +293,17 @@ describe("context pack rendering", () => {
     const result = renderContextPack(
       input({
         ranked: ranked({
-          items: [active, rejected, conflicted],
+          items: [active, conflicted],
           mustKnow: [active],
-          excluded: [
-            excluded(rejected, "rejected"),
-            excluded(conflicted, "conflicted_high_priority")
-          ]
+          excluded: [excluded(conflicted, "conflicted_high_priority")]
         })
       })
     );
 
     expect(result.markdown).toContain("Active webhook behavior");
-    expect(result.markdown).not.toContain("Rejected webhook behavior");
     expect(result.markdown).not.toContain("Conflicted webhook behavior");
     expect(result.includedIds).toEqual(["constraint.active-webhook"]);
-    expect(result.excludedIds).toEqual([
-      "note.rejected-webhook",
-      "constraint.conflicted-webhook"
-    ]);
+    expect(result.excludedIds).toEqual(["constraint.conflicted-webhook"]);
   });
 
   it("renders all selected content when no token target is requested", () => {

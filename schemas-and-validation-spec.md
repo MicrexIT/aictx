@@ -37,9 +37,9 @@ Rules:
 * Schema files are canonical and should be tracked when Git is available.
 * Runtime validation should use the project-local schemas for project data validation.
 * Unknown top-level fields are invalid unless a schema explicitly allows them.
-* Schema `$id` values use `https://aictx.dev/schemas/v1/<name>.schema.json`.
-* Object type enums are closed to the v1 taxonomy from `storage-format-spec.md`: `project`, `architecture`, `decision`, `constraint`, `question`, `fact`, `gotcha`, `workflow`, `note`, and `concept`.
-* `history` and `task-note` are intentionally invalid object types in v1; use Git/events/statuses for history and branch/task scope for temporary task context.
+* Schema `$id` values use `https://aictx.dev/schemas/v3/<name>.schema.json`.
+* Object type enums are closed to the storage v3 taxonomy from `storage-format-spec.md`: `project`, `architecture`, `decision`, `constraint`, `question`, `fact`, `gotcha`, `workflow`, `note`, `concept`, `source`, and `synthesis`.
+* `history`, `task-note`, and `feature` are intentionally invalid object types; use Git/events/statuses for history, branch/task scope for temporary task context, and `concept` or `synthesis` facets for product capabilities.
 
 ## 3. Shared Definitions
 
@@ -128,7 +128,7 @@ Schema:
 ```json
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://aictx.dev/schemas/v1/config.schema.json",
+  "$id": "https://aictx.dev/schemas/v3/config.schema.json",
   "type": "object",
   "additionalProperties": false,
   "required": ["version", "project", "memory", "git"],
@@ -196,7 +196,7 @@ Schema:
 ```json
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://aictx.dev/schemas/v1/object.schema.json",
+  "$id": "https://aictx.dev/schemas/v3/object.schema.json",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -216,10 +216,10 @@ Schema:
       "pattern": "^[a-z][a-z0-9_]*\\.[a-z0-9][a-z0-9-]*$"
     },
     "type": {
-      "enum": ["project", "architecture", "decision", "constraint", "question", "fact", "gotcha", "workflow", "note", "concept"]
+      "enum": ["project", "architecture", "decision", "constraint", "question", "fact", "gotcha", "workflow", "note", "concept", "source", "synthesis"]
     },
     "status": {
-      "enum": ["active", "draft", "stale", "superseded", "rejected", "open", "closed"]
+      "enum": ["active", "stale", "superseded", "open", "closed"]
     },
     "title": {
       "type": "string",
@@ -303,14 +303,14 @@ Schema:
       "then": {
         "properties": {
           "status": {
-            "enum": ["active", "draft", "stale", "superseded", "rejected", "open", "closed"]
+            "enum": ["stale", "superseded", "open", "closed"]
           }
         }
       },
       "else": {
         "properties": {
           "status": {
-            "enum": ["active", "draft", "stale", "superseded", "rejected"]
+            "enum": ["active", "stale", "superseded"]
           }
         }
       }
@@ -341,7 +341,7 @@ Schema:
 ```json
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://aictx.dev/schemas/v1/relation.schema.json",
+  "$id": "https://aictx.dev/schemas/v3/relation.schema.json",
   "type": "object",
   "additionalProperties": false,
   "required": ["id", "from", "predicate", "to", "status", "created_at", "updated_at"],
@@ -355,7 +355,7 @@ Schema:
       "pattern": "^[a-z][a-z0-9_]*\\.[a-z0-9][a-z0-9-]*$"
     },
     "predicate": {
-      "enum": ["affects", "requires", "depends_on", "supersedes", "conflicts_with", "mentions", "implements", "related_to"]
+      "enum": ["affects", "requires", "depends_on", "supersedes", "conflicts_with", "mentions", "implements", "derived_from", "summarizes", "documents", "related_to"]
     },
     "to": {
       "type": "string",
@@ -375,7 +375,7 @@ Schema:
         "required": ["kind", "id"],
         "properties": {
           "kind": {
-            "enum": ["memory", "relation", "file", "commit"]
+            "enum": ["memory", "relation", "file", "commit", "task", "source"]
           },
           "id": {
             "type": "string",
@@ -421,7 +421,7 @@ Schema:
 ```json
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://aictx.dev/schemas/v1/event.schema.json",
+  "$id": "https://aictx.dev/schemas/v3/event.schema.json",
   "type": "object",
   "additionalProperties": false,
   "required": ["event", "actor", "timestamp"],
@@ -432,7 +432,6 @@ Schema:
         "memory.updated",
         "memory.marked_stale",
         "memory.superseded",
-        "memory.rejected",
         "memory.deleted",
         "relation.created",
         "relation.updated",
@@ -513,7 +512,7 @@ Schema:
 ```json
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://aictx.dev/schemas/v1/patch.schema.json",
+  "$id": "https://aictx.dev/schemas/v3/patch.schema.json",
   "type": "object",
   "additionalProperties": false,
   "required": ["source", "changes"],
@@ -630,7 +629,7 @@ Schema:
         "required": ["kind", "id"],
         "properties": {
           "kind": {
-            "enum": ["memory", "relation", "file", "commit"]
+            "enum": ["memory", "relation", "file", "commit", "task", "source"]
           },
           "id": {
             "type": "string",
@@ -651,10 +650,10 @@ Schema:
           "$ref": "#/$defs/objectId"
         },
         "type": {
-          "enum": ["project", "architecture", "decision", "constraint", "question", "fact", "gotcha", "workflow", "note", "concept"]
+          "enum": ["project", "architecture", "decision", "constraint", "question", "fact", "gotcha", "workflow", "note", "concept", "source", "synthesis"]
         },
         "status": {
-          "enum": ["active", "draft", "stale", "superseded", "rejected", "open", "closed"]
+          "enum": ["active", "stale", "superseded", "open", "closed"]
         },
         "title": {
           "type": "string",
@@ -687,7 +686,7 @@ Schema:
           "$ref": "#/$defs/objectId"
         },
         "status": {
-          "enum": ["active", "draft", "stale", "superseded", "rejected", "open", "closed"]
+          "enum": ["active", "stale", "superseded", "open", "closed"]
         },
         "title": {
           "type": "string",
@@ -776,7 +775,7 @@ Schema:
           "$ref": "#/$defs/objectId"
         },
         "predicate": {
-          "enum": ["affects", "requires", "depends_on", "supersedes", "conflicts_with", "mentions", "implements", "related_to"]
+          "enum": ["affects", "requires", "depends_on", "supersedes", "conflicts_with", "mentions", "implements", "derived_from", "summarizes", "documents", "related_to"]
         },
         "to": {
           "$ref": "#/$defs/objectId"

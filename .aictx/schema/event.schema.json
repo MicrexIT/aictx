@@ -1,5 +1,5 @@
 {
-  "$id": "https://aictx.dev/schemas/v2/event.schema.json",
+  "$id": "https://aictx.dev/schemas/v3/event.schema.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "allOf": [
@@ -48,7 +48,6 @@
         "memory.updated",
         "memory.marked_stale",
         "memory.superseded",
-        "memory.rejected",
         "memory.deleted",
         "relation.created",
         "relation.updated",

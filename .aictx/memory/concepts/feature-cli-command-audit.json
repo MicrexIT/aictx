@@ -1,7 +1,7 @@
 {
   "body_path": "memory/concepts/feature-cli-command-audit.md",
-  "content_hash": "sha256:cf5e024632aab71c1b9fabfd8acc3b06f9a27c87e7dd9e84eb6791fecc4537f9",
-  "created_at": "2026-05-04T17:37:16+02:00",
+  "content_hash": "sha256:3fc7adef32afaae6ed138f6dd501911f7096352cc66584c1c605b3b52721990c",
+  "created_at": "2026-05-04T20:21:52+02:00",
   "evidence": [
     {
       "id": "src/cli/commands/audit.ts",
@@ -29,7 +29,8 @@
     "kind": "cli",
     "task": "Proposed bootstrap memory patch from deterministic repository analysis"
   },
-  "status": "active",
+  "status": "superseded",
+  "superseded_by": "synthesis.feature-map",
   "tags": [
     "audit",
     "feature",
@@ -37,5 +38,5 @@
   ],
   "title": "Feature: CLI command audit",
   "type": "concept",
-  "updated_at": "2026-05-04T17:37:16+02:00"
+  "updated_at": "2026-05-05T13:30:07+02:00"
 }

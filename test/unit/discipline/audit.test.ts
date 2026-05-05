@@ -48,7 +48,7 @@ describe("audit discipline findings", () => {
       }),
       memoryObject({
         id: "decision.duplicate-b",
-        status: "draft",
+        status: "active",
         title: "Shared webhook rule",
         tags: ["webhooks", "stripe", "billing"],
         body: longBody("Second duplicate memory keeps the same title and tags.")
@@ -199,16 +199,16 @@ describe("audit discipline findings", () => {
     await expect(buildAuditFindings({ projectRoot, storage })).resolves.toEqual([]);
   });
 
-  it("reports v2 facet, object evidence, task diary, oversized vague, and duplicate facet findings", async () => {
-    const projectRoot = await createTempRoot("aictx-discipline-audit-v2-");
+  it("reports facet, object evidence, task diary, oversized vague, and duplicate facet findings", async () => {
+    const projectRoot = await createTempRoot("aictx-discipline-audit-v3-");
     const storage = storageSnapshot({
       projectRoot,
-      version: 2,
+      version: 3,
       objects: [
         memoryObject({
           id: "decision.no-facets",
           title: "Decision without facets",
-          body: longBody("Decision memory should carry facets in storage v2."),
+          body: longBody("Decision memory should carry facets in storage v3."),
           tags: ["decision"]
         }),
         memoryObject({
@@ -267,7 +267,7 @@ describe("audit discipline findings", () => {
     const projectRoot = await createTempRoot("aictx-discipline-audit-connectivity-");
     const storage = storageSnapshot({
       projectRoot,
-      version: 2,
+      version: 3,
       objects: [
         memoryObject({
           id: "decision.weak",
@@ -346,7 +346,7 @@ function storageSnapshot(options: {
   projectRoot: string;
   objects: StoredMemoryObject[];
   relations: StoredMemoryRelation[];
-  version?: 1 | 2;
+  version?: 1 | 2 | 3;
 }): CanonicalStorageSnapshot {
   return {
     projectRoot: options.projectRoot,

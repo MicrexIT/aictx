@@ -89,7 +89,90 @@ describe("loadMemory integration", () => {
     expect(result.data.context_pack).not.toContain("Token budget:");
     expect(result.data.estimated_tokens).toBeGreaterThan(0);
     expect(result.data.included_ids).toContain("constraint.webhook-idempotency");
-    expect(result.data.excluded_ids).toContain("note.rejected-webhook");
+    expect(result.data.included_ids).toContain("synthesis.webhook-context");
+  });
+
+  it("loads source-backed guidance synthesis for agent memory collection questions", async () => {
+    const projectRoot = await createInitializedProject("aictx-load-agent-guidance-");
+    await writeMemoryObject(projectRoot, {
+      id: "source.prd-memory-guidance",
+      type: "source",
+      status: "active",
+      title: "Source: docs/prd.md",
+      bodyPath: "memory/sources/prd-memory-guidance.md",
+      body:
+        "# Source: docs/prd.md\n\nThe PRD documents the hybrid memory model and source-backed syntheses for agent guidance.\n",
+      tags: ["source", "prd", "guidance"],
+      facets: {
+        category: "source",
+        applies_to: ["docs/prd.md"],
+        load_modes: ["architecture", "onboarding"]
+      },
+      evidence: [{ kind: "file", id: "docs/prd.md" }],
+      updatedAt: FIXED_TIMESTAMP_NEXT_MINUTE
+    });
+    await writeMemoryObject(projectRoot, {
+      id: "source.agent-integration-guidance",
+      type: "source",
+      status: "active",
+      title: "Source: docs/agent-integration.md",
+      bodyPath: "memory/sources/agent-integration-guidance.md",
+      body:
+        "# Source: docs/agent-integration.md\n\nAgent integration guidance explains right-size memory, direct active saves, source records, syntheses, and save-nothing cases.\n",
+      tags: ["source", "agents", "guidance"],
+      facets: {
+        category: "source",
+        applies_to: ["docs/agent-integration.md"],
+        load_modes: ["coding", "onboarding"]
+      },
+      evidence: [{ kind: "file", id: "docs/agent-integration.md" }],
+      updatedAt: FIXED_TIMESTAMP_NEXT_MINUTE
+    });
+    await writeMemoryObject(projectRoot, {
+      id: "synthesis.agent-memory-guidance",
+      type: "synthesis",
+      status: "active",
+      title: "Agent memory guidance",
+      bodyPath: "memory/syntheses/agent-memory-guidance.md",
+      body:
+        "# Agent memory guidance\n\nAICTX should guide agents to right-size memory: atomic memories for precise reusable claims, source records for provenance, and syntheses for product intent, feature maps, roadmap, architecture, conventions, agent guidance, and repeated workflows. Agents save useful memory directly as active memory and save nothing when there is no durable future value.\n",
+      tags: ["agents", "guidance", "memory", "synthesis"],
+      facets: {
+        category: "agent-guidance",
+        applies_to: ["docs/prd.md", "docs/agent-integration.md"],
+        load_modes: ["coding", "architecture", "onboarding"]
+      },
+      evidence: [
+        { kind: "source", id: "source.prd-memory-guidance" },
+        { kind: "source", id: "source.agent-integration-guidance" }
+      ],
+      updatedAt: FIXED_TIMESTAMP_NEXT_MINUTE
+    });
+    const rebuilt = await rebuildIndex({
+      cwd: projectRoot,
+      clock: createFixedTestClock(FIXED_TIMESTAMP_NEXT_MINUTE)
+    });
+
+    expect(rebuilt.ok).toBe(true);
+
+    const result = await loadMemory({
+      cwd: projectRoot,
+      task: "how should AICTX guide agents to collect memory",
+      mode: "architecture",
+      clock: createFixedTestClock(FIXED_TIMESTAMP_NEXT_MINUTE)
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+
+    expect(result.data.included_ids).toContain("synthesis.agent-memory-guidance");
+    expect(result.data.included_ids).toContain("source.agent-integration-guidance");
+    expect(result.data.context_pack).toContain("## Relevant syntheses");
+    expect(result.data.context_pack).toContain("Agent memory guidance");
+    expect(result.data.context_pack).toContain("## Relevant sources");
+    expect(result.data.context_pack).toContain("Source: docs/agent-integration.md");
   });
 
   it("applies mode-aware ranking and rendering through loadMemory", async () => {
@@ -403,13 +486,17 @@ async function writeLoadFixtures(projectRoot: string): Promise<void> {
     updatedAt: FIXED_TIMESTAMP_NEXT_MINUTE
   });
   await writeMemoryObject(projectRoot, {
-    id: "note.rejected-webhook",
-    type: "note",
-    status: "rejected",
-    title: "Rejected webhook",
-    bodyPath: "memory/notes/rejected-webhook.md",
-    body: "# Rejected webhook\n\nStripe webhook details in this memory should be excluded.\n",
+    id: "synthesis.webhook-context",
+    type: "synthesis",
+    status: "active",
+    title: "Webhook context",
+    bodyPath: "memory/syntheses/webhook-context.md",
+    body: "# Webhook context\n\nStripe webhook implementation context is maintained as synthesis memory.\n",
     tags: ["stripe", "webhooks"],
+    facets: {
+      category: "feature-map",
+      load_modes: ["coding", "onboarding"]
+    },
     updatedAt: FIXED_TIMESTAMP_NEXT_MINUTE
   });
 }

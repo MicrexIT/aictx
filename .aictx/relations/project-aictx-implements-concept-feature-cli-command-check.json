@@ -1,17 +1,17 @@
 {
   "confidence": "high",
-  "content_hash": "sha256:22e4d13f71b756d89d8b419f9d065d62551ce7df3c3fbc48c6f20326f96e7515",
-  "created_at": "2026-05-04T18:04:45+02:00",
+  "content_hash": "sha256:1e81e46bc90216642b35e52ceec45e1ad29c34894cb885cb1cd909b17c8a9570",
+  "created_at": "2026-05-04T20:21:52+02:00",
   "evidence": [
     {
-      "id": "src/cli/commands/check.ts",
-      "kind": "file"
+      "id": "synthesis.feature-map",
+      "kind": "memory"
     }
   ],
   "from": "project.aictx",
   "id": "rel.project-aictx-implements-concept-feature-cli-command-check",
   "predicate": "implements",
-  "status": "active",
+  "status": "stale",
   "to": "concept.feature-cli-command-check",
-  "updated_at": "2026-05-04T18:04:45+02:00"
+  "updated_at": "2026-05-05T13:43:35+02:00"
 }

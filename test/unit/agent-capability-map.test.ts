@@ -17,7 +17,7 @@ const mirroredSpecs = [
   "storage-format-spec.md"
 ] as const;
 
-const v1ObjectTypes = [
+const objectTypes = [
   "project",
   "architecture",
   "decision",
@@ -27,7 +27,9 @@ const v1ObjectTypes = [
   "gotcha",
   "workflow",
   "note",
-  "concept"
+  "concept",
+  "source",
+  "synthesis"
 ] as const;
 
 const loadModes = [
@@ -109,7 +111,7 @@ const cliOnlyCapabilities = [
     capability: "Upgrade storage schema",
     mcp: "none",
     cli: "`aictx upgrade`",
-    notes: "Migration remains CLI-only in v2."
+    notes: "Migration remains CLI-only for storage v3."
   },
   {
     capability: "Show memory history",
@@ -327,7 +329,7 @@ describe("agent capability map guardrail", () => {
     for (const path of taxonomyDocs) {
       const content = await readProjectFile(path);
 
-      for (const objectType of v1ObjectTypes) {
+      for (const objectType of objectTypes) {
         expectMentioned(content, objectType);
       }
 

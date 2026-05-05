@@ -10,6 +10,8 @@ export type Sha256Hash = string;
 export const OBJECT_TYPES = [
   "project",
   "architecture",
+  "source",
+  "synthesis",
   "decision",
   "constraint",
   "question",
@@ -35,6 +37,11 @@ export const FACET_CATEGORIES = [
   "workflow",
   "gotcha",
   "debugging-fact",
+  "source",
+  "product-intent",
+  "feature-map",
+  "roadmap",
+  "agent-guidance",
   "concept",
   "open-question"
 ] as const;
@@ -43,10 +50,8 @@ export type FacetCategory = (typeof FACET_CATEGORIES)[number];
 
 export const OBJECT_STATUSES = [
   "active",
-  "draft",
   "stale",
   "superseded",
-  "rejected",
   "open",
   "closed"
 ] as const;
@@ -63,6 +68,9 @@ export const PREDICATES = [
   "depends_on",
   "supersedes",
   "conflicts_with",
+  "derived_from",
+  "summarizes",
+  "documents",
   "mentions",
   "implements",
   "related_to"
@@ -79,7 +87,6 @@ export const EVENT_TYPES = [
   "memory.updated",
   "memory.marked_stale",
   "memory.superseded",
-  "memory.rejected",
   "memory.deleted",
   "relation.created",
   "relation.updated",
@@ -146,7 +153,7 @@ export interface Source {
 }
 
 export interface Evidence {
-  kind: "memory" | "relation" | "file" | "commit" | "task";
+  kind: "memory" | "relation" | "file" | "commit" | "task" | "source";
   id: string;
 }
 

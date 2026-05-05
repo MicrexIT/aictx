@@ -15,6 +15,8 @@ describe("core domain type constants", () => {
     expect(OBJECT_TYPES).toEqual([
       "project",
       "architecture",
+      "source",
+      "synthesis",
       "decision",
       "constraint",
       "question",
@@ -40,6 +42,11 @@ describe("core domain type constants", () => {
       "workflow",
       "gotcha",
       "debugging-fact",
+      "source",
+      "product-intent",
+      "feature-map",
+      "roadmap",
+      "agent-guidance",
       "concept",
       "open-question"
     ]);
@@ -52,6 +59,9 @@ describe("core domain type constants", () => {
       "depends_on",
       "supersedes",
       "conflicts_with",
+      "derived_from",
+      "summarizes",
+      "documents",
       "mentions",
       "implements",
       "related_to"
@@ -64,7 +74,6 @@ describe("core domain type constants", () => {
       "memory.updated",
       "memory.marked_stale",
       "memory.superseded",
-      "memory.rejected",
       "memory.deleted",
       "relation.created",
       "relation.updated",

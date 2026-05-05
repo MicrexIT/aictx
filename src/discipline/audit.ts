@@ -43,13 +43,13 @@ export interface BuildAuditFindingsOptions {
   gitFileChanges?: readonly ProjectFileChange[];
 }
 
-const VAGUE_STATUSES = new Set<ObjectStatus>(["active", "draft"]);
-const CURRENT_STATUSES = new Set<ObjectStatus>(["active", "draft", "open"]);
-const TAG_REQUIRED_STATUSES = new Set<ObjectStatus>(["active", "draft"]);
+const VAGUE_STATUSES = new Set<ObjectStatus>(["active"]);
+const CURRENT_STATUSES = new Set<ObjectStatus>(["active", "open"]);
+const TAG_REQUIRED_STATUSES = new Set<ObjectStatus>(["active"]);
 const INACTIVE_STATUSES = new Set<ObjectStatus>([
   "stale",
   "superseded",
-  "rejected"
+  "closed"
 ]);
 const GENERIC_TITLES = new Set([
   "context",
@@ -74,7 +74,7 @@ const MINIMUM_DUPLICATE_TAG_COUNT = 3;
 const RELATED_TO_WARNING_MINIMUM = 5;
 const RELATED_TO_WARNING_RATIO = 0.5;
 const REPEATED_CHANGE_MINIMUM = 2;
-const RATIONALE_TYPES = new Set(["decision", "fact", "gotcha"]);
+const RATIONALE_TYPES = new Set(["decision", "fact", "gotcha", "synthesis"]);
 const SEVERITY_ORDER = new Map<AuditSeverity, number>([
   ["warning", 0],
   ["info", 1]
@@ -733,7 +733,7 @@ function groupGitChangesByFile(
 function activeRationaleObjects(
   objects: readonly StoredMemoryObject[]
 ): StoredMemoryObject[] {
-  return currentObjects(objects, new Set<ObjectStatus>(["active", "draft"]))
+  return currentObjects(objects, new Set<ObjectStatus>(["active"]))
     .filter((object) => RATIONALE_TYPES.has(object.sidecar.type));
 }
 

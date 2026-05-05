@@ -99,11 +99,11 @@ Dirty or untracked `.aictx/` files are not by themselves a reason to skip saving
 
 For setup, maintenance, inspection, export, registry management, local viewing, suggestion, audit, or recovery operations that are not exposed by MCP, use the `aictx` CLI instead of editing `.aictx/` files directly.
 
-Use `aictx suggest --from-diff --json` when current code changes need a memory review packet before drafting a patch. Use `aictx suggest --bootstrap --json` for a first-run repo memory pass.
+Use `aictx suggest --from-diff --json` when current code changes need a memory review packet before deciding what durable memory to save. Use `aictx suggest --bootstrap --json` for a first-run repo memory pass.
 
 Use `aictx suggest --after-task "<task summary>" --json` at the end of meaningful work when you want a save/no-save review packet. The packet is read-only and packages changed files, related memory, possible stale candidates, recommended object types, recommended facets, and a save decision checklist.
 
-During setup or onboarding, inspect explicit product features and capabilities from current repo evidence such as README feature lists, product docs, route/page files, UI entrypoints, commands, or stable workflows. Save supported current features as `concept` memory with `facets.category: "product-feature"`; do not invent features from weak signals.
+During setup or onboarding, inspect explicit product intent, features, roadmap notes, architecture, conventions, and stable workflows from current repo evidence such as README files, package manifests, agent guidance files, product docs, route/page files, UI entrypoints, commands, or stable workflows. Save repo files and user-stated context as `source` memory when provenance matters. Save compact maintained summaries as `synthesis` memory for product intent, feature maps, roadmap, architecture, conventions, agent guidance, and repeated workflows. Save precise reusable claims as atomic `decision`, `constraint`, `fact`, `gotcha`, `workflow`, `question`, `note`, or `concept` memory. Do not invent features from weak signals.
 
 If loaded memory only contains the init-created project and architecture placeholders, treat Aictx as needing first-run seeding. For setup, onboarding, or "why is memory empty?" requests, run the bootstrap workflow proactively instead of waiting for the user to know the `bootstrap` term:
 
@@ -124,7 +124,7 @@ aictx check
 
 In Git projects, also run `aictx diff` to review the `.aictx/` changes, including untracked memory files.
 
-The bootstrap patch command is read-only for canonical memory and only writes the redirected draft file. Review the proposed patch yourself and apply it through `aictx save`; users should not have to hand-write bootstrap JSON. Use `aictx audit --json` to find deterministic memory hygiene issues.
+The bootstrap patch command is read-only for canonical memory and only writes the redirected patch file. Review the proposed patch yourself and apply it through `aictx save`; users should not have to hand-write bootstrap JSON. Use `aictx audit --json` to find grouped, actionable memory hygiene issues.
 
 MCP exposes exactly `load_memory`, `search_memory`, `save_memory_patch`, and `diff_memory` in v1. These tools are supported MCP equivalents, not a requirement for routine CLI-first memory work.
 
@@ -140,7 +140,7 @@ aictx diff
 
 ## What To Save
 
-Apply the memory discipline lifecycle: load narrowly before non-trivial work, save only durable knowledge, update existing memory before creating duplicates, stale or supersede wrong old memory, prefer current code and user requests over loaded memory, review diffs, and save nothing when there is no durable future value.
+Apply the memory discipline lifecycle: load narrowly before non-trivial work, save only durable knowledge directly as active memory, update existing memory before creating duplicates, stale or supersede wrong old memory, delete memory that should not persist, prefer current code and user requests over loaded memory, review diffs, and save nothing when there is no durable future value.
 
 Save durable project knowledge, such as:
 
@@ -149,19 +149,22 @@ Save durable project knowledge, such as:
 * Operational constraints
 * Gotchas and known failure modes
 * Repeated project workflows
+* Source-backed product intent, feature map, roadmap, architecture, convention, and agent-guidance syntheses
 * Current product features and capabilities
 * Important facts discovered during debugging
 * Open questions that affect future work
 * Superseded or stale memory when old knowledge becomes wrong
 
-Keep memory short and linked. Prefer one durable claim per object. Prefer updating, marking stale, or superseding existing memory over creating duplicates. Save nothing when the task produced no durable future value.
+Right-size memory. Use atomic memories for precise reusable claims. Use `synthesis` memories for compact area-level understanding that future agents should load quickly. Use `source` memories to preserve where context came from, especially repo docs, AGENTS/CLAUDE/rules, package manifests, issues, external references recorded by the agent, and user-stated context. Prefer updating, marking stale, superseding, or deleting existing memory over creating duplicates. Save nothing when the task produced no durable future value.
 
-Short linked memory policy:
+Right-size memory policy:
 
-* One durable claim per object.
-* Concise body text that states the current fact, decision, constraint, gotcha, or workflow.
+* Atomic memories should normally carry one durable claim.
+* Syntheses should summarize an area clearly enough to replace rereading scattered docs.
+* Sources should describe provenance, not restate every detail from the source.
+* Use concise body text that states the current fact, decision, constraint, gotcha, workflow, source, or synthesis.
 * Specific tags that help future retrieval.
-* Relations only when the link matters. Use predicates such as `requires`, `depends_on`, `affects`, or `supersedes` to connect decisions, constraints, workflows, gotchas, and replacements.
+* Relations only when the link matters. Use predicates such as `derived_from`, `summarizes`, `documents`, `requires`, `depends_on`, `affects`, or `supersedes` to connect syntheses, sources, decisions, constraints, workflows, gotchas, and replacements.
 
 Update-before-create policy:
 
@@ -169,6 +172,7 @@ Update-before-create policy:
 * Use `update_object` when the old object is still the right memory but needs fresher wording, tags, status, or body content.
 * Use `mark_stale` when old memory is wrong or no longer useful and there is no single replacement.
 * Use `supersede_object` when a newer object replaces an older one. This creates or preserves the replacement-to-old `supersedes` relation.
+* Use `delete_object` when memory should not persist, such as accidental sensitive content, rejected speculation, or a mistaken duplicate with no future value.
 * Create a new object only when no existing memory should be updated, marked stale, or superseded.
 
 Save-nothing-is-valid policy: if the work produced no durable future value, do not invent a patch. Tell the user that no Aictx memory was saved.
@@ -179,6 +183,10 @@ Good memory examples:
 * Good linked decision: `decision.billing-retries` plus a `requires` relation to `constraint.webhook-idempotency` when the decision depends on that constraint.
 * Good gotcha: `gotcha.viewer-export-overwrites-manifest-files` when a repeated failure mode affects future work.
 * Good workflow: `workflow.release-smoke-test` for a repeated project procedure.
+* Good source-backed synthesis: `synthesis.product-intent` summarizes what the product is for and has `derived_from` relations to `source.readme` and `source.user-context-hybrid-memory`.
+* Good user-stated context: `source.user-context-hybrid-memory` records a durable product direction stated by the user in the task, without saving private or unrelated preferences.
+* Good roadmap memory: `synthesis.roadmap` lists current milestones and has `documents` links to issue or docs sources.
+* Good feature removal: mark `concept.old-feature` stale or supersede it with the replacement feature, and update `synthesis.feature-map`.
 
 Bad memory examples:
 
@@ -186,6 +194,7 @@ Bad memory examples:
 * Bad task diary: saving "I changed three files and tests passed" with no durable project knowledge.
 * Bad speculation: saving "Redis probably handles retries" without current evidence.
 * Bad no-value save: creating memory just because a task finished, even though nothing reusable changed.
+* Bad source dump: pasting an entire README into a `source` object instead of recording concise provenance and linking syntheses to the file.
 
 Do not save:
 
@@ -205,9 +214,9 @@ Aictx does not infer durable project meaning from diffs. Create patches from cur
 
 Keep patches small and reviewable. Prefer one or a few focused memory changes over broad rewrites.
 
-V1 object types are `project`, `architecture`, `decision`, `constraint`, `question`, `fact`, `gotcha`, `workflow`, `note`, and `concept`.
+Object types are `project`, `architecture`, `decision`, `constraint`, `question`, `fact`, `gotcha`, `workflow`, `note`, `concept`, `source`, and `synthesis`.
 
-Use `gotcha` for known failure modes and traps. Use `workflow` for repeated project procedures. Do not create `history`, `task-note`, or `feature` object types; use Git/events/statuses for history, branch/task scope for temporary context, and `concept` with `facets.category: "product-feature"` for product capabilities.
+Use `source` for provenance records. Use `synthesis` for maintained summaries. Use `gotcha` for known failure modes and traps. Use `workflow` for repeated project procedures. Do not create `history`, `task-note`, or `feature` object types; use Git/events/statuses for history, branch/task scope for temporary context, and `concept` or `synthesis` with `facets.category: "product-feature"` or `facets.category: "feature-map"` for product capabilities.
 
 Schema-backed memory can include `facets` and object-level `evidence`.
 
@@ -227,12 +236,17 @@ Use facets to make broad object types retrieval-friendly without inventing new o
 * `debugging-fact`
 * `concept`
 * `open-question`
+* `source`
+* `product-intent`
+* `feature-map`
+* `roadmap`
+* `agent-guidance`
 
 Use `facets.applies_to` for relevant files, directories, subsystems, commands, or config names. Use `facets.load_modes` only when a memory is especially relevant to `coding`, `debugging`, `review`, `architecture`, or `onboarding`.
 
-Use object-level `evidence` for the current proof behind durable claims, such as `{ "kind": "file", "id": "src/billing/webhook.ts" }`, `{ "kind": "commit", "id": "abc123" }`, `{ "kind": "memory", "id": "decision.billing-retries" }`, `{ "kind": "relation", "id": "rel.example" }`, or `{ "kind": "task", "id": "Fix Stripe webhook retries" }`.
+Use object-level `evidence` for the current proof behind durable claims, such as `{ "kind": "file", "id": "src/billing/webhook.ts" }`, `{ "kind": "commit", "id": "abc123" }`, `{ "kind": "memory", "id": "decision.billing-retries" }`, `{ "kind": "relation", "id": "rel.example" }`, `{ "kind": "source", "id": "source.readme" }`, or `{ "kind": "task", "id": "Fix Stripe webhook retries" }`.
 
-Represent product features as `type: "concept"` plus `facets.category: "product-feature"`. Use tags such as `feature`, `product`, and domain-specific terms; use `facets.applies_to` for relevant routes, UI modules, commands, docs, or subsystems. Keep current features `active`, use `mark_stale` for removed features, and use `supersede_object` when one feature replaces another.
+Represent product features as atomic `type: "concept"` memories with `facets.category: "product-feature"` when each feature needs its own reusable claim, and as a maintained `type: "synthesis"` with `facets.category: "feature-map"` when future agents need the compact product picture. Use tags such as `feature`, `product`, and domain-specific terms; use `facets.applies_to` for relevant routes, UI modules, commands, docs, or subsystems. Keep current features `active`, use `mark_stale` for removed features, and use `supersede_object` when one feature replaces another. Also update the feature-map synthesis when the product surface changes.
 
 Represent tried-and-abandoned approaches as active memory with `facets.category: "abandoned-attempt"` when future agents should avoid retrying them. Use `stale` or `superseded` only when the memory itself is no longer valid.
 

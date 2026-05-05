@@ -1,0 +1,1 @@
+Agent memory behavior is maintained in docs/agent-integration.md, integrations/templates/agent-guidance.md, AGENTS.md, CLAUDE.md, and generated integration artifacts. These sources define right-size memory, direct active saves, source-backed synthesis, stale/supersede/delete behavior, and save-nothing cases.

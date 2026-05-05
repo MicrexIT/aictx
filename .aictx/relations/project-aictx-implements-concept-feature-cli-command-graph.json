@@ -1,17 +1,17 @@
 {
   "confidence": "high",
-  "content_hash": "sha256:62bcb50727d60cd839c60caf06a5ae7de29611e120abdde2c987e2b5db61825d",
-  "created_at": "2026-05-04T18:04:45+02:00",
+  "content_hash": "sha256:cf3ab119086f62cd32091d42bf918ebbc1a1b4dae1040a4327bdbaab84c5a161",
+  "created_at": "2026-05-04T20:21:52+02:00",
   "evidence": [
     {
-      "id": "src/cli/commands/graph.ts",
-      "kind": "file"
+      "id": "synthesis.feature-map",
+      "kind": "memory"
     }
   ],
   "from": "project.aictx",
   "id": "rel.project-aictx-implements-concept-feature-cli-command-graph",
   "predicate": "implements",
-  "status": "active",
+  "status": "stale",
   "to": "concept.feature-cli-command-graph",
-  "updated_at": "2026-05-04T18:04:45+02:00"
+  "updated_at": "2026-05-05T13:43:35+02:00"
 }

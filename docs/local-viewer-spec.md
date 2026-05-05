@@ -110,7 +110,7 @@ Project-scoped bootstrap and export routes behave like their legacy routes but r
 * Project metadata from the shared response `meta`.
 * Viewer-readable object summaries including id, type, status, title, paths, scope, tags, timestamps, and body.
 * Relation summaries including id, from, predicate, to, status, confidence, evidence, timestamps, and JSON path.
-* Counts for objects, relations, stale/superseded/rejected objects, and active relations.
+* Counts for objects, relations, source objects, synthesis objects, stale/superseded objects, and active relations.
 * Storage/read warnings.
 
 `POST /api/export/obsidian`:
@@ -133,14 +133,15 @@ Required first-screen layout:
 
 Required features:
 
-* Search memory objects client-side by title, id, type, status, tags, and body text.
-* Filter by type, status, and tag.
+* Search memory objects client-side by title, id, type, status, tags, facets, evidence, and body text.
+* Filter by type, status, tag, and memory layer: atomic memories, syntheses, sources, or stale/superseded.
 * Selecting a memory object opens a focused detail view.
 * Detail view provides a Back action that returns to the filtered object list.
 * Show canonical Markdown body for the selected object.
 * Render Markdown with raw HTML disabled or sanitized.
 * Show sidecar JSON and raw paths/timestamps for the selected object in collapsed technical details.
 * Show incoming and outgoing related memories before raw relation details.
+* Show provenance links in detail view, including source evidence and `derived_from`, `summarizes`, or `documents` relations.
 * Provide a direct-neighborhood map only: selected object plus direct incoming/outgoing neighbor objects and relations.
 * Let users trigger the Obsidian projection export and see success/failure output.
 * Let users return from a selected project to the Projects dashboard.

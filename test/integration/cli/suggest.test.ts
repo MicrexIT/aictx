@@ -183,6 +183,7 @@ describe("aictx suggest CLI", () => {
       "decision.webhook-retries"
     ]);
     expect(envelope.data.recommended_memory).toEqual([
+      "synthesis",
       "decision",
       "constraint",
       "gotcha",
@@ -235,6 +236,8 @@ describe("aictx suggest CLI", () => {
     expect(envelope.data.recommended_memory).toEqual([
       "project",
       "architecture",
+      "source",
+      "synthesis",
       "workflow",
       "constraint",
       "gotcha",
@@ -263,6 +266,8 @@ describe("aictx suggest CLI", () => {
     expect(patch.changes).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ op: "update_object" }),
+        expect.objectContaining({ op: "create_object", id: "source.readme" }),
+        expect.objectContaining({ op: "create_object", id: "synthesis.product-intent" }),
         expect.objectContaining({ op: "create_object", id: "workflow.package-scripts" })
       ])
     );
@@ -279,7 +284,13 @@ describe("aictx suggest CLI", () => {
     expect(saveEnvelope.ok).toBe(true);
     expect(saveEnvelope.data.memory_updated).toContain("architecture.current");
     expect(saveEnvelope.data.memory_created).toEqual(
-      expect.arrayContaining(["workflow.package-scripts", "constraint.node-engine"])
+      expect.arrayContaining([
+        "source.readme",
+        "source.package-json",
+        "synthesis.product-intent",
+        "workflow.package-scripts",
+        "constraint.node-engine"
+      ])
     );
 
     const checkOutput = await runCli(["node", "aictx", "check", "--json"], repo);
@@ -324,12 +335,18 @@ describe("aictx suggest CLI", () => {
     expect(envelope.data.bootstrap_patch_proposed).toBe(true);
     expect(envelope.data.bootstrap_patch_applied).toBe(true);
     expect(envelope.data.save?.memory_created).toEqual(
-      expect.arrayContaining(["workflow.package-scripts", "constraint.node-engine"])
+      expect.arrayContaining([
+        "source.readme",
+        "source.package-json",
+        "synthesis.product-intent",
+        "workflow.package-scripts",
+        "constraint.node-engine"
+      ])
     );
     expect(envelope.data.check.valid).toBe(true);
   });
 
-  it("applies explicit README product features as product-feature concepts during setup", async () => {
+  it("applies explicit README product features as a source-backed feature-map synthesis during setup", async () => {
     const repo = await createProductFeatureBootstrapGitProject(
       "aictx-cli-setup-product-features-"
     );
@@ -342,7 +359,7 @@ describe("aictx suggest CLI", () => {
     expect(envelope.ok).toBe(true);
     expect(envelope.data.bootstrap_patch_applied).toBe(true);
     expect(envelope.data.save?.memory_created).toEqual(
-      expect.arrayContaining(["concept.feature-customer-dashboard"])
+      expect.arrayContaining(["source.readme", "synthesis.feature-map"])
     );
 
     const storage = await readCanonicalStorage(repo);
@@ -352,29 +369,30 @@ describe("aictx suggest CLI", () => {
     }
 
     const feature = storage.data.objects.find(
-      (object) => object.sidecar.id === "concept.feature-customer-dashboard"
+      (object) => object.sidecar.id === "synthesis.feature-map"
     );
-    expect(feature?.sidecar.type).toBe("concept");
+    expect(feature?.sidecar.type).toBe("synthesis");
     expect(feature?.sidecar.facets).toEqual({
-      category: "product-feature",
+      category: "feature-map",
       applies_to: ["README.md"],
       load_modes: ["coding", "onboarding"]
     });
-    expect(feature?.sidecar.evidence).toEqual([{ kind: "file", id: "README.md" }]);
+    expect(feature?.sidecar.evidence).toEqual([{ kind: "source", id: "source.readme" }]);
+    expect(feature?.body).toContain("Customer dashboard");
     const featureRelation = storage.data.relations.find(
       (stored) =>
-        stored.relation.from === storage.data.config.project.id &&
-        stored.relation.predicate === "implements" &&
-        stored.relation.to === "concept.feature-customer-dashboard"
+        stored.relation.from === "synthesis.feature-map" &&
+        stored.relation.predicate === "derived_from" &&
+        stored.relation.to === "source.readme"
     );
     expect(featureRelation?.relation).toEqual(
       expect.objectContaining({
-        from: storage.data.config.project.id,
-        predicate: "implements",
-        to: "concept.feature-customer-dashboard",
+        from: "synthesis.feature-map",
+        predicate: "derived_from",
+        to: "source.readme",
         status: "active",
         confidence: "high",
-        evidence: [{ kind: "file", id: "README.md" }]
+        evidence: [{ kind: "source", id: "source.readme" }]
       })
     );
     const featureRelationId = featureRelation?.relation.id;
@@ -395,10 +413,14 @@ describe("aictx suggest CLI", () => {
     expect(envelope.data.bootstrap_patch_applied).toBe(true);
     expect(envelope.data.save?.memory_created).toEqual(
       expect.arrayContaining([
+        "source.readme",
+        "source.package-json",
+        "source.agents",
+        "synthesis.product-intent",
+        "synthesis.feature-map",
+        "synthesis.agent-guidance",
         "workflow.post-task-verification",
-        "constraint.code-conventions",
-        "concept.feature-cli-binary-billing",
-        "concept.feature-cli-command-sync"
+        "constraint.code-conventions"
       ])
     );
 
@@ -426,38 +448,30 @@ describe("aictx suggest CLI", () => {
     expect(verification?.body).toContain("pnpm run typecheck");
     expect(verification?.body).toContain("pnpm run lint");
     expect(verification?.body).not.toContain("pnpm run generated");
+    const featureMap = storage.data.objects.find(
+      (object) => object.sidecar.id === "synthesis.feature-map"
+    );
+    expect(featureMap?.sidecar.type).toBe("synthesis");
+    expect(featureMap?.body).toContain("CLI binary billing");
+    expect(featureMap?.body).toContain("CLI command sync");
     const binRelation = storage.data.relations.find(
       (stored) =>
-        stored.relation.from === storage.data.config.project.id &&
-        stored.relation.predicate === "implements" &&
-        stored.relation.to === "concept.feature-cli-binary-billing"
-    );
-    const commandRelation = storage.data.relations.find(
-      (stored) =>
-        stored.relation.from === storage.data.config.project.id &&
-        stored.relation.predicate === "implements" &&
-        stored.relation.to === "concept.feature-cli-command-sync"
+        stored.relation.from === "synthesis.feature-map" &&
+        stored.relation.predicate === "derived_from" &&
+        stored.relation.to === "source.package-json"
     );
     expect(binRelation?.relation).toEqual(
       expect.objectContaining({
-        from: storage.data.config.project.id,
-        predicate: "implements",
-        to: "concept.feature-cli-binary-billing",
-        evidence: [{ kind: "file", id: "package.json" }]
+        from: "synthesis.feature-map",
+        predicate: "derived_from",
+        to: "source.package-json",
+        evidence: [{ kind: "source", id: "source.package-json" }]
       })
     );
-    expect(commandRelation?.relation).toEqual(
-      expect.objectContaining({
-        from: storage.data.config.project.id,
-        predicate: "implements",
-        to: "concept.feature-cli-command-sync",
-        evidence: [{ kind: "file", id: "src/cli/commands/sync.ts" }]
-      })
-    );
-    const relationIds = [binRelation?.relation.id, commandRelation?.relation.id].filter(
+    const relationIds = [binRelation?.relation.id].filter(
       (id): id is string => id !== undefined
     );
-    expect(relationIds).toHaveLength(2);
+    expect(relationIds).toHaveLength(1);
     expect(envelope.data.save?.relations_created).toEqual(
       expect.arrayContaining(relationIds)
     );
@@ -943,6 +957,10 @@ function memoryDirectory(type: ObjectType): string {
       return "notes";
     case "concept":
       return "concepts";
+    case "source":
+      return "sources";
+    case "synthesis":
+      return "syntheses";
     case "project":
     case "architecture":
       throw new Error(`Unsupported fixture type for nested memory path: ${type}`);

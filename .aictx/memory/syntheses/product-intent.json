@@ -1,0 +1,48 @@
+{
+  "body_path": "memory/syntheses/product-intent.md",
+  "content_hash": "sha256:c8026a0e2ea3b2ca6225a76a77c1282abbb457c025d90f43a7e4e331451fdba1",
+  "created_at": "2026-05-05T13:30:07+02:00",
+  "evidence": [
+    {
+      "id": "source.user-hybrid-memory-redesign",
+      "kind": "source"
+    },
+    {
+      "id": "source.product-requirements",
+      "kind": "source"
+    }
+  ],
+  "facets": {
+    "applies_to": [
+      "product",
+      "viewer",
+      "agent-guidance"
+    ],
+    "category": "product-intent",
+    "load_modes": [
+      "architecture",
+      "onboarding",
+      "coding"
+    ]
+  },
+  "id": "synthesis.product-intent",
+  "scope": {
+    "branch": null,
+    "kind": "project",
+    "project": "project.aictx",
+    "task": null
+  },
+  "source": {
+    "kind": "agent",
+    "task": "dogfood hybrid source and synthesis memory redesign"
+  },
+  "status": "active",
+  "tags": [
+    "product-intent",
+    "hybrid-memory",
+    "viewer"
+  ],
+  "title": "AICTX product intent",
+  "type": "synthesis",
+  "updated_at": "2026-05-05T13:30:07+02:00"
+}

@@ -126,31 +126,49 @@ MCP exposes exactly `load_memory`, `search_memory`, `save_memory_patch`, and
 `diff_memory` in v1.
 
 Aictx is a memory discipline system, not just storage. Load narrowly before
-non-trivial work, save only durable knowledge, prefer updating or
-stale/supersede changes over duplicate creation, prefer current code and user
-requests over loaded memory when they conflict, review memory diffs, and save
-nothing when the task produced no durable future value.
+non-trivial work, save only durable knowledge directly as active memory, prefer
+updating or stale/supersede changes over duplicate creation, delete memory that
+should not persist, prefer current code and user requests over loaded memory
+when they conflict, review memory diffs, and save nothing when the task
+produced no durable future value.
 
-Short linked memory works best: keep one durable claim per object, use concise
-body text and useful tags, and add relations such as `requires`, `depends_on`,
-`affects`, or `supersedes` only when the link helps future agents. Prefer
-`update_object` for existing memory, `mark_stale` for wrong memory with no
-single replacement, and `supersede_object` when a new object replaces an old
-one. Save-nothing-is-valid: if a task produced no reusable project knowledge,
-do not create a memory patch.
+Aictx storage v3 uses a hybrid memory model:
 
-V1 object types are `project`, `architecture`, `decision`, `constraint`,
-`question`, `fact`, `gotcha`, `workflow`, `note`, and `concept`. Use `gotcha`
-for known failure modes and `workflow` for repeated project procedures. Do not
-create `history` or `task-note` object types; use Git/events/statuses for
-history and branch/task scope for temporary task context.
+* `source` records preserve where context came from, such as README files,
+  package manifests, AGENTS/CLAUDE/rules, issues, external references recorded
+  by an agent, or user-stated context.
+* Atomic memories capture precise reusable claims as `decision`, `constraint`,
+  `fact`, `gotcha`, `workflow`, `question`, `note`, or `concept` objects.
+* `synthesis` records maintain compact summaries for product intent, feature
+  maps, roadmap, architecture, conventions, agent guidance, and repeated
+  workflows.
 
-Track product features as `concept` memory with the `product-feature` facet.
+Right-size memory: atomic memories should usually hold one durable claim,
+syntheses should replace rereading scattered context, and sources should record
+concise provenance rather than dump full documents. Add relations such as
+`derived_from`, `summarizes`, `documents`, `requires`, `depends_on`, `affects`,
+or `supersedes` only when the link helps future agents. Prefer `update_object`
+for existing memory, `mark_stale` for wrong memory with no single replacement,
+`supersede_object` when a new object replaces an old one, and `delete_object`
+when memory should not persist. Save-nothing-is-valid: if a task produced no
+reusable project knowledge, do not create a memory patch.
+
+Object types are `project`, `architecture`, `decision`, `constraint`,
+`question`, `fact`, `gotcha`, `workflow`, `note`, `concept`, `source`, and
+`synthesis`. Use `gotcha` for known failure modes and `workflow` for repeated
+project procedures. Do not create `history`, `task-note`, or `feature` object
+types; use Git/events/statuses for history, branch/task scope for temporary
+task context, and `concept` or `synthesis` facets for product capabilities.
+
+Track product features as atomic `concept` memory with the `product-feature`
+facet when a single durable feature claim matters, and maintain a
+`synthesis.feature-map` when future agents need the compact product picture.
 Use tags such as `feature`, `product`, and domain terms; use `active` for
 present features, `mark_stale` for removed features, and `supersede_object`
-when one feature replaces another. When deterministic bootstrap evidence
-creates product-feature concepts, link the project to each feature with an
-`implements` relation so graph browsing and one-hop retrieval can reach them.
+when one feature replaces another. When deterministic bootstrap evidence creates
+source and synthesis records, link syntheses to sources with provenance
+relations so graph browsing and one-hop retrieval can explain where context
+came from.
 
 ## Quickstart
 
@@ -395,8 +413,8 @@ candidates, and an agent checklist. `--bootstrap` lists likely source files and
 seed memory classes for a first-run project memory pass. Add `--patch` with
 `--bootstrap` to generate a proposed structured patch suitable for review and
 `aictx save --file`; it remains read-only until saved explicitly. Bootstrap
-product-feature concepts are linked from the project with `implements` when the
-feature evidence is deterministic.
+patches favor source records plus maintained syntheses for product intent,
+feature map, and agent guidance instead of noisy one-object-per-command memory.
 
 #### `aictx audit`
 
@@ -462,7 +480,7 @@ metadata paths, tags, and incoming or outgoing relation summaries.
 
 #### `aictx stale`
 
-Lists stale, superseded, and rejected memory.
+Lists stale and superseded memory.
 
 ```bash
 aictx stale

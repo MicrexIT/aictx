@@ -7,7 +7,14 @@ import { chromium, type Browser, type ConsoleMessage, type Page } from "playwrig
 import { afterEach, describe, expect, it } from "vitest";
 
 import { main, type CliOutputWriter } from "../../../src/cli/main.js";
-import type { ObjectStatus, ObjectType, Predicate, RelationStatus } from "../../../src/core/types.js";
+import type {
+  Evidence,
+  ObjectFacets,
+  ObjectStatus,
+  ObjectType,
+  Predicate,
+  RelationStatus
+} from "../../../src/core/types.js";
 import {
   computeObjectContentHash,
   computeRelationContentHash
@@ -35,6 +42,8 @@ interface MemoryFixture {
   bodyPath: string;
   body: string;
   tags: string[];
+  facets?: ObjectFacets;
+  evidence?: Evidence[];
   updatedAt?: string;
 }
 
@@ -89,9 +98,11 @@ describe("read-only viewer shell", () => {
       await expectText(page, '[data-testid="memory-list-view"]', "Memories");
       await expectCount(page, '[data-testid="selected-object"]', 0);
       await expectText(page, '[aria-label="Project memory counts"]', "Memories");
-      await expectText(page, '[aria-label="Project memory counts"]', "10");
+      await expectText(page, '[aria-label="Project memory counts"]', "12");
       await expectText(page, '[aria-label="Project memory counts"]', "Connections");
-      await expectText(page, '[aria-label="Project memory counts"]', "3");
+      await expectText(page, '[aria-label="Project memory counts"]', "4");
+      await expectText(page, '[aria-label="Project memory counts"]', "Syntheses");
+      await expectText(page, '[aria-label="Project memory counts"]', "Sources");
 
       await page.selectOption('[data-testid="viewer-type-filter"]', "decision");
       await expectCount(page, '[data-testid="object-row-decision.viewer-shell"]', 1);
@@ -108,6 +119,24 @@ describe("read-only viewer shell", () => {
       await expectCount(page, '[data-testid="object-row-decision.viewer-shell"]', 0);
 
       await page.selectOption('[data-testid="viewer-status-filter"]', "all");
+
+      await page.locator('[data-testid="viewer-layer-sources"]').click();
+      await expectCount(page, '[data-testid="object-row-source.agent-integration"]', 1);
+      await expectCount(page, '[data-testid="object-row-decision.viewer-shell"]', 0);
+
+      await page.locator('[data-testid="viewer-layer-syntheses"]').click();
+      await expectCount(page, '[data-testid="object-row-synthesis.agent-guidance"]', 1);
+      await expectCount(page, '[data-testid="object-row-source.agent-integration"]', 0);
+
+      await page.locator('[data-testid="viewer-layer-all"]').click();
+      await page.fill('[data-testid="viewer-search"]', "agent guidance provenance");
+      await page.locator('[data-testid="object-row-synthesis.agent-guidance"]').click();
+      await assertSelectedObject(page, "Agent Guidance Synthesis", "synthesis.agent-guidance");
+      await expectText(page, '[data-testid="provenance-links"]', "Source: docs/agent-integration.md");
+      await expectText(page, '[data-testid="provenance-links"]', "derived_from");
+      await page.getByRole("button", { name: "Source: docs/agent-integration.md" }).first().click();
+      await assertSelectedObject(page, "Source: docs/agent-integration.md", "source.agent-integration");
+      await page.locator('[data-testid="selected-object-back"]').click();
 
       await page.fill('[data-testid="viewer-search"]', "markdown safety");
       await page.locator('[data-testid="object-row-constraint.viewer-markdown"]').click();
@@ -399,6 +428,39 @@ async function writeViewerFixtures(projectRoot: string): Promise<void> {
     updatedAt: FIXED_TIMESTAMP
   });
   await writeMemoryObject(projectRoot, {
+    id: "source.agent-integration",
+    type: "source",
+    status: "active",
+    title: "Source: docs/agent-integration.md",
+    bodyPath: "memory/sources/agent-integration.md",
+    body: "# Source: docs/agent-integration.md\n\nViewer source fixture for agent guidance provenance.\n",
+    tags: ["viewer", "source", "guidance"],
+    facets: {
+      category: "source",
+      applies_to: ["docs/agent-integration.md"],
+      load_modes: ["onboarding"]
+    },
+    evidence: [{ kind: "file", id: "docs/agent-integration.md" }],
+    updatedAt: FIXED_TIMESTAMP
+  });
+  await writeMemoryObject(projectRoot, {
+    id: "synthesis.agent-guidance",
+    type: "synthesis",
+    status: "active",
+    title: "Agent Guidance Synthesis",
+    bodyPath: "memory/syntheses/agent-guidance.md",
+    body:
+      "# Agent Guidance Synthesis\n\nThis synthesis explains agent guidance provenance for source-backed viewer tests.\n",
+    tags: ["viewer", "synthesis", "guidance"],
+    facets: {
+      category: "agent-guidance",
+      applies_to: ["docs/agent-integration.md"],
+      load_modes: ["coding", "onboarding"]
+    },
+    evidence: [{ kind: "source", id: "source.agent-integration" }],
+    updatedAt: FIXED_TIMESTAMP_NEXT_MINUTE
+  });
+  await writeMemoryObject(projectRoot, {
     id: "fact.viewer-unrelated-source",
     type: "fact",
     status: "active",
@@ -432,6 +494,13 @@ async function writeViewerFixtures(projectRoot: string): Promise<void> {
     to: "fact.viewer-unrelated-target",
     status: "active"
   });
+  await writeRelation(projectRoot, {
+    id: "rel.synthesis-agent-guidance-derived-from-source-agent-integration",
+    from: "synthesis.agent-guidance",
+    predicate: "derived_from",
+    to: "source.agent-integration",
+    status: "active"
+  });
 }
 
 async function writeMemoryObject(projectRoot: string, fixture: MemoryFixture): Promise<void> {
@@ -450,6 +519,8 @@ async function writeMemoryObject(projectRoot: string, fixture: MemoryFixture): P
       task: null
     },
     tags: fixture.tags,
+    ...(fixture.facets === undefined ? {} : { facets: fixture.facets }),
+    ...(fixture.evidence === undefined ? {} : { evidence: fixture.evidence }),
     source: {
       kind: "agent"
     },

@@ -200,7 +200,7 @@ describe("aictx MCP read tools", () => {
         truncated: false
       });
       expect(mcpEnvelope.data.included_ids).toContain("constraint.webhook-idempotency");
-      expect(mcpEnvelope.data.excluded_ids).toContain("note.rejected-webhook");
+      expect(mcpEnvelope.data.included_ids).toContain("synthesis.webhook-context");
       expect(mcpEnvelope.data.omitted_ids).toEqual([]);
     } finally {
       await started.close();
@@ -249,7 +249,7 @@ describe("aictx MCP read tools", () => {
     expect(started.stderr()).toBe("");
   });
 
-  it("loads v2 facet-aware memory through MCP", async () => {
+  it("loads facet-aware memory through MCP", async () => {
     const projectRoot = await createInitializedProject("aictx-mcp-load-facets-");
     await writeMemoryObject(projectRoot, {
       id: "decision.facet-aware-context",
@@ -411,9 +411,7 @@ describe("aictx MCP read tools", () => {
       expect(mcpEnvelope.data.matches.map((match) => match.id)).toContain(
         "constraint.webhook-idempotency"
       );
-      expect(mcpEnvelope.data.matches.map((match) => match.id)).not.toContain(
-        "note.rejected-webhook"
-      );
+      expect(mcpEnvelope.data.matches.map((match) => match.id)).toContain("synthesis.webhook-context");
     } finally {
       await started.close();
     }
@@ -688,13 +686,17 @@ async function writeLoadSearchFixtures(projectRoot: string): Promise<void> {
     updatedAt: FIXED_TIMESTAMP
   });
   await writeMemoryObject(projectRoot, {
-    id: "note.rejected-webhook",
-    type: "note",
-    status: "rejected",
-    title: "Rejected webhook",
-    bodyPath: "memory/notes/rejected-webhook.md",
-    body: "# Rejected webhook\n\nStripe webhook details in this memory should be excluded.\n",
+    id: "synthesis.webhook-context",
+    type: "synthesis",
+    status: "active",
+    title: "Webhook context",
+    bodyPath: "memory/syntheses/webhook-context.md",
+    body: "# Webhook context\n\nStripe webhook implementation context is maintained as synthesis memory.\n",
     tags: ["stripe", "webhooks", "idempotency"],
+    facets: {
+      category: "feature-map",
+      load_modes: ["coding", "onboarding"]
+    },
     updatedAt: FIXED_TIMESTAMP_NEXT_MINUTE
   });
 }

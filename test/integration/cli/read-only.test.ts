@@ -155,7 +155,7 @@ describe("aictx read-only CLI commands", () => {
     ]);
   });
 
-  it("lists stale, superseded, and rejected memory only", async () => {
+  it("lists stale and superseded memory only", async () => {
     const projectRoot = await createReadOnlyFixtureProject("aictx-cli-stale-");
 
     const output = await runCli(["node", "aictx", "stale", "--json"], projectRoot);
@@ -168,11 +168,11 @@ describe("aictx read-only CLI commands", () => {
     expect(envelope.ok).toBe(true);
     expect(ids).toEqual([
       "decision.old-queue",
-      "constraint.old-api",
-      "note.rejected-memory"
+      "note.stale-memory",
+      "constraint.old-api"
     ]);
     expect(ids).not.toContain("decision.billing-retries");
-    expect(ids).not.toContain("note.draft-memory");
+    expect(ids).not.toContain("note.active-memory");
     expect(ids).not.toContain("question.open-memory");
     expect(ids).not.toContain("question.closed-memory");
   });
@@ -224,7 +224,7 @@ describe("aictx read-only CLI commands", () => {
     expect(inspect.stdout).toContain("decision.billing-retries");
     expect(inspect.stdout).toContain("Outgoing relations:");
     expect(stale.stdout).toContain("decision.old-queue");
-    expect(stale.stdout).toContain("note.rejected-memory");
+    expect(stale.stdout).toContain("note.stale-memory");
     expect(graph.stdout).toContain("Relation neighborhood for decision.billing-retries");
     expect(graph.stdout).toContain("rel.worker-affects-decision");
     expect(() => JSON.parse(inspect.stdout) as unknown).toThrow();
@@ -331,18 +331,18 @@ async function createReadOnlyFixtureProject(prefix: string): Promise<string> {
     supersededBy: "decision.billing-retries"
   });
   await writeMemoryObject(projectRoot, {
-    id: "note.rejected-memory",
+    id: "note.stale-memory",
     type: "note",
-    status: "rejected",
-    title: "Rejected memory",
-    body: "# Rejected memory\n\nThis memory was rejected.\n"
+    status: "stale",
+    title: "Stale memory",
+    body: "# Stale memory\n\nThis memory is stale.\n"
   });
   await writeMemoryObject(projectRoot, {
-    id: "note.draft-memory",
+    id: "note.active-memory",
     type: "note",
-    status: "draft",
-    title: "Draft memory",
-    body: "# Draft memory\n\nThis draft should not be in stale output.\n"
+    status: "active",
+    title: "Active memory",
+    body: "# Active memory\n\nThis active memory should not be in stale output.\n"
   });
   await writeMemoryObject(projectRoot, {
     id: "question.open-memory",
@@ -525,6 +525,10 @@ function memoryDirectory(type: ObjectType): string {
       return "notes";
     case "concept":
       return "concepts";
+    case "source":
+      return "sources";
+    case "synthesis":
+      return "syntheses";
     case "project":
     case "architecture":
       throw new Error(`Unsupported fixture type for nested memory path: ${type}`);

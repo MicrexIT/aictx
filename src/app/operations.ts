@@ -109,7 +109,7 @@ import {
   restoreCanonicalStorageFromCommit
 } from "../storage/write.js";
 import {
-  upgradeStorageToV2,
+  upgradeStorageToV3,
   type UpgradeStorageData
 } from "../storage/upgrade.js";
 import {
@@ -316,7 +316,10 @@ export interface MemoryObjectSummary {
   scope: Scope;
   tags: string[];
   facets: ObjectFacets | null;
-  evidence: Array<{ kind: "memory" | "relation" | "file" | "commit" | "task"; id: string }>;
+  evidence: Array<{
+    kind: "memory" | "relation" | "file" | "commit" | "task" | "source";
+    id: string;
+  }>;
   source: Source | null;
   superseded_by: ObjectId | null;
   created_at: string;
@@ -331,7 +334,10 @@ export interface MemoryRelationSummary {
   to: ObjectId;
   status: RelationStatus;
   confidence: RelationConfidence | null;
-  evidence: Array<{ kind: "memory" | "relation" | "file" | "commit" | "task"; id: string }>;
+  evidence: Array<{
+    kind: "memory" | "relation" | "file" | "commit" | "task" | "source";
+    id: string;
+  }>;
   content_hash: string | null;
   created_at: string;
   updated_at: string;
@@ -368,7 +374,8 @@ export interface ViewerBootstrapData {
     relations: number;
     stale_objects: number;
     superseded_objects: number;
-    rejected_objects: number;
+    source_objects: number;
+    synthesis_objects: number;
     active_relations: number;
   };
   storage_warnings: string[];
@@ -596,7 +603,7 @@ export async function upgradeStorage(
       clock
     },
     async () => {
-      const result = await upgradeStorageToV2({
+      const result = await upgradeStorageToV3({
         projectRoot: paths.data.projectRoot,
         clock
       });
@@ -1091,7 +1098,8 @@ export async function getViewerBootstrap(
         relations: relations.length,
         stale_objects: countObjectsByStatus(objects, "stale"),
         superseded_objects: countObjectsByStatus(objects, "superseded"),
-        rejected_objects: countObjectsByStatus(objects, "rejected"),
+        source_objects: countObjectsByType(objects, "source"),
+        synthesis_objects: countObjectsByType(objects, "synthesis"),
         active_relations: relations.filter(
           (relation) => relation.relation.status === "active"
         ).length
@@ -2147,14 +2155,12 @@ export const applicationOperations = {
 
 const STALE_MEMORY_STATUSES = new Set<ObjectStatus>([
   "stale",
-  "superseded",
-  "rejected"
+  "superseded"
 ]);
 
 const STALE_MEMORY_STATUS_ORDER = new Map<ObjectStatus, number>([
   ["stale", 0],
-  ["superseded", 1],
-  ["rejected", 2]
+  ["superseded", 1]
 ]);
 
 type ResolvedGitOnlyMemoryOperation =
@@ -2450,6 +2456,13 @@ function countObjectsByStatus(
   status: ObjectStatus
 ): number {
   return objects.filter((object) => object.sidecar.status === status).length;
+}
+
+function countObjectsByType(
+  objects: readonly StoredMemoryObject[],
+  type: ObjectType
+): number {
+  return objects.filter((object) => object.sidecar.type === type).length;
 }
 
 function summarizeRelation(relation: StoredMemoryRelation): MemoryRelationSummary {

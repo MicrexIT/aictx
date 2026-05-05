@@ -28,10 +28,8 @@
         "status": {
           "enum": [
             "active",
-            "draft",
             "stale",
             "superseded",
-            "rejected",
             "open",
             "closed"
           ]
@@ -47,6 +45,8 @@
           "enum": [
             "project",
             "architecture",
+            "source",
+            "synthesis",
             "decision",
             "constraint",
             "question",
@@ -95,6 +95,9 @@
             "depends_on",
             "supersedes",
             "conflicts_with",
+            "derived_from",
+            "summarizes",
+            "documents",
             "mentions",
             "implements",
             "related_to"
@@ -165,7 +168,8 @@
               "relation",
               "file",
               "commit",
-              "task"
+              "task",
+              "source"
             ]
           }
         },
@@ -202,6 +206,11 @@
             "workflow",
             "gotcha",
             "debugging-fact",
+            "source",
+            "product-intent",
+            "feature-map",
+            "roadmap",
+            "agent-guidance",
             "concept",
             "open-question"
           ]
@@ -375,10 +384,8 @@
         "status": {
           "enum": [
             "active",
-            "draft",
             "stale",
             "superseded",
-            "rejected",
             "open",
             "closed"
           ]
@@ -434,7 +441,7 @@
       "type": "object"
     }
   },
-  "$id": "https://aictx.dev/schemas/v2/patch.schema.json",
+  "$id": "https://aictx.dev/schemas/v3/patch.schema.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "properties": {

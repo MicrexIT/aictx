@@ -1,0 +1,49 @@
+{
+  "body_path": "memory/syntheses/agent-memory-guidance.md",
+  "content_hash": "sha256:d5e7e3e1443c9548fc8e51cf85312f35587fffe877ac0d02395db9604d548d16",
+  "created_at": "2026-05-05T13:30:07+02:00",
+  "evidence": [
+    {
+      "id": "source.agent-integration-guidance",
+      "kind": "source"
+    },
+    {
+      "id": "source.user-hybrid-memory-redesign",
+      "kind": "source"
+    }
+  ],
+  "facets": {
+    "applies_to": [
+      "AGENTS.md",
+      "CLAUDE.md",
+      "docs/agent-integration.md",
+      "integrations/templates/agent-guidance.md"
+    ],
+    "category": "agent-guidance",
+    "load_modes": [
+      "coding",
+      "review",
+      "onboarding"
+    ]
+  },
+  "id": "synthesis.agent-memory-guidance",
+  "scope": {
+    "branch": null,
+    "kind": "project",
+    "project": "project.aictx",
+    "task": null
+  },
+  "source": {
+    "kind": "agent",
+    "task": "dogfood hybrid source and synthesis memory redesign"
+  },
+  "status": "active",
+  "tags": [
+    "agent-guidance",
+    "memory-discipline",
+    "hybrid-memory"
+  ],
+  "title": "How agents should collect AICTX memory",
+  "type": "synthesis",
+  "updated_at": "2026-05-05T13:30:07+02:00"
+}

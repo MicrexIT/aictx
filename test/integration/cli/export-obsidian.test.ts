@@ -379,6 +379,10 @@ function memoryDirectory(type: ObjectType): string {
       return "notes";
     case "concept":
       return "concepts";
+    case "source":
+      return "sources";
+    case "synthesis":
+      return "syntheses";
     case "project":
     case "architecture":
       throw new Error(`Unsupported fixture type for nested memory path: ${type}`);

@@ -46,11 +46,13 @@ const SCORE = {
 const TYPE_MODIFIERS = {
   constraint: 20,
   decision: 18,
+  synthesis: 16,
   architecture: 12,
   question: 10,
   fact: 8,
   gotcha: 14,
   workflow: 10,
+  source: 5,
   concept: 6,
   project: 8,
   note: 0
@@ -59,24 +61,24 @@ const TYPE_MODIFIERS = {
 const STATUS_MODIFIERS = {
   active: 20,
   open: 12,
-  draft: -5,
   stale: -30,
   superseded: -35,
-  rejected: 0,
   closed: 0
 } as const satisfies Record<ObjectStatus, number>;
 
 const TYPE_PRIORITY = {
   constraint: 0,
   decision: 1,
-  gotcha: 2,
-  architecture: 3,
-  workflow: 4,
-  question: 5,
-  fact: 6,
-  concept: 7,
-  project: 8,
-  note: 9
+  synthesis: 2,
+  gotcha: 3,
+  architecture: 4,
+  workflow: 5,
+  question: 6,
+  fact: 7,
+  concept: 8,
+  project: 9,
+  source: 10,
+  note: 11
 } as const satisfies Record<ObjectType, number>;
 
 export interface SearchMemoryInput {
@@ -474,14 +476,16 @@ function indexedObjectFromRow(row: ObjectRow): IndexedObject {
     throw new Error(`Indexed object has unsupported type: ${row.type}`);
   }
 
-  if (!isObjectStatus(row.status)) {
+  const status = normalizeIndexedObjectStatus(row.type, row.status);
+
+  if (status === null) {
     throw new Error(`Indexed object has unsupported status: ${row.status}`);
   }
 
   return {
     id: row.id,
     type: row.type,
-    status: row.status,
+    status,
     title: row.title,
     bodyPath: row.body_path,
     body: row.body,
@@ -746,8 +750,23 @@ function isObjectStatus(value: string): value is ObjectStatus {
   return OBJECT_STATUSES.includes(value as ObjectStatus);
 }
 
+function normalizeIndexedObjectStatus(
+  type: ObjectType,
+  status: string
+): ObjectStatus | null {
+  if (isObjectStatus(status)) {
+    return status;
+  }
+
+  if (status === "draft") {
+    return type === "question" ? "open" : "active";
+  }
+
+  return null;
+}
+
 function shouldApplyRecentBoost(status: ObjectStatus): boolean {
-  return status !== "stale" && status !== "superseded" && status !== "rejected";
+  return status !== "stale" && status !== "superseded";
 }
 
 function normalizeForMatch(value: string): string {

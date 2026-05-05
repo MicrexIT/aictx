@@ -45,7 +45,7 @@ const cliOnlyCommands = [
   "`aictx audit`"
 ] as const;
 
-const v1ObjectTypes = [
+const objectTypes = [
   "`project`",
   "`architecture`",
   "`decision`",
@@ -55,7 +55,9 @@ const v1ObjectTypes = [
   "`gotcha`",
   "`workflow`",
   "`note`",
-  "`concept`"
+  "`concept`",
+  "`source`",
+  "`synthesis`"
 ] as const;
 
 const loadModes = [
@@ -71,6 +73,7 @@ const lifecycleRules = [
   /save only durable/i,
   /update existing memory before creating duplicates/i,
   /stale or supersede wrong old memory/i,
+  /delete memory that should not persist/i,
   /prefer current code and user requests over loaded memory/i,
   /review diffs/i,
   /save nothing/i
@@ -94,6 +97,7 @@ const memoryPatchOperations = [
   "`update_object`",
   "`mark_stale`",
   "`supersede_object`",
+  "`delete_object`",
   "`create_relation`"
 ] as const;
 
@@ -102,7 +106,7 @@ async function readProjectFile(path: string): Promise<string> {
 }
 
 describe("agent guidance content", () => {
-  it("keeps the guide within v1 safety boundaries", async () => {
+  it("keeps the guide within local-first safety boundaries", async () => {
     for (const path of guideTargets) {
       const content = await readProjectFile(path);
 
@@ -205,13 +209,18 @@ describe("agent guidance content", () => {
     }
   });
 
-  it("teaches short linked memory, update-before-create, stale/supersede, and no-op saves", async () => {
+  it("teaches right-size memory, update-before-create, stale/supersede, deletion, and no-op saves", async () => {
     for (const path of guideTargets) {
       const content = await readProjectFile(path);
 
-      expect(content).toMatch(/Short linked memory (?:policy|means)/i);
-      expect(content).toContain("One durable claim per object.");
+      expect(content).toMatch(/Right-size memory/i);
+      expect(content).toMatch(/Atomic memories (?:should normally|normally) carry one durable claim/i);
+      expect(content).toContain("Use `synthesis` memories for compact area-level understanding");
+      expect(content).toContain("Use `source` memories to preserve where context came from");
       expect(content).toMatch(/relations? only when the (?:link|connection) matters/i);
+      expect(content).toContain("`derived_from`");
+      expect(content).toContain("`summarizes`");
+      expect(content).toContain("`documents`");
       expect(content).toMatch(/Update-before-create/i);
       expect(content).toMatch(/Create a new object only when no existing memory should be updated, marked stale, or superseded/i);
       expect(content).toMatch(/Save-nothing-is-valid/i);
@@ -229,6 +238,10 @@ describe("agent guidance content", () => {
       expect(content).toMatch(/Good memory examples/i);
       expect(content).toMatch(/Good durable fact/i);
       expect(content).toMatch(/Good linked decision/i);
+      expect(content).toMatch(/Good source-backed synthesis/i);
+      expect(content).toMatch(/Good user-stated context/i);
+      expect(content).toMatch(/Good roadmap memory/i);
+      expect(content).toMatch(/Good feature removal/i);
       expect(content).toMatch(/Bad memory examples/i);
       expect(content).toMatch(/Bad duplicate creation/i);
       expect(content).toMatch(/Bad task diary/i);
@@ -244,6 +257,8 @@ describe("agent guidance content", () => {
       expect(content).toContain("aictx suggest --from-diff --json");
       expect(content).toContain("aictx suggest --bootstrap --json");
       expect(content).toContain("product-feature");
+      expect(content).toMatch(/source[- ](?:backed|records?)/i);
+      expect(content).toMatch(/synthes/i);
       expect(content).toContain("Do not create `history`, `task-note`, or `feature` object types");
       expect(content).toContain("why is memory empty?");
       expect(content).toContain("run the bootstrap workflow proactively");
@@ -257,7 +272,7 @@ describe("agent guidance content", () => {
     }
   });
 
-  it("locks load modes and the closed v1 taxonomy in guidance", async () => {
+  it("locks load modes and the closed hybrid taxonomy in guidance", async () => {
     for (const path of guideTargets) {
       const content = await readProjectFile(path);
 
@@ -265,7 +280,7 @@ describe("agent guidance content", () => {
         expect(content).toContain(mode);
       }
 
-      for (const objectType of v1ObjectTypes) {
+      for (const objectType of objectTypes) {
         expect(content).toContain(objectType);
       }
 

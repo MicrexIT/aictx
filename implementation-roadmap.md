@@ -960,14 +960,14 @@ Implementation:
 * Search exact IDs and body paths.
 * Search `objects_fts`.
 * Merge and de-duplicate by object ID.
-* Exclude rejected memory by default.
+* Include active/open memory by default and surface stale/superseded status clearly.
 * Return scores and snippets.
 * Expose `searchMemory` application service.
 
 Assignable subtasks:
 
 * `T022A`: Implement query validation, exact ID search, body-path search, and limit handling.
-* `T022B`: Implement FTS search, snippets, de-duplication, rejected filtering, and deterministic scoring.
+* `T022B`: Implement FTS search, snippets, de-duplication, hybrid source/synthesis scoring, and deterministic scoring.
 * `T022C`: Expose `searchMemory` through application service and integration tests.
 
 Acceptance:
@@ -1037,12 +1037,12 @@ Implementation:
 * Apply deterministic recent-memory boost.
 * Apply relation-neighborhood boost.
 * Apply scope filtering for project, branch, and task scopes.
-* Exclude stale, superseded, rejected, and conflicted memory from high-priority sections by default.
+* Exclude stale, superseded, and conflicted memory from high-priority sections by default.
 
 Acceptance:
 
 * Same inputs produce same order.
-* Rejected memory is excluded from default load output.
+* Stale and superseded memory are excluded from default `Must know` output.
 * Stale and superseded memory are not placed in `Must know` by default.
 * Branch-scoped memory is included only when the current branch matches.
 * Branch-scoped memory is excluded in detached HEAD state.
@@ -1558,7 +1558,7 @@ Implementation:
 Acceptance:
 
 * Inspect shows one object plus direct relations.
-* Stale lists stale, superseded, and rejected memory.
+* Stale lists stale and superseded memory.
 * Graph returns relation neighborhood for debugging.
 
 ## 14. Phase 8: Git History and Restore
@@ -1986,7 +1986,7 @@ Implementation:
 * Verify secret values are not printed.
 * Verify conflict markers block writes.
 * Verify MCP exposes only normalized tools.
-* Verify rejected/stale/superseded memory does not enter `Must know` by default.
+* Verify stale/superseded memory does not enter `Must know` by default.
 
 Acceptance:
 
@@ -2841,7 +2841,7 @@ T002 and T004
 T006 and T007
 T012 and T013
 T023 and CLI rendering work after service contracts are stable
-T049 can draft after CLI behavior stabilizes
+T049 can proceed after CLI behavior stabilizes
 ```
 
 Do not parallelize without coordination:

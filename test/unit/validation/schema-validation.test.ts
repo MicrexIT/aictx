@@ -34,7 +34,7 @@ const tempRoots: string[] = [];
 const hash = `sha256:${"0".repeat(64)}`;
 
 const validConfig = {
-  version: 2,
+  version: 3,
   project: {
     id: "project.billing-api",
     name: "Billing API"
@@ -276,7 +276,7 @@ describe("schema validators", () => {
     expect(validatePatch(validators, createObjectPatch).valid).toBe(true);
   });
 
-  it("accepts v1 config while supporting v2 object facets and evidence", async () => {
+  it("accepts legacy config while supporting storage v3 object facets and evidence", async () => {
     const validators = await compileFixtureProject();
 
     expect(validateConfig(validators, { ...validConfig, version: 1 }).valid).toBe(true);

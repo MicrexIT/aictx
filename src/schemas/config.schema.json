@@ -1,12 +1,12 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://aictx.dev/schemas/v2/config.schema.json",
+  "$id": "https://aictx.dev/schemas/v3/config.schema.json",
   "type": "object",
   "additionalProperties": false,
   "required": ["version", "project", "memory", "git"],
   "properties": {
     "version": {
-      "enum": [1, 2]
+      "enum": [1, 2, 3]
     },
     "project": {
       "type": "object",

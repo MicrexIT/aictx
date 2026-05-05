@@ -31,11 +31,13 @@ const SCORE = {
 const TYPE_MODIFIERS = {
   constraint: 20,
   decision: 18,
+  synthesis: 16,
   architecture: 12,
   question: 10,
   fact: 8,
   gotcha: 14,
   workflow: 10,
+  source: 5,
   concept: 6,
   project: 8,
   note: 0
@@ -44,10 +46,8 @@ const TYPE_MODIFIERS = {
 const STATUS_MODIFIERS = {
   active: 20,
   open: 12,
-  draft: -5,
   stale: -30,
   superseded: -35,
-  rejected: 0,
   closed: 0
 } as const satisfies Record<ObjectStatus, number>;
 
@@ -55,8 +55,11 @@ const PREDICATE_MODIFIERS = {
   requires: 12,
   depends_on: 10,
   conflicts_with: 10,
+  derived_from: 8,
+  summarizes: 8,
   supersedes: 8,
   affects: 8,
+  documents: 6,
   implements: 6,
   mentions: 4,
   related_to: 1
@@ -65,25 +68,29 @@ const PREDICATE_MODIFIERS = {
 const TYPE_PRIORITY = {
   constraint: 0,
   decision: 1,
-  gotcha: 2,
-  architecture: 3,
-  workflow: 4,
-  question: 5,
-  fact: 6,
-  concept: 7,
-  project: 8,
-  note: 9
+  synthesis: 2,
+  gotcha: 3,
+  architecture: 4,
+  workflow: 5,
+  question: 6,
+  fact: 7,
+  concept: 8,
+  project: 9,
+  source: 10,
+  note: 11
 } as const satisfies Record<ObjectType, number>;
 
 const MODE_TYPE_MODIFIERS = {
   coding: {
     constraint: 4,
     decision: 3,
+    synthesis: 3,
     architecture: 2,
     gotcha: 2,
     workflow: 1,
     question: 1,
     fact: 1,
+    source: 1,
     project: 0,
     concept: 0,
     note: 0
@@ -92,10 +99,12 @@ const MODE_TYPE_MODIFIERS = {
     gotcha: 18,
     constraint: 10,
     fact: 8,
+    synthesis: 4,
     decision: 6,
     architecture: 0,
     workflow: 0,
     question: 0,
+    source: 0,
     project: 0,
     concept: 0,
     note: 0
@@ -103,17 +112,20 @@ const MODE_TYPE_MODIFIERS = {
   review: {
     constraint: 16,
     decision: 14,
+    synthesis: 8,
     gotcha: 12,
     architecture: 0,
     workflow: 0,
     question: 0,
     fact: 0,
+    source: 0,
     project: 0,
     concept: 0,
     note: 0
   },
   architecture: {
     architecture: 20,
+    synthesis: 18,
     decision: 14,
     constraint: 10,
     concept: 10,
@@ -122,11 +134,14 @@ const MODE_TYPE_MODIFIERS = {
     gotcha: 0,
     workflow: 0,
     fact: 0,
+    source: 0,
     note: 0
   },
   onboarding: {
+    synthesis: 22,
     project: 20,
     architecture: 16,
+    source: 12,
     concept: 14,
     workflow: 12,
     constraint: 6,
@@ -155,17 +170,20 @@ const MODE_TYPE_PRIORITIES = {
     "gotcha",
     "constraint",
     "fact",
+    "synthesis",
     "decision",
     "architecture",
     "workflow",
     "question",
     "concept",
     "project",
+    "source",
     "note"
   ]),
   review: priorityMap([
     "constraint",
     "decision",
+    "synthesis",
     "gotcha",
     "architecture",
     "workflow",
@@ -173,24 +191,29 @@ const MODE_TYPE_PRIORITIES = {
     "fact",
     "concept",
     "project",
+    "source",
     "note"
   ]),
   architecture: priorityMap([
     "architecture",
+    "synthesis",
     "decision",
     "constraint",
     "concept",
     "question",
     "project",
+    "source",
     "workflow",
     "gotcha",
     "fact",
     "note"
   ]),
   onboarding: priorityMap([
+    "synthesis",
     "project",
     "architecture",
     "concept",
+    "source",
     "workflow",
     "constraint",
     "decision",
@@ -290,7 +313,6 @@ export interface RankedMemoryItem {
 }
 
 export type RankExclusionReason =
-  | "rejected"
   | "scope_project_mismatch"
   | "scope_branch_unavailable"
   | "scope_branch_mismatch"
@@ -351,11 +373,6 @@ export function rankMemoryCandidates(
   const rankable: RankableCandidate[] = [];
 
   for (const candidate of input.candidates) {
-    if (candidate.status === "rejected") {
-      excluded.push({ id: candidate.id, reason: "rejected", candidate });
-      continue;
-    }
-
     const scope = scopeMatches(candidate.scope, {
       taskPhrase: normalizedTask,
       significantTaskTerms,
@@ -747,10 +764,7 @@ function hasTermOverlap(value: string, taskTerms: readonly string[]): boolean {
 }
 
 function isMustKnowItem(item: RankedMemoryItem): boolean {
-  return (
-    !item.conflicted &&
-    (item.status === "active" || item.status === "open" || item.status === "draft")
-  );
+  return !item.conflicted && (item.status === "active" || item.status === "open");
 }
 
 function isStaleOrSupersededMatch(item: RankedMemoryItem): boolean {
@@ -758,7 +772,7 @@ function isStaleOrSupersededMatch(item: RankedMemoryItem): boolean {
 }
 
 function shouldApplyRecentBoost(status: ObjectStatus): boolean {
-  return status !== "stale" && status !== "superseded" && status !== "rejected";
+  return status !== "stale" && status !== "superseded";
 }
 
 function compareRankedItems(

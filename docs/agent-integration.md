@@ -57,7 +57,7 @@ MCP equivalent when available:
 save_memory_patch({ patch: { source, changes } })
 ```
 
-Dirty or untracked `.aictx/` files are not by themselves a reason to skip saving durable memory. Attempt the supported CLI/MCP save when there is durable future value, and stop only if Aictx rejects the update.
+Dirty or untracked `.aictx/` files are not by themselves a reason to skip saving durable memory. Attempt the supported CLI/MCP save when there is durable future value. Aictx backs up dirty touched files under `.aictx/recovery/` before overwrite/delete and continues where possible.
 
 If `aictx` is not on `PATH`, run the same commands through the project package manager or local binary path:
 
@@ -93,7 +93,7 @@ tools use the server launch directory for backward compatibility.
 
 When `aictx-mcp` is not on `PATH`, configure the MCP client to launch it through the project package manager or local binary path, such as `pnpm exec aictx-mcp`, `npm exec aictx-mcp`, or `./node_modules/.bin/aictx-mcp`. For one-off `npx` usage, name the scoped package explicitly: `npx --package @aictx/memory -- aictx-mcp`.
 
-Use `aictx setup` for guided first-run onboarding, or `aictx setup --apply` when the conservative bootstrap patch should be applied immediately after review. Use `aictx suggest --from-diff --json` when the agent needs a deterministic review packet for current code changes before drafting memory. Use `aictx suggest --bootstrap --json` for a first-run repo memory pass. If loaded memory only contains the init-created project and architecture placeholders, treat setup, onboarding, and "why is memory empty?" requests as enough context to run the bootstrap workflow proactively. Run `aictx suggest --bootstrap --patch > bootstrap-memory.json`, review it with `aictx patch review bootstrap-memory.json`, apply it with `aictx save --file bootstrap-memory.json`, then run `aictx check`. In Git projects, use `aictx diff` before committing memory changes so untracked memory files are included. The bootstrap patch command does not write memory; it only creates a reviewable draft so users do not have to hand-write JSON. Use `aictx audit --json` to find deterministic memory hygiene issues.
+Use `aictx setup` for guided first-run onboarding, or `aictx setup --apply` when the conservative bootstrap patch should be applied immediately after review. Use `aictx suggest --from-diff --json` when the agent needs a deterministic review packet for current code changes before deciding what durable memory to save. Use `aictx suggest --bootstrap --json` for a first-run repo memory pass. If loaded memory only contains the init-created project and architecture placeholders, treat setup, onboarding, and "why is memory empty?" requests as enough context to run the bootstrap workflow proactively. Run `aictx suggest --bootstrap --patch > bootstrap-memory.json`, review it with `aictx patch review bootstrap-memory.json`, apply it with `aictx save --file bootstrap-memory.json`, then run `aictx check`. In Git projects, use `aictx diff` before committing memory changes so untracked memory files are included. The bootstrap patch command does not write memory; it only creates a reviewable patch so users do not have to hand-write JSON. Use `aictx audit --json` to find grouped, actionable memory hygiene issues.
 
 ## Capability Map
 
@@ -146,9 +146,9 @@ writes generated projection files through the same service as
 
 The agent creates the structured patch. Aictx validates it, writes canonical Markdown and JSON files, appends events, updates generated local indexes, and leaves the result reviewable.
 
-Aictx does not infer durable project meaning from diffs. The agent should draft memory updates from current evidence, such as the task, loaded context, repository changes, tests, and conversation context.
+Aictx does not infer durable project meaning from diffs. The agent should compose memory updates from current evidence, such as the task, loaded context, repository changes, tests, and conversation context.
 
-Apply the memory discipline lifecycle: load narrowly before non-trivial work, save only durable knowledge, update existing memory before creating duplicates, stale or supersede wrong old memory, prefer current code and user requests over loaded memory, review diffs, and save nothing when there is no durable future value.
+Apply the memory discipline lifecycle: load narrowly before non-trivial work, save only durable knowledge directly as active memory, update existing memory before creating duplicates, stale or supersede wrong old memory, delete memory that should not persist, prefer current code and user requests over loaded memory, review diffs, and save nothing when there is no durable future value.
 
 Minimal patch:
 
@@ -177,18 +177,22 @@ Save only durable information future agents should know:
 * Operational constraints
 * Gotchas and known failure modes
 * Repeated project workflows
+* Source-backed product intent, feature map, roadmap, architecture, convention, and agent-guidance syntheses
+* User-stated product or repository context that future agents need
 * Important facts found during debugging
 * Open questions that affect future work
 * Stale or superseded memory when old knowledge becomes wrong
 
-Keep memory short and linked. Prefer one durable claim per object and create relations when a decision depends on a constraint, a gotcha affects a workflow, or a new object supersedes old memory. Prefer updating existing memory, marking it stale, or superseding it over creating duplicates. Saving nothing is correct when the task produced no durable future value.
+Right-size memory. Use atomic memories for precise reusable claims. Use `synthesis` memories for compact area-level understanding that future agents should load quickly. Use `source` memories to preserve where context came from, especially repo docs, AGENTS/CLAUDE/rules, package manifests, issues, external references recorded by the agent, and user-stated context. Prefer updating existing memory, marking it stale, superseding it, or deleting memory that should not persist over creating duplicates. Saving nothing is correct when the task produced no durable future value.
 
-Short linked memory means:
+Right-size memory means:
 
-* One durable claim per object.
-* Concise body text that states the current fact, decision, constraint, gotcha, or workflow.
+* Atomic memories normally carry one durable claim.
+* Syntheses summarize an area clearly enough to replace rereading scattered docs.
+* Sources describe provenance, not the full source contents.
+* Concise body text states the current fact, decision, constraint, gotcha, workflow, source, or synthesis.
 * Specific tags that help future retrieval.
-* Durable relations only when the connection matters. Use predicates such as `requires`, `depends_on`, `affects`, or `supersedes` to connect decisions, constraints, workflows, gotchas, and replacements.
+* Durable relations only when the connection matters. Use predicates such as `derived_from`, `summarizes`, `documents`, `requires`, `depends_on`, `affects`, or `supersedes` to connect syntheses, sources, decisions, constraints, workflows, gotchas, and replacements.
 
 Use update-before-create behavior:
 
@@ -196,6 +200,7 @@ Use update-before-create behavior:
 * Use `update_object` when the existing object is still correct but needs fresher wording, tags, status, or body content.
 * Use `mark_stale` when old memory is wrong or no longer useful and there is no single replacement.
 * Use `supersede_object` when a newer object replaces an older one.
+* Use `delete_object` when memory should not persist, such as accidental sensitive content, rejected speculation, or a mistaken duplicate with no future value.
 * Create a new object only when no existing memory should be updated, marked stale, or superseded.
 
 Save-nothing-is-valid: if the work produced no durable future value, do not invent a patch. Tell the user that no Aictx memory was saved.
@@ -206,6 +211,10 @@ Good memory examples:
 * Good linked decision: `decision.billing-retries` plus a `requires` relation to `constraint.webhook-idempotency` when the decision depends on that constraint.
 * Good gotcha: `gotcha.viewer-export-overwrites-manifest-files` when a repeated failure mode affects future work.
 * Good workflow: `workflow.release-smoke-test` for a repeated project procedure.
+* Good source-backed synthesis: `synthesis.product-intent` summarizes what the product is for and has `derived_from` relations to `source.readme` and `source.user-context-hybrid-memory`.
+* Good user-stated context: `source.user-context-hybrid-memory` records durable product direction stated by the user in the task, without saving private or unrelated preferences.
+* Good roadmap memory: `synthesis.roadmap` lists current milestones and has `documents` links to issue or docs sources.
+* Good feature removal: mark `concept.old-feature` stale or supersede it with the replacement feature, and update `synthesis.feature-map`.
 
 Bad memory examples:
 
@@ -213,6 +222,7 @@ Bad memory examples:
 * Bad task diary: saving "I changed three files and tests passed" with no durable project knowledge.
 * Bad speculation: saving "Redis probably handles retries" without current evidence.
 * Bad no-value save: creating memory just because a task finished, even though nothing reusable changed.
+* Bad source dump: pasting an entire README into a `source` object instead of recording concise provenance and linking syntheses to the file.
 
 Update an existing object when the durable memory already exists:
 
@@ -298,7 +308,7 @@ Create a relation with `create_relation` when the connection is durable and usef
 }
 ```
 
-The object types remain broad: `project`, `architecture`, `decision`, `constraint`, `question`, `fact`, `gotcha`, `workflow`, `note`, and `concept`. Use v2 facets for more specific durable categories such as `stack`, `convention`, `testing`, `file-layout`, `product-feature`, `decision-rationale`, `abandoned-attempt`, `workflow`, `gotcha`, and `debugging-fact`. Do not create `history`, `task-note`, or `feature` object types; use Git/events/statuses for history, branch/task scope for temporary task context, and `concept` with `facets.category: "product-feature"` for product capabilities.
+The object types remain broad: `project`, `architecture`, `decision`, `constraint`, `question`, `fact`, `gotcha`, `workflow`, `note`, `concept`, `source`, and `synthesis`. Use facets for more specific durable categories such as `stack`, `convention`, `testing`, `file-layout`, `product-feature`, `feature-map`, `product-intent`, `roadmap`, `agent-guidance`, `source`, `decision-rationale`, `abandoned-attempt`, `workflow`, `gotcha`, and `debugging-fact`. Do not create `history`, `task-note`, or `feature` object types; use Git/events/statuses for history, branch/task scope for temporary task context, and `concept` or `synthesis` facets for product capabilities.
 
 After meaningful work, prefer `aictx suggest --after-task "<task>" --json` before saving memory when the right durable update is not obvious. The helper is read-only and packages changed files, related memory, stale or duplicate candidates, recommended facets, and a save/no-save checklist.
 

@@ -1,5 +1,5 @@
 {
-  "$id": "https://aictx.dev/schemas/v2/object.schema.json",
+  "$id": "https://aictx.dev/schemas/v3/object.schema.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "allOf": [
@@ -9,10 +9,8 @@
           "status": {
             "enum": [
               "active",
-              "draft",
               "stale",
-              "superseded",
-              "rejected"
+              "superseded"
             ]
           }
         }
@@ -28,11 +26,8 @@
         "properties": {
           "status": {
             "enum": [
-              "active",
-              "draft",
               "stale",
               "superseded",
-              "rejected",
               "open",
               "closed"
             ]
@@ -68,7 +63,8 @@
               "relation",
               "file",
               "commit",
-              "task"
+              "task",
+              "source"
             ]
           }
         },
@@ -105,6 +101,11 @@
             "workflow",
             "gotcha",
             "debugging-fact",
+            "source",
+            "product-intent",
+            "feature-map",
+            "roadmap",
+            "agent-guidance",
             "concept",
             "open-question"
           ]
@@ -195,10 +196,8 @@
     "status": {
       "enum": [
         "active",
-        "draft",
         "stale",
         "superseded",
-        "rejected",
         "open",
         "closed"
       ]
@@ -226,6 +225,8 @@
       "enum": [
         "project",
         "architecture",
+        "source",
+        "synthesis",
         "decision",
         "constraint",
         "question",

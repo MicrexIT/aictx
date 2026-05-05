@@ -1,7 +1,7 @@
 {
   "body_path": "memory/concepts/feature-cli-binary-aictx-mcp.md",
-  "content_hash": "sha256:0336eddc84de77fe94c5ee875c909bbd37ab22966610f4d27cbfad711a4cec65",
-  "created_at": "2026-05-04T17:37:16+02:00",
+  "content_hash": "sha256:b8b0af407c3bc81ae0ab910459f8f99a6e60da5c3c4c51a76a5cf40b4f83f58a",
+  "created_at": "2026-05-04T20:21:52+02:00",
   "evidence": [
     {
       "id": "package.json",
@@ -29,7 +29,8 @@
     "kind": "cli",
     "task": "Proposed bootstrap memory patch from deterministic repository analysis"
   },
-  "status": "active",
+  "status": "superseded",
+  "superseded_by": "synthesis.feature-map",
   "tags": [
     "binary",
     "feature",
@@ -38,5 +39,5 @@
   ],
   "title": "Feature: CLI binary aictx-mcp",
   "type": "concept",
-  "updated_at": "2026-05-04T17:37:16+02:00"
+  "updated_at": "2026-05-05T13:30:07+02:00"
 }

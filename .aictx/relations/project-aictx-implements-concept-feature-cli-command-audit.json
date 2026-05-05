@@ -1,17 +1,17 @@
 {
   "confidence": "high",
-  "content_hash": "sha256:da5114f55e76da38d91d8a4b8dcb46ec37ac0d5a01599d612f77866de665df88",
-  "created_at": "2026-05-04T18:04:45+02:00",
+  "content_hash": "sha256:ba1033a296e9639f3ccfcd1a2a181bba2a2b9a8463684bdf024dfd36037641b8",
+  "created_at": "2026-05-04T20:21:52+02:00",
   "evidence": [
     {
-      "id": "src/cli/commands/audit.ts",
-      "kind": "file"
+      "id": "synthesis.feature-map",
+      "kind": "memory"
     }
   ],
   "from": "project.aictx",
   "id": "rel.project-aictx-implements-concept-feature-cli-command-audit",
   "predicate": "implements",
-  "status": "active",
+  "status": "stale",
   "to": "concept.feature-cli-command-audit",
-  "updated_at": "2026-05-04T18:04:45+02:00"
+  "updated_at": "2026-05-05T13:43:35+02:00"
 }

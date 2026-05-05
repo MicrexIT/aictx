@@ -15,6 +15,7 @@ const MAX_ONBOARDING_GOTCHAS = 2;
 type ContextSectionTitle =
   | "Must know"
   | "Architecture Snapshot"
+  | "Relevant syntheses"
   | "Do not do"
   | "Rationale Gaps"
   | "Linked History"
@@ -27,6 +28,7 @@ type ContextSectionTitle =
   | "Relevant gotchas"
   | "Relevant workflows"
   | "Relevant facts"
+  | "Relevant sources"
   | "Abandoned approaches"
   | "Relevant files"
   | "Open questions"
@@ -146,6 +148,11 @@ function buildSectionCandidates(
   return [
     memorySection("Must know", primaryItems, sectionRequired("Must know", mode)),
     architectureSnapshotSection(primaryItems, mode),
+    memorySection(
+      "Relevant syntheses",
+      primaryItems.filter((item) => item.type === "synthesis"),
+      sectionRequired("Relevant syntheses", mode)
+    ),
     doNotDoSection(primaryItems),
     rationaleGapsSection(input.rationaleGaps ?? []),
     linkedHistorySection(input.linkedHistory ?? []),
@@ -193,6 +200,11 @@ function buildSectionCandidates(
       "Relevant facts",
       primaryItems.filter((item) => item.type === "fact"),
       sectionRequired("Relevant facts", mode)
+    ),
+    memorySection(
+      "Relevant sources",
+      primaryItems.filter((item) => item.type === "source"),
+      sectionRequired("Relevant sources", mode)
     ),
     memorySection(
       "Abandoned approaches",
@@ -251,10 +263,12 @@ function sectionRequired(title: ContextSectionTitle, mode: LoadMemoryMode): bool
       return (
         title === "Relevant decisions" ||
         title === "Relevant constraints" ||
+        title === "Relevant syntheses" ||
         title === "Open questions"
       );
     case "onboarding":
       return (
+        title === "Relevant syntheses" ||
         title === "Relevant workflows" ||
         title === "Relevant stack" ||
         title === "Relevant file layout"
@@ -316,6 +330,7 @@ function architectureSnapshotSection(
     .filter(
       (item) =>
         item.type === "architecture" ||
+        item.type === "synthesis" ||
         item.type === "constraint" ||
         item.type === "decision" ||
         item.type === "gotcha" ||

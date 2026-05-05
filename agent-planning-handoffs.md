@@ -1162,7 +1162,7 @@ Do not modify:
 
 Acceptance:
 - Inspect shows one object plus direct relations.
-- Stale lists stale, superseded, and rejected memory.
+- Stale lists stale and superseded memory.
 - Graph returns relation neighborhood for debugging.
 
 Run:

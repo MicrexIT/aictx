@@ -100,7 +100,7 @@ describe("suggest discipline packets", () => {
         "constraint.billing-idempotency",
         "decision.webhook-retries"
       ],
-      recommended_memory: ["decision", "constraint", "gotcha", "workflow", "fact"],
+      recommended_memory: ["synthesis", "decision", "constraint", "gotcha", "workflow", "fact"],
       recommended_evidence: [
         { kind: "file", id: "src/billing/webhook.ts" },
         { kind: "file", id: "src/billing/worker.ts" }
@@ -117,7 +117,7 @@ describe("suggest discipline packets", () => {
         "Create memory only for durable future value.",
         "Prefer updating, marking stale, or superseding existing memory over creating duplicates.",
         "Use current code, tests, manifests, and user instructions as evidence.",
-        "Keep each memory object short, linked, and reviewable.",
+        "Right-size memory: atomic for precise claims, source for provenance, synthesis for compact area-level understanding.",
         "Save nothing if the work produced no durable future value."
       ]
     });
@@ -172,13 +172,15 @@ describe("suggest discipline packets", () => {
     expect(packet.recommended_memory).toEqual([
       "project",
       "architecture",
+      "source",
+      "synthesis",
       "workflow",
       "constraint",
       "gotcha",
       "decision"
     ]);
     expect(packet.agent_checklist).toContain(
-      "During setup, capture explicit current product features as concept memory with the product-feature facet; mark removed or replaced features stale or superseded."
+      "During setup, capture explicit product features in a maintained feature-map synthesis backed by source records; mark removed or replaced feature memories stale or superseded."
     );
   });
 
@@ -221,7 +223,7 @@ describe("suggest discipline packets", () => {
     );
   });
 
-  it("recommends concept memory and product-feature facets for feature work", () => {
+  it("recommends synthesis memory and product-feature facets for feature work", () => {
     const storage = storageSnapshot({
       objects: [],
       relations: []
@@ -233,7 +235,7 @@ describe("suggest discipline packets", () => {
       storage
     });
 
-    expect(packet.recommended_memory).toContain("concept");
+    expect(packet.recommended_memory).toContain("synthesis");
     expect(packet.recommended_facets).toContain("product-feature");
     expect(packet.recommended_evidence).toEqual([
       { kind: "file", id: "app/dashboard/page.tsx" }
@@ -286,15 +288,9 @@ describe("suggest discipline packets", () => {
     expect(proposal.patch).not.toBeNull();
     expect(proposal.reason).toBeNull();
     expect(proposal.packet.mode).toBe("bootstrap");
-    expect(proposal.patch?.changes.map((change) => change.op)).toEqual([
-      "update_object",
-      "update_object",
-      "create_relation",
-      "create_object",
-      "create_object",
-      "create_object",
-      "create_object"
-    ]);
+    expect(proposal.patch?.changes.map((change) => change.op)).toEqual(
+      expect.arrayContaining(["update_object", "create_relation", "create_object"])
+    );
     expect(proposal.patch?.changes).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ op: "update_object", id: "project.billing-api" }),
@@ -307,6 +303,35 @@ describe("suggest discipline packets", () => {
           to: "architecture.current",
           status: "active",
           confidence: "high"
+        }),
+        expect.objectContaining({
+          op: "create_object",
+          id: "source.readme",
+          type: "source",
+          facets: expect.objectContaining({ category: "source" })
+        }),
+        expect.objectContaining({
+          op: "create_object",
+          id: "source.package-json",
+          type: "source",
+          facets: expect.objectContaining({ category: "source" })
+        }),
+        expect.objectContaining({
+          op: "create_object",
+          id: "synthesis.product-intent",
+          type: "synthesis",
+          facets: expect.objectContaining({ category: "product-intent" }),
+          evidence: expect.arrayContaining([
+            { kind: "source", id: "source.readme" },
+            { kind: "source", id: "source.package-json" }
+          ])
+        }),
+        expect.objectContaining({
+          op: "create_relation",
+          from: "synthesis.product-intent",
+          predicate: "derived_from",
+          to: "source.readme",
+          evidence: [{ kind: "source", id: "source.readme" }]
         }),
         expect.objectContaining({ op: "create_object", id: "workflow.package-scripts" }),
         expect.objectContaining({
@@ -325,7 +350,7 @@ describe("suggest discipline packets", () => {
     }
   });
 
-  it("creates product-feature concept memory from explicit README feature bullets", async () => {
+  it("creates a source-backed feature-map synthesis from explicit README feature bullets", async () => {
     const projectRoot = await createTempRoot("aictx-discipline-bootstrap-features-");
     await writeProjectFile(
       projectRoot,
@@ -359,34 +384,48 @@ describe("suggest discipline packets", () => {
     });
 
     expect(proposal.proposed).toBe(true);
-    expect(proposal.packet.recommended_memory).toContain("concept");
+    expect(proposal.packet.recommended_memory).toContain("synthesis");
     expect(proposal.packet.recommended_facets).toEqual(["product-feature"]);
     expect(proposal.patch?.changes).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           op: "create_object",
-          id: "concept.feature-customer-dashboard",
-          type: "concept",
-          title: "Feature: Customer dashboard",
-          tags: ["customer", "dashboard", "feature", "product"],
-          facets: {
-            category: "product-feature",
-            applies_to: ["README.md"],
-            load_modes: ["coding", "onboarding"]
-          },
+          id: "source.readme",
+          type: "source",
           evidence: [{ kind: "file", id: "README.md" }]
         }),
         expect.objectContaining({
+          op: "create_object",
+          id: "synthesis.feature-map",
+          type: "synthesis",
+          title: "Feature map",
+          tags: ["synthesis", "features"],
+          facets: {
+            category: "feature-map",
+            applies_to: ["README.md"],
+            load_modes: ["coding", "onboarding"]
+          },
+          evidence: [{ kind: "source", id: "source.readme" }]
+        }),
+        expect.objectContaining({
           op: "create_relation",
-          id: "rel.project-billing-api-implements-concept-feature-customer-dashboard",
-          from: "project.billing-api",
-          predicate: "implements",
-          to: "concept.feature-customer-dashboard",
+          from: "synthesis.feature-map",
+          predicate: "derived_from",
+          to: "source.readme",
           status: "active",
           confidence: "high",
-          evidence: [{ kind: "file", id: "README.md" }]
+          evidence: [{ kind: "source", id: "source.readme" }]
         })
       ])
+    );
+    const featureMap = proposal.patch?.changes.find(
+      (change) => change.op === "create_object" && change.id === "synthesis.feature-map"
+    );
+    expect(featureMap?.op === "create_object" ? featureMap.body : "").toContain(
+      "Customer dashboard"
+    );
+    expect(featureMap?.op === "create_object" ? featureMap.body : "").toContain(
+      "Webhook event log"
     );
 
     const validators = await compileProjectSchemas(projectRoot);
@@ -494,7 +533,7 @@ describe("suggest discipline packets", () => {
     }
   });
 
-  it("creates product-feature concepts from package bins, CLI commands, and route files", async () => {
+  it("summarizes package bins, CLI commands, and route files in the feature-map synthesis", async () => {
     const projectRoot = await createTempRoot("aictx-discipline-bootstrap-code-features-");
     await writeProjectFile(projectRoot, "README.md", "# Billing App\n");
     await writeJsonProjectFile(projectRoot, "package.json", {
@@ -537,51 +576,42 @@ describe("suggest discipline packets", () => {
     });
 
     expect(proposal.proposed).toBe(true);
-    expect(proposal.packet.recommended_memory).toContain("concept");
+    expect(proposal.packet.recommended_memory).toContain("synthesis");
     expect(proposal.packet.recommended_facets).toEqual(["product-feature"]);
     expect(proposal.patch?.changes).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          id: "concept.feature-cli-binary-billing",
-          type: "concept",
-          facets: expect.objectContaining({ category: "product-feature" }),
+          id: "source.package-json",
+          type: "source",
           evidence: [{ kind: "file", id: "package.json" }]
         }),
         expect.objectContaining({
-          id: "concept.feature-cli-command-sync",
-          type: "concept",
-          evidence: [{ kind: "file", id: "src/cli/commands/sync.ts" }]
-        }),
-        expect.objectContaining({
-          id: "concept.feature-route-dashboard",
-          type: "concept",
-          evidence: [{ kind: "file", id: "app/dashboard/page.tsx" }]
-        }),
-        expect.objectContaining({
-          op: "create_relation",
-          id: "rel.project-billing-app-implements-concept-feature-cli-binary-billing",
-          from: "project.billing-app",
-          predicate: "implements",
-          to: "concept.feature-cli-binary-billing",
-          evidence: [{ kind: "file", id: "package.json" }]
+          id: "synthesis.feature-map",
+          type: "synthesis",
+          facets: expect.objectContaining({ category: "feature-map" }),
+          evidence: expect.arrayContaining([
+            { kind: "source", id: "source.package-json" }
+          ])
         }),
         expect.objectContaining({
           op: "create_relation",
-          id: "rel.project-billing-app-implements-concept-feature-cli-command-sync",
-          from: "project.billing-app",
-          predicate: "implements",
-          to: "concept.feature-cli-command-sync",
-          evidence: [{ kind: "file", id: "src/cli/commands/sync.ts" }]
-        }),
-        expect.objectContaining({
-          op: "create_relation",
-          id: "rel.project-billing-app-implements-concept-feature-route-dashboard",
-          from: "project.billing-app",
-          predicate: "implements",
-          to: "concept.feature-route-dashboard",
-          evidence: [{ kind: "file", id: "app/dashboard/page.tsx" }]
+          from: "synthesis.feature-map",
+          predicate: "derived_from",
+          to: "source.package-json"
         })
       ])
+    );
+    const featureMap = proposal.patch?.changes.find(
+      (change) => change.op === "create_object" && change.id === "synthesis.feature-map"
+    );
+    expect(featureMap?.op === "create_object" ? featureMap.body : "").toContain(
+      "CLI binary billing"
+    );
+    expect(featureMap?.op === "create_object" ? featureMap.body : "").toContain(
+      "CLI command sync"
+    );
+    expect(featureMap?.op === "create_object" ? featureMap.body : "").toContain(
+      "Route /dashboard"
     );
 
     const validators = await compileProjectSchemas(projectRoot);
@@ -591,7 +621,7 @@ describe("suggest discipline packets", () => {
     }
   });
 
-  it("links existing product-feature concepts during bootstrap when the relation is missing", async () => {
+  it("links existing feature-map syntheses to source records during bootstrap when provenance is missing", async () => {
     const projectRoot = await createTempRoot("aictx-discipline-bootstrap-existing-feature-");
     await writeProjectFile(
       projectRoot,
@@ -616,11 +646,18 @@ describe("suggest discipline packets", () => {
           body: "Existing project memory."
         }),
         memoryObject({
-          id: "concept.feature-customer-dashboard",
-          type: "concept",
+          id: "source.readme",
+          type: "source",
           status: "active",
-          title: "Feature: Customer dashboard",
-          body: "Existing feature memory."
+          title: "Source: README.md",
+          body: "Existing README source."
+        }),
+        memoryObject({
+          id: "synthesis.feature-map",
+          type: "synthesis",
+          status: "active",
+          title: "Feature map",
+          body: "Existing feature map."
         })
       ],
       relations: [],
@@ -637,13 +674,13 @@ describe("suggest discipline packets", () => {
     expect(proposal.patch?.changes).toEqual([
       {
         op: "create_relation",
-        id: "rel.project-billing-api-implements-concept-feature-customer-dashboard",
-        from: "project.billing-api",
-        predicate: "implements",
-        to: "concept.feature-customer-dashboard",
+        id: "rel.synthesis-feature-map-derived-from-source-readme",
+        from: "synthesis.feature-map",
+        predicate: "derived_from",
+        to: "source.readme",
         status: "active",
         confidence: "high",
-        evidence: [{ kind: "file", id: "README.md" }]
+        evidence: [{ kind: "source", id: "source.readme" }]
       }
     ]);
 
@@ -654,7 +691,7 @@ describe("suggest discipline packets", () => {
     }
   });
 
-  it("does not duplicate existing product-feature relations during bootstrap", async () => {
+  it("does not duplicate existing source-backed syntheses during bootstrap", async () => {
     const projectRoot = await createTempRoot("aictx-discipline-bootstrap-linked-feature-");
     await writeProjectFile(
       projectRoot,
@@ -678,16 +715,21 @@ describe("suggest discipline packets", () => {
           body: "Existing project memory."
         }),
         memoryObject({
-          id: "concept.feature-customer-dashboard",
-          type: "concept",
+          id: "source.readme",
+          type: "source",
           status: "active",
-          title: "Feature: Customer dashboard",
-          body: "Existing feature memory."
+          title: "Source: README.md",
+          body: "Existing README source."
+        }),
+        memoryObject({
+          id: "synthesis.feature-map",
+          type: "synthesis",
+          status: "active",
+          title: "Feature map",
+          body: "Existing feature map."
         })
       ],
-      relations: [
-        projectFeatureRelation("project.billing-api", "concept.feature-customer-dashboard")
-      ],
+      relations: [provenanceRelation("synthesis.feature-map", "source.readme")],
       projectId: "project.billing-api",
       projectName: "Billing API"
     });
@@ -745,9 +787,33 @@ describe("suggest discipline packets", () => {
           status: "active",
           title: "Package manager",
           body: "Existing package manager constraint."
+        }),
+        memoryObject({
+          id: "source.package-json",
+          type: "source",
+          status: "active",
+          title: "Source: package.json",
+          body: "Existing package source."
+        }),
+        memoryObject({
+          id: "synthesis.product-intent",
+          type: "synthesis",
+          status: "active",
+          title: "Product intent",
+          body: "Existing product intent."
+        }),
+        memoryObject({
+          id: "synthesis.agent-guidance",
+          type: "synthesis",
+          status: "active",
+          title: "Agent guidance",
+          body: "Existing agent guidance synthesis."
         })
       ],
-      relations: [projectArchitectureRelation("project.billing-api")],
+      relations: [
+        projectArchitectureRelation("project.billing-api"),
+        provenanceRelation("synthesis.product-intent", "source.package-json")
+      ],
       projectId: "project.billing-api",
       projectName: "Billing API"
     });
@@ -781,20 +847,27 @@ describe("suggest discipline packets", () => {
     });
 
     expect(proposal.proposed).toBe(true);
-    expect(proposal.patch?.changes).toEqual([
-      {
-        op: "create_relation",
-        id: "rel.project-tiny-related-to-architecture-current",
-        from: "project.tiny",
-        predicate: "related_to",
-        to: "architecture.current",
-        status: "active",
-        confidence: "high"
-      }
-    ]);
+    expect(proposal.patch?.changes).toEqual(
+      expect.arrayContaining([
+        {
+          op: "create_relation",
+          id: "rel.project-tiny-related-to-architecture-current",
+          from: "project.tiny",
+          predicate: "related_to",
+          to: "architecture.current",
+          status: "active",
+          confidence: "high"
+        },
+        expect.objectContaining({
+          op: "create_object",
+          id: "source.readme",
+          type: "source"
+        })
+      ])
+    );
   });
 
-  it("returns a clear no-patch proposal for small repos without confident evidence", async () => {
+  it("creates only source records for small repos without confident synthesis evidence", async () => {
     const projectRoot = await createTempRoot("aictx-discipline-bootstrap-minimal-");
     await writeProjectFile(projectRoot, "README.md", "# Tiny\n");
     await writeJsonProjectFile(projectRoot, "package.json", {});
@@ -814,13 +887,19 @@ describe("suggest discipline packets", () => {
       storage
     });
 
-    expect(proposal).toEqual(
-      expect.objectContaining({
-        proposed: false,
-        patch: null,
-        reason:
-          "No high-confidence bootstrap memory patch could be generated from deterministic repository evidence."
-      })
+    expect(proposal.proposed).toBe(true);
+    expect(proposal.reason).toBeNull();
+    expect(proposal.patch?.changes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ op: "create_object", id: "source.readme", type: "source" }),
+        expect.objectContaining({ op: "create_object", id: "source.package-json", type: "source" })
+      ])
+    );
+    expect(proposal.patch?.changes).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ op: "create_object", id: "synthesis.product-intent" }),
+        expect.objectContaining({ op: "create_object", id: "synthesis.feature-map" })
+      ])
     );
     expect(proposal.packet.changed_files).toEqual(
       expect.arrayContaining(["README.md", "package.json", "src/index.ts"])
@@ -938,15 +1017,16 @@ function projectArchitectureRelation(projectId: ObjectId): StoredMemoryRelation 
   };
 }
 
-function projectFeatureRelation(projectId: ObjectId, featureId: ObjectId): StoredMemoryRelation {
-  const id = `rel.${projectId.replace(".", "-")}-implements-${featureId.replace(".", "-")}`;
+function provenanceRelation(from: ObjectId, to: ObjectId): StoredMemoryRelation {
+  const id = `rel.${from.replace(".", "-")}-derived-from-${to.replace(".", "-")}`;
   const relationData: MemoryRelation = {
     id,
-    from: projectId,
-    predicate: "implements",
-    to: featureId,
+    from,
+    predicate: "derived_from",
+    to,
     status: "active",
     confidence: "high",
+    evidence: [{ kind: "source", id: to }],
     content_hash: "sha256:relation",
     created_at: TIMESTAMP,
     updated_at: TIMESTAMP

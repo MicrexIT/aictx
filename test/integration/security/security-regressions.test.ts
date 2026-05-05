@@ -284,7 +284,7 @@ describe("integration security regression guardrails", () => {
     await expect(readdir(projectRoot)).resolves.toEqual([]);
   });
 
-  it("keeps stale, superseded, and rejected memory out of Must know by default", async () => {
+  it("keeps stale and superseded memory out of Must know by default", async () => {
     const projectRoot = await createInitializedProject("aictx-security-load-");
     await writeMemoryObject(projectRoot, {
       id: "decision.security-active",
@@ -315,15 +315,6 @@ describe("integration security regression guardrails", () => {
       tags: ["security", "regression"],
       supersededBy: "decision.security-active"
     });
-    await writeMemoryObject(projectRoot, {
-      id: "note.security-rejected",
-      type: "note",
-      status: "rejected",
-      title: "Security rejected memory",
-      bodyPath: "memory/notes/security-rejected.md",
-      body: "# Security rejected memory\n\nSecurity regression keyword rejected guidance must never render.\n",
-      tags: ["security", "regression"]
-    });
     await rebuildProject(projectRoot);
 
     const output = await runCli(
@@ -340,12 +331,9 @@ describe("integration security regression guardrails", () => {
     expect(mustKnow).toContain("decision.security-active");
     expect(mustKnow).not.toContain("decision.security-stale");
     expect(mustKnow).not.toContain("decision.security-superseded");
-    expect(mustKnow).not.toContain("note.security-rejected");
     expect(staleSection).toContain("decision.security-stale");
     expect(staleSection).toContain("decision.security-superseded");
-    expect(envelope.data.context_pack).not.toContain("note.security-rejected");
     expect(envelope.data.included_ids).toContain("decision.security-active");
-    expect(envelope.data.excluded_ids).toContain("note.security-rejected");
   });
 });
 

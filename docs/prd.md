@@ -133,7 +133,7 @@ Aictx is not:
 Aictx is:
 
 * A local project-memory layer for AI coding agents
-* A local source of truth for architecture decisions, constraints, facts, open questions, project concepts, and product features
+* A local source of truth for architecture decisions, constraints, facts, open questions, project concepts, product features, provenance sources, and maintained syntheses
 * A context compiler that gives agents compact relevant context for a task
 * A deterministic persistence layer for agent-generated memory updates
 * Transparent memory files that developers can diff, edit, commit, and revert when Git is available
@@ -319,7 +319,7 @@ The memory lifecycle rules are:
 * Review memory diffs at the end of meaningful work so the user can approve, edit, or revert changes.
 * Save nothing when no durable future value was discovered.
 
-Aictx may produce deterministic review packets that help an agent decide what to save, but Aictx must not pretend to semantically understand a diff without the user's agent. The agent remains responsible for drafting structured memory patches.
+Aictx may produce deterministic review packets that help an agent decide what to save, but Aictx must not pretend to semantically understand a diff without the user's agent. The agent remains responsible for composing structured memory patches.
 
 ⸻
 
@@ -491,12 +491,12 @@ aictx suggest --bootstrap
 Purpose:
 
 * Package deterministic evidence for the user's agent.
-* Help the agent decide whether to create, update, stale, or supersede memory.
-* Generate bootstrap patch drafts only when deterministic evidence is strong, and never save them implicitly.
+* Help the agent decide whether to create, update, stale, supersede, delete, or skip memory.
+* Generate bootstrap patch proposals only when deterministic evidence is strong, and never save them implicitly.
 
 `aictx suggest --from-diff` is Git-required. It should summarize changed files, changed `.aictx/` files, related existing memory, possible stale candidates, and a concise agent checklist. It must not write memory.
 
-`aictx suggest --bootstrap` should work without Git. It should list likely source files to inspect, such as README files, package manifests, framework configs, docs, and obvious entrypoints, and recommend seed memory classes for project intent, architecture, constraints, workflows, gotchas, concepts, product features, and open questions. `aictx suggest --bootstrap --patch` may emit a conservative structured patch for review and `aictx save`, but it must not write memory.
+`aictx suggest --bootstrap` should work without Git. It should list likely source files to inspect, such as README files, package manifests, framework configs, docs, agent guidance files, and obvious entrypoints, and recommend seed memory classes for sources, syntheses, project intent, architecture, constraints, workflows, gotchas, concepts, product features, roadmap, agent guidance, and open questions. `aictx suggest --bootstrap --patch` may emit a conservative structured patch for review and `aictx save`, but it must not write memory. Bootstrap patches should prefer source records plus compact product intent, feature map, and agent guidance syntheses over noisy one-node-per-command memory.
 
 5.3.2 Memory audit packets
 
@@ -945,6 +945,8 @@ gotcha
 workflow
 note
 concept
+source
+synthesis
 
 Definitions:
 
@@ -988,7 +990,19 @@ concept
 
 Named project/domain concept used for linking and retrieval.
 
-Only these ten values are object types in v1. Do not add `history` or `task-note`
+source
+
+Concise provenance record for where durable context came from: repo docs,
+AGENTS/CLAUDE/rules, package manifests, issues, external references recorded by
+the agent, or user-stated context.
+
+synthesis
+
+Maintained compact summary for an area future agents need to recall quickly,
+such as product intent, feature map, roadmap, architecture, conventions, agent
+guidance, or repeated workflows.
+
+Only these twelve values are object types in storage v3. Do not add `history` or `task-note`
 as object types: use Git/events/statuses for history and use branch/task scope
 for temporary task context.
 
@@ -997,10 +1011,8 @@ for temporary task context.
 General memory statuses:
 
 active
-draft
 stale
 superseded
-rejected
 
 Question-specific statuses:
 
@@ -1010,14 +1022,17 @@ closed
 Suggested usage:
 
 * active: current and usable
-* draft: proposed or incomplete
 * stale: no longer reliable
 * superseded: replaced by another object
-* rejected: intentionally not accepted
 * open: unresolved question, primarily for question objects
 * closed: resolved question, primarily for question objects
 
-V1 should avoid mixing lifecycle meanings. Non-question objects should normally use active, draft, stale, superseded, or rejected.
+Storage v3 should avoid mixing lifecycle meanings. Non-question objects use
+`active`, `stale`, or `superseded`. Question objects use `open`, `closed`,
+`stale`, or `superseded`. Agents save useful memory directly as active memory;
+there is no normal persisted proposal or rejection workflow. Delete memory that
+should not persist, such as accidental sensitive content, rejected speculation,
+or mistaken duplicates with no future value.
 
 9.3 Object JSON sidecar schema example
 
@@ -1207,7 +1222,6 @@ memory.created
 memory.updated
 memory.marked_stale
 memory.superseded
-memory.rejected
 memory.deleted
 relation.created
 relation.updated
@@ -1215,7 +1229,9 @@ relation.deleted
 index.rebuilt
 context.generated
 
-Physical deletion should be rare. Prefer stale/superseded statuses.
+Physical deletion should be reserved for memory that should not persist. Prefer
+stale/superseded statuses when older knowledge remains useful as history or as
+an explicit warning.
 
 ⸻
 
@@ -1705,7 +1721,7 @@ V1 should include basic safeguards:
 * Prefer context pack sections that distinguish facts, constraints, decisions, and stale memory.
 * Detect obvious secret material before saving.
 * Make every memory write visible as local file changes and, in Git projects, visible in Git diff.
-* Avoid loading stale, superseded, rejected, or conflicted memory into Must know sections by default.
+* Avoid loading stale, superseded, or conflicted memory into Must know sections by default.
 
 Aictx should not attempt full automated truth verification in v1. The safety model is structured memory, local files, and Git review/reversible history when available.
 

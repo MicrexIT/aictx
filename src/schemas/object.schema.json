@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://aictx.dev/schemas/v2/object.schema.json",
+  "$id": "https://aictx.dev/schemas/v3/object.schema.json",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -20,10 +20,10 @@
       "pattern": "^[a-z][a-z0-9_]*\\.[a-z0-9][a-z0-9-]*$"
     },
     "type": {
-      "enum": ["project", "architecture", "decision", "constraint", "question", "fact", "gotcha", "workflow", "note", "concept"]
+      "enum": ["project", "architecture", "source", "synthesis", "decision", "constraint", "question", "fact", "gotcha", "workflow", "note", "concept"]
     },
     "status": {
-      "enum": ["active", "draft", "stale", "superseded", "rejected", "open", "closed"]
+      "enum": ["active", "stale", "superseded", "open", "closed"]
     },
     "title": {
       "type": "string",
@@ -80,6 +80,11 @@
             "workflow",
             "gotcha",
             "debugging-fact",
+            "source",
+            "product-intent",
+            "feature-map",
+            "roadmap",
+            "agent-guidance",
             "concept",
             "open-question"
           ]
@@ -109,7 +114,7 @@
         "required": ["kind", "id"],
         "properties": {
           "kind": {
-            "enum": ["memory", "relation", "file", "commit", "task"]
+            "enum": ["memory", "relation", "file", "commit", "task", "source"]
           },
           "id": {
             "type": "string",
@@ -164,14 +169,14 @@
       "then": {
         "properties": {
           "status": {
-            "enum": ["active", "draft", "stale", "superseded", "rejected", "open", "closed"]
+            "enum": ["stale", "superseded", "open", "closed"]
           }
         }
       },
       "else": {
         "properties": {
           "status": {
-            "enum": ["active", "draft", "stale", "superseded", "rejected"]
+            "enum": ["active", "stale", "superseded"]
           }
         }
       }

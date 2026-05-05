@@ -103,6 +103,7 @@ export interface SuggestBootstrapPatchProposal {
 }
 
 const FROM_DIFF_RECOMMENDED_MEMORY: ObjectType[] = [
+  "synthesis",
   "decision",
   "constraint",
   "gotcha",
@@ -112,12 +113,15 @@ const FROM_DIFF_RECOMMENDED_MEMORY: ObjectType[] = [
 const BOOTSTRAP_RECOMMENDED_MEMORY: ObjectType[] = [
   "project",
   "architecture",
+  "source",
+  "synthesis",
   "workflow",
   "constraint",
   "gotcha",
   "decision"
 ];
 const AFTER_TASK_RECOMMENDED_MEMORY: ObjectType[] = [
+  "synthesis",
   "decision",
   "constraint",
   "gotcha",
@@ -131,6 +135,11 @@ const RECOMMENDED_FACETS: FacetCategory[] = [
   "gotcha",
   "workflow",
   "debugging-fact",
+  "source",
+  "product-intent",
+  "feature-map",
+  "roadmap",
+  "agent-guidance",
   "testing",
   "file-layout",
   "stack",
@@ -141,24 +150,24 @@ const AGENT_CHECKLIST = [
   "Create memory only for durable future value.",
   "Prefer updating, marking stale, or superseding existing memory over creating duplicates.",
   "Use current code, tests, manifests, and user instructions as evidence.",
-  "Keep each memory object short, linked, and reviewable.",
+  "Right-size memory: atomic for precise claims, source for provenance, synthesis for compact area-level understanding.",
   "Save nothing if the work produced no durable future value."
 ] as const;
 const BOOTSTRAP_PRODUCT_FEATURE_CHECKLIST_ITEM =
-  "During setup, capture explicit current product features as concept memory with the product-feature facet; mark removed or replaced features stale or superseded.";
+  "During setup, capture explicit product features in a maintained feature-map synthesis backed by source records; mark removed or replaced feature memories stale or superseded.";
 const AGENT_GUIDANCE_FILES = ["AGENTS.md", "CLAUDE.md"] as const;
 const AICTX_MEMORY_START_MARKER = "<!-- aictx-memory:start -->";
 const AICTX_MEMORY_END_MARKER = "<!-- aictx-memory:end -->";
 const SAVE_DECISION_CHECKLIST = [
   "Save memory only when the task produced durable future value.",
   "Prefer updating, marking stale, or superseding related memory over creating duplicates.",
+  "Choose the right layer: atomic memory for precise claims, source records for provenance, synthesis records for compact area-level summaries.",
   "Add facets.category and evidence when creating or updating durable memory.",
   "Use facets.applies_to for relevant files, subsystems, commands, or configs.",
   "Record abandoned approaches as active abandoned-attempt memory only when future agents should avoid retrying them."
 ] as const;
 const STALE_CANDIDATE_STATUSES = new Set<ObjectStatus>([
   "active",
-  "draft",
   "open",
   "closed"
 ]);
@@ -486,6 +495,10 @@ function buildBootstrapPatchChanges(
     changes.push(projectArchitectureRelation);
   }
 
+  const bootstrapSources = sourceRecordChanges(storage, analysis);
+  changes.push(...bootstrapSources.changes);
+  changes.push(...synthesisRecordChanges(storage, analysis, bootstrapSources.byPath));
+
   const workflow = packageScriptsWorkflow(storage, analysis);
 
   if (workflow !== null) {
@@ -516,20 +529,18 @@ function buildBootstrapPatchChanges(
     changes.push(packageManagerChange);
   }
 
-  changes.push(...productFeatureConcepts(storage, analysis));
-
   return changes;
 }
 
 function recommendedBootstrapMemory(hasProductFeatures: boolean): ObjectType[] {
   return hasProductFeatures
-    ? uniqueObjectTypes([...BOOTSTRAP_RECOMMENDED_MEMORY, "concept"])
+    ? uniqueObjectTypes([...BOOTSTRAP_RECOMMENDED_MEMORY, "synthesis"])
     : [...BOOTSTRAP_RECOMMENDED_MEMORY];
 }
 
 function recommendedMemoryForTask(task: string, changedFiles: readonly string[]): ObjectType[] {
   return isProductFeatureTask(task, changedFiles)
-    ? uniqueObjectTypes([...AFTER_TASK_RECOMMENDED_MEMORY, "concept"])
+    ? uniqueObjectTypes([...AFTER_TASK_RECOMMENDED_MEMORY, "synthesis"])
     : [...AFTER_TASK_RECOMMENDED_MEMORY];
 }
 
@@ -723,6 +734,323 @@ function hasEquivalentRelation(
       relation.relation.predicate === predicate &&
       relation.relation.to === to
   );
+}
+
+interface BootstrapSourceRecords {
+  changes: BootstrapPatchChange[];
+  byPath: Map<string, ObjectId>;
+}
+
+function sourceRecordChanges(
+  storage: CanonicalStorageSnapshot,
+  analysis: BootstrapAnalysis
+): BootstrapSourceRecords {
+  const changes: BootstrapPatchChange[] = [];
+  const byPath = new Map<string, ObjectId>();
+
+  for (const path of bootstrapSourcePaths(analysis)) {
+    const title = `Source: ${path}`;
+    const id = sourceIdForPath(path);
+    const existing = similarObject(storage, "source", id, title);
+    const sourceId = existing?.sidecar.id ?? id;
+
+    byPath.set(path, sourceId);
+
+    if (existing !== undefined) {
+      continue;
+    }
+
+    changes.push({
+      op: "create_object",
+      id,
+      type: "source",
+      title,
+      body: sourceBody(path, analysis),
+      tags: ["source"],
+      facets: {
+        category: "source",
+        applies_to: [path],
+        load_modes: ["onboarding", "architecture"]
+      },
+      evidence: [{ kind: "file", id: path }]
+    });
+  }
+
+  return { changes, byPath };
+}
+
+function synthesisRecordChanges(
+  storage: CanonicalStorageSnapshot,
+  analysis: BootstrapAnalysis,
+  sourcesByPath: ReadonlyMap<string, ObjectId>
+): BootstrapPatchChange[] {
+  const changes: BootstrapPatchChange[] = [];
+  const existingRelationIds = new Set(storage.relations.map((relation) => relation.relation.id));
+
+  for (const synthesis of bootstrapSyntheses(analysis, sourcesByPath)) {
+    const existing = similarObject(storage, "synthesis", synthesis.id, synthesis.title);
+    const synthesisId = existing?.sidecar.id ?? synthesis.id;
+
+    if (existing === undefined) {
+      changes.push({
+        op: "create_object",
+        id: synthesis.id,
+        type: "synthesis",
+        title: synthesis.title,
+        body: synthesis.body,
+        tags: synthesis.tags,
+        facets: synthesis.facets,
+        evidence: synthesis.evidence
+      });
+    }
+
+    for (const sourceId of synthesis.sourceIds) {
+      if (hasEquivalentRelation(storage, synthesisId, "derived_from", sourceId)) {
+        continue;
+      }
+
+      const relationId = generateRelationId({
+        from: synthesisId,
+        predicate: "derived_from",
+        to: sourceId,
+        existingIds: existingRelationIds
+      });
+      existingRelationIds.add(relationId);
+      changes.push({
+        op: "create_relation",
+        id: relationId,
+        from: synthesisId,
+        predicate: "derived_from",
+        to: sourceId,
+        status: "active",
+        confidence: "high",
+        evidence: [{ kind: "source", id: sourceId }]
+      });
+    }
+  }
+
+  return changes;
+}
+
+interface BootstrapSynthesis {
+  id: ObjectId;
+  title: string;
+  body: string;
+  tags: string[];
+  facets: ObjectFacets;
+  evidence: Evidence[];
+  sourceIds: ObjectId[];
+}
+
+function bootstrapSyntheses(
+  analysis: BootstrapAnalysis,
+  sourcesByPath: ReadonlyMap<string, ObjectId>
+): BootstrapSynthesis[] {
+  return [
+    productIntentSynthesis(analysis, sourcesByPath),
+    featureMapSynthesis(analysis, sourcesByPath),
+    agentGuidanceSynthesis(analysis, sourcesByPath)
+  ].filter((synthesis): synthesis is BootstrapSynthesis => synthesis !== null);
+}
+
+function productIntentSynthesis(
+  analysis: BootstrapAnalysis,
+  sourcesByPath: ReadonlyMap<string, ObjectId>
+): BootstrapSynthesis | null {
+  const purpose = analysis.packageJson?.description ?? analysis.readme?.summary;
+
+  if (purpose === undefined || purpose === null || purpose === "") {
+    return null;
+  }
+
+  const sourceIds = sourceIdsForPaths(sourcesByPath, ["README.md", "package.json"]);
+
+  return {
+    id: "synthesis.product-intent",
+    title: "Product intent",
+    body: [
+      "# Product intent",
+      "",
+      purpose,
+      "",
+      "Maintain this synthesis when the project's purpose, user promise, or product direction changes.",
+      ""
+    ].join("\n"),
+    tags: ["synthesis", "product-intent"],
+    facets: {
+      category: "product-intent",
+      load_modes: ["coding", "architecture", "onboarding"]
+    },
+    evidence: sourceEvidence(sourceIds),
+    sourceIds
+  };
+}
+
+function featureMapSynthesis(
+  analysis: BootstrapAnalysis,
+  sourcesByPath: ReadonlyMap<string, ObjectId>
+): BootstrapSynthesis | null {
+  const features = analysis.productFeatures.slice(0, BOOTSTRAP_PRODUCT_FEATURE_LIMIT);
+
+  if (features.length === 0) {
+    return null;
+  }
+
+  const sourceIds = sourceIdsForEvidence(sourcesByPath, features.flatMap((feature) => feature.evidence));
+
+  return {
+    id: "synthesis.feature-map",
+    title: "Feature map",
+    body: [
+      "# Feature map",
+      "",
+      "Current product capabilities inferred from durable repository evidence:",
+      ...features.map((feature) => `- ${feature.title}: ${feature.description}`),
+      "",
+      "Update this synthesis when features are added, removed, renamed, or replaced.",
+      ""
+    ].join("\n"),
+    tags: ["synthesis", "features"],
+    facets: {
+      category: "feature-map",
+      applies_to: uniqueSorted(features.flatMap((feature) => feature.appliesTo)),
+      load_modes: ["coding", "onboarding"]
+    },
+    evidence: sourceEvidence(sourceIds),
+    sourceIds
+  };
+}
+
+function agentGuidanceSynthesis(
+  analysis: BootstrapAnalysis,
+  sourcesByPath: ReadonlyMap<string, ObjectId>
+): BootstrapSynthesis | null {
+  const statements = uniqueSorted(
+    analysis.agentGuidance.flatMap((guidance) => guidance.conventionStatements)
+  ).slice(0, 8);
+  const commands = postTaskVerificationCommands(analysis).slice(0, 6);
+
+  if (statements.length === 0 && commands.length === 0) {
+    return null;
+  }
+
+  const paths = analysis.agentGuidance.map((guidance) => guidance.path);
+  const sourceIds = sourceIdsForPaths(sourcesByPath, paths);
+
+  return {
+    id: "synthesis.agent-guidance",
+    title: "Agent guidance",
+    body: [
+      "# Agent guidance",
+      "",
+      ...statements.map((statement) => `- ${statement}`),
+      ...(commands.length === 0
+        ? []
+        : [
+            "",
+            "Verification workflows:",
+            ...commands.map((command) => `- ${command.command}: ${command.description}`)
+          ]),
+      "",
+      "Update this synthesis when agent instructions, conventions, or verification workflows change.",
+      ""
+    ].join("\n"),
+    tags: ["synthesis", "agents", "guidance"],
+    facets: {
+      category: "agent-guidance",
+      applies_to: paths,
+      load_modes: ["coding", "review", "onboarding"]
+    },
+    evidence: sourceEvidence(sourceIds),
+    sourceIds
+  };
+}
+
+function bootstrapSourcePaths(analysis: BootstrapAnalysis): string[] {
+  return uniqueSorted([
+    ...(analysis.readme === null ? [] : ["README.md"]),
+    ...(analysis.packageJson === null ? [] : ["package.json"]),
+    ...(analysis.packageManager === null ? [] : [analysis.packageManager.source]),
+    ...analysis.agentGuidance.map((guidance) => guidance.path),
+    ...["docs/prd.md", "docs/agent-integration.md", "integrations/templates/agent-guidance.md"].filter(
+      (path) => analysis.files.has(path)
+    )
+  ]).slice(0, 10);
+}
+
+function sourceBody(path: string, analysis: BootstrapAnalysis): string {
+  const details = sourceDetails(path, analysis);
+
+  return [
+    `# Source: ${path}`,
+    "",
+    `This source records that durable Aictx memory can be derived from \`${path}\`.`,
+    ...(details.length === 0 ? [] : ["", "Captured signals:", ...details.map((detail) => `- ${detail}`)]),
+    ""
+  ].join("\n");
+}
+
+function sourceDetails(path: string, analysis: BootstrapAnalysis): string[] {
+  if (path === "README.md") {
+    return [
+      ...(analysis.readme?.title === null || analysis.readme?.title === undefined
+        ? []
+        : [`README title: ${analysis.readme.title}`]),
+      ...(analysis.readme?.summary === null || analysis.readme?.summary === undefined
+        ? []
+        : [`README summary: ${analysis.readme.summary}`])
+    ];
+  }
+
+  if (path === "package.json") {
+    return [
+      ...(analysis.packageJson?.name === null || analysis.packageJson?.name === undefined
+        ? []
+        : [`Package name: ${analysis.packageJson.name}`]),
+      ...(analysis.packageJson?.description === null || analysis.packageJson?.description === undefined
+        ? []
+        : [`Package description: ${analysis.packageJson.description}`])
+    ];
+  }
+
+  if (analysis.agentGuidance.some((guidance) => guidance.path === path)) {
+    return ["Agent guidance file with conventions or verification workflows."];
+  }
+
+  return [];
+}
+
+function sourceIdForPath(path: string): ObjectId {
+  const slug = path
+    .toLowerCase()
+    .replace(/\.(?:md|mdx)$/u, "")
+    .replace(/[^a-z0-9]+/gu, "-")
+    .replace(/^-+|-+$/gu, "");
+
+  return `source.${slug === "" ? "record" : slug}` as ObjectId;
+}
+
+function sourceIdsForPaths(
+  sourcesByPath: ReadonlyMap<string, ObjectId>,
+  paths: readonly string[]
+): ObjectId[] {
+  return uniqueSorted(paths.map((path) => sourcesByPath.get(path)).filter(isString));
+}
+
+function sourceIdsForEvidence(
+  sourcesByPath: ReadonlyMap<string, ObjectId>,
+  evidence: readonly Evidence[]
+): ObjectId[] {
+  const paths = evidence
+    .filter((item) => item.kind === "file")
+    .map((item) => item.id)
+    .filter((path) => sourcesByPath.has(path));
+
+  return sourceIdsForPaths(sourcesByPath, paths);
+}
+
+function sourceEvidence(sourceIds: readonly ObjectId[]): Evidence[] {
+  return sourceIds.map((id) => ({ kind: "source", id }));
 }
 
 function packageScriptsWorkflow(
@@ -1928,6 +2256,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+function isString(value: unknown): value is string {
+  return typeof value === "string";
+}
+
 function relatedMemoryIds(
   storage: CanonicalStorageSnapshot,
   changedFiles: readonly string[]
@@ -1962,7 +2294,7 @@ function recommendedRelations(
   changedFiles: readonly string[]
 ): SuggestedRelation[] {
   const related = storage.objects
-    .filter((object) => ["active", "draft", "open"].includes(object.sidecar.status))
+    .filter((object) => ["active", "open"].includes(object.sidecar.status))
     .filter((object) => objectMatchesFiles(object, changedFiles))
     .sort(compareObjectsById);
   const suggestions: SuggestedRelation[] = [];

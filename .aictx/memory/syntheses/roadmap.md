@@ -1,0 +1,1 @@
+The hybrid roadmap moves AICTX from atomic-only memory to a supervised hybrid model: v3 schema and migration, source/synthesis retrieval and provenance, quieter bootstrap and actionable audits, viewer tabs and provenance links, and dogfood memory cleanup. Future product opportunity is strongest in the viewer and supervision experience.

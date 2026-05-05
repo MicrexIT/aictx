@@ -2,7 +2,7 @@
 
 ## 1. Purpose
 
-This document defines the v2 generated index and context compiler behavior for Aictx.
+This document defines the v4 generated index and context compiler behavior for Aictx storage v3.
 
 This spec owns:
 
@@ -199,7 +199,7 @@ event_count
 Rules:
 
 * `schema_version` is the generated index schema version, not the storage format version.
-* V3 `schema_version` is `3`.
+* V4 `schema_version` is `4`. The index records storage format version `3`.
 * `git_available` records whether the project root was inside a Git worktree at rebuild time.
 * `source_git_commit` records the Git `HEAD` used at rebuild time when Git is available, otherwise it is empty or omitted.
 * When Git is available, the index may be stale when `.aictx/` has uncommitted canonical changes.
@@ -282,7 +282,6 @@ Rules:
 * `limit` must be between `1` and `50`.
 * `hints` is optional. Hint arrays accept at most 50 strings each.
 * `hints.history_window` is optional and must use a compact duration such as `30d`, `12w`, `6m`, or `1y`.
-* Search must not include `rejected` memory by default.
 * Search may include `stale` and `superseded` memory, but results must expose status clearly.
 * Search must not require embeddings.
 
@@ -385,17 +384,17 @@ Facet and evidence matching:
 * `facets.category` terms should boost memories whose durable category fits the task.
 * `facets.applies_to` should boost memories tied to paths, tests, configs, or subsystem names mentioned in the task.
 * `facets.load_modes` should boost memories when the requested load mode matches.
-* File, memory, relation, commit, and task evidence should participate in direct matching and FTS material.
+* File, memory, relation, commit, source, and task evidence should participate in direct matching and FTS material.
 * Facets and evidence are ranking hints, not proof that a memory is correct.
 
 Status filtering:
 
-* `active`, `open`, and `draft` may be included in primary sections.
+* `active` and `open` may be included in primary sections.
 * `stale` and `superseded` must not be included in `Must know`.
-* `rejected` must be excluded by default.
 * `stale` and `superseded` may appear in `Stale or superseded memory to avoid`.
+* `source` and `synthesis` records participate in retrieval and context rendering. Relevant syntheses should be favored for broad product, architecture, roadmap, convention, and guidance tasks; relevant sources should be rendered as provenance rather than as long source dumps.
 
-## 10. V2 Scoring Rules
+## 10. V3 Scoring Rules
 
 Scoring should be simple, explainable, and deterministic.
 
@@ -419,7 +418,7 @@ load-mode facet boost:            +6
 Recent memory boost:
 
 * Apply the boost to the five newest candidate objects by `updated_at`.
-* Do not apply the boost to `stale`, `superseded`, or `rejected` objects.
+* Do not apply the boost to `stale` or `superseded` objects.
 
 Type modifiers:
 
@@ -431,6 +430,8 @@ question:        +10
 fact:             +8
 gotcha:          +14
 workflow:        +10
+synthesis:       +16
+source:           +5
 concept:          +6
 project:          +8
 note:             +0
@@ -441,10 +442,8 @@ Status modifiers:
 ```text
 active:          +20
 open:            +12
-draft:            -5
 stale:           -30
 superseded:      -35
-rejected:       exclude by default
 ```
 
 Relation predicate modifiers:
@@ -456,6 +455,9 @@ conflicts_with:  +10
 supersedes:       +8
 affects:          +8
 implements:       +6
+derived_from:     +8
+summarizes:       +8
+documents:        +6
 mentions:         +4
 related_to:       +1
 ```
@@ -463,7 +465,7 @@ related_to:       +1
 Tie-breakers:
 
 1. Higher score.
-2. More specific type priority: constraint, decision, gotcha, architecture, workflow, question, fact, concept, project, note.
+2. More specific type priority: constraint, decision, synthesis, gotcha, architecture, workflow, question, fact, concept, project, source, note.
 3. Newer `updated_at`.
 4. Lexicographic ID.
 

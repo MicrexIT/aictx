@@ -1,7 +1,7 @@
 {
   "body_path": "memory/concepts/feature-cli-command-diff.md",
-  "content_hash": "sha256:f2db7956960bd1f3245fb5e387ac279f8d3a95e9b1bbd414efa98971b6a60202",
-  "created_at": "2026-05-04T17:37:16+02:00",
+  "content_hash": "sha256:d95377d9163ac95f6ffed5f8fa02223554f73f9260daf9fe973934bfa6902311",
+  "created_at": "2026-05-04T20:21:52+02:00",
   "evidence": [
     {
       "id": "src/cli/commands/diff.ts",
@@ -29,7 +29,8 @@
     "kind": "cli",
     "task": "Proposed bootstrap memory patch from deterministic repository analysis"
   },
-  "status": "active",
+  "status": "superseded",
+  "superseded_by": "synthesis.feature-map",
   "tags": [
     "diff",
     "feature",
@@ -37,5 +38,5 @@
   ],
   "title": "Feature: CLI command diff",
   "type": "concept",
-  "updated_at": "2026-05-04T17:37:16+02:00"
+  "updated_at": "2026-05-05T13:30:07+02:00"
 }

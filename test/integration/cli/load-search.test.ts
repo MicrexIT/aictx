@@ -128,9 +128,8 @@ describe("aictx load and search CLI", () => {
     expect(envelope.data.estimated_tokens).toBeGreaterThan(0);
     expect(envelope.data.source.git_available).toBe(false);
     expect(envelope.data.included_ids).toContain("constraint.webhook-idempotency");
-    expect(envelope.data.excluded_ids).toContain("note.rejected-webhook");
+    expect(envelope.data.included_ids).toContain("synthesis.webhook-context");
     expect(envelope.data.omitted_ids).toEqual([]);
-    expect(envelope.data.omitted_ids).not.toContain("note.rejected-webhook");
   });
 
   it("reports explicit token target and omitted IDs when packaging truncates", async () => {
@@ -234,8 +233,8 @@ describe("aictx load and search CLI", () => {
 
     expect(envelope.ok).toBe(true);
     expect(ids).toContain("constraint.webhook-idempotency");
+    expect(ids).toContain("synthesis.webhook-context");
     expect(ids).toContain("decision.old-webhook-queue");
-    expect(ids).not.toContain("note.rejected-webhook");
     expect(webhook).toMatchObject({
       id: "constraint.webhook-idempotency",
       type: "constraint",
@@ -414,13 +413,17 @@ async function writeLoadSearchFixtures(projectRoot: string): Promise<void> {
     updatedAt: FIXED_TIMESTAMP
   });
   await writeMemoryObject(projectRoot, {
-    id: "note.rejected-webhook",
-    type: "note",
-    status: "rejected",
-    title: "Rejected webhook",
-    bodyPath: "memory/notes/rejected-webhook.md",
-    body: "# Rejected webhook\n\nStripe webhook details in this memory should be excluded.\n",
+    id: "synthesis.webhook-context",
+    type: "synthesis",
+    status: "active",
+    title: "Webhook context",
+    bodyPath: "memory/syntheses/webhook-context.md",
+    body: "# Webhook context\n\nStripe webhook implementation context is maintained as synthesis memory.\n",
     tags: ["stripe", "webhooks", "idempotency"],
+    facets: {
+      category: "feature-map",
+      load_modes: ["coding", "onboarding"]
+    },
     updatedAt: FIXED_TIMESTAMP_NEXT_MINUTE
   });
 }

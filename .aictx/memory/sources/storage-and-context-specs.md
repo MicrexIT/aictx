@@ -1,0 +1,1 @@
+Storage, schema, API, indexing, and context compiler behavior are maintained across the storage format, schema validation, MCP/CLI API, indexing/context compiler, runtime architecture, and local viewer specs.

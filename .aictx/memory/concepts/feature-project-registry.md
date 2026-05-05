@@ -1,3 +1,0 @@
-# Feature: Project Registry
-
-Aictx keeps a user-level registry at `$AICTX_HOME/projects.json`, defaulting to `~/.aictx/projects.json`. Entries contain only project metadata and roots, keyed by `prj_` plus the first 16 hex chars of `sha256(realpath(projectRoot))`; they do not copy memory bodies. Successful project-scoped CLI commands upsert the current project, `reset` removes the project after a successful reset, and `aictx projects list|add|remove|prune` manages the registry. Registry writes use `projects.lock` and atomic JSON writes. MCP remains project-scoped and does not expose registry tools.

@@ -174,7 +174,7 @@ async function createAuditGitProject(prefix: string): Promise<string> {
   });
   await writeMemoryObject(repo, {
     id: "decision.duplicate-b",
-    status: "draft",
+    status: "active",
     title: "Shared webhook rule",
     tags: ["billing", "stripe", "webhooks"],
     body: longBody("Second duplicate memory keeps the same title and tags.")
@@ -378,6 +378,10 @@ function memoryDirectory(type: ObjectType): string {
       return "notes";
     case "concept":
       return "concepts";
+    case "source":
+      return "sources";
+    case "synthesis":
+      return "syntheses";
     case "project":
       return "projects";
     case "architecture":

@@ -2,14 +2,14 @@ import { aictxError } from "../core/errors.js";
 import { err, ok, type Result } from "../core/result.js";
 import type { SqliteDatabase } from "./sqlite-driver.js";
 
-export const CURRENT_INDEX_SCHEMA_VERSION = 3;
+export const CURRENT_INDEX_SCHEMA_VERSION = 4;
 
 export const REQUIRED_META_DEFAULTS = {
   schema_version: String(CURRENT_INDEX_SCHEMA_VERSION),
   built_at: "",
   source_git_commit: "",
   git_available: "false",
-  storage_version: "2",
+  storage_version: "3",
   object_count: "0",
   relation_count: "0",
   event_count: "0"

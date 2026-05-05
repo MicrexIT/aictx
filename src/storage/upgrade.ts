@@ -1,9 +1,9 @@
-import { readFile } from "node:fs/promises";
+import { readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 
 import type { Clock } from "../core/clock.js";
 import { aictxError, type JsonValue } from "../core/errors.js";
-import { stableJsonStringify, writeJsonAtomic } from "../core/fs.js";
+import { stableJsonStringify, writeJsonAtomic, writeTextAtomic } from "../core/fs.js";
 import { err, ok, type Result } from "../core/result.js";
 import type {
   Evidence,
@@ -15,8 +15,19 @@ import type {
 } from "../core/types.js";
 import { computeObjectContentHash } from "./hashes.js";
 import type { AictxConfig, MemoryObjectSidecar, StoredMemoryObject } from "./objects.js";
+import type { StoredMemoryRelation } from "./relations.js";
 import { readCanonicalStorage } from "./read.js";
 import { SCHEMA_FILES } from "../validation/schemas.js";
+
+interface UpgradeEvent {
+  event: string;
+  actor: string;
+  timestamp: string;
+  id?: string;
+  relation_id?: string;
+  reason?: string;
+  payload?: unknown;
+}
 
 export interface UpgradeStorageOptions {
   projectRoot: string;
@@ -26,12 +37,14 @@ export interface UpgradeStorageOptions {
 export interface UpgradeStorageData {
   upgraded: boolean;
   from_version: number;
-  to_version: 2;
+  to_version: 3;
   files_changed: string[];
   objects_upgraded: string[];
+  objects_deleted: string[];
+  relations_deleted: string[];
 }
 
-export async function upgradeStorageToV2(
+export async function upgradeStorageToV3(
   options: UpgradeStorageOptions
 ): Promise<Result<UpgradeStorageData>> {
   const storage = await readCanonicalStorage(options.projectRoot);
@@ -42,12 +55,14 @@ export async function upgradeStorageToV2(
 
   const filesChanged: string[] = [];
   const objectsUpgraded: string[] = [];
+  const objectsDeleted: string[] = [];
+  const relationsDeleted: string[] = [];
   const fromVersion = storage.data.config.version;
 
-  if (fromVersion !== 2) {
+  if (fromVersion !== 3) {
     const config = {
       ...storage.data.config,
-      version: 2
+      version: 3
     } satisfies AictxConfig;
 
     const configWrite = await writeJsonAtomic(
@@ -69,8 +84,57 @@ export async function upgradeStorageToV2(
   }
   filesChanged.push(...schemas.data);
 
+  const events = migrateEventsForV3(storage.data.events);
+
+  if (events.changed) {
+    const written = await writeTextAtomic(
+      options.projectRoot,
+      ".aictx/events.jsonl",
+      events.contents
+    );
+
+    if (!written.ok) {
+      return written;
+    }
+
+    filesChanged.push(".aictx/events.jsonl");
+  }
+
+  const rejectedObjectIds = new Set(
+    storage.data.objects
+      .filter((object) => isLegacyRejectedObject(object))
+      .map((object) => object.sidecar.id)
+  );
+
+  for (const relation of storage.data.relations) {
+    if (!shouldDeleteRelationForV3(relation, rejectedObjectIds)) {
+      continue;
+    }
+
+    const deleted = await deleteCanonicalFile(options.projectRoot, relation.path);
+
+    if (!deleted.ok) {
+      return deleted;
+    }
+
+    filesChanged.push(relation.path);
+    relationsDeleted.push(relation.relation.id);
+  }
+
   for (const object of storage.data.objects) {
-    if (object.sidecar.facets !== undefined && object.sidecar.evidence !== undefined) {
+    if (rejectedObjectIds.has(object.sidecar.id)) {
+      const deleted = await deleteRejectedObject(options.projectRoot, object);
+
+      if (!deleted.ok) {
+        return deleted;
+      }
+
+      filesChanged.push(object.path, object.bodyPath);
+      objectsDeleted.push(object.sidecar.id);
+      continue;
+    }
+
+    if (!needsObjectUpgrade(object)) {
       continue;
     }
 
@@ -90,19 +154,120 @@ export async function upgradeStorageToV2(
   }
 
   return ok({
-    upgraded: fromVersion !== 2 || objectsUpgraded.length > 0 || filesChanged.length > 0,
+    upgraded: fromVersion !== 3 || filesChanged.length > 0,
     from_version: fromVersion,
-    to_version: 2,
+    to_version: 3,
     files_changed: filesChanged,
-    objects_upgraded: objectsUpgraded
+    objects_upgraded: objectsUpgraded,
+    objects_deleted: objectsDeleted,
+    relations_deleted: relationsDeleted
   });
+}
+
+export const upgradeStorageToV2 = upgradeStorageToV3;
+
+function isLegacyRejectedObject(object: StoredMemoryObject): boolean {
+  return objectStatusString(object) === "rejected";
+}
+
+function shouldDeleteRelationForV3(
+  relation: StoredMemoryRelation,
+  rejectedObjectIds: ReadonlySet<string>
+): boolean {
+  return (
+    relation.relation.status === "rejected" ||
+    rejectedObjectIds.has(relation.relation.from) ||
+    rejectedObjectIds.has(relation.relation.to)
+  );
+}
+
+async function deleteRejectedObject(
+  projectRoot: string,
+  object: StoredMemoryObject
+): Promise<Result<void>> {
+  const sidecarDeleted = await deleteCanonicalFile(projectRoot, object.path);
+
+  if (!sidecarDeleted.ok) {
+    return sidecarDeleted;
+  }
+
+  return deleteCanonicalFile(projectRoot, object.bodyPath);
+}
+
+async function deleteCanonicalFile(projectRoot: string, path: string): Promise<Result<void>> {
+  try {
+    await rm(join(projectRoot, path), { force: true });
+    return ok(undefined);
+  } catch (error) {
+    return err(
+      aictxError("AICtxValidationFailed", "Canonical file could not be deleted during upgrade.", {
+        path,
+        message: error instanceof Error ? error.message : String(error)
+      })
+    );
+  }
+}
+
+function needsObjectUpgrade(object: StoredMemoryObject): boolean {
+  return (
+    object.sidecar.facets === undefined ||
+    object.sidecar.evidence === undefined ||
+    objectStatusString(object) !== normalizedObjectStatus(object)
+  );
+}
+
+function migrateEventsForV3(
+  events: readonly UpgradeEvent[]
+): { changed: boolean; contents: string } {
+  let changed = false;
+  const lines = events.map((event) => {
+    const json = eventToJson(event);
+
+    if (json.event === "memory.rejected") {
+      json.event = "memory.deleted";
+      changed = true;
+    }
+
+    return JSON.stringify(json);
+  });
+
+  return {
+    changed,
+    contents: lines.length === 0 ? "" : `${lines.join("\n")}\n`
+  };
+}
+
+function eventToJson(event: UpgradeEvent): Record<string, JsonValue> {
+  const json: Record<string, JsonValue> = {
+    event: event.event,
+    actor: event.actor,
+    timestamp: event.timestamp
+  };
+
+  if (event.id !== undefined) {
+    json.id = event.id;
+  }
+
+  if (event.relation_id !== undefined) {
+    json.relation_id = event.relation_id;
+  }
+
+  if (event.reason !== undefined) {
+    json.reason = event.reason;
+  }
+
+  if (isJsonValue(event.payload)) {
+    json.payload = event.payload;
+  }
+
+  return json;
 }
 
 function upgradeObjectSidecar(object: StoredMemoryObject): MemoryObjectSidecar {
   const sidecarWithoutHash: Omit<MemoryObjectSidecar, "content_hash"> = {
     id: object.sidecar.id,
     type: object.sidecar.type,
-    status: object.sidecar.status,
+    status: normalizedObjectStatus(object),
     title: object.sidecar.title,
     body_path: object.sidecar.body_path,
     scope: cloneScope(object.sidecar.scope),
@@ -121,6 +286,28 @@ function upgradeObjectSidecar(object: StoredMemoryObject): MemoryObjectSidecar {
     ...sidecarWithoutHash,
     content_hash: computeObjectContentHash(objectSidecarToJson(sidecarWithoutHash), object.body)
   };
+}
+
+function objectStatusString(object: StoredMemoryObject): string {
+  return object.sidecar.status as string;
+}
+
+function normalizedObjectStatus(object: StoredMemoryObject): MemoryObjectSidecar["status"] {
+  const status = objectStatusString(object);
+
+  if (object.sidecar.type === "question") {
+    if (status === "closed" || status === "stale" || status === "superseded") {
+      return status;
+    }
+
+    return "open";
+  }
+
+  if (status === "stale" || status === "superseded") {
+    return status;
+  }
+
+  return "active";
 }
 
 function inferFacets(type: ObjectType, tags: readonly string[]): ObjectFacets {
@@ -153,6 +340,22 @@ function inferFacetCategory(type: ObjectType, tags: readonly string[]): FacetCat
       return "project-description";
     case "architecture":
       return "architecture";
+    case "source":
+      return "source";
+    case "synthesis":
+      if (hasAnyTag(tagSet, ["product-intent", "purpose", "vision"])) {
+        return "product-intent";
+      }
+      if (hasAnyTag(tagSet, ["feature-map", "features", "product-feature"])) {
+        return "feature-map";
+      }
+      if (hasAnyTag(tagSet, ["roadmap", "milestone", "milestones"])) {
+        return "roadmap";
+      }
+      if (hasAnyTag(tagSet, ["agent-guidance", "agents", "guidance"])) {
+        return "agent-guidance";
+      }
+      return "concept";
     case "decision":
       return "decision-rationale";
     case "constraint":

@@ -66,7 +66,7 @@ describe("search memory integration", () => {
 
       expect(ids).toContain("constraint.webhook-idempotency");
       expect(ids).toContain("decision.old-webhook-queue");
-      expect(ids).not.toContain("note.rejected-webhook");
+      expect(ids).toContain("synthesis.webhook-context");
       expect(second.data.matches.map((match) => match.id)).toEqual(ids);
       expect(webhook).toMatchObject({
         id: "constraint.webhook-idempotency",
@@ -176,12 +176,12 @@ async function writeSearchFixtures(projectRoot: string): Promise<void> {
     updatedAt: FIXED_TIMESTAMP
   });
   await writeMemoryObject(projectRoot, {
-    id: "note.rejected-webhook",
-    type: "note",
-    status: "rejected",
-    title: "Rejected webhook",
-    bodyPath: "memory/notes/rejected-webhook.md",
-    body: "# Rejected webhook\n\nStripe webhook details in this memory should be excluded by search.\n",
+    id: "synthesis.webhook-context",
+    type: "synthesis",
+    status: "active",
+    title: "Webhook context",
+    bodyPath: "memory/syntheses/webhook-context.md",
+    body: "# Webhook context\n\nStripe webhook implementation context is maintained as synthesis memory.\n",
     tags: ["stripe", "webhooks"],
     updatedAt: FIXED_TIMESTAMP_NEXT_MINUTE
   });

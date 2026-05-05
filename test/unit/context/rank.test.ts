@@ -137,7 +137,7 @@ describe("context memory ranking", () => {
     expect(result.items.map((item) => item.scoreBreakdown.typeModifier)).toEqual([14, 10]);
   });
 
-  it("excludes rejected memory from default output", () => {
+  it("includes synthesis memory as current context", () => {
     const result = rankMemoryCandidates({
       task: "webhook",
       projectId: PROJECT_ID,
@@ -150,25 +150,17 @@ describe("context memory ranking", () => {
           body: "Webhook behavior."
         }),
         memory({
-          id: "note.rejected-webhook",
-          status: "rejected",
-          title: "Rejected webhook",
-          body: "Rejected webhook behavior."
+          id: "synthesis.webhook-context",
+          type: "synthesis",
+          title: "Webhook context",
+          body: "Synthesized webhook behavior."
         })
       ]
     });
 
-    expect(result.items.map((item) => item.id)).not.toContain("note.rejected-webhook");
-    expect(result.mustKnow.map((item) => item.id)).not.toContain("note.rejected-webhook");
-    expect(result.staleOrSuperseded.map((item) => item.id)).not.toContain(
-      "note.rejected-webhook"
-    );
-    expect(result.excluded).toContainEqual(
-      expect.objectContaining({
-        id: "note.rejected-webhook",
-        reason: "rejected"
-      })
-    );
+    expect(result.items.map((item) => item.id)).toContain("synthesis.webhook-context");
+    expect(result.mustKnow.map((item) => item.id)).toContain("synthesis.webhook-context");
+    expect(result.excluded).toEqual([]);
   });
 
   it("routes stale and superseded memory away from Must know", () => {

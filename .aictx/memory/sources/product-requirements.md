@@ -1,0 +1,1 @@
+Product requirements and public positioning are maintained in docs/prd.md and README.md. Treat them as source material for AICTX product intent, core goals, local-first behavior, hybrid memory model, and user-facing terminology.

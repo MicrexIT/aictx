@@ -1,5 +1,5 @@
 {
-  "$id": "https://aictx.dev/schemas/v2/relation.schema.json",
+  "$id": "https://aictx.dev/schemas/v3/relation.schema.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "properties": {
@@ -32,7 +32,8 @@
               "relation",
               "file",
               "commit",
-              "task"
+              "task",
+              "source"
             ]
           }
         },
@@ -59,6 +60,9 @@
         "depends_on",
         "supersedes",
         "conflicts_with",
+        "derived_from",
+        "summarizes",
+        "documents",
         "mentions",
         "implements",
         "related_to"

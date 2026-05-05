@@ -51,20 +51,15 @@ import {
 const PATCH_PATH = "<patch>";
 const EVENTS_PATH = ".aictx/events.jsonl";
 const QUESTION_STATUSES = new Set<ObjectStatus>([
-  "active",
-  "draft",
   "stale",
   "superseded",
-  "rejected",
   "open",
   "closed"
 ]);
 const NON_QUESTION_STATUSES = new Set<ObjectStatus>([
   "active",
-  "draft",
   "stale",
-  "superseded",
-  "rejected"
+  "superseded"
 ]);
 const PATCH_OPERATION_SET = new Set<string>(PATCH_OPERATIONS);
 
@@ -1306,6 +1301,10 @@ function objectDirectory(type: ObjectType): string {
     case "project":
     case "architecture":
       return type;
+    case "source":
+      return "sources";
+    case "synthesis":
+      return "syntheses";
     case "decision":
       return "decisions";
     case "constraint":

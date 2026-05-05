@@ -87,8 +87,11 @@ describe("initProject", () => {
       expect(guidance).toContain('aictx suggest --after-task "<task>" --json');
       expect(guidance).toContain("save_memory_patch({ patch: { source, changes } })");
       expect(guidance).toContain("Save durable decisions");
-      expect(guidance).toContain("one durable claim per object");
-      expect(guidance).toContain("updating, marking stale, or superseding");
+      expect(guidance).toContain("Right-size memory");
+      expect(guidance).toContain("atomic memories");
+      expect(guidance).toContain("synthesis records");
+      expect(guidance).toContain("source records");
+      expect(guidance).toContain("updating existing memory, marking stale, superseding, or deleting");
       expect(guidance).toContain("Save nothing when there is no durable future value");
       expect(guidance).toContain("Do not save task diaries");
       expect(guidance).toContain("Before finalizing, say whether Aictx memory changed");

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://aictx.dev/schemas/v2/patch.schema.json",
+  "$id": "https://aictx.dev/schemas/v3/patch.schema.json",
   "type": "object",
   "additionalProperties": false,
   "required": ["source", "changes"],
@@ -117,7 +117,7 @@
         "required": ["kind", "id"],
         "properties": {
           "kind": {
-            "enum": ["memory", "relation", "file", "commit", "task"]
+            "enum": ["memory", "relation", "file", "commit", "task", "source"]
           },
           "id": {
             "type": "string",
@@ -145,6 +145,11 @@
             "workflow",
             "gotcha",
             "debugging-fact",
+            "source",
+            "product-intent",
+            "feature-map",
+            "roadmap",
+            "agent-guidance",
             "concept",
             "open-question"
           ]
@@ -178,10 +183,10 @@
           "$ref": "#/$defs/objectId"
         },
         "type": {
-          "enum": ["project", "architecture", "decision", "constraint", "question", "fact", "gotcha", "workflow", "note", "concept"]
+          "enum": ["project", "architecture", "source", "synthesis", "decision", "constraint", "question", "fact", "gotcha", "workflow", "note", "concept"]
         },
         "status": {
-          "enum": ["active", "draft", "stale", "superseded", "rejected", "open", "closed"]
+          "enum": ["active", "stale", "superseded", "open", "closed"]
         },
         "title": {
           "type": "string",
@@ -220,7 +225,7 @@
           "$ref": "#/$defs/objectId"
         },
         "status": {
-          "enum": ["active", "draft", "stale", "superseded", "rejected", "open", "closed"]
+          "enum": ["active", "stale", "superseded", "open", "closed"]
         },
         "title": {
           "type": "string",
@@ -315,7 +320,7 @@
           "$ref": "#/$defs/objectId"
         },
         "predicate": {
-          "enum": ["affects", "requires", "depends_on", "supersedes", "conflicts_with", "mentions", "implements", "related_to"]
+          "enum": ["affects", "requires", "depends_on", "supersedes", "conflicts_with", "derived_from", "summarizes", "documents", "mentions", "implements", "related_to"]
         },
         "to": {
           "$ref": "#/$defs/objectId"

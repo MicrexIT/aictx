@@ -11,7 +11,7 @@ import type {
 } from "../core/types.js";
 
 export interface AictxConfig {
-  version: 1 | 2;
+  version: 1 | 2 | 3;
   project: {
     id: string;
     name: string;
@@ -60,7 +60,7 @@ export function isAictxConfig(value: unknown): value is AictxConfig {
   const git = value.git;
 
   return (
-    (value.version === 1 || value.version === 2) &&
+    (value.version === 1 || value.version === 2 || value.version === 3) &&
     isRecord(project) &&
     typeof project.id === "string" &&
     typeof project.name === "string" &&

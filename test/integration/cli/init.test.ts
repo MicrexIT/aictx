@@ -150,7 +150,9 @@ describe("aictx init CLI", () => {
     const agentGuidance = await readFile(join(projectRoot, "AGENTS.md"), "utf8");
     expect(agentGuidance).toContain("aictx suggest --after-task");
     expect(agentGuidance).toContain("save/no-save decision");
-    expect(agentGuidance).toContain("useful tags/facets/evidence");
+    expect(agentGuidance).toContain("Right-size memory");
+    expect(agentGuidance).toContain("source records");
+    expect(agentGuidance).toContain("synthesis records");
     expect(agentGuidance).toContain("Save nothing when there is no durable future value");
   });
 

@@ -3,10 +3,12 @@
 <script lang="ts">
   import { onMount } from "svelte";
 
-  type ObjectStatus = "active" | "draft" | "stale" | "superseded" | "rejected" | "open" | "closed";
+  type ObjectStatus = "active" | "stale" | "superseded" | "open" | "closed";
   type ObjectType =
     | "project"
     | "architecture"
+    | "source"
+    | "synthesis"
     | "decision"
     | "constraint"
     | "question"
@@ -23,6 +25,9 @@
     | "depends_on"
     | "supersedes"
     | "conflicts_with"
+    | "derived_from"
+    | "summarizes"
+    | "documents"
     | "mentions"
     | "implements"
     | "related_to";
@@ -40,6 +45,17 @@
     commit?: string;
   }
 
+  interface Evidence {
+    kind: "memory" | "relation" | "file" | "commit" | "task" | "source";
+    id: string;
+  }
+
+  interface ObjectFacets {
+    category: string;
+    applies_to?: string[];
+    load_modes?: string[];
+  }
+
   interface MemoryObjectSummary {
     id: string;
     type: ObjectType;
@@ -49,6 +65,8 @@
     json_path: string;
     scope: Scope;
     tags: string[];
+    facets: ObjectFacets | null;
+    evidence: Evidence[];
     source: Source | null;
     superseded_by: string | null;
     created_at: string;
@@ -63,7 +81,7 @@
     to: string;
     status: RelationStatus;
     confidence: RelationConfidence | null;
-    evidence: Array<{ kind: "memory" | "relation" | "file" | "commit"; id: string }>;
+    evidence: Evidence[];
     content_hash: string | null;
     created_at: string;
     updated_at: string;
@@ -82,7 +100,8 @@
       relations: number;
       stale_objects: number;
       superseded_objects: number;
-      rejected_objects: number;
+      source_objects: number;
+      synthesis_objects: number;
       active_relations: number;
     };
     storage_warnings: string[];
@@ -162,6 +181,7 @@
   type ViewerState = "loading" | "ready" | "error";
   type ViewerScreen = "projects" | "memories" | "detail" | "export";
   type ExportState = "idle" | "running" | "success" | "error";
+  type LayerFilter = "all" | "memories" | "syntheses" | "sources" | "inactive";
 
   interface MarkdownBlock {
     kind: "heading" | "paragraph" | "list" | "quote" | "code";
@@ -198,6 +218,7 @@
   let currentScreen = $state<ViewerScreen>("projects");
   let selectedProjectId = $state<string | null>(null);
   let searchQuery = $state("");
+  let layerFilter = $state<LayerFilter>("all");
   let typeFilter = $state("all");
   let statusFilter = $state("all");
   let tagFilter = $state("all");
@@ -210,6 +231,13 @@
   let exportManifestPath = $state("");
 
   const allOption = "all";
+  const layerOptions: Array<{ value: LayerFilter; label: string }> = [
+    { value: "all", label: "All" },
+    { value: "memories", label: "Memories" },
+    { value: "syntheses", label: "Syntheses" },
+    { value: "sources", label: "Sources" },
+    { value: "inactive", label: "Stale / Superseded" }
+  ];
   const graphWidth = 960;
   const graphHeight = 420;
   const token = new URLSearchParams(window.location.search).get("token") ?? "";
@@ -253,6 +281,18 @@
     selectedObject === null
       ? []
       : directRelations.filter((relation) => relation.from === selectedObject.id)
+  );
+  const provenanceEvidence = $derived.by(() =>
+    selectedObject === null
+      ? []
+      : selectedObject.evidence.filter((evidence) =>
+          ["source", "file", "commit", "memory"].includes(evidence.kind)
+        )
+  );
+  const provenanceRelations = $derived.by(() =>
+    directRelations.filter((relation) =>
+      ["derived_from", "summarizes", "documents"].includes(relation.predicate)
+    )
   );
   const graphNodes = $derived.by(() =>
     selectedObject === null ? [] : buildGraphNodes(selectedObject, directRelations, objectById)
@@ -405,6 +445,7 @@
 
   function objectMatchesFilters(object: MemoryObjectSummary): boolean {
     return (
+      objectMatchesLayer(object, layerFilter) &&
       optionMatches(typeFilter, object.type) &&
       optionMatches(statusFilter, object.status) &&
       (tagFilter === allOption || object.tags.includes(tagFilter)) &&
@@ -425,12 +466,33 @@
       object.type,
       object.status,
       object.tags.join(" "),
+      object.facets?.category ?? "",
+      object.evidence.map((evidence) => `${evidence.kind} ${evidence.id}`).join(" "),
       object.body
     ].join(" ")).includes(query);
   }
 
   function optionMatches(filter: string, value: string): boolean {
     return filter === allOption || filter === value;
+  }
+
+  function objectMatchesLayer(object: MemoryObjectSummary, filter: LayerFilter): boolean {
+    switch (filter) {
+      case "all":
+        return true;
+      case "memories":
+        return object.type !== "source" && object.type !== "synthesis" && isCurrentStatus(object.status);
+      case "syntheses":
+        return object.type === "synthesis";
+      case "sources":
+        return object.type === "source";
+      case "inactive":
+        return object.status === "stale" || object.status === "superseded";
+    }
+  }
+
+  function isCurrentStatus(status: ObjectStatus): boolean {
+    return status === "active" || status === "open";
   }
 
   function normalizeText(value: string): string {
@@ -475,6 +537,7 @@
     selectedProjectId = registryId;
     selectedObjectId = null;
     searchQuery = "";
+    layerFilter = "all";
     typeFilter = allOption;
     statusFilter = allOption;
     tagFilter = allOption;
@@ -745,6 +808,8 @@
       json_path: object.json_path,
       scope: object.scope,
       tags: object.tags,
+      facets: object.facets,
+      evidence: object.evidence,
       source: object.source,
       superseded_by: object.superseded_by,
       created_at: object.created_at,
@@ -953,10 +1018,14 @@
             <dt>Connections</dt>
             <dd>{bootstrap.counts.relations}</dd>
           </div>
-          <div>
-            <dt>Active</dt>
-            <dd>{bootstrap.counts.active_relations}</dd>
-          </div>
+	          <div>
+	            <dt>Syntheses</dt>
+	            <dd>{bootstrap.counts.synthesis_objects}</dd>
+	          </div>
+	          <div>
+	            <dt>Sources</dt>
+	            <dd>{bootstrap.counts.source_objects}</dd>
+	          </div>
         {/if}
       </dl>
     </aside>
@@ -1002,10 +1071,10 @@
                       <dt>Connections</dt>
                       <dd>{project.counts?.relations ?? 0}</dd>
                     </div>
-                    <div>
-                      <dt>Active</dt>
-                      <dd>{project.counts?.active_relations ?? 0}</dd>
-                    </div>
+	                    <div>
+	                      <dt>Syntheses</dt>
+	                      <dd>{project.counts?.synthesis_objects ?? 0}</dd>
+	                    </div>
                   </dl>
 
                   {#if project.warnings.length > 0}
@@ -1131,7 +1200,7 @@
             {/if}
           </header>
 
-          <section class="markdown-view" aria-label="Markdown body" data-testid="markdown-view">
+	          <section class="markdown-view" aria-label="Markdown body" data-testid="markdown-view">
             {#each markdownBlocks as block, index (`${block.kind}-${index}`)}
               {#if block.kind === "heading"}
                 {#if block.level === 1}
@@ -1156,10 +1225,67 @@
               {/if}
             {:else}
               <p class="empty-copy">This memory object has an empty Markdown body.</p>
-            {/each}
-          </section>
+	            {/each}
+	          </section>
 
-          <section class="connections-section" aria-labelledby="connections-title">
+	          <section class="provenance-section" aria-labelledby="provenance-title" data-testid="provenance-links">
+	            <div class="section-heading">
+	              <div>
+	                <p class="eyebrow">Provenance</p>
+	                <h3 id="provenance-title">Sources</h3>
+	              </div>
+	              <p>{countLabel(provenanceEvidence.length + provenanceRelations.length, "link", "links")}</p>
+	            </div>
+
+	            {#if provenanceEvidence.length === 0 && provenanceRelations.length === 0}
+	              <p class="empty-copy">No provenance links on this object.</p>
+	            {:else}
+	              <div class="provenance-grid">
+	                {#if provenanceEvidence.length > 0}
+	                  <section aria-label="Evidence">
+	                    <h4>Evidence</h4>
+	                    <ul class="evidence-list">
+	                      {#each provenanceEvidence as evidence (`${evidence.kind}-${evidence.id}`)}
+	                        <li>
+	                          <span class="pill">{evidence.kind}</span>
+	                          {#if objectById.has(evidence.id)}
+	                            <button type="button" onclick={() => openRelatedObject(evidence.id)}>
+	                              {objectById.get(evidence.id)?.title ?? evidence.id}
+	                            </button>
+	                          {:else}
+	                            <code>{evidence.id}</code>
+	                          {/if}
+	                        </li>
+	                      {/each}
+	                    </ul>
+	                  </section>
+	                {/if}
+
+	                {#if provenanceRelations.length > 0}
+	                  <section aria-label="Provenance relations">
+	                    <h4>Relations</h4>
+	                    <ul class="evidence-list">
+	                      {#each provenanceRelations as relation (relation.id)}
+	                        {@const related = relationObject(relation, selectedObject.id)}
+	                        <li>
+	                          <span class="pill">{relation.predicate}</span>
+	                          <button
+	                            type="button"
+	                            disabled={related === null}
+	                            onclick={() => openRelatedObject(relationCounterpart(relation, selectedObject.id))}
+	                          >
+	                            {relationTargetLabel(relation, selectedObject.id)}
+	                          </button>
+	                        </li>
+	                      {/each}
+	                    </ul>
+	                  </section>
+	                {/if}
+	              </div>
+	            {/if}
+	          </section>
+
+	          <section class="connections-section" aria-labelledby="connections-title">
             <div class="section-heading">
               <div>
                 <p class="eyebrow">Direct context</p>
@@ -1357,8 +1483,23 @@
             <p>{filteredObjects.length} shown / {objects.length} total</p>
           </header>
 
-          <section class="filters" aria-label="Search and filters">
-            <label class="field search-field">
+	          <section class="filters" aria-label="Search and filters">
+	            <div class="layer-tabs" role="group" aria-label="Memory layers">
+	              {#each layerOptions as option (option.value)}
+	                <button
+	                  type="button"
+	                  class:active={layerFilter === option.value}
+	                  onclick={() => {
+	                    layerFilter = option.value;
+	                  }}
+	                  data-testid={`viewer-layer-${option.value}`}
+	                >
+	                  {option.label}
+	                </button>
+	              {/each}
+	            </div>
+
+	            <label class="field search-field">
               <span>Search</span>
               <input
                 type="search"
@@ -1796,6 +1937,7 @@
 
   .filters,
   .export-form,
+  .provenance-section,
   .connections-section,
   .graph-panel,
   .technical-details,
@@ -1817,6 +1959,29 @@
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 12px;
+  }
+
+  .layer-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .layer-tabs button {
+    min-height: 34px;
+    border: 1px solid #cfd4d3;
+    border-radius: 6px;
+    padding: 6px 10px;
+    color: #344054;
+    background: #ffffff;
+    font-weight: 800;
+  }
+
+  .layer-tabs button:hover,
+  .layer-tabs button.active {
+    border-color: #8fb5ad;
+    color: #123532;
+    background: #eef7f4;
   }
 
   .field {
@@ -2031,6 +2196,7 @@
   }
 
   .connections-section,
+  .provenance-section,
   .graph-panel,
   .technical-details {
     display: grid;
@@ -2048,6 +2214,46 @@
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 14px;
+  }
+
+  .provenance-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+  }
+
+  .evidence-list {
+    display: grid;
+    gap: 10px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .evidence-list li {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  .evidence-list button {
+    min-height: 34px;
+    border: 1px solid #b9c8c4;
+    border-radius: 6px;
+    padding: 6px 9px;
+    color: #17443e;
+    background: #eef7f4;
+    overflow-wrap: anywhere;
+    text-align: left;
+  }
+
+  .evidence-list code {
+    overflow-wrap: anywhere;
+    color: #52615d;
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+    font-size: 0.78rem;
   }
 
   .relation-columns section {
@@ -2395,6 +2601,7 @@
     }
 
     .filter-grid,
+    .provenance-grid,
     .relation-columns,
     .project-card-stats,
     .technical-details dl {

@@ -1,7 +1,7 @@
 {
   "body_path": "memory/workflows/post-task-verification.md",
-  "content_hash": "sha256:d5b0bf3e16fec79749ec97fdc9d6b251c1c4a6eac46055337eeac5fe501557b7",
-  "created_at": "2026-05-04T17:37:16+02:00",
+  "content_hash": "sha256:2b498b06059b30cb50958f0f7348817563834f6c852f62c5305ed2cd8b017543",
+  "created_at": "2026-05-04T20:21:52+02:00",
   "evidence": [
     {
       "id": "package.json",
@@ -38,5 +38,5 @@
   ],
   "title": "Post-task verification",
   "type": "workflow",
-  "updated_at": "2026-05-04T17:37:16+02:00"
+  "updated_at": "2026-05-04T20:21:52+02:00"
 }

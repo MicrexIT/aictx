@@ -5,7 +5,7 @@ import { writeMarkdownAtomic } from "../core/fs.js";
 import { slugify } from "../core/ids.js";
 import type { ProjectPaths } from "../core/paths.js";
 import { err, ok, type Result } from "../core/result.js";
-import type { GitState, ObjectId, ProjectId } from "../core/types.js";
+import type { GitState, ObjectId, ObjectStatus, ProjectId } from "../core/types.js";
 import { searchIndex, type SearchResult } from "../index/search.js";
 import { openIndexDatabase, type IndexDatabaseConnection } from "../index/sqlite.js";
 import type { StoredMemoryObject } from "../storage/objects.js";
@@ -521,7 +521,8 @@ function selectCandidateObjects(input: CandidateSelectionInput): RankMemoryCandi
   return [...candidateIds]
     .map((id) => objectsById.get(id))
     .filter((object): object is StoredMemoryObject => object !== undefined)
-    .map(rankCandidateFromStoredObject);
+    .map(rankCandidateFromStoredObject)
+    .filter((candidate): candidate is RankMemoryCandidate => candidate !== null);
 }
 
 function objectMatchesTask(
@@ -604,9 +605,13 @@ function rationaleGaps(input: {
 }
 
 function isActiveRationaleObject(object: StoredMemoryObject): boolean {
+  const status = normalizedObjectStatus(object);
+
   return (
-    ["active", "open", "draft"].includes(object.sidecar.status) &&
-    ["architecture", "decision", "gotcha", "fact", "constraint"].includes(object.sidecar.type)
+    (status === "active" || status === "open") &&
+    ["architecture", "synthesis", "decision", "gotcha", "fact", "constraint"].includes(
+      object.sidecar.type
+    )
   );
 }
 
@@ -619,7 +624,11 @@ function objectReferencesFile(object: StoredMemoryObject, filePath: string): boo
 
   const facets = object.sidecar.facets;
 
-  if ((facets?.applies_to ?? []).some((path) => normalizeProjectFileReference(path) === normalized)) {
+  if (
+    (facets?.applies_to ?? []).some(
+      (path) => normalizeProjectFileReference(path) === normalized
+    )
+  ) {
     return true;
   }
 
@@ -662,19 +671,24 @@ function newestHighPriorityObjects(
 ): StoredMemoryObject[] {
   return [...objects]
     .filter((object) =>
-      ["active", "open", "draft"].includes(object.sidecar.status)
+      ["active", "open"].includes(normalizedObjectStatus(object) ?? "")
     )
     .sort(compareStoredObjectsByPriority)
     .slice(0, RECENT_CANDIDATE_LIMIT);
 }
 
-function rankCandidateFromStoredObject(object: StoredMemoryObject): RankMemoryCandidate {
+function rankCandidateFromStoredObject(object: StoredMemoryObject): RankMemoryCandidate | null {
   const sidecar = object.sidecar;
+  const status = normalizedObjectStatus(object);
+
+  if (status === null) {
+    return null;
+  }
 
   return {
     id: sidecar.id,
     type: sidecar.type,
-    status: sidecar.status,
+    status,
     title: sidecar.title,
     body_path: object.bodyPath,
     body: object.body,
@@ -684,6 +698,33 @@ function rankCandidateFromStoredObject(object: StoredMemoryObject): RankMemoryCa
     ...(sidecar.evidence === undefined ? {} : { evidence: sidecar.evidence }),
     updated_at: sidecar.updated_at
   };
+}
+
+function normalizedObjectStatus(object: StoredMemoryObject): ObjectStatus | null {
+  const status = object.sidecar.status as string;
+
+  if (status === "rejected") {
+    return null;
+  }
+
+  if (object.sidecar.type === "question") {
+    if (
+      status === "stale" ||
+      status === "superseded" ||
+      status === "open" ||
+      status === "closed"
+    ) {
+      return status;
+    }
+
+    return "open";
+  }
+
+  if (status === "stale" || status === "superseded") {
+    return status;
+  }
+
+  return "active";
 }
 
 function compareStoredObjectsByPriority(

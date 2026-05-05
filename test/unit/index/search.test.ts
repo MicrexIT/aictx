@@ -117,7 +117,7 @@ describe("search index", () => {
     }
   });
 
-  it("uses punctuation-safe FTS, excludes rejected memory, and exposes included statuses", async () => {
+  it("uses punctuation-safe FTS and exposes current hybrid statuses", async () => {
     const connection = await openMigratedConnection();
 
     try {
@@ -152,10 +152,11 @@ describe("search index", () => {
         tags: ["stripe"]
       });
       insertObject(connection, {
-        id: "note.rejected-webhook",
-        status: "rejected",
-        title: "Rejected webhook",
-        body: "Webhook text should not be returned.",
+        id: "synthesis.webhook-context",
+        type: "synthesis",
+        status: "active",
+        title: "Webhook context",
+        body: "Webhook text is captured in maintained synthesis.",
         tags: ["stripe"]
       });
 
@@ -169,8 +170,51 @@ describe("search index", () => {
         const ids = result.data.matches.map((match) => match.id);
         const statuses = result.data.matches.map((match) => match.status);
 
-        expect(ids).not.toContain("note.rejected-webhook");
+        expect(ids).toContain("synthesis.webhook-context");
         expect(statuses).toEqual(expect.arrayContaining(["active", "stale", "superseded", "closed"]));
+      }
+    } finally {
+      connection.close();
+    }
+  });
+
+  it("normalizes legacy draft rows and excludes legacy rejected rows", async () => {
+    const connection = await openMigratedConnection();
+
+    try {
+      insertObject(connection, {
+        id: "note.legacy-draft",
+        status: "draft",
+        title: "Legacy draft webhook",
+        body: "Webhook notes from legacy draft storage.",
+        tags: ["webhook"]
+      });
+      insertObject(connection, {
+        id: "note.legacy-rejected",
+        status: "rejected",
+        title: "Legacy rejected webhook",
+        body: "Webhook notes from legacy rejected storage.",
+        tags: ["webhook"]
+      });
+
+      const result = await searchIndex({
+        aictxRoot: connection.aictxRoot,
+        query: "webhook"
+      });
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.data.matches).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({
+              id: "note.legacy-draft",
+              status: "active"
+            })
+          ])
+        );
+        expect(result.data.matches.map((match) => match.id)).not.toContain(
+          "note.legacy-rejected"
+        );
       }
     } finally {
       connection.close();
@@ -420,7 +464,7 @@ interface TestConnection extends IndexDatabaseConnection {
 interface ObjectFixture {
   id: string;
   type?: ObjectType;
-  status?: ObjectStatus;
+  status?: ObjectStatus | "draft" | "rejected";
   title: string;
   bodyPath?: string;
   body: string;

@@ -1,17 +1,17 @@
 {
   "confidence": "high",
-  "content_hash": "sha256:c6efcf0bd8847e0d468efdd0dfe6dfd2ed51f105945db7222ebf7128c366a369",
-  "created_at": "2026-05-04T18:04:45+02:00",
+  "content_hash": "sha256:aa0117f3dd9c07e5706dd90ed9a4b129e5ce6251873f37eb6ae1e0ccec2a6f07",
+  "created_at": "2026-05-04T20:21:52+02:00",
   "evidence": [
     {
-      "id": "package.json",
-      "kind": "file"
+      "id": "synthesis.feature-map",
+      "kind": "memory"
     }
   ],
   "from": "project.aictx",
   "id": "rel.project-aictx-implements-concept-feature-cli-binary-aictx",
   "predicate": "implements",
-  "status": "active",
+  "status": "stale",
   "to": "concept.feature-cli-binary-aictx",
-  "updated_at": "2026-05-04T18:04:45+02:00"
+  "updated_at": "2026-05-05T13:43:35+02:00"
 }

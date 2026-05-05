@@ -2,7 +2,7 @@
 
 ## 1. Purpose
 
-This document defines the v2 on-disk storage format for Aictx.
+This document defines the v3 on-disk storage format for Aictx.
 
 Aictx stores durable project memory as local files under `.aictx/`. The storage format must be readable by humans, deterministic for tools, rebuildable into generated indexes, and safe to review or revert with Git when Git is available.
 
@@ -78,6 +78,12 @@ Storage uses this layout:
       stripe-webhook-behavior.md
       stripe-webhook-behavior.json
     concepts/
+    sources/
+      readme.md
+      readme.json
+    syntheses/
+      feature-map.md
+      feature-map.json
   relations/
     decision-billing-retries-requires-constraint-webhook-idempotency.json
   events.jsonl
@@ -128,11 +134,11 @@ Recommended `.gitignore` entries when Git is available:
 
 `.aictx/config.json` is canonical and should be tracked when Git is available.
 
-V2 example:
+V3 example:
 
 ```json
 {
-  "version": 2,
+  "version": 3,
   "project": {
     "id": "project.billing-api",
     "name": "Billing API"
@@ -173,7 +179,7 @@ Version behavior:
 * `version > supported_version` must refuse writes.
 * `version < supported_version` must be upgraded before writes that require the newer schema.
 * Read-only inspection may proceed when safe.
-* Aictx must not silently rewrite storage formats; use `aictx upgrade` for v1-to-v2 migration.
+* Aictx must not silently rewrite storage formats; use `aictx upgrade` for legacy-to-v3 migration.
 
 ## 5. Memory Objects
 
@@ -200,6 +206,8 @@ Object types:
 * `workflow`
 * `note`
 * `concept`
+* `source`
+* `synthesis`
 
 Recommended directories:
 
@@ -214,21 +222,21 @@ gotcha         -> .aictx/memory/gotchas/
 workflow       -> .aictx/memory/workflows/
 note           -> .aictx/memory/notes/
 concept        -> .aictx/memory/concepts/
+source         -> .aictx/memory/sources/
+synthesis      -> .aictx/memory/syntheses/
 ```
 
-`gotcha` captures known failure modes, traps, recurring bugs, and behavior future agents should avoid. `workflow` captures repeated project procedures such as release steps, debugging paths, migrations, local setup, or recurring maintenance. Do not add `history` or `task-note` object types; use Git/events/statuses for history and branch/task scope for temporary context.
+`source` captures concise provenance for repo docs, AGENTS/CLAUDE/rules, package manifests, issues, external references recorded by an agent, or user-stated context. `synthesis` captures maintained summaries for product intent, feature maps, roadmap, architecture, conventions, agent guidance, and repeated workflows. `gotcha` captures known failure modes, traps, recurring bugs, and behavior future agents should avoid. `workflow` captures repeated project procedures such as release steps, debugging paths, migrations, local setup, or recurring maintenance. Do not add `history` or `task-note` object types; use Git/events/statuses for history and branch/task scope for temporary context.
 
-V2 keeps the broad object type taxonomy and adds object-level facets for more specific agent-memory categories.
+Storage v3 keeps broad object types, adds `source` and `synthesis` layers, and uses object-level facets for more specific agent-memory categories.
 
 ### 5.2 Object Statuses
 
 General statuses:
 
 * `active`
-* `draft`
 * `stale`
 * `superseded`
-* `rejected`
 
 Question-specific statuses:
 
@@ -237,10 +245,11 @@ Question-specific statuses:
 
 Rules:
 
-* Non-question objects should use `active`, `draft`, `stale`, `superseded`, or `rejected`.
-* Question objects may use `open` or `closed` in addition to general statuses.
+* Non-question objects should use `active`, `stale`, or `superseded`.
+* Question objects should use `open`, `closed`, `stale`, or `superseded`.
 * `superseded` objects should identify their replacement with `superseded_by` and/or a `supersedes` relation.
-* Physical deletion is allowed only through an explicit delete operation and should be rare.
+* Agents save useful memory directly as active memory; there is no normal persisted proposal or rejection workflow.
+* Physical deletion is allowed through an explicit delete operation for memory that should not persist, such as accidental sensitive content, rejected speculation, or a mistaken duplicate with no future value.
 
 ### 5.3 Object IDs
 
@@ -263,6 +272,8 @@ question.retry-backoff
 fact.stripe-sends-duplicates
 note.stripe-webhook-behavior
 concept.billing
+source.readme
+synthesis.feature-map
 ```
 
 Rules:
@@ -362,13 +373,13 @@ Rules:
 * Markdown H1 should match `title`; mismatch is a warning.
 * `created_at` and `updated_at` must be ISO 8601 strings with timezone offsets.
 * `tags` must be lowercase slug strings.
-* `facets.category` should classify the durable claim with one of the v2 facet categories.
+* `facets.category` should classify the durable claim with one of the storage v3 facet categories.
 * `facets.applies_to` should list relevant paths, globs, or subsystem hints when the memory is not globally applicable.
 * `facets.load_modes` may restrict boosts to `coding`, `debugging`, `review`, `architecture`, or `onboarding`.
-* `evidence` should link durable claims to supporting files, commits, memory objects, relations, or tasks.
+* `evidence` should link durable claims to supporting files, commits, memory objects, relations, source records, or tasks.
 * Unknown top-level fields are invalid.
 
-V2 facet categories:
+V3 facet categories:
 
 * `project-description`
 * `architecture`
@@ -496,6 +507,9 @@ Allowed predicates:
 * `conflicts_with`
 * `mentions`
 * `implements`
+* `derived_from`
+* `summarizes`
+* `documents`
 * `related_to`
 
 Relation status values:
@@ -540,7 +554,6 @@ Allowed event types:
 * `memory.updated`
 * `memory.marked_stale`
 * `memory.superseded`
-* `memory.rejected`
 * `memory.deleted`
 * `relation.created`
 * `relation.updated`

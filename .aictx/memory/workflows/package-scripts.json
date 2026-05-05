@@ -1,27 +1,9 @@
 {
   "body_path": "memory/workflows/package-scripts.md",
-  "content_hash": "sha256:b9b777efb4f4af0c19ec103182728796a744916463346c66637481580212ea4f",
-  "created_at": "2026-05-04T17:37:16+02:00",
-  "evidence": [
-    {
-      "id": "package.json",
-      "kind": "file"
-    },
-    {
-      "id": "scripts/sync-readme-install-version.mjs",
-      "kind": "file"
-    },
-    {
-      "id": "scripts/generate-version.mjs",
-      "kind": "file"
-    }
-  ],
+  "content_hash": "sha256:6b02d453c781bb68657a6ff76457b068e6ec6ce9a7fee93f69e851e45185a254",
+  "created_at": "2026-05-04T20:21:52+02:00",
+  "evidence": [],
   "facets": {
-    "applies_to": [
-      "package.json",
-      "scripts/sync-readme-install-version.mjs",
-      "scripts/generate-version.mjs"
-    ],
     "category": "workflow"
   },
   "id": "workflow.package-scripts",
@@ -42,5 +24,5 @@
   ],
   "title": "Package scripts",
   "type": "workflow",
-  "updated_at": "2026-05-04T18:39:34+02:00"
+  "updated_at": "2026-05-04T20:21:52+02:00"
 }
