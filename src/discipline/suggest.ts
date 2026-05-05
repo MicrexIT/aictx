@@ -221,7 +221,8 @@ const BOOTSTRAP_PATTERNS = [
   "lib/**/*.{ts,tsx,js,jsx,svelte,md}",
   "test/**/*.{ts,tsx,js,jsx,svelte,md}",
   "tests/**/*.{ts,tsx,js,jsx,svelte,md}",
-  "docs/**/*.{md,mdx}"
+  "docs/**/*.{md,mdx}",
+  "specs/**/*.{md,mdx}"
 ] as const;
 const TOKEN_STOP_WORDS = new Set([
   "aictx",
@@ -972,9 +973,11 @@ function bootstrapSourcePaths(analysis: BootstrapAnalysis): string[] {
     ...(analysis.packageJson === null ? [] : ["package.json"]),
     ...(analysis.packageManager === null ? [] : [analysis.packageManager.source]),
     ...analysis.agentGuidance.map((guidance) => guidance.path),
-    ...["docs/prd.md", "docs/agent-integration.md", "integrations/templates/agent-guidance.md"].filter(
-      (path) => analysis.files.has(path)
-    )
+    ...[
+      "specs/prd.md",
+      "docs/src/content/docs/agent-integration.md",
+      "integrations/templates/agent-guidance.md"
+    ].filter((path) => analysis.files.has(path))
   ]).slice(0, 10);
 }
 

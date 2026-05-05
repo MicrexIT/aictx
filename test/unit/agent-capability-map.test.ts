@@ -168,6 +168,12 @@ const cliOnlyCapabilities = [
     notes: "Local read-only viewer remains CLI-only in v1."
   },
   {
+    capability: "Read public docs",
+    mcp: "none",
+    cli: "`aictx docs`",
+    notes: "Bundled public docs remain CLI-only in v1."
+  },
+  {
     capability: "Suggest memory review packet",
     mcp: "none",
     cli: "`aictx suggest`",
@@ -204,6 +210,7 @@ const exactCliOnlyCommands = [
   "`aictx export obsidian`",
   "`aictx projects`",
   "`aictx view`",
+  "`aictx docs`",
   "`aictx suggest`",
   "`aictx audit`"
 ] as const;
@@ -225,6 +232,7 @@ const exactCliOnlyGuidanceCommands = [
   "`aictx export obsidian`",
   "`aictx projects`",
   "`aictx view`",
+  "`aictx docs`",
   "`aictx suggest`",
   "`aictx audit`"
 ] as const;
@@ -308,10 +316,10 @@ function parseCapabilityTable(markdown: string): CapabilityRow[] {
 }
 
 describe("agent capability map guardrail", () => {
-  it("keeps root spec mirrors in sync with docs copies", async () => {
+  it("keeps root spec mirrors in sync with internal spec copies", async () => {
     for (const spec of mirroredSpecs) {
       await expect(readProjectFile(spec)).resolves.toBe(
-        await readProjectFile(`docs/${spec}`)
+        await readProjectFile(`specs/${spec}`)
       );
     }
   });
@@ -322,7 +330,7 @@ describe("agent capability map guardrail", () => {
       "storage-format-spec.md",
       "schemas-and-validation-spec.md",
       "README.md",
-      "docs/agent-integration.md",
+      "docs/src/content/docs/agent-integration.md",
       "integrations/templates/agent-guidance.md"
     ] as const;
 
@@ -346,7 +354,7 @@ describe("agent capability map guardrail", () => {
       "prd.md",
       "runtime-and-project-architecture-spec.md",
       "README.md",
-      "docs/agent-integration.md",
+      "docs/src/content/docs/agent-integration.md",
       "integrations/templates/agent-guidance.md"
     ] as const;
 
@@ -362,7 +370,7 @@ describe("agent capability map guardrail", () => {
   it("keeps setup docs explicit about package-manager fallback commands", async () => {
     const fallbackDocs = [
       "README.md",
-      "docs/agent-integration.md",
+      "docs/src/content/docs/agent-integration.md",
       "integrations/templates/agent-guidance.md"
     ] as const;
 
@@ -383,7 +391,7 @@ describe("agent capability map guardrail", () => {
       "mcp-and-cli-api-spec.md",
       "runtime-and-project-architecture-spec.md",
       "README.md",
-      "docs/agent-integration.md",
+      "docs/src/content/docs/agent-integration.md",
       "integrations/templates/agent-guidance.md"
     ] as const;
 
@@ -432,7 +440,7 @@ describe("agent capability map guardrail", () => {
       const guidance = await readProjectFile(path);
 
       expect(guidance.indexOf("Use CLI first for routine memory work")).toBeLessThan(
-        guidance.indexOf("Use CLI for v1 setup, maintenance, recovery, export, inspection, registry management, local viewing, suggestion, and audit capabilities")
+        guidance.indexOf("Use CLI for v1 setup, maintenance, recovery, export, inspection, registry management, local viewing, public documentation, suggestion, and audit capabilities")
       );
       expect(guidance.indexOf("aictx load \"<task summary>\"")).toBeLessThan(
         guidance.indexOf("load_memory({ task: \"<task summary>\"")
@@ -462,7 +470,7 @@ describe("agent capability map guardrail", () => {
       "prd.md",
       "runtime-and-project-architecture-spec.md",
       "README.md",
-      "docs/agent-integration.md",
+      "docs/src/content/docs/agent-integration.md",
       "integrations/templates/agent-guidance.md"
     ] as const;
 
@@ -478,7 +486,7 @@ describe("agent capability map guardrail", () => {
   });
 
   it("keeps README and agent docs explicit that local viewing is CLI-only", async () => {
-    for (const path of ["README.md", "docs/agent-integration.md"] as const) {
+    for (const path of ["README.md", "docs/src/content/docs/agent-integration.md"] as const) {
       const content = await readProjectFile(path);
 
       expect(content).toContain("| View local memory | none | `aictx view`");

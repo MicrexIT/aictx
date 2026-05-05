@@ -127,11 +127,15 @@ describe("release package", () => {
     });
     expect(packageJson.scripts?.build).toContain("pnpm build:viewer");
     expect(packageJson.scripts?.build).toContain("pnpm build:version");
+    expect(packageJson.scripts?.["build:docs"]).toBe("astro build --root docs");
     expect(packageJson.scripts?.["build:version"]).toBe("node scripts/generate-version.mjs");
     expect(packageJson.scripts?.["build:viewer"]).toBe("vite build --config viewer/vite.config.ts");
     expect(packageJson.devDependencies).toEqual(
       expect.objectContaining({
+        "@astrojs/starlight": expect.any(String),
         "@sveltejs/vite-plugin-svelte": expect.any(String),
+        astro: expect.any(String),
+        "starlight-llms-txt": expect.any(String),
         svelte: expect.any(String),
         "svelte-check": expect.any(String),
         vite: expect.any(String)
@@ -193,6 +197,25 @@ describe("release package", () => {
     expect(aictxVersion.stderr).toBe("");
     expect(aictxVersion.stdout).toBe(`${packageVersion}\n`);
 
+    const docsList = await expectSuccessfulCommand(
+      installedBin("aictx", installRoot),
+      ["docs"],
+      installRoot
+    );
+
+    expect(docsList.stderr).toBe("");
+    expect(docsList.stdout).toContain("Aictx docs: https://docs.aictx.dev/");
+    expect(docsList.stdout).toContain("- getting-started:");
+
+    const docsTopic = await expectSuccessfulCommand(
+      installedBin("aictx", installRoot),
+      ["docs", "agent-integration"],
+      installRoot
+    );
+
+    expect(docsTopic.stderr).toBe("");
+    expect(docsTopic.stdout).toContain("# Agent integration");
+
     const viewer = await startInstalledViewerProcess(installRoot, viewerProjectRoot);
 
     try {
@@ -231,7 +254,11 @@ const requiredPackedPaths = [
   "dist/schemas/patch.schema.json",
   "dist/schemas/relation.schema.json",
   "dist/viewer/index.html",
-  "docs/agent-integration.md",
+  "docs/astro.config.mjs",
+  "docs/public/CNAME",
+  "docs/src/content/docs/agent-integration.md",
+  "docs/src/content/docs/getting-started.md",
+  "docs/src/content/docs/reference.md",
   "integrations/templates/agent-guidance.md",
   "integrations/codex/aictx/SKILL.md",
   "integrations/claude/aictx/SKILL.md",
@@ -376,7 +403,7 @@ function exactDependencyVersion(version: string): string {
 async function expectInstalledMemoryDisciplineDocs(installRoot: string): Promise<void> {
   const agentIntegration = await readInstalledPackageFile(
     installRoot,
-    "docs/agent-integration.md"
+    "docs/src/content/docs/agent-integration.md"
   );
 
   expectMemoryDisciplineContent(agentIntegration);

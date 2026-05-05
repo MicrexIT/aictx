@@ -1,0 +1,117 @@
+---
+import GitHubIcon from "../components/GitHubIcon.astro";
+import BaseLayout from "../layouts/BaseLayout.astro";
+---
+
+<BaseLayout>
+  <main id="top">
+    <section class="hero">
+      <div class="hero-panel">
+        <a class="eyebrow-link" href="https://github.com/MicrexIT/aictx" rel="noreferrer">
+          <GitHubIcon />
+          Local-first and open source <span data-star-count></span>
+        </a>
+        <h1>Give your AI agents project memory.</h1>
+        <p class="hero-copy">
+          Install Aictx once. Agents can load what matters before work and save what future agents
+          should remember after.
+        </p>
+
+        <div class="hero-actions">
+          <a class="button primary" href="https://github.com/MicrexIT/aictx" rel="noreferrer">Install Aictx</a>
+          <a class="button secondary" href="https://viewer-gold-five.vercel.app/?token=demo" rel="noreferrer">
+            Browse demo
+          </a>
+        </div>
+
+        <div class="hero-command" aria-label="Quick start commands">
+          <code>npm install -g @aictx/memory</code>
+        </div>
+      </div>
+    </section>
+
+    <section class="split-section" id="context" aria-labelledby="context-title">
+      <div class="section-heading">
+        <h2 id="context-title">Relevant memory beats bigger prompts.</h2>
+        <p>
+          AGENTS.md and CLAUDE.md files can help, but loading them on every task adds noise.
+          Aictx gives agents the context they need for the work in front of them.
+        </p>
+      </div>
+
+      <div class="comparison">
+        <div>
+          <strong>Less prompt clutter</strong>
+          <p>Load the useful parts, not every rule and reminder by default.</p>
+        </div>
+        <div>
+          <strong>Better token efficiency</strong>
+          <p>Spend tokens on the current task, not repeated setup.</p>
+        </div>
+        <div>
+          <strong>Lower operating cost</strong>
+          <p>Reuse project knowledge instead of explaining the same things again.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="workflow" id="workflow" aria-labelledby="workflow-title">
+      <div class="section-heading">
+        <h2 id="workflow-title">Load context. Save memory. Review the diff.</h2>
+        <p>
+          Aictx stores memory as readable local files beside your repo, so changes stay visible
+          and reviewable.
+        </p>
+      </div>
+
+      <div class="steps">
+        <article>
+          <span>01</span>
+          <h3>Load before work</h3>
+          <code>aictx load "change auth routes"</code>
+          <p>Agents start with the project knowledge that matters for the task.</p>
+        </article>
+        <article>
+          <span>02</span>
+          <h3>Save durable knowledge</h3>
+          <code>aictx save --stdin</code>
+          <p>Agents save decisions, gotchas, workflows, and handoffs as they work.</p>
+        </article>
+        <article>
+          <span>03</span>
+          <h3>Review like code</h3>
+          <code>aictx diff</code>
+          <p>Inspect memory changes before they guide future agents.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="demo-section" id="demo" aria-labelledby="demo-title">
+      <div class="section-heading">
+        <h2 id="demo-title">See what your agents know.</h2>
+      </div>
+
+      <div class="demo-art">
+        <a class="viewer-frame" href="https://viewer-gold-five.vercel.app/?token=demo" rel="noreferrer">
+          <span class="browser-bar">
+            <i></i>
+            <i></i>
+            <i></i>
+            <code>viewer-gold-five.vercel.app/?token=demo</code>
+          </span>
+          <img
+            src="/assets/viewer-demo.png"
+            alt="Aictx viewer showing repo memory navigation, task filters, source memory, and graph relationships."
+          />
+        </a>
+      </div>
+
+      <div class="demo-footer">
+        <p>Browse the local handbook and inspect the memory future agents will use.</p>
+        <a class="text-link" href="https://viewer-gold-five.vercel.app/?token=demo" rel="noreferrer">
+          Open live demo
+        </a>
+      </div>
+    </section>
+  </main>
+</BaseLayout>

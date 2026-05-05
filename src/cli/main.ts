@@ -8,6 +8,10 @@ import { version } from "../generated/version.js";
 import { registerAuditCommand } from "./commands/audit.js";
 import { registerCheckCommand } from "./commands/check.js";
 import { registerDiffCommand } from "./commands/diff.js";
+import {
+  registerDocsCommand,
+  type DocsUrlOpener
+} from "./commands/docs.js";
 import { registerExportCommand } from "./commands/export.js";
 import { registerGraphCommand } from "./commands/graph.js";
 import { registerHistoryCommand } from "./commands/history.js";
@@ -50,6 +54,11 @@ export interface CliMainOptions {
     opener?: ViewerUrlOpener;
     detacher?: ViewerDetacher;
     shutdownSignal?: AbortSignal;
+  };
+  docs?: {
+    docsDir?: string;
+    baseUrl?: string;
+    opener?: DocsUrlOpener;
   };
   registry?: {
     enabled?: boolean;
@@ -156,6 +165,13 @@ export function createCliProgram(options: CliMainOptions = {}): Command {
     cwd: options.cwd ?? process.cwd(),
     stdout: writeOut,
     stderr: writeErr
+  });
+  registerDocsCommand(program, {
+    stdout: writeOut,
+    stderr: writeErr,
+    ...(options.docs?.docsDir === undefined ? {} : { docsDir: options.docs.docsDir }),
+    ...(options.docs?.baseUrl === undefined ? {} : { baseUrl: options.docs.baseUrl }),
+    ...(options.docs?.opener === undefined ? {} : { opener: options.docs.opener })
   });
   registerViewCommand(program, {
     cwd: options.cwd ?? process.cwd(),

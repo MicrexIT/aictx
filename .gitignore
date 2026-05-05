@@ -15,6 +15,7 @@ coverage/
 .cache/
 .turbo/
 .vite/
+.astro/
 .eslintcache
 
 # Logs and diagnostics

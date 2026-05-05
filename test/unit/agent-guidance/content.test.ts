@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 const root = process.cwd();
 
 const guideTargets = [
-  "docs/agent-integration.md",
+  "docs/src/content/docs/agent-integration.md",
   "integrations/templates/agent-guidance.md",
   "integrations/codex/aictx/SKILL.md",
   "integrations/claude/aictx/SKILL.md",
@@ -41,6 +41,7 @@ const cliOnlyCommands = [
   "`aictx graph`",
   "`aictx export obsidian`",
   "`aictx view`",
+  "`aictx docs`",
   "`aictx suggest`",
   "`aictx audit`"
 ] as const;
@@ -153,10 +154,10 @@ describe("agent guidance content", () => {
       const content = await readProjectFile(path);
 
       expect(content).toContain(
-        "Use CLI for v1 setup, maintenance, recovery, export, inspection, registry management, local viewing, suggestion, and audit capabilities"
+        "Use CLI for v1 setup, maintenance, recovery, export, inspection, registry management, local viewing, public documentation, suggestion, and audit capabilities"
       );
       expect(content).toContain(
-        "For setup, maintenance, inspection, export, registry management, local viewing, suggestion, audit, or recovery operations that are not exposed by MCP, use the `aictx` CLI"
+        "For setup, maintenance, inspection, export, registry management, local viewing, public documentation, suggestion, audit, or recovery operations that are not exposed by MCP, use the `aictx` CLI"
       );
 
       for (const command of cliOnlyCommands) {

@@ -1,0 +1,54 @@
+---
+import GitHubIcon from "../components/GitHubIcon.astro";
+import "../styles/global.css";
+
+interface Props {
+  title?: string;
+  description?: string;
+}
+
+const {
+  title = "Aictx - Local memory for AI coding agents",
+  description = "Aictx gives AI coding agents local, reviewable project memory so they stop starting from scratch on every task."
+} = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <script src="/stars.js" defer></script>
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="/" aria-label="Aictx home">
+        <span class="brand-mark" aria-hidden="true">A</span>
+        <span>Aictx</span>
+      </a>
+
+      <nav aria-label="Primary navigation">
+        <a href="/#context">Context</a>
+        <a href="/#workflow">How it works</a>
+        <a href="/#demo">Viewer</a>
+        <a href="/blog/">Blog</a>
+        <a href="https://github.com/MicrexIT/aictx" rel="noreferrer">Docs</a>
+      </nav>
+
+      <a class="github-pill" href="https://github.com/MicrexIT/aictx" rel="noreferrer">
+        <GitHubIcon />
+        <span>Star</span>
+        <strong data-star-count>GitHub</strong>
+      </a>
+    </header>
+
+    <slot />
+
+    <footer class="site-footer">
+      <p>Local, reviewable project memory for AI coding agents.</p>
+    </footer>
+  </body>
+</html>

@@ -1,0 +1,47 @@
+{
+  "body_path": "memory/sources/user-public-docs-strategy.md",
+  "content_hash": "sha256:7252102bb00ddc0e491ad6bb9cd5ec54c4d97ba678cbba3514b42e40327204d4",
+  "created_at": "2026-05-05T14:47:09+02:00",
+  "evidence": [
+    {
+      "id": "2026-05-05 public documentation strategy clarification",
+      "kind": "task"
+    }
+  ],
+  "facets": {
+    "applies_to": [
+      "public-documentation",
+      "agent-documentation",
+      "docs-architecture",
+      "deployment"
+    ],
+    "category": "source",
+    "load_modes": [
+      "architecture",
+      "onboarding",
+      "coding"
+    ]
+  },
+  "id": "source.user-public-docs-strategy",
+  "scope": {
+    "branch": null,
+    "kind": "project",
+    "project": "project.aictx",
+    "task": null
+  },
+  "source": {
+    "kind": "user",
+    "task": "public documentation strategy clarification"
+  },
+  "status": "active",
+  "tags": [
+    "docs",
+    "public-docs",
+    "agent-docs",
+    "hosting",
+    "user-context"
+  ],
+  "title": "User-stated public documentation strategy",
+  "type": "source",
+  "updated_at": "2026-05-05T14:47:09+02:00"
+}

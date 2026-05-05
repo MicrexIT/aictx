@@ -13,7 +13,11 @@ function formatStars(count) {
 }
 
 async function loadStars() {
-  if (window.location.protocol === "file:") {
+  if (
+    window.location.protocol === "file:" ||
+    window.location.hostname === "localhost" ||
+    window.location.hostname === "127.0.0.1"
+  ) {
     return;
   }
 

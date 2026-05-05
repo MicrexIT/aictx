@@ -90,7 +90,7 @@ Repository layout:
   scripts/
     copy-schemas.mjs
     generate-agent-guidance.mjs
-  docs/
+  specs/
     prd.md
     storage-format-spec.md
     mcp-and-cli-api-spec.md
@@ -99,7 +99,16 @@ Repository layout:
     runtime-and-project-architecture-spec.md
     local-viewer-spec.md
     implementation-roadmap.md
-    agent-integration.md
+  docs/
+    astro.config.mjs
+    public/
+      CNAME
+    src/
+      content/
+        docs/
+          agent-integration.md
+          getting-started.md
+          reference.md
   integrations/
     templates/
       agent-guidance.md
@@ -206,7 +215,7 @@ Packaging rules:
 * `scripts/generate-agent-guidance.mjs` generates target-specific guidance files from the canonical template.
 * Generated guidance files must not be edited directly.
 * `integrations/codex/aictx/SKILL.md`, `integrations/claude/aictx/SKILL.md`, `integrations/claude/aictx.md`, and `integrations/generic/aictx-agent-instructions.md` are packaged as optional agent guidance.
-* Specs may live at repo root during planning, but the implementation repo should place them under `docs/`.
+* Internal specs live under `specs/`; public, package-shipped docs live under `docs/`.
 
 ## 4. Public Entry Points
 
@@ -1034,7 +1043,7 @@ Rules:
 
 * Package must include `dist/` and schema files.
 * Package must include built local viewer assets under `dist/viewer/` once `aictx view` is implemented.
-* Package should include `docs/agent-integration.md`, `integrations/templates/agent-guidance.md`, and generated files under `integrations/codex/`, `integrations/claude/`, and `integrations/generic/`.
+* Package should include public docs under `docs/src/content/docs/`, `integrations/templates/agent-guidance.md`, and generated files under `integrations/codex/`, `integrations/claude/`, and `integrations/generic/`.
 * Package must not include test fixtures unless needed.
 * Package must declare Node engine `>=22`.
 * Package should support macOS and Linux first.

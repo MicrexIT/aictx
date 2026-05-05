@@ -38,13 +38,13 @@ V1 API behavior must follow these rules:
 * AI agents must be able to reach every supported Aictx capability through either MCP or CLI.
 * CLI is the default agent path for routine memory load, search, save, and diff workflows.
 * MCP is a supported integration path when the agent client has already launched and connected to `aictx-mcp`.
-* CLI is the supported path for setup, maintenance, recovery, export, inspection, registry management, local viewing, suggestion, and audit workflows.
+* CLI is the supported path for setup, maintenance, recovery, export, inspection, registry management, local viewing, public documentation, suggestion, and audit workflows.
 * The API must be usable without a cloud account, external API, embeddings, or hosted service.
 
 ### 2.1 Agent Capability Map
 
 V1 parity means agent reachability through MCP or CLI, not identical command lists.
-CLI-only capabilities are intentionally not MCP parity gaps; do not add setup, maintenance, recovery, export, inspection, registry management, local viewing, suggestion, or audit tools to MCP just to mirror CLI commands.
+CLI-only capabilities are intentionally not MCP parity gaps; do not add setup, maintenance, recovery, export, inspection, registry management, local viewing, public documentation, suggestion, or audit tools to MCP just to mirror CLI commands.
 When a supported MCP or CLI entrypoint exists, agents must use that entrypoint instead of editing `.aictx/` files directly.
 
 | Capability | MCP | CLI | Notes |
@@ -68,6 +68,7 @@ When a supported MCP or CLI entrypoint exists, agents must use that entrypoint i
 | Export Obsidian projection | none | `aictx export obsidian` | Generated projection remains CLI-only in v1. |
 | Manage project registry | none | `aictx projects` | Registry management remains CLI-only in v1. |
 | View local memory | none | `aictx view` | Local read-only viewer remains CLI-only in v1. |
+| Read public docs | none | `aictx docs` | Bundled public docs remain CLI-only in v1. |
 | Suggest memory review packet | none | `aictx suggest` | Agent assistance remains CLI-only in v1. |
 | Audit memory hygiene | none | `aictx audit` | Deterministic hygiene review remains CLI-only in v1. |
 
@@ -581,6 +582,7 @@ aictx graph <id> [--json]
 aictx export obsidian [--out <dir>] [--json]
 aictx projects (list | add [path] | remove <identifier> | prune) [--json]
 aictx view [--port <number>] [--open] [--detach] [--json]
+aictx docs [topic] [--open] [--json]
 aictx suggest (--from-diff | --bootstrap | --after-task "<task>") [--patch] [--json]
 aictx upgrade [--json]
 aictx patch review <file> [--json]
@@ -600,6 +602,7 @@ Minimum behavior:
 * `aictx export obsidian` writes a one-way generated Obsidian projection from canonical memory.
 * `aictx projects` manages the user-level project registry used by the multi-project viewer.
 * `aictx view` starts a loopback-only read-only web viewer for human memory inspection.
+* `aictx docs` lists bundled public documentation topics, prints bundled Markdown for a selected topic, and optionally opens the hosted docs page.
 * `aictx suggest --from-diff` returns a Git-backed deterministic memory review packet for the current diff and does not write memory.
 * `aictx suggest --bootstrap` returns a deterministic first-run memory review packet and does not write memory.
 * `aictx suggest --after-task "<task>"` returns an end-of-task save/no-save review packet and does not write memory.
@@ -836,6 +839,64 @@ Success data:
 }
 ```
 
+### 5.16 `aictx docs`
+
+Purpose:
+
+Read package-shipped public Aictx documentation from the CLI or open the hosted documentation site.
+
+Syntax:
+
+```bash
+aictx docs [topic] [--open] [--json]
+```
+
+Behavior:
+
+* Do not require initialized `.aictx/` in the launch cwd.
+* With no topic, list available public documentation topics.
+* With `<topic>`, print the bundled Markdown for that topic with Starlight frontmatter omitted.
+* Support aliases such as `quickstart`, `agents`, `help`, and `patch` for common topic names.
+* `--open` opens `https://docs.aictx.dev` or the selected topic URL in the user's default browser.
+* Browser-open failures must be warnings, not command failures.
+* The command must not read canonical memory, mutate `.aictx/`, or depend on a network request to print bundled docs.
+
+Success data when listing topics:
+
+```json
+{
+  "kind": "list",
+  "base_url": "https://docs.aictx.dev/",
+  "topics": [
+    {
+      "topic": "getting-started",
+      "title": "Getting started",
+      "description": "Install Aictx, initialize memory, and run the first load/save/diff loop.",
+      "url": "https://docs.aictx.dev/getting-started/",
+      "aliases": ["quickstart", "install", "start"]
+    }
+  ],
+  "open_attempted": false,
+  "opened_url": null
+}
+```
+
+Success data when printing one topic:
+
+```json
+{
+  "kind": "topic",
+  "topic": "getting-started",
+  "title": "Getting started",
+  "description": "Install Aictx, initialize memory, and run the first load/save/diff loop.",
+  "url": "https://docs.aictx.dev/getting-started/",
+  "aliases": ["quickstart", "install", "start"],
+  "content": "# Getting started\n\n...",
+  "open_attempted": false,
+  "opened_url": null
+}
+```
+
 ## 6. MCP Tools
 
 V1 MCP must expose only these required tools:
@@ -846,7 +907,7 @@ V1 MCP must expose only these required tools:
 * `diff_memory`
 
 The MCP server must not expose arbitrary shell access, arbitrary filesystem writes, or low-level graph mutation tools.
-Do not add MCP tools for load-mode management, suggestion packets, audits, setup, maintenance, recovery, export, inspection, registry management, or local viewing. `aictx suggest` and `aictx audit` remain CLI-only read-only support surfaces in v1.
+Do not add MCP tools for load-mode management, suggestion packets, audits, setup, maintenance, recovery, export, inspection, registry management, local viewing, or public documentation. `aictx suggest`, `aictx audit`, and `aictx docs` remain CLI-only read-only support surfaces in v1.
 
 ### 6.1 `load_memory`
 
