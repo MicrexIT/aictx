@@ -60,7 +60,7 @@ const AGENT_GUIDANCE_BLOCK = `${[
   '- Default CLI: `aictx load "<task summary>"`',
   '- MCP equivalent when available: `load_memory({ task: "<task summary>" })`',
   "",
-  "After meaningful work, make a save/no-save decision. Use `aictx suggest --after-task \"<task>\" --json` when useful, then save durable project knowledge directly as active memory:",
+  "After meaningful work, make a save/no-save decision. Use `aictx suggest --after-task \"<task>\" --json` when useful, then save durable project knowledge directly as active memory. Saved memory is active immediately after Aictx validates and writes it:",
   "- Default CLI: `aictx save --stdin`",
   '- MCP equivalent when available: `save_memory_patch({ patch: { source, changes } })`',
   "",
@@ -70,7 +70,7 @@ const AGENT_GUIDANCE_BLOCK = `${[
   "",
   "If loaded memory conflicts with the user request, current code, or test results, prefer current evidence and mention the conflict.",
   "",
-  "Before finalizing, say whether Aictx memory changed. If it changed, suggest reviewing `.aictx/` changes; in Git projects, use `aictx diff` or MCP `diff_memory` when available.",
+  "Before finalizing, say whether Aictx memory changed. If it changed, mention that asynchronous inspection is available through `aictx view`, `aictx diff`, Git tools, or MCP `diff_memory` when available.",
   AGENT_GUIDANCE_END_MARKER
 ].join("\n")}\n`;
 
@@ -983,9 +983,9 @@ function countOccurrences(value: string, search: string): number {
 function nextSteps(agentGuidance: AgentGuidanceData): string[] {
   return [
     agentGuidanceNextStep(agentGuidance),
-    "`aictx init` creates linked starter placeholders only. To seed useful first-run memory, run `aictx setup` for a review summary or `aictx setup --apply` to apply the conservative bootstrap patch. For manual review, run `aictx suggest --bootstrap --patch > bootstrap-memory.json`, `aictx patch review bootstrap-memory.json`, `aictx save --file bootstrap-memory.json`, and `aictx check`.",
-    "`aictx init` does not start MCP; agents should use `aictx load`, `aictx save --stdin`, and `aictx diff` by default. Configure agent clients that support MCP to launch `aictx-mcp` only when you want MCP equivalents such as `load_memory` and `save_memory_patch`. A globally launched MCP server can serve this project when tool calls include this project root as `project_root`. If `aictx` is not on `PATH`, use the project package-manager form such as `pnpm exec aictx`, `npm exec aictx`, or `./node_modules/.bin/aictx`, but treat package-manager and local-binary fallbacks as version-sensitive and update stale local installs before trusting schema errors.",
-    "Review memory changes in `.aictx/`; in Git projects, use `aictx diff` before committing because it includes untracked Aictx memory files that plain `git diff -- .aictx/` can omit.",
+    "`aictx init` creates linked starter placeholders only. To seed useful first-run memory, run `aictx setup` for a bootstrap preview or `aictx setup --apply` to apply the conservative bootstrap patch. For manual patch inspection, run `aictx suggest --bootstrap --patch > bootstrap-memory.json`, `aictx patch review bootstrap-memory.json`, `aictx save --file bootstrap-memory.json`, and `aictx check`.",
+    "`aictx init` does not start MCP; agents should use `aictx load` and `aictx save --stdin` by default. Configure agent clients that support MCP to launch `aictx-mcp` only when you want MCP equivalents such as `load_memory` and `save_memory_patch`. A globally launched MCP server can serve this project when tool calls include this project root as `project_root`. If `aictx` is not on `PATH`, use the project package-manager form such as `pnpm exec aictx`, `npm exec aictx`, or `./node_modules/.bin/aictx`, but treat package-manager and local-binary fallbacks as version-sensitive and update stale local installs before trusting schema errors.",
+    "Saved memory is active immediately after Aictx validates and writes it. Inspect memory asynchronously with `aictx view`, `aictx diff`, Git tools, or MCP `diff_memory` when available.",
     "Optional bundled skills are available under `integrations/codex/` and `integrations/claude/`."
   ];
 }

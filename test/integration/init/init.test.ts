@@ -95,8 +95,9 @@ describe("initProject", () => {
       expect(guidance).toContain("Save nothing when there is no durable future value");
       expect(guidance).toContain("Do not save task diaries");
       expect(guidance).toContain("Before finalizing, say whether Aictx memory changed");
-      expect(guidance).toContain("If it changed, suggest reviewing `.aictx/` changes");
-      expect(guidance).toContain("use `aictx diff` or MCP `diff_memory` when available");
+      expect(guidance).toContain("Saved memory is active immediately");
+      expect(guidance).toContain("asynchronous inspection is available");
+      expect(guidance).toContain("`aictx view`, `aictx diff`, Git tools, or MCP `diff_memory`");
       expect(guidance).not.toMatch(/install .*skill/i);
     }
     expect(result.data.agent_guidance).toEqual({
@@ -158,7 +159,7 @@ describe("initProject", () => {
     expect(nextSteps).toContain("aictx save --file bootstrap-memory.json");
     expect(nextSteps).toContain("save_memory_patch");
     expect(nextSteps).toContain(
-      "Review memory changes in `.aictx/`; in Git projects, use `aictx diff` before committing because it includes untracked Aictx memory files that plain `git diff -- .aictx/` can omit."
+      "Saved memory is active immediately after Aictx validates and writes it. Inspect memory asynchronously with `aictx view`, `aictx diff`, Git tools, or MCP `diff_memory` when available."
     );
     expect(nextSteps).not.toContain("`aictx check`, and `aictx diff`");
     expect(nextSteps).toContain("integrations/codex");

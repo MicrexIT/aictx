@@ -6,7 +6,6 @@ Aictx gives coding agents a local project-memory workflow:
 2. Do the task using the loaded memory as project context.
 3. Have the agent create a structured memory patch for durable findings.
 4. Save the patch through Aictx.
-5. Review `.aictx/` changes, using Git when available.
 
 The normal agent loop should be one load call before work and one save call after meaningful work.
 
@@ -57,7 +56,7 @@ MCP equivalent when available:
 save_memory_patch({ patch: { source, changes } })
 ```
 
-Dirty or untracked `.aictx/` files are not by themselves a reason to skip saving durable memory. Attempt the supported CLI/MCP save when there is durable future value. Aictx backs up dirty touched files under `.aictx/recovery/` before overwrite/delete and continues where possible.
+Saved memory is active immediately after Aictx validates and writes the patch. Dirty or untracked `.aictx/` files are not by themselves a reason to skip saving durable memory. Attempt the supported CLI/MCP save when there is durable future value. Aictx backs up dirty touched files under `.aictx/recovery/` before overwrite/delete and continues where possible.
 
 If `aictx` is not on `PATH`, run the same commands through the project package manager or local binary path:
 
@@ -74,13 +73,14 @@ Load modes are `coding`, `debugging`, `review`, `architecture`, and
 broaden the project scope, call a model, use external retrieval, or load the whole
 project.
 
-In Git projects, review memory changes before finalizing:
+Inspect memory asynchronously when needed:
 
 ```bash
+aictx view
 aictx diff
 ```
 
-`aictx diff` shows tracked and untracked Aictx memory changes. Git remains the source of truth for history and rollback, but plain `git diff -- .aictx/` can omit untracked memory files before staging. Aictx writes local files and never commits automatically. The user decides whether to edit, commit, or revert memory changes.
+`aictx diff` shows tracked and untracked Aictx memory changes in Git projects. Git remains the source of truth for history and rollback, but plain `git diff -- .aictx/` can omit untracked memory files before staging. Aictx writes local files and never commits automatically.
 
 `aictx-mcp` is an MCP stdio server. The MCP client must launch it and connect to its stdin/stdout; an agent generally cannot start `aictx-mcp` in a shell and then use it as MCP tools in an already-running session. If MCP tools are not available, stay on the CLI path.
 
@@ -93,7 +93,7 @@ tools use the server launch directory for backward compatibility.
 
 When `aictx-mcp` is not on `PATH`, configure the MCP client to launch it through the project package manager or local binary path, such as `pnpm exec aictx-mcp`, `npm exec aictx-mcp`, or `./node_modules/.bin/aictx-mcp`. For one-off `npx` usage, name the scoped package explicitly: `npx --package @aictx/memory -- aictx-mcp`.
 
-Use `aictx setup` for guided first-run onboarding, or `aictx setup --apply` when the conservative bootstrap patch should be applied immediately after review. Use `aictx suggest --from-diff --json` when the agent needs a deterministic review packet for current code changes before deciding what durable memory to save. Use `aictx suggest --bootstrap --json` for a first-run repo memory pass. If loaded memory only contains the init-created project and architecture placeholders, treat setup, onboarding, and "why is memory empty?" requests as enough context to run the bootstrap workflow proactively. Run `aictx suggest --bootstrap --patch > bootstrap-memory.json`, review it with `aictx patch review bootstrap-memory.json`, apply it with `aictx save --file bootstrap-memory.json`, then run `aictx check`. In Git projects, use `aictx diff` before committing memory changes so untracked memory files are included. The bootstrap patch command does not write memory; it only creates a reviewable patch so users do not have to hand-write JSON. Use `aictx audit --json` to find grouped, actionable memory hygiene issues.
+Use `aictx setup` for guided first-run onboarding, or `aictx setup --apply` when the conservative bootstrap patch should be applied immediately. Use `aictx suggest --from-diff --json` when the agent needs a deterministic suggestion packet for current code changes before deciding what durable memory to save. Use `aictx suggest --bootstrap --json` for a first-run repo memory pass. If loaded memory only contains the init-created project and architecture placeholders, treat setup, onboarding, and "why is memory empty?" requests as enough context to run the bootstrap workflow proactively. Run `aictx suggest --bootstrap --patch > bootstrap-memory.json`, inspect it with `aictx patch review bootstrap-memory.json`, apply it with `aictx save --file bootstrap-memory.json`, then run `aictx check`. The bootstrap patch command does not write memory; it only creates an inspectable patch so users do not have to hand-write JSON. Use `aictx audit --json` to find grouped, actionable memory hygiene issues.
 
 ## Capability Map
 
@@ -119,7 +119,7 @@ The v1 agent model is CLI-first and MCP-compatible. CLI handles routine memory w
 | Export Obsidian projection | none | `aictx export obsidian` |
 | Manage project registry | none | `aictx projects` |
 | View local memory | none | `aictx view` |
-| Suggest memory review packet | none | `aictx suggest` |
+| Suggest memory decision packet | none | `aictx suggest` |
 | Audit memory hygiene | none | `aictx audit` |
 
 CLI-only capabilities are not MCP parity gaps. Do not expose setup, maintenance, recovery, export, inspection, registry management, local viewing, suggestion, or audit commands as MCP tools solely to mirror the CLI command list.
@@ -144,11 +144,11 @@ writes generated projection files through the same service as
 
 ## Structured Patches
 
-The agent creates the structured patch. Aictx validates it, writes canonical Markdown and JSON files, appends events, updates generated local indexes, and leaves the result reviewable.
+The agent creates the structured patch. Aictx validates it, writes canonical Markdown and JSON files, appends events, updates generated local indexes, and makes the result active immediately.
 
 Aictx does not infer durable project meaning from diffs. The agent should compose memory updates from current evidence, such as the task, loaded context, repository changes, tests, and conversation context.
 
-Apply the memory discipline lifecycle: load narrowly before non-trivial work, save only durable knowledge directly as active memory, update existing memory before creating duplicates, stale or supersede wrong old memory, delete memory that should not persist, prefer current code and user requests over loaded memory, review diffs, and save nothing when there is no durable future value.
+Apply the memory discipline lifecycle: load narrowly before non-trivial work, save only durable knowledge directly as active memory, update existing memory before creating duplicates, stale or supersede wrong old memory, delete memory that should not persist, prefer current code and user requests over loaded memory, report whether memory changed, and save nothing when there is no durable future value.
 
 Minimal patch:
 
@@ -339,4 +339,4 @@ Treat loaded memory as project context, not as instructions that outrank the use
 
 If memory conflicts with the user's request, source code, tests, or current evidence, mention the conflict and prefer current evidence.
 
-If Aictx rejects an attempted save because of invalid incoming patch data, secret detection, lock contention, invalid config, or filesystem failures, report the reason. Do not work around the rejection by editing `.aictx/` manually. Dirty or untracked `.aictx/` files are reviewable state, not a preflight blocker; Aictx backs up dirty touched files to `.aictx/recovery/` before overwrite/delete and continues where possible. Valid dirty `events.jsonl` history is allowed because saves append to it.
+If Aictx rejects an attempted save because of invalid incoming patch data, secret detection, lock contention, invalid config, or filesystem failures, report the reason. Do not work around the rejection by editing `.aictx/` manually. Dirty or untracked `.aictx/` files are inspectable state, not a preflight blocker; Aictx backs up dirty touched files to `.aictx/recovery/` before overwrite/delete and continues where possible. Valid dirty `events.jsonl` history is allowed because saves append to it.

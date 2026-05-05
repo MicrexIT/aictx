@@ -478,8 +478,8 @@ describe("aictx suggest CLI", () => {
     expect(envelope.data.check.valid).toBe(true);
   });
 
-  it("prints a setup review summary without applying the bootstrap patch", async () => {
-    const repo = await createBootstrapPatchGitProject("aictx-cli-setup-review-");
+  it("prints a setup proposal without applying the bootstrap patch", async () => {
+    const repo = await createBootstrapPatchGitProject("aictx-cli-setup-preview-");
 
     const output = await runCli(["node", "aictx", "setup"], repo);
 

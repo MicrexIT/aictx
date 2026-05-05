@@ -1,6 +1,6 @@
 ---
 title: Agent integration
-description: How coding agents should load, use, save, and review Aictx memory.
+description: How coding agents should load, use, save, and inspect Aictx memory.
 ---
 
 # Agent integration
@@ -11,7 +11,6 @@ Aictx gives coding agents a local project-memory workflow:
 2. Do the task using the loaded memory as project context.
 3. Create a structured memory patch for durable findings.
 4. Save the patch through Aictx.
-5. Review `.aictx/` changes, using Git when available.
 
 The normal agent loop should be one load call before work and one save call
 after meaningful work.
@@ -59,16 +58,18 @@ MCP equivalent when available:
 save_memory_patch({ patch: { source, changes } })
 ```
 
+Saved memory is active immediately after Aictx validates and writes the patch.
 Dirty or untracked `.aictx/` files are not by themselves a reason to skip saving durable memory. Dirty state is not a preflight blocker. Aictx backs up dirty touched files under `.aictx/recovery/` before overwrite/delete and continues where possible.
 
-In Git projects, review memory changes before finalizing:
+Inspect memory asynchronously when needed:
 
 ```bash
+aictx view
 aictx diff
 ```
 
-`aictx diff` shows tracked and untracked Aictx memory changes. Aictx writes
-local files and never commits automatically.
+`aictx diff` shows tracked and untracked Aictx memory changes in Git projects.
+Aictx writes local files and never commits automatically.
 
 If `aictx` is not on `PATH`, run the same commands through the project package
 manager or local binary path:
@@ -108,7 +109,7 @@ The v1 agent model is CLI-first and MCP-compatible.
 | Export Obsidian projection | none | `aictx export obsidian` |
 | Manage project registry | none | `aictx projects` |
 | View local memory | none | `aictx view` |
-| Suggest memory review packet | none | `aictx suggest` |
+| Suggest memory decision packet | none | `aictx suggest` |
 | Audit memory hygiene | none | `aictx audit` |
 | Read public docs | none | `aictx docs` |
 
@@ -127,7 +128,8 @@ Apply the lifecycle consistently:
 - Stale or supersede wrong old memory when current evidence invalidates it.
 - Delete memory that should not persist.
 - Prefer current code and user requests over loaded memory when they conflict.
-- Review diffs before finalizing; agents should review memory diffs before they guide future work.
+- Report whether memory changed; inspection can happen asynchronously through
+  the viewer, `aictx diff`, or Git tools.
 - Save nothing when the task produced no durable future value.
 
 Right-size memory:
@@ -147,7 +149,7 @@ Use update-before-create behavior:
   single replacement.
 - Use `supersede_object` when a newer object replaces an older one.
 - Use `delete_object` when memory should not persist.
-- Use `create_relation` only when the link helps future retrieval or review.
+- Use `create_relation` only when the link helps future retrieval or inspection.
 - Create a new object only when no existing memory should be updated, marked stale, or superseded.
 
 Save-nothing-is-valid: if the work produced no durable future value, do not
@@ -201,7 +203,7 @@ ignore current code or user requests.
 - Bad no-value save: creating a memory patch only to say that nothing important
   happened.
 
-## Bootstrap and review packets
+## Bootstrap and suggestion packets
 
 Use `aictx setup` for guided first-run onboarding. If loaded memory only contains starter placeholders, treat setup, onboarding, and "why is memory empty?" requests as enough context to run the bootstrap workflow proactively.
 
@@ -214,7 +216,7 @@ aictx check
 ```
 
 Use `aictx suggest --from-diff --json` when current code changes need a memory
-review packet before deciding what durable memory to save. Use
+suggestion packet before deciding what durable memory to save. Use
 `aictx audit --json` to find grouped, actionable memory hygiene issues.
 
 During setup, capture explicit product features with the `product-feature`

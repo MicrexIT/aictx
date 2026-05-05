@@ -13,7 +13,7 @@ description: Compact CLI, MCP, docs, object taxonomy, and structured patch refer
 | Maintenance | `aictx check`, `aictx rebuild`, `aictx reset`, `aictx upgrade` |
 | Routine memory | `aictx load`, `aictx search`, `aictx suggest`, `aictx audit`, `aictx save` |
 | Inspection | `aictx inspect`, `aictx stale`, `aictx graph` |
-| Review and recovery | `aictx diff`, `aictx history`, `aictx restore`, `aictx rewind` |
+| Inspection and recovery | `aictx diff`, `aictx history`, `aictx restore`, `aictx rewind` |
 | Export | `aictx export obsidian` |
 | Viewer | `aictx projects`, `aictx view` |
 | Docs | `aictx docs` |

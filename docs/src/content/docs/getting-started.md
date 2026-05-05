@@ -1,6 +1,6 @@
 ---
 title: Getting started
-description: Install Aictx, initialize memory, and run the first load/save/diff loop.
+description: Install Aictx, initialize memory, and run the first load/save loop.
 ---
 
 # Getting started
@@ -77,14 +77,15 @@ save a structured patch:
 aictx save --stdin
 ```
 
-Then review memory changes:
+Saved memory is active immediately after Aictx validates and writes the patch.
+Inspect it asynchronously when needed:
 
 ```bash
+aictx view
 aictx diff
 ```
 
-Aictx writes local files and never commits automatically. Review `.aictx/`
-changes the same way you review source code.
+Aictx writes local files and never commits automatically.
 
 ## Guided setup
 
@@ -95,6 +96,6 @@ aictx setup
 aictx setup --apply
 ```
 
-Use `aictx setup` when you want a guided review. Use `aictx setup --apply` when
-the conservative bootstrap memory patch should be applied immediately after
-review.
+Use `aictx setup` when you want a guided bootstrap preview. Use
+`aictx setup --apply` when the conservative bootstrap memory patch should be
+applied immediately.

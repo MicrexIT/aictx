@@ -1,6 +1,6 @@
 {
   "body_path": "memory/syntheses/agent-memory-guidance.md",
-  "content_hash": "sha256:d5e7e3e1443c9548fc8e51cf85312f35587fffe877ac0d02395db9604d548d16",
+  "content_hash": "sha256:aadfbf4b06c9a1da6573cb2be2b83e665ae82de7dabe96bd8c28dd16582d820e",
   "created_at": "2026-05-05T13:30:07+02:00",
   "evidence": [
     {
@@ -10,14 +10,23 @@
     {
       "id": "source.user-hybrid-memory-redesign",
       "kind": "source"
+    },
+    {
+      "id": "docs/src/content/docs/agent-integration.md",
+      "kind": "file"
+    },
+    {
+      "id": "src/storage/init.ts",
+      "kind": "file"
     }
   ],
   "facets": {
     "applies_to": [
       "AGENTS.md",
       "CLAUDE.md",
-      "docs/agent-integration.md",
-      "integrations/templates/agent-guidance.md"
+      "docs/src/content/docs/agent-integration.md",
+      "integrations/templates/agent-guidance.md",
+      "src/storage/init.ts"
     ],
     "category": "agent-guidance",
     "load_modes": [
@@ -45,5 +54,5 @@
   ],
   "title": "How agents should collect AICTX memory",
   "type": "synthesis",
-  "updated_at": "2026-05-05T13:30:07+02:00"
+  "updated_at": "2026-05-05T17:26:27+02:00"
 }

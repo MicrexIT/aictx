@@ -15,7 +15,7 @@ locally for fast retrieval.
 The normal loop is:
 
 ```text
-load relevant memory -> do work -> save durable memory -> review .aictx changes
+load relevant memory -> do work -> save durable memory
 ```
 
 Core memory commands do not require a cloud account, embeddings, hosted sync, an

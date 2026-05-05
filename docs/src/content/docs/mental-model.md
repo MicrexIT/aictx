@@ -1,6 +1,6 @@
 ---
 title: Mental model
-description: How Aictx stores, indexes, retrieves, and reviews project memory.
+description: How Aictx stores, indexes, retrieves, and inspects project memory.
 ---
 
 # Mental model
@@ -17,8 +17,8 @@ task, and save only reusable knowledge that future agents can safely rely on.
 
 Canonical memory is the durable source of truth. It includes human-readable
 Markdown bodies, JSON sidecars with structured metadata, relation JSON files,
-and `events.jsonl` for semantic memory history. These files are meant to be
-reviewed like source code.
+and `events.jsonl` for semantic memory history. Saved memory is accepted as
+active memory immediately after Aictx validates and writes it.
 
 Generated state is rebuildable. The SQLite search index, context packs, and
 exports can be regenerated from canonical memory. Do not hand-edit generated
@@ -50,11 +50,13 @@ such as `coding`, `debugging`, `review`, `architecture`, and `onboarding` tune
 deterministic ranking and rendering. They do not broaden the project scope, call
 a model, use external retrieval, or load the whole project.
 
-## Review loop
+## Async inspection
 
-Aictx writes reviewable files. In Git projects, use:
+Aictx writes inspectable files. Use the local viewer or, in Git projects, the
+memory diff:
 
 ```bash
+aictx view
 aictx diff
 ```
 

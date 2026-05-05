@@ -498,7 +498,7 @@ Rules:
 
 V1 project root resolution must support Git and non-Git projects.
 
-Git is preferred when available because it provides diff, review, history, and restore behavior. Non-Git projects still support core memory operations.
+Git is preferred when available because it provides diff, inspection, history, and restore behavior. Non-Git projects still support core memory operations.
 
 Algorithm:
 
@@ -664,16 +664,16 @@ Rules:
 Memory discipline is policy plus deterministic packets. The lifecycle rules are:
 
 * Load narrowly before non-trivial work using the task and load mode.
-* Save only durable knowledge and keep entries short, linked, and reviewable.
+* Save only durable knowledge and keep entries short, linked, and inspectable.
 * Prefer updating existing memory, marking it stale, or superseding it before creating duplicates.
 * Prefer current code, tests, manifests, and user instruction over loaded memory when they conflict.
-* Review memory diffs after meaningful work.
+* Report whether memory changed; inspection can happen asynchronously through the viewer, `aictx diff`, or Git tools.
 * Save nothing when no durable future value was discovered.
 
 Responsibilities:
 
-* Build `aictx suggest --from-diff` review packets from Git diff summaries, changed files, related memory, and possible stale candidates.
-* Build `aictx suggest --bootstrap` review packets from local project files that are useful for first-run memory creation.
+* Build `aictx suggest --from-diff` suggestion packets from Git diff summaries, changed files, related memory, and possible stale candidates.
+* Build `aictx suggest --bootstrap` suggestion packets from local project files that are useful for first-run memory creation.
 * Build `aictx suggest --bootstrap --patch` proposed patches from deterministic high-confidence repository evidence without saving them. Bootstrap proposals should create source records and maintained syntheses for product intent, feature map, and agent guidance instead of noisy one-node-per-command memory.
 * Build `aictx audit` findings for deterministic memory hygiene rules.
 * Keep suggestion and audit outputs read-only and local-only.
@@ -1020,7 +1020,7 @@ Security rules:
 Prompt-injection handling:
 
 * Aictx cannot prevent all memory poisoning.
-* Aictx must preserve Git reviewability so suspicious memory changes are visible.
+* Aictx must preserve Git inspectability so suspicious memory changes are visible.
 * Context packs should label memory as project memory, not system instructions.
 * Rejected, stale, superseded, and conflicted memory must not enter high-priority context sections by default.
 

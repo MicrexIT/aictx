@@ -171,7 +171,7 @@ async function runSetup(
       viewer_log_path: viewer.data?.log_path ?? null,
       next_step:
         save === null && proposal.proposed
-          ? "Run `aictx setup --apply` to apply the reviewed bootstrap memory patch after reviewing any product-feature concepts."
+          ? "Run `aictx setup --apply` to apply the proposed bootstrap memory patch."
           : proposal.proposed
             ? null
             : "No bootstrap memory patch to apply."

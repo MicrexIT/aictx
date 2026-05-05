@@ -8,7 +8,7 @@ chat. Memory is stored under `.aictx/` as reviewable local files, indexed
 locally for fast retrieval, and kept compatible with Git workflows.
 
 ```text
-load relevant memory -> do work -> save durable memory -> review .aictx changes
+load relevant memory -> do work -> save durable memory
 ```
 
 Aictx does not require a cloud account, embeddings, hosted sync, an external
@@ -97,9 +97,11 @@ Save durable memory after meaningful work:
 aictx save --stdin
 ```
 
-Review `.aictx/` changes:
+Saved memory is active immediately after Aictx validates and writes the patch.
+Inspect memory asynchronously when needed:
 
 ```bash
+aictx view
 aictx diff
 ```
 
@@ -172,7 +174,8 @@ Agents should:
 - Stale or supersede wrong old memory when current evidence invalidates it.
 - Delete memory that should not persist.
 - Prefer current code and user requests over loaded memory when they conflict.
-- Review diffs before finalizing.
+- Report whether memory changed; inspection can happen asynchronously through
+  the viewer, `aictx diff`, or Git tools.
 - Save nothing when the task produced no durable future value.
 
 Right-size memory. Use atomic memories for precise reusable claims,
@@ -225,5 +228,6 @@ aictx setup --apply
 
 Finally, run:
 aictx check
-aictx diff
 ```
+
+Inspect the accepted memory later with `aictx view` or `aictx diff` when needed.

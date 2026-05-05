@@ -428,9 +428,9 @@ function expectMemoryDisciplineContent(content: string): void {
   expect(content).toContain("`mark_stale`");
   expect(content).toContain("`supersede_object`");
   expect(
-    content.includes("review diffs") ||
-      content.includes("review memory diffs") ||
-      content.includes("reviewing `.aictx/` changes")
+    /report whether memory changed/i.test(content) ||
+      /inspect(?:ion)?[\s\S]{0,40}asynchron/i.test(content) ||
+      /async inspection/i.test(content)
   ).toBe(true);
 }
 

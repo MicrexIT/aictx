@@ -45,7 +45,7 @@ const lifecycleRules = [
   /save only durable/i,
   /updat(?:e|ing)[\s\S]*stale[\s\S]*supersed/i,
   /current code[\s\S]*user/i,
-  /review[\s\S]*diff/i,
+  /memory changed|async inspection/i,
   /save[\s\S]*nothing/i
 ] as const;
 
@@ -72,7 +72,7 @@ const mcpAndCliCapabilities = [
     capability: "Show memory diff",
     mcp: "`diff_memory`",
     cli: "`aictx diff`",
-    notes: "Git-backed; CLI is the default review path."
+    notes: "Git-backed async inspection and recovery path."
   }
 ] as const;
 
@@ -174,7 +174,7 @@ const cliOnlyCapabilities = [
     notes: "Bundled public docs remain CLI-only in v1."
   },
   {
-    capability: "Suggest memory review packet",
+    capability: "Suggest memory decision packet",
     mcp: "none",
     cli: "`aictx suggest`",
     notes: "Agent assistance remains CLI-only in v1."
@@ -183,7 +183,7 @@ const cliOnlyCapabilities = [
     capability: "Audit memory hygiene",
     mcp: "none",
     cli: "`aictx audit`",
-    notes: "Deterministic hygiene review remains CLI-only in v1."
+    notes: "Deterministic hygiene audit remains CLI-only in v1."
   }
 ] as const;
 
@@ -429,8 +429,8 @@ describe("agent capability map guardrail", () => {
     const claude = await readProjectFile("integrations/claude/aictx.md");
     const generic = await readProjectFile("integrations/generic/aictx-agent-instructions.md");
 
-    expect(codex).toBe(`---\nname: aictx-memory\ndescription: Use this skill when working in a project that uses Aictx project memory. It guides the agent to load relevant memory before non-trivial coding work, save durable memory patches after meaningful changes, and keep all memory updates reviewable through Aictx and Git when available.\n---\n\n${generatedNotice}\n\n${template}\n`);
-    expect(claudeSkill).toBe(`---\nname: aictx-memory\ndescription: Use this skill when working in a project that uses Aictx project memory. It guides the agent to load relevant memory before non-trivial coding work, save durable memory patches after meaningful changes, and keep all memory updates reviewable through Aictx and Git when available.\n---\n\n${generatedNotice}\n\n${template}\n`);
+    expect(codex).toBe(`---\nname: aictx-memory\ndescription: Use this skill when working in a project that uses Aictx project memory. It guides the agent to load relevant memory before non-trivial coding work, save durable memory patches after meaningful changes, and keep memory inspectable through Aictx and Git when available.\n---\n\n${generatedNotice}\n\n${template}\n`);
+    expect(claudeSkill).toBe(`---\nname: aictx-memory\ndescription: Use this skill when working in a project that uses Aictx project memory. It guides the agent to load relevant memory before non-trivial coding work, save durable memory patches after meaningful changes, and keep memory inspectable through Aictx and Git when available.\n---\n\n${generatedNotice}\n\n${template}\n`);
     expect(claude).toBe(`${generatedNotice}\n\n${template}\n`);
     expect(generic).toBe(`${generatedNotice}\n\n${template}\n`);
   });

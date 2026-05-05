@@ -97,7 +97,7 @@ const DOC_TOPICS = [
   {
     topic: "agent-integration",
     title: "Agent integration",
-    description: "Teach coding agents to load, use, save, and review Aictx memory safely.",
+    description: "Teach coding agents to load, use, save, and inspect Aictx memory safely.",
     file: "agent-integration.md",
     path: "/agent-integration/",
     aliases: ["agents", "agent", "guidance"]

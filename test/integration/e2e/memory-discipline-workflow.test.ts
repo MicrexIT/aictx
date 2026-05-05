@@ -109,7 +109,7 @@ afterEach(async () => {
 });
 
 describe("aictx memory discipline e2e workflow", () => {
-  it("covers bootstrap, save, mode-aware load, suggest, audit, stale/supersede, and final diff review", async () => {
+  it("covers bootstrap, save, mode-aware load, suggest, audit, stale/supersede, and async inspection", async () => {
     const repo = await createRepo("aictx-e2e-memory-discipline-");
     const init = parseSuccessEnvelope<InitData>(
       (await expectSuccessfulCli(["node", "aictx", "init", "--json"], repo)).stdout

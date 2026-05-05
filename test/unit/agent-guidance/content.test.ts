@@ -76,7 +76,7 @@ const lifecycleRules = [
   /stale or supersede wrong old memory/i,
   /delete memory that should not persist/i,
   /prefer current code and user requests over loaded memory/i,
-  /review diffs/i,
+  /report whether memory changed/i,
   /save nothing/i
 ] as const;
 

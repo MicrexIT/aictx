@@ -26,7 +26,7 @@ aictx reset
 ```
 
 - `init` creates `.aictx/` and optional repo-level agent guidance.
-- `setup` guides first-run onboarding and bootstrap memory review.
+- `setup` guides first-run onboarding and bootstrap memory preview.
 - `check` validates canonical memory and generated index health.
 - `rebuild` regenerates indexes from canonical memory.
 - `reset` backs up and clears local `.aictx/` storage.
@@ -56,7 +56,7 @@ aictx graph <id>
 Use these commands to inspect one memory object, list stale/superseded memory,
 or view a one-hop relation neighborhood.
 
-## Git review and recovery
+## Git inspection and recovery
 
 ```bash
 aictx diff

@@ -52,7 +52,7 @@ When a supported MCP or CLI entrypoint exists, agents must use that entrypoint i
 | Load task context | `load_memory` | `aictx load` | Default routine agent path is CLI; MCP equivalent is supported when configured. |
 | Search memory | `search_memory` | `aictx search` | Default routine agent path is CLI; MCP equivalent is supported when configured. |
 | Save memory patch | `save_memory_patch` | `aictx save` | All writes use structured patches. |
-| Show memory diff | `diff_memory` | `aictx diff` | Git-backed; CLI is the default review path. |
+| Show memory diff | `diff_memory` | `aictx diff` | Git-backed async inspection and recovery path. |
 | Initialize storage | none | `aictx init`, `aictx setup` | Setup remains CLI-only in v1. |
 | Review patch file | none | `aictx patch review` | Patch review remains CLI-only in v1. |
 | Validate storage | none | `aictx check` | Maintenance remains CLI-only in v1. |
@@ -69,8 +69,8 @@ When a supported MCP or CLI entrypoint exists, agents must use that entrypoint i
 | Manage project registry | none | `aictx projects` | Registry management remains CLI-only in v1. |
 | View local memory | none | `aictx view` | Local read-only viewer remains CLI-only in v1. |
 | Read public docs | none | `aictx docs` | Bundled public docs remain CLI-only in v1. |
-| Suggest memory review packet | none | `aictx suggest` | Agent assistance remains CLI-only in v1. |
-| Audit memory hygiene | none | `aictx audit` | Deterministic hygiene review remains CLI-only in v1. |
+| Suggest memory decision packet | none | `aictx suggest` | Agent assistance remains CLI-only in v1. |
+| Audit memory hygiene | none | `aictx audit` | Deterministic hygiene audit remains CLI-only in v1. |
 
 ## 3. Runtime Preconditions
 
@@ -227,9 +227,9 @@ Success data:
   },
   "next_steps": [
     "Agents are now instructed through `AGENTS.md` and `CLAUDE.md` to load and save Aictx memory.",
-    "`aictx init` creates linked starter placeholders only. To seed useful first-run memory, run `aictx setup` for a review summary or `aictx setup --apply` to apply the conservative bootstrap patch. For manual review, run `aictx suggest --bootstrap --patch > bootstrap-memory.json`, `aictx patch review bootstrap-memory.json`, `aictx save --file bootstrap-memory.json`, and `aictx check`.",
-    "`aictx init` does not start MCP; agents should use `aictx load`, `aictx save --stdin`, and `aictx diff` by default. Configure agent clients that support MCP to launch `aictx-mcp` only when you want MCP equivalents such as `load_memory` and `save_memory_patch`. A globally launched MCP server can serve this project when tool calls include this project root as `project_root`.",
-    "Review memory changes in `.aictx/`; in Git projects, use `aictx diff` before committing because it includes untracked Aictx memory files that plain `git diff -- .aictx/` can omit.",
+    "`aictx init` creates linked starter placeholders only. To seed useful first-run memory, run `aictx setup` for a bootstrap preview or `aictx setup --apply` to apply the conservative bootstrap patch. For manual patch inspection, run `aictx suggest --bootstrap --patch > bootstrap-memory.json`, `aictx patch review bootstrap-memory.json`, `aictx save --file bootstrap-memory.json`, and `aictx check`.",
+    "`aictx init` does not start MCP; agents should use `aictx load` and `aictx save --stdin` by default. Configure agent clients that support MCP to launch `aictx-mcp` only when you want MCP equivalents such as `load_memory` and `save_memory_patch`. A globally launched MCP server can serve this project when tool calls include this project root as `project_root`.",
+    "Saved memory is active immediately after Aictx validates and writes it. Inspect memory asynchronously with `aictx view`, `aictx diff`, Git tools, or MCP `diff_memory` when available.",
     "Optional bundled skills are available under `integrations/codex/` and `integrations/claude/`."
   ]
 }
@@ -251,7 +251,7 @@ Behavior:
 
 * Run `aictx init`, using `--force` only when explicitly requested.
 * Build a conservative bootstrap patch proposal.
-* Without `--apply`, print a concise review summary and the next command.
+* Without `--apply`, print a concise bootstrap preview and the next command.
 * With `--apply`, save the bootstrap patch directly, then run `aictx check`.
 * If no bootstrap patch is proposed, print “No bootstrap memory patch to apply” and still run `aictx check`.
 * Include a diff summary when Git is available.
@@ -603,9 +603,9 @@ Minimum behavior:
 * `aictx projects` manages the user-level project registry used by the multi-project viewer.
 * `aictx view` starts a loopback-only read-only web viewer for human memory inspection.
 * `aictx docs` lists bundled public documentation topics, prints bundled Markdown for a selected topic, and optionally opens the hosted docs page.
-* `aictx suggest --from-diff` returns a Git-backed deterministic memory review packet for the current diff and does not write memory.
-* `aictx suggest --bootstrap` returns a deterministic first-run memory review packet and does not write memory.
-* `aictx suggest --after-task "<task>"` returns an end-of-task save/no-save review packet and does not write memory.
+* `aictx suggest --from-diff` returns a Git-backed deterministic memory suggestion packet for the current diff and does not write memory.
+* `aictx suggest --bootstrap` returns a deterministic first-run memory suggestion packet and does not write memory.
+* `aictx suggest --after-task "<task>"` returns an end-of-task save/no-save decision packet and does not write memory.
 * `aictx suggest --bootstrap --patch` returns a proposed structured memory patch and does not write canonical memory.
 * `aictx patch review <file>` validates and summarizes a patch file without writing canonical memory.
 * `aictx setup` orchestrates init, bootstrap proposal, optional save, check, and diff summary.
@@ -637,7 +637,7 @@ Behavior:
 * `--from-diff` reads the current non-generated project diff and related Aictx memory but does not create memory patches.
 * `--bootstrap` works with or without Git and lists likely files for the agent to inspect before creating seed memory.
 * `--after-task` packages changed files, related memory, duplicate or stale candidates, recommended facets, and a save/no-save checklist for the completed task.
-* `--patch` is valid only with `--bootstrap`; it emits a conservative proposed patch suitable for review and `aictx save --file`.
+* `--patch` is valid only with `--bootstrap`; it emits a conservative proposed patch suitable for inspection and `aictx save --file`.
 * `--bootstrap --patch` updates init-created project and architecture placeholders when deterministic evidence is strong, creates source records for important repo files and guidance, creates maintained syntheses for product intent, feature map, and agent guidance when evidence supports them, creates small workflow or constraint memories from package metadata when useful, proposes provenance relations such as `derived_from`, `summarizes`, and `documents`, proposes the starter project-to-architecture relation when it is missing, and emits no patch only when there is no deterministic source, synthesis, workflow, constraint, or starter relation to create.
 * All suggestion modes must be deterministic, local-only, and read-only for canonical memory.
 * Do not expose an MCP tool for suggestion packets in v1.
@@ -689,7 +689,7 @@ Bootstrap patch JSON success data with `--json`:
 ```
 
 Without `--json`, `--bootstrap --patch` prints the patch object directly so it
-can be redirected to a file and reviewed before `aictx save --file`.
+can be redirected to a file and inspected before `aictx save --file`.
 
 ### 5.12 `aictx audit`
 

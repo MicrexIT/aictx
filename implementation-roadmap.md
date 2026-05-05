@@ -2059,8 +2059,8 @@ Implementation:
 * Show `aictx load`.
 * Explain that `--token-budget` is optional and advisory; omitted budgets do not truncate context.
 * Show `aictx save --stdin` with a minimal structured patch example.
-* Show how to review `.aictx/` files.
-* Show `aictx diff` for Git projects.
+* Show how to inspect `.aictx/` files asynchronously.
+* Show `aictx view` and `aictx diff` for optional inspection.
 * Show MCP setup conceptually.
 * Include or link to the CLI-first, MCP-compatible capability map.
 * Link to the optional generated agent guidance and agent integration guide.
@@ -2111,7 +2111,7 @@ Implementation:
 * Include patch examples.
 * Include MCP tool list.
 * Include the CLI-first, MCP-compatible capability map.
-* Include safety warning about reviewing Git diffs.
+* Include safety note that saved memory is active immediately and can be inspected asynchronously.
 * Add one canonical guidance template under `integrations/templates/`.
 * Add a generator script that produces Codex, Claude, and generic guidance files from the template.
 * Verify the existing `build:guidance` hook regenerates the finalized guidance.
@@ -2599,7 +2599,7 @@ T060
 
 Implementation:
 
-* Define Aictx as a memory discipline system: narrow loads, durable saves, update-before-create, stale/supersede behavior, current-code precedence, diff review, and save-nothing-is-valid.
+* Define Aictx as a memory discipline system: narrow loads, durable saves, update-before-create, stale/supersede behavior, current-code precedence, async inspection, and save-nothing-is-valid.
 * Add first-class `gotcha` and `workflow` object types to specs.
 * Keep `history` and `task-note` out of object types; use Git/events/statuses and branch/task scope instead.
 * Specify mode-aware load modes: `coding`, `debugging`, `review`, `architecture`, and `onboarding`.
@@ -2688,11 +2688,11 @@ Acceptance:
 * Different modes rank/render different memory priorities deterministically.
 * Invalid modes return validation errors.
 
-### T064: Add Aictx Suggest Review Packets
+### T064: Add Aictx Suggestion Packets
 
 Goal:
 
-Add deterministic, read-only memory review packets for agents.
+Add deterministic, read-only memory suggestion packets for agents.
 
 Write scope:
 
@@ -2713,8 +2713,8 @@ T063
 
 Implementation:
 
-* Add `aictx suggest --from-diff [--json]` as a Git-required read-only review packet.
-* Add `aictx suggest --bootstrap [--json]` as a Git-optional first-run review packet.
+* Add `aictx suggest --from-diff [--json]` as a Git-required read-only suggestion packet.
+* Add `aictx suggest --bootstrap [--json]` as a Git-optional first-run suggestion packet.
 * Return changed files, related memory IDs, possible stale IDs, recommended memory types, and an agent checklist.
 * Do not generate final semantic patches or write memory.
 
@@ -2822,7 +2822,7 @@ T066
 
 Implementation:
 
-* Cover bootstrap suggestion, saving gotcha/workflow memory, mode-aware load, diff suggestion, audit findings, stale/supersede patching, and final diff review.
+* Cover bootstrap suggestion, saving gotcha/workflow memory, mode-aware load, diff suggestion, audit findings, stale/supersede patching, and optional async inspection.
 * Prove MCP remains limited to `load_memory`, `search_memory`, `save_memory_patch`, and `diff_memory`.
 * Prove core workflows still work outside Git except Git-required suggestion/diff/history/restore commands.
 
@@ -2916,10 +2916,10 @@ V1 implementation is complete when:
 * MCP declares and uses `zod` directly for transport-level tool input shape validation only.
 * Every supported Aictx capability is reachable to AI agents through MCP or CLI.
 * Docs and generated guidance describe the CLI-first, MCP-compatible model.
-* Memory discipline guidance teaches agents short linked memories, update-before-create, stale/supersede behavior, diff review, and save-nothing-is-valid.
+* Memory discipline guidance teaches agents short linked memories, update-before-create, stale/supersede behavior, async inspection, and save-nothing-is-valid.
 * `gotcha` and `workflow` are first-class memory object types.
 * `aictx load` and `load_memory` support deterministic mode-aware retrieval for coding, debugging, review, architecture, and onboarding.
-* `aictx suggest` returns deterministic read-only review packets for diffs and bootstrap memory creation.
+* `aictx suggest` returns deterministic read-only suggestion packets for diffs and bootstrap memory creation.
 * `aictx audit` returns deterministic read-only memory hygiene findings.
 * `aictx export obsidian` creates a generated Obsidian projection without changing canonical memory.
 * `aictx view` serves a loopback-only read-only viewer for search, document inspection, direct relation graph context, and generated Obsidian export.

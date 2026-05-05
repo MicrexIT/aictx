@@ -140,7 +140,7 @@ Aictx is:
 
 The product should feel like:
 
-load context → do work → save memory → review Git diff
+load context -> do work -> save memory -> inspect later when needed
 
 Not like:
 
@@ -193,9 +193,9 @@ A developer should understand the basic usage in less than a minute:
 aictx init
 aictx load "fix Stripe webhook retries"
 aictx save --stdin
-review .aictx/ changes
+inspect memory asynchronously when needed
 
-In Git projects, review with:
+In Git projects, inspect accepted memory changes with:
 
 aictx diff
 
@@ -204,8 +204,8 @@ In the default agent flow, `aictx save --stdin` expects a structured memory patc
 The first user-facing mental model:
 
 Before work: load project memory.
-After work: save what changed.
-Everything is visible in Git.
+After work: save what future agents should remember.
+Saved memory is active immediately and remains visible in Git.
 
 4.2 Minimal interaction overhead
 
@@ -316,10 +316,10 @@ The memory lifecycle rules are:
 * Prefer updating, marking stale, or superseding existing memory over creating duplicates.
 * Mark memory stale or superseded when current code, tests, manifests, or user instruction contradict it.
 * Prefer current code, tests, manifests, and the user's request over loaded memory when they conflict.
-* Review memory diffs at the end of meaningful work so the user can approve, edit, or revert changes.
+* Report whether memory changed; users can inspect accepted memory asynchronously through the viewer, `aictx diff`, or Git tools.
 * Save nothing when no durable future value was discovered.
 
-Aictx may produce deterministic review packets that help an agent decide what to save, but Aictx must not pretend to semantically understand a diff without the user's agent. The agent remains responsible for composing structured memory patches.
+Aictx may produce deterministic suggestion packets that help an agent decide what to save, but Aictx must not pretend to semantically understand a diff without the user's agent. The agent remains responsible for composing structured memory patches.
 
 ⸻
 
@@ -1608,7 +1608,7 @@ git restore .aictx/
 
 Aictx should provide convenience wrappers, but not hide Git.
 
-Aictx must not commit automatically. When Git is available, it writes memory files and leaves review, staging, committing, and pushing under user control.
+Aictx must not commit automatically. When Git is available, it writes memory files and leaves inspection, staging, committing, and pushing under user control.
 
 17.2 Required Git-aware features
 
@@ -2098,7 +2098,7 @@ Avoid making the initial product feel like enterprise compliance software.
 
 Decision 11: Memory discipline is policy plus deterministic packets
 
-Aictx should guide agents toward short, linked, reviewable memory and provide deterministic suggestion/audit packets. It should not call a model, infer semantic truth from code, or auto-save memory from diffs in v1.
+Aictx should guide agents toward short, linked, inspectable memory and provide deterministic suggestion/audit packets. It should not call a model, infer semantic truth from code, or auto-save memory from diffs in v1.
 
 ⸻
 
@@ -2142,7 +2142,7 @@ The product is working if:
 * The context pack improves agent performance without requiring the user to manage an ontology.
 * A new developer can understand the product intent from the first command and generated files.
 * The product remains useful with only two agent interactions per task: one memory load and one memory save.
-* Agents can use mode-aware load, suggestion packets, and audit findings to keep memory narrow, current, and reviewable.
+* Agents can use mode-aware load, suggestion packets, and audit findings to keep memory narrow, current, and inspectable.
 
 ⸻
 

@@ -9,7 +9,7 @@ Before non-trivial coding, architecture, debugging, dependency, or configuration
 - Default CLI: `aictx load "<task summary>"`
 - MCP equivalent when available: `load_memory({ task: "<task summary>" })`
 
-After meaningful work, make a save/no-save decision. Use `aictx suggest --after-task "<task>" --json` when useful, then save durable project knowledge directly as active memory:
+After meaningful work, make a save/no-save decision. Use `aictx suggest --after-task "<task>" --json` when useful, then save durable project knowledge directly as active memory. Saved memory is active immediately after Aictx validates and writes it:
 - Default CLI: `aictx save --stdin`
 - MCP equivalent when available: `save_memory_patch({ patch: { source, changes } })`
 
@@ -19,5 +19,5 @@ Right-size memory: use atomic memories for precise reusable claims, source recor
 
 If loaded memory conflicts with the user request, current code, or test results, prefer current evidence and mention the conflict.
 
-Before finalizing, say whether Aictx memory changed. If it changed, suggest reviewing `.aictx/` changes; in Git projects, use `aictx diff` or MCP `diff_memory` when available.
+Before finalizing, say whether Aictx memory changed. If it changed, mention that asynchronous inspection is available through `aictx view`, `aictx diff`, Git tools, or MCP `diff_memory` when available.
 <!-- aictx-memory:end -->

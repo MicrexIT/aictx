@@ -31,10 +31,10 @@ export function registerSuggestCommand(
 ): void {
   program
     .command("suggest")
-    .description("Build a read-only Aictx memory review packet.")
+    .description("Build a read-only Aictx memory suggestion packet.")
     .option("--from-diff", "Build a packet from current Git project changes.")
     .option("--bootstrap", "Build a first-run project memory packet.")
-    .option("--after-task <task>", "Build an end-of-task save/no-save review packet.")
+    .option("--after-task <task>", "Build an end-of-task save/no-save decision packet.")
     .option("--patch", "With --bootstrap, output a proposed structured memory patch.")
     .action(async (commandOptions: SuggestCommandOptions, command: Command) => {
       const result = await suggestMemory(suggestMemoryOptions(options, commandOptions));
