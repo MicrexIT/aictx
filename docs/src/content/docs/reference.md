@@ -7,7 +7,7 @@ description: Compact CLI, MCP, docs, object taxonomy, and structured patch refer
 
 ## CLI commands
 
-The CLI is the default path for routine memory work.
+The CLI is the default interface for routine memory work.
 
 | Area | Commands |
 | --- | --- |
@@ -20,7 +20,7 @@ The CLI is the default path for routine memory work.
 | Viewer | `aictx projects`, `aictx view` |
 | Docs | `aictx docs` |
 
-Use `--json` on commands that support structured output:
+Commands that support structured output accept `--json`:
 
 ```bash
 aictx check --json
@@ -39,8 +39,8 @@ MCP exposes exactly:
 - `diff_memory`
 
 Setup, maintenance, recovery, export, registry, viewer, docs, suggest, audit,
-stale, and graph workflows remain CLI-only. CLI-only capabilities are not MCP
-parity gaps.
+stale, and graph workflows are CLI-only in v1. These CLI-only commands are part
+of the v1 integration model rather than MCP parity gaps.
 
 Local MCP is the near-term integration path for local agent harnesses. Remote
 MCP, hosted sync, cloud auth, cloud hosting, and ChatGPT App SDK UI are future
@@ -65,7 +65,7 @@ bundled Markdown for that topic. `--open` opens the hosted page at
 Object types are `project`, `architecture`, `source`, `synthesis`, `decision`,
 `constraint`, `question`, `fact`, `gotcha`, `workflow`, `note`, and `concept`.
 
-Do not create `history`, `task-note`, or `feature` object types.
+`history`, `task-note`, and `feature` are not object types.
 
 Facet categories include `project-description`, `architecture`, `stack`,
 `convention`, `file-layout`, `product-feature`, `testing`,
@@ -100,5 +100,5 @@ Patch operations include `create_object`, `update_object`, `mark_stale`,
 `supersede_object`, `delete_object`, `create_relation`, `update_relation`, and
 `delete_relation`.
 
-Save only durable information future agents should know. Save nothing when the
-task produced no durable future value.
+Structured patches are for durable information future agents should know. A
+task that produced no durable future value does not need a save.

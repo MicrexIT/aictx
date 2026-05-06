@@ -42,12 +42,12 @@ const loadModes = [
 ] as const;
 
 const lifecycleRules = [
-  /load narrowly/i,
-  /save only durable/i,
-  /updat(?:e|ing)[\s\S]*stale[\s\S]*supersed/i,
+  /load(?:s)?(?: stay)? narrow|load narrowly/i,
+  /save only durable|only durable knowledge is saved/i,
+  /updat(?:e|ed|ing)[\s\S]*stale[\s\S]*supersed/i,
   /current code[\s\S]*user/i,
   /memory changed|async inspection/i,
-  /save[\s\S]*nothing/i
+  /save[-\s]*nothing/i
 ] as const;
 
 const mcpAndCliCapabilities = [
@@ -435,7 +435,7 @@ describe("agent capability map guardrail", () => {
     for (const path of fallbackDocs) {
       const content = await readProjectFile(path);
 
-      expect(content).toContain("If `aictx` is not on `PATH`");
+      expect(content).toMatch(/(?:If|When) `aictx` is not on `PATH`/);
 
       for (const fallback of packageManagerFallbacks) {
         expect(content).toContain(fallback);
@@ -527,7 +527,7 @@ describe("agent capability map guardrail", () => {
       expect(content).toMatch(/`search`\/`fetch`|`search`[\s\S]{0,80}`fetch`/);
       expect(content).toMatch(/adapter/i);
       expect(content).toMatch(
-        /not (?:the )?local MCP tool (?:contract|names)|must not (?:rename|replace) the local MCP tool(?:s| names)|must not register[\s\S]{0,40}`search`[\s\S]{0,40}`fetch`/i
+        /not (?:the )?local MCP tool\s+(?:contract|names)|must not (?:rename|replace) the local MCP tool(?:s| names)|must not register[\s\S]{0,40}`search`[\s\S]{0,40}`fetch`/i
       );
     }
   });
@@ -594,7 +594,7 @@ describe("agent capability map guardrail", () => {
 
       expect(content).toMatch(/CLI-only capabilities[\s\S]{0,80}not MCP parity gaps/);
       expect(content).toMatch(
-        /do not add[\s\S]{0,200}to MCP|do not add MCP tools|not (?:be )?added to MCP|do not add or ask for MCP tools solely to mirror these CLI\s+commands/i
+        /do not add[\s\S]{0,200}to MCP|do not add MCP tools|not (?:be )?added to MCP|do not add or ask for MCP tools solely to mirror these CLI\s+commands|has no MCP equivalent|have no MCP equivalents?|part of the v1 integration model rather than MCP parity gaps|CLI is the supported interface/i
       );
       expect(content).toMatch(/edit(?:ing)? `\.aictx\/` files directly/);
     }

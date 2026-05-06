@@ -6,7 +6,6 @@ import { describe, expect, it } from "vitest";
 const root = process.cwd();
 
 const guideTargets = [
-  "docs/src/content/docs/agent-integration.md",
   "integrations/templates/agent-guidance.md",
   "integrations/codex/aictx/SKILL.md",
   "integrations/claude/aictx/SKILL.md",
@@ -178,7 +177,7 @@ describe("agent guidance content", () => {
     for (const path of publicMcpContractTargets) {
       const content = await readProjectFile(path);
 
-      expect(content).toMatch(/MCP\s+exposes exactly/i);
+      expect(content).toMatch(/MCP\s+exposes\s+exactly/i);
       expect(content).toMatch(cliOnlyCategoryBoundary);
 
       for (const tool of mcpTools) {
@@ -215,7 +214,7 @@ describe("agent guidance content", () => {
 
       expect(content).toMatch(/`search`\/`fetch`|`search`[\s\S]{0,80}`fetch`/);
       expect(content).toMatch(/adapter/i);
-      expect(content).toMatch(/not\s+local MCP tool names|must not register[\s\S]{0,40}`search`[\s\S]{0,40}`fetch`/i);
+      expect(content).toMatch(/not\s+local MCP tool\s+names|must not register[\s\S]{0,40}`search`[\s\S]{0,40}`fetch`/i);
     }
   });
 

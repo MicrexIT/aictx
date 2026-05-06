@@ -1,11 +1,15 @@
 {
   "body_path": "memory/sources/user-public-docs-strategy.md",
-  "content_hash": "sha256:7252102bb00ddc0e491ad6bb9cd5ec54c4d97ba678cbba3514b42e40327204d4",
+  "content_hash": "sha256:de3f6232b9396ba40ea81e204a1668e9be30ebd6aacdcd71ba62424907d5ca21",
   "created_at": "2026-05-05T14:47:09+02:00",
   "evidence": [
     {
-      "id": "2026-05-05 public documentation strategy clarification",
+      "id": "public docs tone rewrite request",
       "kind": "task"
+    },
+    {
+      "id": "docs/src/content/docs/agent-integration.md",
+      "kind": "file"
     }
   ],
   "facets": {
@@ -43,5 +47,5 @@
   ],
   "title": "User-stated public documentation strategy",
   "type": "source",
-  "updated_at": "2026-05-05T14:47:09+02:00"
+  "updated_at": "2026-05-06T21:51:56+02:00"
 }

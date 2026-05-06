@@ -5,20 +5,22 @@ description: Setup, routine work, inspection, recovery, export, docs, and viewer
 
 # CLI guide
 
-The CLI is the default path for routine Aictx work. MCP is supported only when
-the agent client has already launched and connected to `aictx-mcp`.
+The CLI is the default interface for Aictx. It covers setup, routine memory
+work, inspection, recovery, export, documentation, and the local viewer.
 
-Local MCP exposes exactly `load_memory`, `search_memory`, `inspect_memory`,
-`save_memory_patch`, and `diff_memory`. Setup, maintenance, recovery, export,
-registry, viewer, docs, suggest, audit, stale, and graph workflows remain
-CLI-only. CLI-only capabilities are not MCP parity gaps.
+MCP is available when the agent client has launched and connected to
+`aictx-mcp`. Local MCP exposes exactly `load_memory`, `search_memory`,
+`inspect_memory`, `save_memory_patch`, and `diff_memory`. Setup, maintenance,
+recovery, export, registry, viewer, docs, suggest, audit, stale, and graph
+workflows are CLI-only in v1. These CLI-only commands are part of the v1
+integration model rather than MCP parity gaps.
 
 Local MCP is the near-term integration path for local agent harnesses. Remote
 MCP, hosted sync, cloud auth, cloud hosting, and ChatGPT App SDK UI are future
 work, and future `search`/`fetch` adapter names are not local MCP tool names.
 
-All CLI commands render human-readable output by default. Add `--json` for the
-shared response envelope:
+CLI commands render human-readable output by default. Commands that support
+structured output accept `--json`:
 
 ```bash
 aictx check --json
@@ -53,9 +55,8 @@ aictx save --stdin
 aictx search "auth route conventions"
 ```
 
-Load narrowly before non-trivial work. Save only durable knowledge directly as
-active memory. Saving nothing is valid when the task produced no durable future
-value.
+The routine loop is narrow load, work, and save only durable knowledge as active
+memory. A task that produced no reusable project knowledge does not need a save.
 
 ## Inspection and debugging
 
@@ -65,8 +66,8 @@ aictx stale
 aictx graph <id>
 ```
 
-Use these commands to inspect one memory object, list stale/superseded memory,
-or view a one-hop relation neighborhood.
+These commands inspect one memory object, list stale or superseded memory, and
+show a one-hop relation neighborhood.
 
 ## Git inspection and recovery
 
@@ -88,8 +89,8 @@ aictx projects list
 aictx view --open
 ```
 
-`aictx view` starts a local, read-only memory viewer. It is CLI-only in v1.
-Do not add `aictx view` to MCP.
+`aictx view` starts a local, read-only memory viewer. It is CLI-only in v1 and
+has no MCP equivalent.
 
 ## Documentation
 
@@ -101,4 +102,4 @@ aictx docs agent-integration --open
 ```
 
 `aictx docs` lists bundled public docs topics. `aictx docs <topic>` prints the
-bundled Markdown for that topic. Use `--open` to open the hosted docs site.
+bundled Markdown for that topic. `--open` opens the hosted docs site.

@@ -1,6 +1,6 @@
 ---
 title: Demand-driven memory
-description: Use real agent failure, confusion, and correction to improve durable project memory.
+description: How real agent failure, confusion, and correction improve durable project memory.
 ---
 
 # Demand-driven memory
@@ -8,7 +8,7 @@ description: Use real agent failure, confusion, and correction to improve durabl
 Aictx is most useful when memory quality improves from real work.
 
 When an agent fails, asks for missing project context, finds stale assumptions,
-or receives a correction from the user, treat that as evidence that project
+or receives a correction from the user, that event is evidence that project
 memory may need repair.
 
 The loop is:
@@ -19,8 +19,8 @@ load -> work/fail/correction -> identify memory gap -> save memory repair
 
 ## What counts as a signal
 
-Repair memory when a task reveals durable context that future agents should not
-rediscover:
+A task is a memory-quality signal when it reveals durable context that future
+agents should not rediscover:
 
 - Missing architecture, workflow, or product context blocked the task.
 - Loaded memory contradicted current code, tests, docs, or the user request.
@@ -30,7 +30,7 @@ rediscover:
 
 ## Repair with existing primitives
 
-Use existing Aictx objects before inventing anything new:
+Existing Aictx objects cover the common repair cases:
 
 - `source` for provenance.
 - `question` for missing knowledge or unresolved conflict.
@@ -45,6 +45,6 @@ plain-language.
 
 ## Keep it local-first
 
-Demand-driven memory is not broad enterprise ingestion. Aictx should improve
-local memory quality before adding external inputs such as Slack, Jira,
-Confluence, hosted sync, embeddings, background scanners, or expert graphs.
+Demand-driven memory is not broad enterprise ingestion. Aictx improves local
+memory quality before adding external inputs such as Slack, Jira, Confluence,
+hosted sync, embeddings, background scanners, or expert graphs.

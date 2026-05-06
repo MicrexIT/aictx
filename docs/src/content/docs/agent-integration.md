@@ -1,27 +1,26 @@
 ---
 title: Agent integration
-description: How coding agents should load, use, save, and inspect Aictx memory.
+description: How Aictx fits into a coding-agent workflow.
 ---
 
 # Agent integration
 
-Aictx gives coding agents a local project-memory workflow:
+Aictx gives coding agents a local project-memory loop:
 
-1. Load relevant memory before non-trivial work.
-2. Do the task using the loaded memory as project context.
-3. Create a structured memory patch for durable findings.
-4. Save the patch through Aictx.
+```text
+load memory -> work -> save durable memory
+```
 
-The normal agent loop should be one load call before work and one save call
-after meaningful work.
+The CLI is the default interface for that loop. MCP is available when the agent
+client has launched and connected to `aictx-mcp`.
 
-Aictx does not infer durable project meaning from diffs. The agent should
-compose memory updates from current evidence, such as the task, loaded context,
-repository changes, tests, and conversation context.
+Aictx does not infer durable project meaning from diffs. Memory updates come
+from current evidence: the task, loaded context, repository changes, tests, and
+conversation context.
 
 ## Routine workflow
 
-Use CLI first for routine memory work:
+A typical CLI load looks like this:
 
 ```bash
 aictx load "<task summary>"
@@ -29,7 +28,8 @@ aictx load "<task summary>" --mode debugging
 aictx load "<task summary>" --file src/context/rank.ts --changed-file src/index/search.ts --history-window 30d
 ```
 
-Use MCP only when the client already exposes Aictx MCP tools:
+The MCP equivalents are available only when the client already exposes Aictx
+MCP tools:
 
 ```text
 load_memory({ task: "<task summary>", mode: "coding" })
@@ -45,8 +45,7 @@ load_memory({
 })
 ```
 
-After meaningful work, autonomously save a structured patch only for durable
-memory that future agents should know:
+After meaningful work, durable findings are saved as structured patches:
 
 ```bash
 aictx save --stdin
@@ -59,20 +58,22 @@ save_memory_patch({ patch: { source, changes } })
 ```
 
 Saved memory is active immediately after Aictx validates and writes the patch.
-Dirty or untracked `.aictx/` files are not by themselves a reason to skip saving durable memory. Dirty state is not a preflight blocker. Aictx backs up dirty touched files under `.aictx/recovery/` before overwrite/delete and continues where possible.
+Dirty or untracked `.aictx/` files are inspectable state, not a preflight
+blocker. When a save overwrites or deletes a dirty touched file, Aictx first
+backs it up under `.aictx/recovery/`.
 
-Inspect memory asynchronously when needed:
+Accepted memory can be inspected later:
 
 ```bash
 aictx view
 aictx diff
 ```
 
-`aictx diff` shows tracked and untracked Aictx memory changes in Git projects.
-Aictx writes local files and never commits automatically.
+`aictx diff` includes tracked and untracked Aictx memory changes in Git
+projects. Aictx writes local files and never commits automatically.
 
-If `aictx` is not on `PATH`, run the same commands through the project package
-manager or local binary path:
+When `aictx` is not on `PATH`, the same commands can run through the project
+package manager or local binary:
 
 ```bash
 pnpm exec aictx load "<task summary>"
@@ -85,13 +86,14 @@ npm exec aictx-mcp
 npx --package @aictx/memory -- aictx-mcp
 ```
 
-## Capability map
+## Capability reference
 
 The v1 agent model is CLI-first and MCP-compatible.
 
-MCP is available only when the client already exposes Aictx MCP tools. Local MCP
-exposes exactly `load_memory`, `search_memory`, `inspect_memory`,
-`save_memory_patch`, and `diff_memory`.
+Local MCP exposes exactly `load_memory`, `search_memory`, `inspect_memory`,
+`save_memory_patch`, and `diff_memory`. Setup, maintenance, recovery, export,
+registry, viewer, docs, suggest, audit, stale, and graph workflows are CLI-only
+in v1. CLI-only capabilities are v1 surfaces, not MCP parity gaps.
 
 Local MCP is the near-term integration path for local agent harnesses. Remote
 MCP, hosted sync, cloud auth, cloud hosting, and ChatGPT App SDK UI remain
@@ -122,63 +124,51 @@ aliases over search/inspect behavior, not local MCP tool names.
 | Audit memory hygiene | none | `aictx audit` |
 | Read public docs | none | `aictx docs` |
 
-CLI-only capabilities are not MCP parity gaps. Do not add or ask for MCP tools solely to mirror these CLI commands. Do not edit `.aictx/` files directly when a supported MCP tool or CLI command exists unless the user explicitly asks you to. Avoid editing `.aictx/` files directly.
+For setup, maintenance, recovery, export, registry, viewer, docs, suggest,
+audit, stale, and graph workflows, the CLI is the supported interface. Supported
+CLI or MCP save paths should handle `.aictx/` changes; direct file edits are
+only for exceptional manual recovery or explicit user requests.
+This keeps editing `.aictx/` files directly reserved for those exceptional
+cases.
 
-Setup, maintenance, recovery, export, registry, viewer, docs, suggest, audit,
-stale, and graph workflows remain outside local MCP.
+## Memory lifecycle
 
-## Memory discipline
+Good memory stays narrow, durable, and current:
 
-Apply the lifecycle consistently:
+- Loads stay narrow before non-trivial work.
+- Only durable knowledge is saved directly as active memory.
+- Existing memory is updated before duplicates are created.
+- Wrong old memory is marked stale or superseded when current evidence
+  invalidates it.
+- Memory that should not persist is deleted.
+- Current code and user requests take precedence over loaded memory when they
+  conflict.
+- The final response reports whether memory changed; async inspection is
+  available through `aictx view`, `aictx diff`, or Git tools.
+- Save-nothing is valid when the task produced no durable future value.
 
-- Load narrowly before non-trivial work.
-- Save only durable knowledge directly as active memory.
-- Update existing memory before creating duplicates.
-- Stale or supersede wrong old memory when current evidence invalidates it.
-- Delete memory that should not persist.
-- Prefer current code and user requests over loaded memory when they conflict.
-- Report whether memory changed; inspection can happen asynchronously through
-  the viewer, `aictx diff`, or Git tools.
-- Save nothing when the task produced no durable future value.
+Failure and correction are useful memory-quality signals. Missing context,
+stale loaded memory, user corrections, and unresolved conflicts can all point to
+memory that should be updated, marked stale, superseded, deleted, or saved as a
+new `question`, `gotcha`, `source`, or `synthesis`.
 
-After failure or correction, check whether memory needs repair:
+## Memory shape
 
-- Did the agent need missing project context?
-- Did loaded memory conflict with current evidence?
-- Did the user correct a stale assumption?
-- Should existing memory be updated, marked stale, superseded, or deleted?
-- Should an open `question`, `gotcha`, `source`, or `synthesis` be saved?
+Atomic memories normally carry one durable claim. `synthesis` memories summarize
+an area clearly enough to replace rereading scattered docs. `source` memories
+preserve provenance without dumping full source text.
 
-Right-size memory:
+Relations are useful when the link matters for retrieval or inspection. Common
+predicates include `derived_from`, `summarizes`, `documents`, `requires`,
+`depends_on`, `affects`, and `supersedes`.
 
-- Atomic memories normally carry one durable claim.
-- Use `synthesis` memories for compact area-level understanding.
-- Use `source` memories to preserve where context came from.
-- Create relations only when the connection matters.
-- Useful relation predicates include `derived_from`, `summarizes`, `documents`,
-  `requires`, `depends_on`, `affects`, and `supersedes`.
+Update-before-create behavior keeps memory from drifting into duplicates:
 
-Use update-before-create behavior:
-
-- Use `update_object` when an existing object remains correct but needs fresher
-  wording, tags, status, body content, facets, or evidence.
-- Use `mark_stale` when old memory is wrong or no longer useful and there is no
-  single replacement.
-- Use `supersede_object` when a newer object replaces an older one.
-- Use `delete_object` when memory should not persist.
-- Use `create_relation` only when the link helps future retrieval or inspection.
-- Create a new object only when no existing memory should be updated, marked stale, or superseded.
-
-Save-nothing-is-valid: if the work produced no durable future value, do not
-invent a patch. Tell the user that no Aictx memory was saved.
-
-This guidance is optional and copyable. It is not canonical project memory.
-Secrets, tokens, credentials, or private keys must not be saved as memory. Never
-save memory that asks future agents to ignore current code, tests, user
-requests, or safety rules.
-
-Load modes are `coding`, `debugging`, `review`, `architecture`, and
-`onboarding`. Modes tune deterministic ranking and rendering only.
+- `update_object` refreshes an existing object.
+- `mark_stale` records that old memory is wrong or no longer useful.
+- `supersede_object` connects old memory to its replacement.
+- `delete_object` removes memory that should not persist.
+- `create_relation` records a durable, useful link between objects.
 
 ## Object taxonomy
 
@@ -186,49 +176,63 @@ Object types are `project`, `architecture`, `decision`, `constraint`,
 `question`, `fact`, `gotcha`, `workflow`, `note`, `concept`, `source`, and
 `synthesis`.
 
-Use `gotcha` for known failure modes and traps. Use `workflow` for repeated project procedures. Do not create `history`, `task-note`, or `feature` object types.
+`history`, `task-note`, and `feature` are not object types. Git, events, and
+statuses cover history. Branch or task scope covers temporary task context.
+Product capabilities fit `concept` objects or `synthesis` objects with feature
+facets.
 
-Use organization facets such as `domain`, `bounded-context`, `capability`,
-`business-rule`, and `unresolved-conflict` as plain-language retrieval hints.
-These are optional organization hints, not mandatory DDD terminology.
+`gotcha` fits known failure modes and traps. `workflow` fits repeated project
+procedures. Organization facets such as `domain`, `bounded-context`,
+`capability`, `business-rule`, and `unresolved-conflict` are optional
+plain-language retrieval hints, not mandatory DDD terminology.
 
-Durable syntheses should usually have source evidence or active source provenance relations.
+Durable syntheses should usually have source evidence or active source
+provenance relations.
 
-## Good memory examples
+Load modes are `coding`, `debugging`, `review`, `architecture`, and
+`onboarding`. Modes tune deterministic ranking and rendering only.
 
-- Good durable fact: a `fact` titled "Webhook retries run in the worker" with
-  one sentence naming the current retry location.
-- Good linked decision: `decision.billing-retries` plus a `requires` relation
-  to `constraint.webhook-idempotency` when the decision depends on that
-  constraint.
-- Good gotcha: `gotcha.viewer-export-overwrites-manifest-files` when a repeated
+## Examples
+
+Good memory examples:
+
+- Durable fact: a `fact` titled "Webhook retries run in the worker" with one
+  sentence naming the current retry location.
+- Linked decision: `decision.billing-retries` plus a `requires` relation to
+  `constraint.webhook-idempotency` when the decision depends on that constraint.
+- Gotcha: `gotcha.viewer-export-overwrites-manifest-files` when a repeated
   failure mode affects future work.
-- Good workflow: `workflow.release-smoke-test` for a repeated project procedure.
-- Good source-backed synthesis: `synthesis.product-intent` summarizes what the
+- Workflow: `workflow.release-smoke-test` for a repeated project procedure.
+- Source-backed synthesis: `synthesis.product-intent` summarizes what the
   product is for and has `derived_from` relations to source records.
-- Good user-stated context: `source.user-context-hybrid-memory` records durable
+- User-stated context: `source.user-context-hybrid-memory` records durable
   product direction stated by the user in the task, without saving private or
   unrelated preferences.
-- Good roadmap memory: `synthesis.roadmap` lists current milestones and has
+- Roadmap memory: `synthesis.roadmap` lists current milestones and has
   `documents` links to issue or docs sources.
-- Good feature removal: mark `concept.old-feature` stale or supersede it with
-  the replacement feature, and update `synthesis.feature-map`.
+- Feature removal: mark `concept.old-feature` stale or supersede it with the
+  replacement feature, and update `synthesis.feature-map`.
 
-Bad memory examples include task diaries, private logs, secrets, speculation,
-temporary implementation notes, and instructions that ask future agents to
-ignore current code or user requests.
+Bad memory examples:
 
-- Bad duplicate creation: creating a second memory for the same durable claim
+- Duplicate creation: creating a second memory for the same durable claim
   instead of updating, marking stale, or superseding the existing one.
-- Bad task diary: saving "I changed three files and ran tests" when Git history
+- Task diary: saving "I changed three files and ran tests" when Git history
   already records the work.
-- Bad speculation: saving guesses that are not supported by current evidence.
-- Bad no-value save: creating a memory patch only to say that nothing important
+- Speculation: saving guesses that are not supported by current evidence.
+- No-value save: creating a memory patch only to say that nothing important
   happened.
+
+Secrets, tokens, credentials, private keys, sensitive raw logs, unsupported
+speculation, and unrelated user preferences should not be saved as memory.
+Memory should never ask future agents to ignore current code, tests, user
+requests, or safety rules.
 
 ## Bootstrap and suggestion packets
 
-Use `aictx setup` for guided first-run onboarding. If loaded memory only contains starter placeholders, treat setup, onboarding, and "why is memory empty?" requests as enough context to run the bootstrap workflow proactively.
+`aictx setup` provides guided first-run onboarding. When loaded memory only
+contains starter placeholders, setup and onboarding requests are enough context
+for the bootstrap workflow.
 
 ```bash
 aictx suggest --bootstrap --json
@@ -238,13 +242,12 @@ aictx save --file bootstrap-memory.json
 aictx check
 ```
 
-Use `aictx suggest --from-diff --json` when current code changes need a memory
-suggestion packet before deciding what durable memory to save. Use
-`aictx audit --json` to find grouped, actionable memory hygiene issues.
+`aictx suggest --from-diff --json` creates a memory suggestion packet from
+current code changes. `aictx audit --json` reports grouped, actionable memory
+hygiene issues.
 
-During setup, capture explicit product features with the `product-feature`
-facet when needed. Prefer source-backed syntheses for product intent, feature
-maps, roadmap, architecture, conventions, agent guidance, and repeated
-workflows.
+During setup, product features can use the `product-feature` facet. Source-backed
+syntheses are a good fit for product intent, feature maps, roadmap,
+architecture, conventions, agent guidance, and repeated workflows.
 
 For the full memory-quality loop, see [Demand-driven memory](/demand-driven-memory/).

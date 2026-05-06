@@ -7,9 +7,9 @@ description: How Aictx stores, indexes, retrieves, and inspects project memory.
 
 Aictx is a memory discipline system, not just a storage folder.
 
-The product goal is simple: future agents should not restart from zero when
-working in a project. They should load the durable context that matters, do the
-task, and save only reusable knowledge that future agents can safely rely on.
+The goal is simple: future agents should not restart from zero when working in a
+project. They can load the durable context that matters, do the task, and save
+only reusable knowledge that future agents can safely rely on.
 
 ## Canonical memory
 
@@ -21,8 +21,8 @@ and `events.jsonl` for semantic memory history. Saved memory is accepted as
 active memory immediately after Aictx validates and writes it.
 
 Generated state is rebuildable. The SQLite search index, context packs, and
-exports can be regenerated from canonical memory. Do not hand-edit generated
-state when a supported Aictx command can produce it.
+exports can be regenerated from canonical memory. Supported Aictx commands are
+the normal way to recreate generated state.
 
 ## Hybrid memory model
 
@@ -39,14 +39,15 @@ Aictx uses three layers:
 
 Object types are `project`, `architecture`, `source`, `synthesis`, `decision`,
 `constraint`, `question`, `fact`, `gotcha`, `workflow`, `note`, and `concept`.
-Do not create `history`, `task-note`, or `feature` object types. Use Git,
-events, and object statuses for history; branch or task scope for temporary task
-context; and `concept` or `synthesis` facets for product capabilities.
+`history`, `task-note`, and `feature` are not object types. Git, events, and
+object statuses cover history. Branch or task scope covers temporary task
+context. Product capabilities fit `concept` objects or `synthesis` objects with
+feature facets.
 
 ## Demand-driven memory quality
 
-Use real work to improve memory. Agent failure, confusion, stale loaded context,
-and user correction are signals that durable memory may need repair.
+Real work improves memory quality. Agent failure, confusion, stale loaded
+context, and user correction are signals that durable memory may need repair.
 
 The lean loop is:
 
@@ -65,8 +66,8 @@ a model, use external retrieval, or load the whole project.
 
 ## Async inspection
 
-Aictx writes inspectable files. Use the local viewer or, in Git projects, the
-memory diff:
+Aictx writes inspectable files. The local viewer and, in Git projects, the
+memory diff show the current state:
 
 ```bash
 aictx view

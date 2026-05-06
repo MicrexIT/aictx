@@ -7,7 +7,7 @@ description: Fix common install, PATH, MCP, schema, index, and recovery issues.
 
 ## `aictx` is not on PATH
 
-Use the package-manager or local-binary form:
+Package-manager and local-binary forms work without a global `PATH` entry:
 
 ```bash
 pnpm exec aictx check
@@ -26,12 +26,12 @@ binary before trusting schema errors.
 
 ## MCP tools are not available
 
-`aictx init` does not start MCP. Configure your MCP client to launch
-`aictx-mcp`.
+`aictx init` creates local storage. It does not start MCP. MCP tools become
+available when the MCP client is configured to launch `aictx-mcp`.
 
 An agent generally cannot start `aictx-mcp` in a shell and then use it as MCP
-tools in an already-running session. If MCP tools are not available, stay on the
-CLI path.
+tools in an already-running session. When MCP tools are not available, the CLI
+path provides the same routine memory workflow.
 
 Local MCP exposes exactly `load_memory`, `search_memory`, `inspect_memory`,
 `save_memory_patch`, and `diff_memory` when the client already exposes Aictx
@@ -47,13 +47,14 @@ local MCP tool names.
 `aictx init` creates starter storage. It does not infer a full project memory
 model by itself.
 
-Run:
+Guided setup:
 
 ```bash
 aictx setup
 ```
 
 or ask for a bootstrap patch:
+Bootstrap patch commands:
 
 ```bash
 aictx suggest --bootstrap --patch > bootstrap-memory.json
@@ -64,13 +65,13 @@ aictx check
 
 ## Schema or index errors
 
-Validate storage:
+Storage validation:
 
 ```bash
 aictx check
 ```
 
-Rebuild generated indexes:
+Generated index rebuild:
 
 ```bash
 aictx rebuild
@@ -87,7 +88,7 @@ there is durable future value. Aictx backs up dirty touched files under
 
 ## Git diff misses new memory files
 
-Use:
+The Aictx diff includes tracked and untracked memory files:
 
 ```bash
 aictx diff

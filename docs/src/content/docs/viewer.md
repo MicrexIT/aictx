@@ -1,6 +1,6 @@
 ---
 title: Local viewer
-description: Use the read-only local browser viewer to inspect project memory.
+description: Read-only local browser viewer for project memory inspection.
 ---
 
 # Local viewer
@@ -26,7 +26,7 @@ The registry lives at `$AICTX_HOME/projects.json`, defaulting to
 `~/.aictx/projects.json`. It stores only project metadata and roots. Canonical
 memory stays isolated in each project's own `.aictx/` directory.
 
-Use:
+Project registry commands:
 
 ```bash
 aictx projects list
@@ -50,8 +50,9 @@ aictx export obsidian
 
 That export writes generated projection files only.
 
-`aictx view` is CLI-only in v1. CLI-only capabilities are not MCP parity gaps.
-Do not add `aictx view` to MCP.
+`aictx view` is CLI-only in v1. These CLI-only commands are part of the v1
+integration model rather than MCP parity gaps. The viewer has no MCP
+equivalent.
 
 Local MCP exposes exactly `load_memory`, `search_memory`, `inspect_memory`,
 `save_memory_patch`, and `diff_memory`. Setup, maintenance, recovery, export,
