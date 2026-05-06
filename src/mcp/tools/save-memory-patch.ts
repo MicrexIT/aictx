@@ -1,9 +1,9 @@
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 
-import { saveMemoryPatch } from "../../app/operations.js";
 import { LOAD_MEMORY_MODES } from "../../context/modes.js";
 import { resolveProjectPaths } from "../../core/paths.js";
+import { dataAccessService } from "../../data-access/index.js";
 import {
   ACTORS,
   FACET_CATEGORIES,
@@ -194,8 +194,11 @@ async function callSaveMemoryPatchTool(
   const projectKey = await resolveWriteQueueKey(cwd);
 
   return serializeProjectWrite(projectKey, async () => {
-    const result = await saveMemoryPatch({
-      cwd,
+    const result = await dataAccessService.applyPatch({
+      target: {
+        kind: "cwd",
+        cwd
+      },
       patch: args.patch
     });
 

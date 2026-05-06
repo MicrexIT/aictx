@@ -3,9 +3,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Readable } from "node:stream";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { main, type CliOutputWriter } from "../../../src/cli/main.js";
+import { dataAccessService } from "../../../src/data-access/index.js";
 import { readCanonicalStorage } from "../../../src/storage/read.js";
 
 const tempRoots: string[] = [];
@@ -37,6 +38,7 @@ interface SaveErrorEnvelope {
 }
 
 afterEach(async () => {
+  vi.restoreAllMocks();
   await Promise.all(
     tempRoots.splice(0).map((path) => rm(path, { recursive: true, force: true }))
   );
@@ -52,6 +54,7 @@ describe("aictx save CLI", () => {
     const fileProject = await createInitializedProject("aictx-cli-save-file-");
     const stdinOutput = createCapturedOutput();
     const fileOutput = createCapturedOutput();
+    const applyPatch = vi.spyOn(dataAccessService, "applyPatch");
 
     const stdinExitCode = await main(["node", "aictx", "save", "--stdin", "--json"], {
       ...stdinOutput.writers,
@@ -70,6 +73,21 @@ describe("aictx save CLI", () => {
 
     expect(stdinExitCode).toBe(0);
     expect(fileExitCode).toBe(0);
+    expect(applyPatch).toHaveBeenCalledTimes(2);
+    expect(applyPatch).toHaveBeenNthCalledWith(1, {
+      target: {
+        kind: "cwd",
+        cwd: stdinProject
+      },
+      patch
+    });
+    expect(applyPatch).toHaveBeenNthCalledWith(2, {
+      target: {
+        kind: "cwd",
+        cwd: fileProject
+      },
+      patch
+    });
     expect(stdinOutput.stderr()).toBe("");
     expect(fileOutput.stderr()).toBe("");
     const stdinEnvelope = JSON.parse(stdinOutput.stdout()) as SaveEnvelope;

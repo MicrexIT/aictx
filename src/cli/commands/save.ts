@@ -5,11 +5,11 @@ import type { Readable } from "node:stream";
 import { CommanderError, type Command } from "commander";
 
 import {
-  saveMemoryPatch,
   type AppResult,
-  type SaveMemoryData,
-  type SaveMemoryPatchOptions
-} from "../../app/operations.js";
+  dataAccessService,
+  type DataAccessApplyPatchInput,
+  type SaveMemoryData
+} from "../../data-access/index.js";
 import { aictxError, type AictxError } from "../../core/errors.js";
 import type { AictxMeta } from "../../core/types.js";
 import { err, ok, type Result } from "../../core/result.js";
@@ -69,7 +69,9 @@ export function registerSaveCommand(
         return;
       }
 
-      const result = await saveMemoryPatch(saveMemoryPatchOptions(options, patch.data));
+      const result = await dataAccessService.applyPatch(
+        saveMemoryPatchOptions(options, patch.data)
+      );
 
       renderAndThrowOnFailure(result, options, command);
     });
@@ -78,9 +80,12 @@ export function registerSaveCommand(
 function saveMemoryPatchOptions(
   options: RegisterSaveCommandOptions,
   patch: unknown
-): SaveMemoryPatchOptions {
+): DataAccessApplyPatchInput {
   return {
-    cwd: options.cwd,
+    target: {
+      kind: "cwd",
+      cwd: options.cwd
+    },
     patch
   };
 }

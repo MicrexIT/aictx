@@ -14,5 +14,6 @@ export type {
   AppResult,
   DiffMemoryData,
   InspectMemoryData,
-  MemoryRelationSummary
+  MemoryRelationSummary,
+  SaveMemoryData
 } from "../app/operations.js";

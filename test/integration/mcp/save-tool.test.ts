@@ -154,29 +154,41 @@ describe("aictx MCP save_memory_patch tool", () => {
     expect(started.stderr()).toBe("");
   });
 
-  it("produces equivalent canonical files to CLI save", async () => {
+  it("produces equivalent canonical files to CLI stdin, CLI file, and MCP save", async () => {
     const patch = createNotePatch(
       "MCP shared save note",
       "CLI and MCP save should write equivalent canonical memory."
     );
-    const cliProject = await createInitializedProject("aictx-mcp-save-cli-");
+    const cliStdinProject = await createInitializedProject("aictx-mcp-save-cli-stdin-");
+    const cliFileProject = await createInitializedProject("aictx-mcp-save-cli-file-");
     const mcpProject = await createInitializedProject("aictx-mcp-save-mcp-");
     const started = await startMcpClient(mcpProject);
 
     try {
-      const cli = await runCli(["node", "aictx", "save", "--stdin", "--json"], cliProject, {
-        stdin: Readable.from([JSON.stringify(patch)])
-      });
+      const cliStdin = await runCli(
+        ["node", "aictx", "save", "--stdin", "--json"],
+        cliStdinProject,
+        {
+          stdin: Readable.from([JSON.stringify(patch)])
+        }
+      );
+      await writeFile(join(cliFileProject, "patch.json"), JSON.stringify(patch), "utf8");
+      const cliFile = await runCli(
+        ["node", "aictx", "save", "--file", "patch.json", "--json"],
+        cliFileProject
+      );
       const mcp = await started.client.callTool({
         name: "save_memory_patch",
         arguments: {
           patch
         }
       });
-      const cliEnvelope = parseCliEnvelope<SaveEnvelope>(cli);
+      const cliStdinEnvelope = parseCliEnvelope<SaveEnvelope>(cliStdin);
+      const cliFileEnvelope = parseCliEnvelope<SaveEnvelope>(cliFile);
       const mcpEnvelope = parseToolEnvelope<SaveEnvelope>(mcp);
 
-      expect(mcpEnvelope.data).toEqual(cliEnvelope.data);
+      expect(cliFileEnvelope.data).toEqual(cliStdinEnvelope.data);
+      expect(mcpEnvelope.data).toEqual(cliStdinEnvelope.data);
       expect(mcpEnvelope.data).toEqual({
         files_changed: [
           ".aictx/events.jsonl",
@@ -194,11 +206,12 @@ describe("aictx MCP save_memory_patch tool", () => {
         events_appended: 1,
         index_updated: true
       });
-      await expectSavedNote(cliProject, "note.mcp-shared-save-note");
+      await expectSavedNote(cliStdinProject, "note.mcp-shared-save-note");
+      await expectSavedNote(cliFileProject, "note.mcp-shared-save-note");
       await expectSavedNote(mcpProject, "note.mcp-shared-save-note");
-      await expect(readCanonicalSnapshot(mcpProject)).resolves.toEqual(
-        await readCanonicalSnapshot(cliProject)
-      );
+      const cliSnapshot = await readCanonicalSnapshot(cliStdinProject);
+      await expect(readCanonicalSnapshot(cliFileProject)).resolves.toEqual(cliSnapshot);
+      await expect(readCanonicalSnapshot(mcpProject)).resolves.toEqual(cliSnapshot);
     } finally {
       await started.close();
     }

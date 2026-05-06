@@ -1,6 +1,6 @@
 {
   "body_path": "memory/facts/data-access-contract-foundation.md",
-  "content_hash": "sha256:b07b9149ce7be1d4c1f72b06b6578dcbb51e1d34de37994a55b1f0dce7be1445",
+  "content_hash": "sha256:0aaab6d484e9d2440faf48f257c8a272eabc2bdcfc8b37d35d6d90e7805edbda",
   "created_at": "2026-05-06T18:10:26+02:00",
   "evidence": [
     {
@@ -28,6 +28,10 @@
       "kind": "file"
     },
     {
+      "id": "src/cli/commands/save.ts",
+      "kind": "file"
+    },
+    {
       "id": "src/mcp/tools/load-memory.ts",
       "kind": "file"
     },
@@ -44,11 +48,27 @@
       "kind": "file"
     },
     {
+      "id": "src/mcp/tools/save-memory-patch.ts",
+      "kind": "file"
+    },
+    {
+      "id": "test/unit/data-access/service.test.ts",
+      "kind": "file"
+    },
+    {
       "id": "test/integration/mcp/read-tools.test.ts",
       "kind": "file"
     },
     {
       "id": "test/integration/cli/read-only.test.ts",
+      "kind": "file"
+    },
+    {
+      "id": "test/integration/cli/save.test.ts",
+      "kind": "file"
+    },
+    {
+      "id": "test/integration/mcp/save-tool.test.ts",
       "kind": "file"
     }
   ],
@@ -60,13 +80,17 @@
       "src/cli/commands/search.ts",
       "src/cli/commands/inspect.ts",
       "src/cli/commands/diff.ts",
+      "src/cli/commands/save.ts",
       "src/mcp/tools/load-memory.ts",
       "src/mcp/tools/search-memory.ts",
       "src/mcp/tools/inspect-memory.ts",
       "src/mcp/tools/diff-memory.ts",
+      "src/mcp/tools/save-memory-patch.ts",
       "test/unit/data-access/service.test.ts",
       "test/integration/mcp/read-tools.test.ts",
-      "test/integration/cli/read-only.test.ts"
+      "test/integration/cli/read-only.test.ts",
+      "test/integration/cli/save.test.ts",
+      "test/integration/mcp/save-tool.test.ts"
     ],
     "category": "architecture"
   },
@@ -79,7 +103,7 @@
   },
   "source": {
     "kind": "agent",
-    "task": "Implemented T007 host-neutral data-access service contract."
+    "task": "Implemented T009 Move Structured Patch Writes Behind Data Access."
   },
   "status": "active",
   "tags": [
@@ -87,7 +111,7 @@
     "roadmap",
     "adapters"
   ],
-  "title": "Data-access contract and read adapter wiring exist",
+  "title": "Data-access contract and adapter wiring exist",
   "type": "fact",
-  "updated_at": "2026-05-06T18:35:02+02:00"
+  "updated_at": "2026-05-06T19:00:03+02:00"
 }
