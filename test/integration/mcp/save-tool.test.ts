@@ -13,6 +13,19 @@ import { afterEach, describe, expect, it } from "vitest";
 import { main, type CliOutputWriter } from "../../../src/cli/main.js";
 import { runSubprocess } from "../../../src/core/subprocess.js";
 import { readCanonicalStorage } from "../../../src/storage/read.js";
+import {
+  backupParityAictxRoot,
+  cleanupParityTempRoots,
+  createInitializedParityProject,
+  createParityNotePatch,
+  createParityTempRoot,
+  parseParityCliEnvelope,
+  parseParityToolEnvelope,
+  readParityCanonicalSnapshot,
+  restoreParityAictxRoot,
+  runParityCli,
+  startParityMcpClient
+} from "./parity-fixtures.js";
 
 const require = createRequire(import.meta.url);
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
@@ -79,6 +92,7 @@ afterEach(async () => {
   await Promise.all(
     tempRoots.splice(0).map((path) => rm(path, { recursive: true, force: true }))
   );
+  await cleanupParityTempRoots();
 });
 
 describe("aictx MCP save_memory_patch tool", () => {
@@ -212,6 +226,45 @@ describe("aictx MCP save_memory_patch tool", () => {
       const cliSnapshot = await readCanonicalSnapshot(cliStdinProject);
       await expect(readCanonicalSnapshot(cliFileProject)).resolves.toEqual(cliSnapshot);
       await expect(readCanonicalSnapshot(mcpProject)).resolves.toEqual(cliSnapshot);
+    } finally {
+      await started.close();
+    }
+
+    expect(started.stderr()).toBe("");
+  });
+
+  it("keeps globally targeted save_memory_patch envelopes in parity with CLI stdin", async () => {
+    const serverRoot = await createParityTempRoot("aictx-mcp-save-parity-server-");
+    const projectRoot = await createInitializedParityProject("aictx-mcp-save-parity-");
+    const initialSnapshot = await backupParityAictxRoot(projectRoot);
+    const patch = createParityNotePatch(
+      "Global parity save note",
+      "Global project_root save should match CLI stdin."
+    );
+    const started = await startParityMcpClient(serverRoot);
+
+    try {
+      const cli = parseParityCliEnvelope<SaveEnvelope>(
+        await runParityCli(["node", "aictx", "save", "--stdin", "--json"], projectRoot, {
+          stdin: Readable.from([JSON.stringify(patch)])
+        })
+      );
+      const cliSnapshot = await readParityCanonicalSnapshot(projectRoot);
+
+      await restoreParityAictxRoot(projectRoot, initialSnapshot);
+
+      const mcp = parseParityToolEnvelope<SaveEnvelope>(
+        await started.client.callTool({
+          name: "save_memory_patch",
+          arguments: {
+            project_root: projectRoot,
+            patch
+          }
+        })
+      );
+
+      expect(mcp).toEqual(cli);
+      await expect(readParityCanonicalSnapshot(projectRoot)).resolves.toEqual(cliSnapshot);
     } finally {
       await started.close();
     }

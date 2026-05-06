@@ -31,6 +31,20 @@ import {
   FIXED_TIMESTAMP,
   FIXED_TIMESTAMP_NEXT_MINUTE
 } from "../../fixtures/time.js";
+import {
+  cleanupParityTempRoots,
+  createInitializedParityProject,
+  createInitializedParityRepo,
+  createParityTempRoot,
+  parseParityCliEnvelope,
+  parseParityCliErrorEnvelope,
+  parseParityToolEnvelope,
+  rebuildParityProject,
+  runParityCli,
+  startParityMcpClient,
+  writeParityDiffChanges,
+  writeParityReadFixtures
+} from "./parity-fixtures.js";
 
 const require = createRequire(import.meta.url);
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
@@ -189,6 +203,7 @@ afterEach(async () => {
   await Promise.all(
     tempRoots.splice(0).map((path) => rm(path, { recursive: true, force: true }))
   );
+  await cleanupParityTempRoots();
 });
 
 describe("aictx MCP read tools", () => {
@@ -815,6 +830,129 @@ describe("aictx MCP read tools", () => {
 
     expect(started.stderr()).toBe("");
   });
+
+  it("keeps globally targeted CLI and MCP read envelopes in parity", async () => {
+    const serverRoot = await createParityTempRoot("aictx-mcp-read-parity-server-");
+    const gitProject = await createInitializedParityRepo("aictx-mcp-read-parity-git-");
+    const nonGitProject = await createInitializedParityProject(
+      "aictx-mcp-read-parity-nongit-"
+    );
+
+    await writeParityReadFixtures(gitProject);
+    await rebuildParityProject(gitProject);
+
+    const started = await startParityMcpClient(serverRoot);
+
+    try {
+      const cliLoad = parseParityCliEnvelope<LoadEnvelope>(
+        await runParityCli(
+          ["node", "aictx", "load", "shared adapter parity", "--json"],
+          gitProject
+        )
+      );
+      const mcpLoad = parseParityToolEnvelope<LoadEnvelope>(
+        await started.client.callTool({
+          name: "load_memory",
+          arguments: {
+            project_root: gitProject,
+            task: "shared adapter parity"
+          }
+        })
+      );
+
+      expect(mcpLoad).toEqual(cliLoad);
+      expect(mcpLoad.data.included_ids).toContain("decision.parity-shared-read");
+
+      const cliSearch = parseParityCliEnvelope<SearchEnvelope>(
+        await runParityCli(
+          [
+            "node",
+            "aictx",
+            "search",
+            "shared adapter parity",
+            "--limit",
+            "10",
+            "--json"
+          ],
+          gitProject
+        )
+      );
+      const mcpSearch = parseParityToolEnvelope<SearchEnvelope>(
+        await started.client.callTool({
+          name: "search_memory",
+          arguments: {
+            project_root: gitProject,
+            query: "shared adapter parity",
+            limit: 10
+          }
+        })
+      );
+
+      expect(mcpSearch).toEqual(cliSearch);
+      expect(mcpSearch.data.matches.map((match) => match.id)).toContain(
+        "decision.parity-shared-read"
+      );
+
+      const cliInspect = parseParityCliEnvelope<InspectEnvelope>(
+        await runParityCli(
+          ["node", "aictx", "inspect", "decision.parity-shared-read", "--json"],
+          gitProject
+        )
+      );
+      const mcpInspect = parseParityToolEnvelope<InspectEnvelope>(
+        await started.client.callTool({
+          name: "inspect_memory",
+          arguments: {
+            project_root: gitProject,
+            id: "decision.parity-shared-read"
+          }
+        })
+      );
+
+      expect(mcpInspect).toEqual(cliInspect);
+      expect(mcpInspect.data.relations.outgoing.map((relation) => relation.id)).toEqual([
+        "rel.parity-read-requires-targeting"
+      ]);
+
+      const projectId = await writeParityDiffChanges(gitProject);
+      const cliDiff = parseParityCliEnvelope<DiffEnvelope>(
+        await runParityCli(["node", "aictx", "diff", "--json"], gitProject)
+      );
+      const mcpDiff = parseParityToolEnvelope<DiffEnvelope>(
+        await started.client.callTool({
+          name: "diff_memory",
+          arguments: {
+            project_root: gitProject
+          }
+        })
+      );
+
+      expect(mcpDiff).toEqual(cliDiff);
+      expect(mcpDiff.data.diff).not.toContain("src.ts");
+      expect(mcpDiff.data.changed_memory_ids).toEqual(
+        expect.arrayContaining(["note.parity-untracked-note", projectId])
+      );
+
+      const cliNonGitDiff = parseParityCliErrorEnvelope<ErrorEnvelope>(
+        await runParityCli(["node", "aictx", "diff", "--json"], nonGitProject)
+      );
+      const mcpNonGitDiff = parseParityToolEnvelope<ErrorEnvelope>(
+        await started.client.callTool({
+          name: "diff_memory",
+          arguments: {
+            project_root: nonGitProject
+          }
+        })
+      );
+
+      expect(mcpNonGitDiff).toEqual(cliNonGitDiff);
+      expect(mcpNonGitDiff.error.code).toBe("AICtxGitRequired");
+    } finally {
+      await started.close();
+    }
+
+    expect(started.stderr()).toBe("");
+  }, 60_000);
 });
 
 async function startMcpClient(cwd: string): Promise<StartedMcpClient> {
