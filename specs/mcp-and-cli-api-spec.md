@@ -1184,6 +1184,8 @@ Local MCP tool names are intentionally Aictx-specific: `search_memory` and `insp
 
 Future hosts that require generic tool names may map their adapter-level `search` operation to the shared search behavior and their adapter-level `fetch` operation to the shared inspect behavior. That mapping is a host adapter concern and must not rename the local MCP tools.
 
+The current local MCP server must not register `search` or `fetch`; it must continue to register only the five v1 local MCP tools unless a future implementation explicitly selects a non-local profile. Future generic profiles are inactive metadata only and do not implement remote MCP, cloud hosting, OAuth, hosted sync, or ChatGPT App SDK UI.
+
 ## 7. Structured Patch Format
 
 The structured patch is the only write contract.

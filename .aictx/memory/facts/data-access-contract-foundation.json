@@ -1,10 +1,14 @@
 {
   "body_path": "memory/facts/data-access-contract-foundation.md",
-  "content_hash": "sha256:0aaab6d484e9d2440faf48f257c8a272eabc2bdcfc8b37d35d6d90e7805edbda",
+  "content_hash": "sha256:988b981ac44012ed178408d98526713e8146f1a4322c8bcab855139dc8dd34fc",
   "created_at": "2026-05-06T18:10:26+02:00",
   "evidence": [
     {
       "id": "src/data-access/service.ts",
+      "kind": "file"
+    },
+    {
+      "id": "src/data-access/adapter-profiles.ts",
       "kind": "file"
     },
     {
@@ -32,6 +36,10 @@
       "kind": "file"
     },
     {
+      "id": "src/mcp/server.ts",
+      "kind": "file"
+    },
+    {
       "id": "src/mcp/tools/load-memory.ts",
       "kind": "file"
     },
@@ -56,6 +64,10 @@
       "kind": "file"
     },
     {
+      "id": "test/unit/data-access/adapter-profiles.test.ts",
+      "kind": "file"
+    },
+    {
       "id": "test/integration/mcp/read-tools.test.ts",
       "kind": "file"
     },
@@ -75,18 +87,21 @@
   "facets": {
     "applies_to": [
       "src/data-access/service.ts",
+      "src/data-access/adapter-profiles.ts",
       "src/data-access/index.ts",
       "src/cli/commands/load.ts",
       "src/cli/commands/search.ts",
       "src/cli/commands/inspect.ts",
       "src/cli/commands/diff.ts",
       "src/cli/commands/save.ts",
+      "src/mcp/server.ts",
       "src/mcp/tools/load-memory.ts",
       "src/mcp/tools/search-memory.ts",
       "src/mcp/tools/inspect-memory.ts",
       "src/mcp/tools/diff-memory.ts",
       "src/mcp/tools/save-memory-patch.ts",
       "test/unit/data-access/service.test.ts",
+      "test/unit/data-access/adapter-profiles.test.ts",
       "test/integration/mcp/read-tools.test.ts",
       "test/integration/cli/read-only.test.ts",
       "test/integration/cli/save.test.ts",
@@ -111,7 +126,7 @@
     "roadmap",
     "adapters"
   ],
-  "title": "Data-access contract and adapter wiring exist",
+  "title": "Data-access contract, adapter wiring, and profiles exist",
   "type": "fact",
-  "updated_at": "2026-05-06T19:00:03+02:00"
+  "updated_at": "2026-05-06T19:13:18+02:00"
 }

@@ -56,6 +56,10 @@ meta
 
 ## 5. Adapter Profiles
 
+Adapter profiles are static adapter-level mappings from host-visible tool or command names to shared data-access operations.
+Only the local MCP profile is active by default in the current implementation.
+Future generic or host-specific profiles remain inactive metadata unless an adapter explicitly selects them; defining a profile must not register tools, rename local MCP tools, or implement remote/cloud host behavior.
+
 The local MCP adapter profile exposes exactly these tool names:
 
 ```text
@@ -76,7 +80,7 @@ aictx save
 aictx diff
 ```
 
-Future ChatGPT-compatible or other host profiles may map a generic `search` operation to the shared `search` data-access operation and a generic `fetch` operation to the shared `inspect` data-access operation. Those names are adapter-level aliases only. They must not replace the local MCP tool names.
+Future ChatGPT-compatible or other host profiles may map a generic `search` operation to the shared `search` data-access operation and a generic `fetch` operation to the shared `inspect` data-access operation. Those names are adapter-level aliases only. They must remain inactive unless explicitly selected and must not replace the local MCP tool names.
 
 ## 6. Write Boundary
 
