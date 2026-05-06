@@ -90,6 +90,7 @@ describe("aictx MCP save_memory_patch tool", () => {
 
       expect(toolNames).toEqual([
         "diff_memory",
+        "inspect_memory",
         "load_memory",
         "save_memory_patch",
         "search_memory"

@@ -15,11 +15,18 @@ import type {
   Evidence,
   ObjectFacets,
   ObjectStatus,
-  ObjectType
+  ObjectType,
+  Predicate,
+  RelationConfidence,
+  RelationStatus
 } from "../../../src/core/types.js";
-import { computeObjectContentHash } from "../../../src/storage/hashes.js";
+import {
+  computeObjectContentHash,
+  computeRelationContentHash
+} from "../../../src/storage/hashes.js";
 import type { MemoryObjectSidecar } from "../../../src/storage/objects.js";
 import { readCanonicalStorage } from "../../../src/storage/read.js";
+import type { MemoryRelation } from "../../../src/storage/relations.js";
 import {
   FIXED_TIMESTAMP,
   FIXED_TIMESTAMP_NEXT_MINUTE
@@ -81,6 +88,37 @@ interface SearchEnvelope {
   };
 }
 
+interface InspectEnvelope {
+  ok: true;
+  data: {
+    object: {
+      id: string;
+      type: string;
+      status: string;
+      title: string;
+      body_path: string;
+      json_path: string;
+      tags: string[];
+      body: string;
+    };
+    relations: {
+      outgoing: RelationSummary[];
+      incoming: RelationSummary[];
+    };
+  };
+}
+
+interface InspectErrorEnvelope {
+  ok: false;
+  error: {
+    code: string;
+    message: string;
+    details?: {
+      id?: string;
+    };
+  };
+}
+
 interface DiffEnvelope {
   ok: true;
   data: {
@@ -90,6 +128,16 @@ interface DiffEnvelope {
     changed_memory_ids: string[];
     changed_relation_ids: string[];
   };
+}
+
+interface RelationSummary {
+  id: string;
+  from: string;
+  predicate: string;
+  to: string;
+  status: string;
+  confidence: string | null;
+  json_path: string;
 }
 
 interface MemoryFixture {
@@ -103,6 +151,15 @@ interface MemoryFixture {
   facets?: ObjectFacets;
   evidence?: Evidence[];
   updatedAt?: string;
+}
+
+interface RelationFixture {
+  id: string;
+  from: string;
+  predicate: Predicate;
+  to: string;
+  status?: RelationStatus;
+  confidence?: RelationConfidence;
 }
 
 interface TextContent {
@@ -127,6 +184,7 @@ describe("aictx MCP read tools", () => {
 
       expect(toolNames).toEqual([
         "diff_memory",
+        "inspect_memory",
         "load_memory",
         "save_memory_patch",
         "search_memory"
@@ -488,6 +546,106 @@ describe("aictx MCP read tools", () => {
     expect(started.stderr()).toBe("");
   });
 
+  it("returns inspect_memory data matching CLI inspect JSON", async () => {
+    const projectRoot = await createInitializedProject("aictx-mcp-inspect-");
+    await writeInspectFixtures(projectRoot);
+    const started = await startMcpClient(projectRoot);
+
+    try {
+      const cli = await runCli(
+        ["node", "aictx", "inspect", "decision.billing-retries", "--json"],
+        projectRoot
+      );
+      const mcp = await started.client.callTool({
+        name: "inspect_memory",
+        arguments: {
+          id: "decision.billing-retries"
+        }
+      });
+      const cliEnvelope = parseCliEnvelope<InspectEnvelope>(cli);
+      const mcpEnvelope = parseToolEnvelope<InspectEnvelope>(mcp);
+
+      expect(mcpEnvelope).toEqual(cliEnvelope);
+      expect(mcpEnvelope.data.object).toMatchObject({
+        id: "decision.billing-retries",
+        type: "decision",
+        status: "active",
+        title: "Billing retries",
+        body_path: ".aictx/memory/decisions/billing-retries.md",
+        json_path: ".aictx/memory/decisions/billing-retries.json"
+      });
+      expect(mcpEnvelope.data.object.body).toContain("Billing retries run in the worker.");
+      expect(mcpEnvelope.data.relations.outgoing.map((relation) => relation.id)).toEqual([
+        "rel.decision-requires-idempotency"
+      ]);
+      expect(mcpEnvelope.data.relations.incoming.map((relation) => relation.id)).toEqual([
+        "rel.worker-affects-decision"
+      ]);
+    } finally {
+      await started.close();
+    }
+
+    expect(started.stderr()).toBe("");
+  });
+
+  it("targets inspect_memory with explicit project_root from a global MCP launch", async () => {
+    const serverRoot = await createTempRoot("aictx-mcp-inspect-global-server-");
+    const projectRoot = await createInitializedProject("aictx-mcp-inspect-global-project-");
+    await writeInspectFixtures(projectRoot);
+    const started = await startMcpClient(serverRoot);
+
+    try {
+      const mcp = await started.client.callTool({
+        name: "inspect_memory",
+        arguments: {
+          project_root: projectRoot,
+          id: "constraint.webhook-idempotency"
+        }
+      });
+      const mcpEnvelope = parseToolEnvelope<InspectEnvelope>(mcp);
+
+      expect(mcpEnvelope.ok).toBe(true);
+      expect(mcpEnvelope.data.object).toMatchObject({
+        id: "constraint.webhook-idempotency",
+        title: "Webhook idempotency"
+      });
+      expect(mcpEnvelope.data.relations.incoming.map((relation) => relation.id)).toEqual([
+        "rel.decision-requires-idempotency"
+      ]);
+    } finally {
+      await started.close();
+    }
+
+    expect(started.stderr()).toBe("");
+  });
+
+  it("returns the shared error envelope for missing inspect_memory IDs", async () => {
+    const projectRoot = await createInitializedProject("aictx-mcp-inspect-missing-");
+    const started = await startMcpClient(projectRoot);
+
+    try {
+      const mcp = await started.client.callTool({
+        name: "inspect_memory",
+        arguments: {
+          id: "decision.missing"
+        }
+      });
+      const envelope = parseToolEnvelope<InspectErrorEnvelope>(mcp);
+
+      expect(envelope.ok).toBe(false);
+      expect(envelope.error).toMatchObject({
+        code: "AICtxObjectNotFound",
+        details: {
+          id: "decision.missing"
+        }
+      });
+    } finally {
+      await started.close();
+    }
+
+    expect(started.stderr()).toBe("");
+  });
+
   it("returns diff_memory data matching CLI diff JSON", async () => {
     const repo = await createInitializedGitProject("aictx-mcp-diff-");
     const projectId = await readJsonId(join(repo, ".aictx", "memory", "project.json"));
@@ -701,6 +859,53 @@ async function writeLoadSearchFixtures(projectRoot: string): Promise<void> {
   });
 }
 
+async function writeInspectFixtures(projectRoot: string): Promise<void> {
+  await writeMemoryObject(projectRoot, {
+    id: "decision.billing-retries",
+    type: "decision",
+    status: "active",
+    title: "Billing retries",
+    bodyPath: "memory/decisions/billing-retries.md",
+    body: "# Billing retries\n\nBilling retries run in the worker.\n",
+    tags: ["billing", "worker"],
+    updatedAt: FIXED_TIMESTAMP_NEXT_MINUTE
+  });
+  await writeMemoryObject(projectRoot, {
+    id: "constraint.webhook-idempotency",
+    type: "constraint",
+    status: "active",
+    title: "Webhook idempotency",
+    bodyPath: "memory/constraints/webhook-idempotency.md",
+    body: "# Webhook idempotency\n\nWebhook delivery IDs must be deduplicated.\n",
+    tags: ["webhooks"],
+    updatedAt: FIXED_TIMESTAMP_NEXT_MINUTE
+  });
+  await writeMemoryObject(projectRoot, {
+    id: "note.worker-details",
+    type: "note",
+    status: "active",
+    title: "Worker details",
+    bodyPath: "memory/notes/worker-details.md",
+    body: "# Worker details\n\nThe queue worker owns retry execution.\n",
+    tags: ["worker"],
+    updatedAt: FIXED_TIMESTAMP_NEXT_MINUTE
+  });
+  await writeRelation(projectRoot, {
+    id: "rel.decision-requires-idempotency",
+    from: "decision.billing-retries",
+    predicate: "requires",
+    to: "constraint.webhook-idempotency",
+    confidence: "high"
+  });
+  await writeRelation(projectRoot, {
+    id: "rel.worker-affects-decision",
+    from: "note.worker-details",
+    predicate: "affects",
+    to: "decision.billing-retries",
+    confidence: "medium"
+  });
+}
+
 async function writeModeFixtures(projectRoot: string): Promise<void> {
   const shared = {
     status: "active" as const,
@@ -787,6 +992,35 @@ async function writeMemoryObject(projectRoot: string, fixture: MemoryFixture): P
     projectRoot,
     `.aictx/${fixture.bodyPath.replace(/\.md$/, ".json")}`,
     sidecar
+  );
+}
+
+async function writeRelation(projectRoot: string, fixture: RelationFixture): Promise<void> {
+  const relationWithoutHash = {
+    id: fixture.id,
+    from: fixture.from,
+    predicate: fixture.predicate,
+    to: fixture.to,
+    status: fixture.status ?? "active",
+    ...(fixture.confidence === undefined ? {} : { confidence: fixture.confidence }),
+    evidence: [
+      {
+        kind: "memory",
+        id: fixture.from
+      }
+    ],
+    created_at: FIXED_TIMESTAMP,
+    updated_at: FIXED_TIMESTAMP
+  } satisfies Omit<MemoryRelation, "content_hash">;
+  const relation: MemoryRelation = {
+    ...relationWithoutHash,
+    content_hash: computeRelationContentHash(relationWithoutHash)
+  };
+
+  await writeJsonProjectFile(
+    projectRoot,
+    `.aictx/relations/${fixture.id.replace(/^rel\./, "")}.json`,
+    relation
   );
 }
 

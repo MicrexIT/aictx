@@ -182,7 +182,7 @@ describe("performance smoke tests", () => {
           patch: {
             source: {
               kind: "agent",
-              task: "T048 performance smoke save"
+              task: "performance smoke save"
             },
             changes: [
               {
@@ -291,7 +291,7 @@ function buildObjectWrites(projectId: ProjectId, objectIds: readonly ObjectId[])
       `# ${title}`,
       "",
       `Performance smoke query fixture ${fixtureIndex} documents local index rebuild, search, and context packaging behavior.`,
-      "This deterministic project memory entry keeps roadmap task T048 coverage local-only and repeatable."
+      "This deterministic project memory entry keeps performance smoke coverage local-only and repeatable."
     ].join("\n") + "\n";
     const sidecarWithoutHash = {
       id,
@@ -308,7 +308,7 @@ function buildObjectWrites(projectId: ProjectId, objectIds: readonly ObjectId[])
       tags: ["performance", "smoke", "local"],
       source: {
         kind: "agent",
-        task: "T048 performance smoke fixture"
+        task: "performance smoke fixture"
       },
       created_at: FIXED_TIMESTAMP,
       updated_at: FIXED_TIMESTAMP

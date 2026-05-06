@@ -635,7 +635,7 @@ Start a local loopback-only read-only web viewer for browsing canonical Aictx me
 
 7. MCP interface
 
-MCP should be first-class because it allows existing AI clients and coding agents to interact with Aictx.
+Local MCP is a near-term product priority because it lets agents talk with Aictx data from local harnesses that can launch `aictx-mcp`. Remote MCP, hosted sync, cloud auth, tenancy, billing, and ChatGPT App SDK UI remain deferred.
 
 The MCP interface should be intentionally small but powerful enough to disappear into normal agent workflows.
 
@@ -645,8 +645,8 @@ Design principle:
 * Agents should not need to orchestrate file writes, relation writes, index updates, or shell commands.
 * All memory writes should go through structured patch submission.
 * MCP should make Aictx easy to insert into existing coding-agent flows without becoming a spaghetti API.
-* MCP exposes load, search, save, and diff; the CLI also exposes those routine capabilities.
-* Setup, maintenance, recovery, export, inspection, registry management, local viewing, suggestion, and audit capabilities remain CLI-only in v1: init, check, rebuild, reset, history, restore, rewind, inspect, stale, graph, export obsidian, projects, view, suggest, and audit.
+* MCP exposes load, search, inspect, save, and diff; the CLI also exposes those routine capabilities.
+* Setup, maintenance, recovery, export, registry management, local viewing, suggestion, and audit capabilities remain CLI-only in v1: init, check, rebuild, reset, history, restore, rewind, stale, graph, export obsidian, projects, view, suggest, and audit.
 * CLI-first must not mean MCP-unavailable: AI agents may use MCP equivalents when the client has already launched and connected to `aictx-mcp`.
 * Every supported Aictx capability should remain reachable to an AI agent through MCP or CLI without requiring direct `.aictx/` file edits.
 * CLI-only capabilities should not be added to MCP just to create command-list parity.
@@ -692,6 +692,22 @@ Output:
 * Status
 * Paths
 * IDs
+
+inspect_memory
+
+Input:
+
+{
+  "id": "decision.billing-retries"
+}
+
+Output:
+
+* One memory object summary
+* Markdown body
+* Metadata
+* Incoming direct relation summaries
+* Outgoing direct relation summaries
 
 save_memory_patch
 
@@ -2052,12 +2068,13 @@ Prefer:
 
 load_memory
 search_memory
+inspect_memory
 save_memory_patch
 diff_memory
 
 Avoid exposing too many granular tools.
 
-The agent capability model is CLI-first, MCP-compatible. Routine memory work should happen through CLI by default, with MCP equivalents available when the client has already launched and connected to `aictx-mcp`. Commands that are user-facing, diagnostic, or recovery-oriented can remain CLI-only as long as agents are explicitly allowed to run them and receive stable `--json` output where automation benefits from it.
+The agent capability model is CLI-first, MCP-compatible. Routine memory work should happen through CLI by default, with MCP equivalents available when the client has already launched and connected to `aictx-mcp`. Local MCP is a generic local-agent interface rather than a ChatGPT-specific API. Commands that are user-facing, diagnostic, or recovery-oriented can remain CLI-only as long as agents are explicitly allowed to run them and receive stable `--json` output where automation benefits from it.
 
 The MCP adapter may declare Zod directly and use it for tool input shape validation, but service-level validation must remain shared with the CLI so MCP behavior does not fork from CLI behavior.
 

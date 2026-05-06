@@ -141,8 +141,8 @@ The CLI is the default path for routine memory work. MCP remains a supported
 integration path when the agent client has already launched and connected to
 `aictx-mcp`.
 
-MCP exposes exactly `load_memory`, `search_memory`, `save_memory_patch`, and
-`diff_memory` in v1.
+MCP exposes exactly `load_memory`, `search_memory`, `inspect_memory`,
+`save_memory_patch`, and `diff_memory` in v1.
 
 CLI-only capabilities are not MCP parity gaps. Do not add or ask for MCP tools solely to mirror these CLI commands, and do not edit `.aictx/` files directly when a supported MCP tool or CLI command exists. Avoid editing `.aictx/` files directly.
 
@@ -150,12 +150,13 @@ CLI-only capabilities are not MCP parity gaps. Do not add or ask for MCP tools s
 | --- | --- | --- |
 | Load task context | `load_memory` | `aictx load` |
 | Search memory | `search_memory` | `aictx search` |
+| Inspect memory | `inspect_memory` | `aictx inspect` |
 | Save memory patch | `save_memory_patch` | `aictx save` |
 | Show memory diff | `diff_memory` | `aictx diff` |
 | Initialize storage | none | `aictx init`, `aictx setup` |
 | Validate storage | none | `aictx check` |
 | Rebuild generated index | none | `aictx rebuild` |
-| Inspect memory | none | `aictx inspect`, `aictx stale`, `aictx graph` |
+| Inspect memory neighborhoods | none | `aictx stale`, `aictx graph` |
 | Export projection | none | `aictx export obsidian` |
 | View local memory | none | `aictx view` |
 | Suggest or audit memory | none | `aictx suggest`, `aictx audit` |

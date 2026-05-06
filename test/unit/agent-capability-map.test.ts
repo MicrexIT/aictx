@@ -7,6 +7,7 @@ const root = process.cwd();
 const generatedNotice = "<!-- Generated from integrations/templates/agent-guidance.md. Do not edit directly. -->";
 
 const mirroredSpecs = [
+  "aictx-data-access-spec.md",
   "implementation-roadmap.md",
   "indexing-and-context-compiler-spec.md",
   "local-viewer-spec.md",
@@ -63,6 +64,12 @@ const mcpAndCliCapabilities = [
     notes: "Default routine agent path is CLI; MCP equivalent is supported when configured."
   },
   {
+    capability: "Inspect object",
+    mcp: "`inspect_memory`",
+    cli: "`aictx inspect`",
+    notes: "Full-object local-agent read path with direct relation summaries."
+  },
+  {
     capability: "Save memory patch",
     mcp: "`save_memory_patch`",
     cli: "`aictx save`",
@@ -117,7 +124,7 @@ const cliOnlyCapabilities = [
     capability: "Show memory history",
     mcp: "none",
     cli: "`aictx history`",
-    notes: "Recovery/inspection remains CLI-only in v1."
+    notes: "Recovery remains CLI-only in v1."
   },
   {
     capability: "Restore memory",
@@ -132,22 +139,16 @@ const cliOnlyCapabilities = [
     notes: "Recovery remains CLI-only in v1."
   },
   {
-    capability: "Inspect object",
-    mcp: "none",
-    cli: "`aictx inspect`",
-    notes: "Debug inspection remains CLI-only in v1."
-  },
-  {
     capability: "List stale memory",
     mcp: "none",
     cli: "`aictx stale`",
-    notes: "Debug inspection remains CLI-only in v1."
+    notes: "Debug list remains CLI-only in v1."
   },
   {
     capability: "Show graph neighborhood",
     mcp: "none",
     cli: "`aictx graph`",
-    notes: "Debug inspection remains CLI-only in v1."
+    notes: "Debug graph neighborhood remains CLI-only in v1."
   },
   {
     capability: "Export Obsidian projection",
@@ -190,6 +191,7 @@ const cliOnlyCapabilities = [
 const exactMcpTools = [
   "`load_memory`",
   "`search_memory`",
+  "`inspect_memory`",
   "`save_memory_patch`",
   "`diff_memory`"
 ] as const;
@@ -204,7 +206,6 @@ const exactCliOnlyCommands = [
   "`aictx history`",
   "`aictx restore`",
   "`aictx rewind`",
-  "`aictx inspect`",
   "`aictx stale`",
   "`aictx graph`",
   "`aictx export obsidian`",
@@ -226,7 +227,6 @@ const exactCliOnlyGuidanceCommands = [
   "`aictx history`",
   "`aictx restore`",
   "`aictx rewind`",
-  "`aictx inspect`",
   "`aictx stale`",
   "`aictx graph`",
   "`aictx export obsidian`",
@@ -324,7 +324,7 @@ describe("agent capability map guardrail", () => {
     }
   });
 
-  it("locks the T061 object taxonomy and exclusions in specs and agent docs", async () => {
+  it("locks the object taxonomy and exclusions in specs and agent docs", async () => {
     const taxonomyDocs = [
       "prd.md",
       "storage-format-spec.md",
@@ -440,7 +440,7 @@ describe("agent capability map guardrail", () => {
       const guidance = await readProjectFile(path);
 
       expect(guidance.indexOf("Use CLI first for routine memory work")).toBeLessThan(
-        guidance.indexOf("Use CLI for v1 setup, maintenance, recovery, export, inspection, registry management, local viewing, public documentation, suggestion, and audit capabilities")
+        guidance.indexOf("Use CLI for v1 setup, maintenance, recovery, export, registry management, local viewing, public documentation, suggestion, and audit capabilities")
       );
       expect(guidance.indexOf("aictx load \"<task summary>\"")).toBeLessThan(
         guidance.indexOf("load_memory({ task: \"<task summary>\"")
@@ -506,7 +506,7 @@ describe("agent capability map guardrail", () => {
     }
 
     expect(prd).toContain(
-      "Setup, maintenance, recovery, export, inspection, registry management, local viewing, suggestion, and audit capabilities remain CLI-only in v1"
+      "Setup, maintenance, recovery, export, registry management, local viewing, suggestion, and audit capabilities remain CLI-only in v1"
     );
     expect(apiSpec).toContain("Do not expose an MCP tool for local viewing.");
     expect(localViewerSpec).toContain("Do not add `aictx view` to MCP.");

@@ -31,6 +31,7 @@ MCP exposes exactly:
 
 - `load_memory`
 - `search_memory`
+- `inspect_memory`
 - `save_memory_patch`
 - `diff_memory`
 

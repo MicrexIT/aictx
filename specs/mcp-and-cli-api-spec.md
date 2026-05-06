@@ -36,21 +36,23 @@ V1 API behavior must follow these rules:
 * MCP exposes a small normalized tool set.
 * CLI and MCP must share the same core implementation path.
 * AI agents must be able to reach every supported Aictx capability through either MCP or CLI.
-* CLI is the default agent path for routine memory load, search, save, and diff workflows.
+* CLI is the default agent path for routine memory load, search, inspect, save, and diff workflows.
 * MCP is a supported integration path when the agent client has already launched and connected to `aictx-mcp`.
-* CLI is the supported path for setup, maintenance, recovery, export, inspection, registry management, local viewing, public documentation, suggestion, and audit workflows.
+* Local MCP is a generic local-agent interface for MCP-capable harnesses, not a ChatGPT-specific API.
+* CLI is the supported path for setup, maintenance, recovery, export, registry management, local viewing, public documentation, suggestion, and audit workflows.
 * The API must be usable without a cloud account, external API, embeddings, or hosted service.
 
 ### 2.1 Agent Capability Map
 
 V1 parity means agent reachability through MCP or CLI, not identical command lists.
-CLI-only capabilities are intentionally not MCP parity gaps; do not add setup, maintenance, recovery, export, inspection, registry management, local viewing, public documentation, suggestion, or audit tools to MCP just to mirror CLI commands.
+CLI-only capabilities are intentionally not MCP parity gaps; do not add setup, maintenance, recovery, export, registry management, local viewing, public documentation, suggestion, or audit tools to MCP just to mirror CLI commands.
 When a supported MCP or CLI entrypoint exists, agents must use that entrypoint instead of editing `.aictx/` files directly.
 
 | Capability | MCP | CLI | Notes |
 | --- | --- | --- | --- |
 | Load task context | `load_memory` | `aictx load` | Default routine agent path is CLI; MCP equivalent is supported when configured. |
 | Search memory | `search_memory` | `aictx search` | Default routine agent path is CLI; MCP equivalent is supported when configured. |
+| Inspect object | `inspect_memory` | `aictx inspect` | Full-object local-agent read path with direct relation summaries. |
 | Save memory patch | `save_memory_patch` | `aictx save` | All writes use structured patches. |
 | Show memory diff | `diff_memory` | `aictx diff` | Git-backed async inspection and recovery path. |
 | Initialize storage | none | `aictx init`, `aictx setup` | Setup remains CLI-only in v1. |
@@ -59,12 +61,11 @@ When a supported MCP or CLI entrypoint exists, agents must use that entrypoint i
 | Rebuild generated index | none | `aictx rebuild` | Maintenance remains CLI-only in v1. |
 | Reset local storage | none | `aictx reset` | Destructive maintenance remains CLI-only in v1. |
 | Upgrade storage schema | none | `aictx upgrade` | Migration remains CLI-only for storage v3. |
-| Show memory history | none | `aictx history` | Recovery/inspection remains CLI-only in v1. |
+| Show memory history | none | `aictx history` | Recovery remains CLI-only in v1. |
 | Restore memory | none | `aictx restore` | Recovery remains CLI-only in v1. |
 | Rewind memory | none | `aictx rewind` | Recovery remains CLI-only in v1. |
-| Inspect object | none | `aictx inspect` | Debug inspection remains CLI-only in v1. |
-| List stale memory | none | `aictx stale` | Debug inspection remains CLI-only in v1. |
-| Show graph neighborhood | none | `aictx graph` | Debug inspection remains CLI-only in v1. |
+| List stale memory | none | `aictx stale` | Debug list remains CLI-only in v1. |
+| Show graph neighborhood | none | `aictx graph` | Debug graph neighborhood remains CLI-only in v1. |
 | Export Obsidian projection | none | `aictx export obsidian` | Generated projection remains CLI-only in v1. |
 | Manage project registry | none | `aictx projects` | Registry management remains CLI-only in v1. |
 | View local memory | none | `aictx view` | Local read-only viewer remains CLI-only in v1. |
@@ -228,8 +229,8 @@ Success data:
   "next_steps": [
     "Agents are now instructed through `AGENTS.md` and `CLAUDE.md` to load and save Aictx memory.",
     "`aictx init` creates linked starter placeholders only. To seed useful first-run memory, run `aictx setup` for a bootstrap preview or `aictx setup --apply` to apply the conservative bootstrap patch. For manual patch inspection, run `aictx suggest --bootstrap --patch > bootstrap-memory.json`, `aictx patch review bootstrap-memory.json`, `aictx save --file bootstrap-memory.json`, and `aictx check`.",
-    "`aictx init` does not start MCP; agents should use `aictx load` and `aictx save --stdin` by default. Configure agent clients that support MCP to launch `aictx-mcp` only when you want MCP equivalents such as `load_memory` and `save_memory_patch`. A globally launched MCP server can serve this project when tool calls include this project root as `project_root`.",
-    "Saved memory is active immediately after Aictx validates and writes it. Inspect memory asynchronously with `aictx view`, `aictx diff`, Git tools, or MCP `diff_memory` when available.",
+    "`aictx init` does not start MCP; agents should use `aictx load` and `aictx save --stdin` by default. Configure agent clients that support MCP to launch `aictx-mcp` only when you want MCP equivalents such as `load_memory`, `inspect_memory`, and `save_memory_patch`. A globally launched MCP server can serve this project when tool calls include this project root as `project_root`.",
+    "Saved memory is active immediately after Aictx validates and writes it. Inspect memory asynchronously with `inspect_memory`, `aictx view`, `aictx diff`, Git tools, or MCP `diff_memory` when available.",
     "Optional bundled skills are available under `integrations/codex/` and `integrations/claude/`."
   ]
 }
@@ -908,11 +909,12 @@ V1 MCP must expose only these required tools:
 
 * `load_memory`
 * `search_memory`
+* `inspect_memory`
 * `save_memory_patch`
 * `diff_memory`
 
 The MCP server must not expose arbitrary shell access, arbitrary filesystem writes, or low-level graph mutation tools.
-Do not add MCP tools for load-mode management, suggestion packets, audits, setup, maintenance, recovery, export, inspection, registry management, local viewing, or public documentation. `aictx suggest`, `aictx audit`, and `aictx docs` remain CLI-only read-only support surfaces in v1.
+Do not add MCP tools for load-mode management, suggestion packets, audits, setup, maintenance, recovery, export, registry management, local viewing, stale lists, graph neighborhoods, or public documentation. `aictx suggest`, `aictx audit`, and `aictx docs` remain CLI-only read-only support surfaces in v1.
 
 ### 6.1 `load_memory`
 
@@ -1022,7 +1024,77 @@ Output data:
 }
 ```
 
-### 6.3 `save_memory_patch`
+### 6.3 `inspect_memory`
+
+Input:
+
+```json
+{
+  "id": "decision.billing-retries",
+  "project_root": "/repo"
+}
+```
+
+Input fields:
+
+* `id` is required and is the memory object ID to inspect.
+* `project_root` is optional. If omitted, the MCP server launch directory is used.
+
+Behavior:
+
+* Same core behavior as `aictx inspect --json`.
+* Must return one memory object summary, including body and metadata, plus direct incoming and outgoing relation summaries.
+* Must not mutate canonical storage, generated indexes, or Git state.
+* If the object does not exist, return the shared `AICtxObjectNotFound` envelope.
+
+Output data:
+
+```json
+{
+  "object": {
+    "id": "decision.billing-retries",
+    "type": "decision",
+    "status": "active",
+    "title": "Billing retries",
+    "body_path": ".aictx/memory/decisions/billing-retries.md",
+    "json_path": ".aictx/memory/decisions/billing-retries.json",
+    "scope": {
+      "kind": "project",
+      "project": "project.aictx",
+      "branch": null,
+      "task": null
+    },
+    "tags": ["billing"],
+    "facets": null,
+    "evidence": [],
+    "source": { "kind": "agent" },
+    "superseded_by": null,
+    "created_at": "2026-05-06T00:00:00.000Z",
+    "updated_at": "2026-05-06T00:00:00.000Z",
+    "body": "# Billing retries\n\nBilling retries run in the worker.\n"
+  },
+  "relations": {
+    "outgoing": [
+      {
+        "id": "rel.decision-requires-idempotency",
+        "from": "decision.billing-retries",
+        "predicate": "requires",
+        "to": "constraint.webhook-idempotency",
+        "status": "active",
+        "confidence": "high",
+        "evidence": [],
+        "content_hash": null,
+        "created_at": "2026-05-06T00:00:00.000Z",
+        "updated_at": "2026-05-06T00:00:00.000Z",
+        "json_path": ".aictx/relations/decision-requires-idempotency.json"
+      }
+    ],
+    "incoming": []
+  }
+}
+```
+
+### 6.4 `save_memory_patch`
 
 Input:
 
@@ -1074,7 +1146,7 @@ Output data:
 }
 ```
 
-### 6.4 `diff_memory`
+### 6.5 `diff_memory`
 
 Input:
 
@@ -1105,6 +1177,12 @@ Output data:
   "changed_relation_ids": []
 }
 ```
+
+### 6.6 Future Host Adapter Names
+
+Local MCP tool names are intentionally Aictx-specific: `search_memory` and `inspect_memory`.
+
+Future hosts that require generic tool names may map their adapter-level `search` operation to the shared search behavior and their adapter-level `fetch` operation to the shared inspect behavior. That mapping is a host adapter concern and must not rename the local MCP tools.
 
 ## 7. Structured Patch Format
 
@@ -1421,9 +1499,9 @@ Core memory behavior must work without Git. Git behavior is part of the API cont
 
 Rules:
 
-* `init`, `load_memory`, `search_memory`, `save_memory_patch`, `check`, and `rebuild` must work outside Git.
+* `init`, `load_memory`, `search_memory`, `inspect_memory`, `save_memory_patch`, `check`, and `rebuild` must work outside Git.
 * `diff_memory`, `aictx diff`, `aictx history`, `aictx restore`, and `aictx rewind` require Git and return `AICtxGitRequired` outside Git.
-* When Git is available, `load_memory` and `search_memory` may run when `.aictx/` is dirty.
+* When Git is available, `load_memory`, `search_memory`, and `inspect_memory` may run when `.aictx/` is dirty.
 * `save_memory_patch` must try to repair or quarantine unrelated malformed memory and keep applying independent patch changes.
 * When Git is available, `save_memory_patch` must not reject writes only because `.aictx/` is dirty.
 * When Git is available, `save_memory_patch` must back up dirty touched files to `.aictx/recovery/` before overwrite/delete.
@@ -1483,6 +1561,7 @@ The v1 API is valid when:
 
 * `aictx init` creates storage from `storage-format-spec.md` inside Git and non-Git project directories.
 * `aictx load` and `load_memory` return equivalent context data.
+* `aictx inspect --json` and `inspect_memory` return equivalent object and relation data.
 * `aictx save --stdin`, `aictx save --file`, and `save_memory_patch` use the same write path.
 * Save operations write canonical files, append events, and update hashes.
 * In Git projects, save operations leave changes uncommitted.

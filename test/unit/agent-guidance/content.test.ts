@@ -25,6 +25,7 @@ const generatedGuidanceTargets = [
 const mcpTools = [
   "`load_memory`",
   "`search_memory`",
+  "`inspect_memory`",
   "`save_memory_patch`",
   "`diff_memory`"
 ] as const;
@@ -36,7 +37,6 @@ const cliOnlyCommands = [
   "`aictx history`",
   "`aictx restore`",
   "`aictx rewind`",
-  "`aictx inspect`",
   "`aictx stale`",
   "`aictx graph`",
   "`aictx export obsidian`",
@@ -162,10 +162,10 @@ describe("agent guidance content", () => {
       const content = await readProjectFile(path);
 
       expect(content).toContain(
-        "Use CLI for v1 setup, maintenance, recovery, export, inspection, registry management, local viewing, public documentation, suggestion, and audit capabilities"
+        "Use CLI for v1 setup, maintenance, recovery, export, registry management, local viewing, public documentation, suggestion, and audit capabilities"
       );
       expect(content).toContain(
-        "For setup, maintenance, inspection, export, registry management, local viewing, public documentation, suggestion, audit, or recovery operations that are not exposed by MCP, use the `aictx` CLI"
+        "For setup, maintenance, export, registry management, local viewing, public documentation, suggestion, audit, recovery, stale-list, or graph-neighborhood operations that are not exposed by MCP, use the `aictx` CLI"
       );
 
       for (const command of cliOnlyCommands) {
@@ -208,7 +208,7 @@ describe("agent guidance content", () => {
     }
   });
 
-  it("teaches the T061 memory discipline lifecycle", async () => {
+  it("teaches the memory discipline lifecycle", async () => {
     for (const path of guideTargets) {
       const content = await readProjectFile(path);
 

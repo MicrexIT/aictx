@@ -75,6 +75,7 @@ describe("aictx MCP server bootstrap", () => {
 
       expect(toolNames).toEqual([
         "diff_memory",
+        "inspect_memory",
         "load_memory",
         "save_memory_patch",
         "search_memory"

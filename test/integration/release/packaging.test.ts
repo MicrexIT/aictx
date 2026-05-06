@@ -414,7 +414,7 @@ async function expectInstalledMemoryDisciplineDocs(installRoot: string): Promise
 
     expectMemoryDisciplineContent(content);
     expect(content).toContain(
-      "MCP exposes exactly `load_memory`, `search_memory`, `save_memory_patch`, and `diff_memory`"
+      "MCP exposes exactly `load_memory`, `search_memory`, `inspect_memory`, `save_memory_patch`, and `diff_memory`"
     );
     expect(content).toContain("Use CLI for v1 setup");
   }

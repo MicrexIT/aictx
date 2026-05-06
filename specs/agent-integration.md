@@ -97,12 +97,13 @@ Use `aictx setup` for guided first-run onboarding, or `aictx setup --apply` when
 
 ## Capability Map
 
-The v1 agent model is CLI-first and MCP-compatible. CLI handles routine memory work by default; MCP remains a supported integration path when the agent client has already launched and connected to `aictx-mcp`. The CLI remains the supported path for setup, maintenance, recovery, export, inspection, registry management, local viewing, suggestion, and audit operations.
+The v1 agent model is CLI-first and MCP-compatible. CLI handles routine memory work by default; MCP remains a supported integration path when the agent client has already launched and connected to `aictx-mcp`. The CLI remains the supported path for setup, maintenance, recovery, export, registry management, local viewing, suggestion, and audit operations; stale lists and graph neighborhoods also remain CLI-only.
 
 | Capability | MCP | CLI |
 | --- | --- | --- |
 | Load task context | `load_memory` | `aictx load` |
 | Search memory | `search_memory` | `aictx search` |
+| Inspect object | `inspect_memory` | `aictx inspect` |
 | Save memory patch | `save_memory_patch` | `aictx save` |
 | Show memory diff | `diff_memory` | `aictx diff` |
 | Initialize storage | none | `aictx init`, `aictx setup` |
@@ -113,7 +114,6 @@ The v1 agent model is CLI-first and MCP-compatible. CLI handles routine memory w
 | Show memory history | none | `aictx history` |
 | Restore memory | none | `aictx restore` |
 | Rewind memory | none | `aictx rewind` |
-| Inspect object | none | `aictx inspect` |
 | List stale memory | none | `aictx stale` |
 | Show graph neighborhood | none | `aictx graph` |
 | Export Obsidian projection | none | `aictx export obsidian` |
@@ -122,11 +122,11 @@ The v1 agent model is CLI-first and MCP-compatible. CLI handles routine memory w
 | Suggest memory decision packet | none | `aictx suggest` |
 | Audit memory hygiene | none | `aictx audit` |
 
-CLI-only capabilities are not MCP parity gaps. Do not expose setup, maintenance, recovery, export, inspection, registry management, local viewing, suggestion, or audit commands as MCP tools solely to mirror the CLI command list.
+CLI-only capabilities are not MCP parity gaps. Do not expose setup, maintenance, recovery, export, registry management, local viewing, suggestion, audit, stale-list, or graph-neighborhood commands as MCP tools solely to mirror the CLI command list.
 
-Agents may use the CLI for supported setup, maintenance, recovery, export, inspection, registry management, local viewing, suggestion, and audit operations. They should use supported MCP or CLI entrypoints instead of editing `.aictx/` files directly when a supported command exists.
+Agents may use the CLI for supported setup, maintenance, recovery, export, registry management, local viewing, suggestion, audit, stale-list, and graph-neighborhood operations. They should use supported MCP or CLI entrypoints instead of editing `.aictx/` files directly when a supported command exists.
 
-MCP exposes exactly `load_memory`, `search_memory`, `save_memory_patch`, and `diff_memory` in v1.
+MCP exposes exactly `load_memory`, `search_memory`, `inspect_memory`, `save_memory_patch`, and `diff_memory` in v1.
 
 ## Local Viewer
 

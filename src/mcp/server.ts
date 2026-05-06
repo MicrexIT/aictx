@@ -11,6 +11,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { version } from "../generated/version.js";
 import type { AictxMcpContext } from "./context.js";
 import { diffMemoryTool } from "./tools/diff-memory.js";
+import { inspectMemoryTool } from "./tools/inspect-memory.js";
 import { loadMemoryTool } from "./tools/load-memory.js";
 import { saveMemoryPatchTool } from "./tools/save-memory-patch.js";
 import { searchMemoryTool } from "./tools/search-memory.js";
@@ -113,6 +114,16 @@ function registerTools(mcp: AictxMcpServer): void {
       annotations: searchMemoryTool.annotations
     },
     (args) => searchMemoryTool.call(mcp.context, args)
+  );
+  mcp.server.registerTool(
+    inspectMemoryTool.name,
+    {
+      title: inspectMemoryTool.title,
+      description: inspectMemoryTool.description,
+      inputSchema: inspectMemoryTool.inputSchema,
+      annotations: inspectMemoryTool.annotations
+    },
+    (args) => inspectMemoryTool.call(mcp.context, args)
   );
   mcp.server.registerTool(
     saveMemoryPatchTool.name,

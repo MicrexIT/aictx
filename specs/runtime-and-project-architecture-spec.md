@@ -94,6 +94,7 @@ Repository layout:
     prd.md
     storage-format-spec.md
     mcp-and-cli-api-spec.md
+    aictx-data-access-spec.md
     indexing-and-context-compiler-spec.md
     schemas-and-validation-spec.md
     runtime-and-project-architecture-spec.md
@@ -142,10 +143,13 @@ Repository layout:
       tools/
         load-memory.ts
         search-memory.ts
+        inspect-memory.ts
         save-memory-patch.ts
         diff-memory.ts
     app/
       operations.ts
+    data-access/
+      service.ts
     registry/
       projects.ts
     core/
@@ -467,12 +471,15 @@ Rules:
 
 `src/app/operations.ts` owns the high-level application operations.
 
+The shared host-neutral data-access contract is specified in `aictx-data-access-spec.md`. CLI and MCP adapters should converge on that contract for load, search, inspect, diff, and structured patch writes without forking behavior.
+
 Required service functions:
 
 ```text
 initProject(input): Promise<Result<InitData>>
 loadMemory(input): Promise<Result<LoadData>>
 searchMemory(input): Promise<Result<SearchData>>
+inspectMemory(input): Promise<Result<InspectData>>
 saveMemoryPatch(input): Promise<Result<SaveData>>
 diffMemory(input): Promise<Result<DiffData>>
 suggestMemory(input): Promise<Result<SuggestData>>
@@ -741,6 +748,7 @@ Required tools:
 ```text
 load_memory
 search_memory
+inspect_memory
 save_memory_patch
 diff_memory
 ```
@@ -748,8 +756,8 @@ diff_memory
 Agent capability split:
 
 ```text
-MCP + CLI: load, search, save, diff
-CLI-only in v1: init, check, rebuild, history, restore, rewind, inspect, stale, graph, export obsidian, view, suggest, audit
+MCP + CLI: load, search, inspect object, save, diff
+CLI-only in v1: init, check, rebuild, history, restore, rewind, stale, graph, export obsidian, view, suggest, audit
 ```
 
 Rules:

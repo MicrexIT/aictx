@@ -39,6 +39,7 @@ MCP exposes exactly these tools in v1:
 
 - `load_memory`
 - `search_memory`
+- `inspect_memory`
 - `save_memory_patch`
 - `diff_memory`
 
@@ -47,6 +48,7 @@ Use MCP equivalents only when the client already exposes Aictx MCP tools:
 ```text
 load_memory({ task: "<task summary>", mode: "coding" })
 search_memory({ query: "auth route conventions" })
+inspect_memory({ id: "decision.auth-route-conventions" })
 save_memory_patch({ patch: { source, changes } })
 diff_memory({})
 ```
@@ -65,8 +67,8 @@ load_memory({
 ## CLI-only boundaries
 
 The CLI remains the supported path for setup, maintenance, recovery, export,
-inspection, registry management, local viewing, suggestion, and audit
-operations.
+registry management, local viewing, suggestion, and audit operations. Stale
+lists and graph neighborhoods also remain CLI-only.
 
 CLI-only capabilities are not MCP parity gaps. Do not add or ask for MCP tools
 solely to mirror these CLI commands. In particular, do not add `aictx view` to

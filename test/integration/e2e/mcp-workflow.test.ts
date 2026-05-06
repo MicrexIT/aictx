@@ -97,6 +97,22 @@ interface SearchData {
   }>;
 }
 
+interface InspectData {
+  object: {
+    id: string;
+    type: string;
+    status: string;
+    title: string;
+    body_path: string;
+    json_path: string;
+    body: string;
+  };
+  relations: {
+    outgoing: unknown[];
+    incoming: unknown[];
+  };
+}
+
 interface DiffData {
   diff: string;
   changed_files: string[];
@@ -135,6 +151,7 @@ interface TextContent {
 
 const REQUIRED_MCP_TOOLS = [
   "diff_memory",
+  "inspect_memory",
   "load_memory",
   "save_memory_patch",
   "search_memory"
@@ -329,6 +346,31 @@ describe("aictx full MCP workflow", () => {
 
       expect(mcpSearch).toEqual(cliSearch);
       expect(searchIds(mcpSearch)).toContain("decision.mcp-routine-workflow");
+
+      const mcpInspect = parseToolEnvelope<SuccessEnvelope<InspectData>>(
+        await started.client.callTool({
+          name: "inspect_memory",
+          arguments: {
+            id: "decision.mcp-routine-workflow"
+          }
+        })
+      );
+      const cliInspect = parseCliEnvelope<InspectData>(
+        await expectSuccessfulAictxCli(repo, [
+          "inspect",
+          "decision.mcp-routine-workflow",
+          "--json"
+        ])
+      );
+
+      expect(mcpInspect).toEqual(cliInspect);
+      expect(mcpInspect.data.object).toMatchObject({
+        id: "decision.mcp-routine-workflow",
+        type: "decision",
+        status: "active",
+        title: "MCP routine workflow"
+      });
+      expect(mcpInspect.data.object.body).toContain("inspect_memory");
 
       const checked = parseCliEnvelope<CheckData>(
         await expectSuccessfulAictxCli(repo, ["check", "--json"])
@@ -533,7 +575,7 @@ function createWorkflowPatch() {
         type: "decision",
         title: "MCP routine workflow",
         body:
-          "# MCP routine workflow\n\nMCP routine workflow agents use load_memory, save_memory_patch, search_memory, and diff_memory for normal project memory work. Relevant file src/mcp/server.ts.\n",
+          "# MCP routine workflow\n\nMCP routine workflow agents use load_memory, search_memory, inspect_memory, save_memory_patch, and diff_memory for normal project memory work. Relevant file src/mcp/server.ts.\n",
         tags: ["mcp", "workflow", "routine"]
       },
       {
@@ -542,7 +584,7 @@ function createWorkflowPatch() {
         type: "constraint",
         title: "MCP does not mirror CLI-only commands",
         body:
-          "# MCP does not mirror CLI-only commands\n\nDo not expose init, check, rebuild, history, restore, inspect, stale, graph, export, shell, or filesystem operations through MCP. Agents must use the aictx binary for CLI-only capabilities.\n",
+          "# MCP does not mirror CLI-only commands\n\nDo not expose init, check, rebuild, history, restore, stale, graph, export, shell, or filesystem operations through MCP. Agents must use the aictx binary for CLI-only capabilities.\n",
         tags: ["mcp", "workflow", "cli-only"]
       },
       ...Array.from({ length: 14 }, (_, index) => ({
