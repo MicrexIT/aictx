@@ -39,6 +39,7 @@ V1 API behavior must follow these rules:
 * CLI is the default agent path for routine memory load, search, inspect, save, and diff workflows.
 * MCP is a supported integration path when the agent client has already launched and connected to `aictx-mcp`.
 * Local MCP is a generic local-agent interface for MCP-capable harnesses, not a ChatGPT-specific API.
+* Local MCP is the near-term integration path; remote MCP, hosted sync, cloud hosting, OAuth or cloud auth, tenancy, billing, and ChatGPT App SDK UI are future work.
 * CLI is the supported path for setup, maintenance, recovery, export, registry management, local viewing, public documentation, suggestion, and audit workflows.
 * The API must be usable without a cloud account, external API, embeddings, or hosted service.
 

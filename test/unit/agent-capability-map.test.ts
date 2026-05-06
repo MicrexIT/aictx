@@ -274,6 +274,38 @@ const staleRoadmapDocs = [
   "integrations/templates/agent-guidance.md"
 ] as const;
 
+const localNowCloudLaterDocs = [
+  "prd.md",
+  "specs/prd.md",
+  "mcp-and-cli-api-spec.md",
+  "specs/mcp-and-cli-api-spec.md",
+  "aictx-data-access-spec.md",
+  "specs/aictx-data-access-spec.md",
+  "implementation-roadmap.md",
+  "specs/implementation-roadmap.md",
+  "README.md",
+  "docs/src/content/docs/mcp.md",
+  "docs/src/content/docs/agent-integration.md",
+  "docs/src/content/docs/reference.md",
+  "integrations/templates/agent-guidance.md"
+] as const;
+
+const futureAdapterMappingDocs = [
+  "prd.md",
+  "specs/prd.md",
+  "mcp-and-cli-api-spec.md",
+  "specs/mcp-and-cli-api-spec.md",
+  "aictx-data-access-spec.md",
+  "specs/aictx-data-access-spec.md",
+  "implementation-roadmap.md",
+  "specs/implementation-roadmap.md",
+  "README.md",
+  "docs/src/content/docs/mcp.md",
+  "docs/src/content/docs/agent-integration.md",
+  "docs/src/content/docs/reference.md",
+  "integrations/templates/agent-guidance.md"
+] as const;
+
 const deprecatedFourToolRoadmapPatterns = [
   /MCP \+ CLI capabilities: load, search, save, diff\./,
   /CLI-only capabilities in v1:.*\binspect\b/,
@@ -474,6 +506,32 @@ describe("agent capability map guardrail", () => {
     }
   });
 
+  it("locks the local-now/cloud-later integration story", async () => {
+    for (const path of localNowCloudLaterDocs) {
+      const content = await readProjectFile(path);
+
+      expect(content).toMatch(/local MCP[\s\S]{0,80}near-term|near-term[\s\S]{0,80}local MCP/i);
+      expect(content).toMatch(
+        /remote\s+MCP[\s\S]{0,160}(?:future|deferred)|(?:future|deferred)[\s\S]{0,160}remote\s+MCP/i
+      );
+      expect(content).toMatch(
+        /ChatGPT App SDK[\s\S]{0,160}(?:future|deferred)|(?:future|deferred)[\s\S]{0,160}ChatGPT App SDK/i
+      );
+    }
+  });
+
+  it("locks search/fetch as future adapter aliases outside local MCP", async () => {
+    for (const path of futureAdapterMappingDocs) {
+      const content = await readProjectFile(path);
+
+      expect(content).toMatch(/`search`\/`fetch`|`search`[\s\S]{0,80}`fetch`/);
+      expect(content).toMatch(/adapter/i);
+      expect(content).toMatch(
+        /not (?:the )?local MCP tool (?:contract|names)|must not (?:rename|replace) the local MCP tool(?:s| names)|must not register[\s\S]{0,40}`search`[\s\S]{0,40}`fetch`/i
+      );
+    }
+  });
+
   it("keeps generated guidance template-derived", async () => {
     const template = (await readProjectFile("integrations/templates/agent-guidance.md")).trimEnd();
     const codex = await readProjectFile("integrations/codex/aictx/SKILL.md");
@@ -491,9 +549,14 @@ describe("agent capability map guardrail", () => {
     for (const path of guidanceTargets) {
       const guidance = await readProjectFile(path);
 
-      expect(guidance.indexOf("Use CLI first for routine memory work")).toBeLessThan(
-        guidance.indexOf("Use CLI for v1 setup, maintenance, recovery, export, registry management, local viewing, public documentation, suggestion, and audit capabilities")
+      const cliFirstIndex = guidance.indexOf("Use CLI first for routine memory work");
+      const cliOnlyIndex = guidance.search(
+        /Use (?:the )?CLI for v1 setup, maintenance, recovery, export, registry(?: management)?, (?:viewer|local viewing), (?:docs|public documentation), suggest, audit/i
       );
+
+      expect(cliFirstIndex).toBeGreaterThanOrEqual(0);
+      expect(cliOnlyIndex).toBeGreaterThanOrEqual(0);
+      expect(cliFirstIndex).toBeLessThan(cliOnlyIndex);
       expect(guidance.indexOf("aictx load \"<task summary>\"")).toBeLessThan(
         guidance.indexOf("load_memory({ task: \"<task summary>\"")
       );
@@ -529,11 +592,11 @@ describe("agent capability map guardrail", () => {
     for (const path of docsAndGuidance) {
       const content = await readProjectFile(path);
 
-      expect(content).toMatch(/CLI-only capabilities .*not MCP parity gaps/);
+      expect(content).toMatch(/CLI-only capabilities[\s\S]{0,80}not MCP parity gaps/);
       expect(content).toMatch(
-        /do not add .* to MCP|not (?:be )?added to MCP|do not add or ask for MCP tools solely to mirror these CLI commands/i
+        /do not add[\s\S]{0,200}to MCP|do not add MCP tools|not (?:be )?added to MCP|do not add or ask for MCP tools solely to mirror these CLI\s+commands/i
       );
-      expect(content).toMatch(/editing `\.aictx\/` files directly/);
+      expect(content).toMatch(/edit(?:ing)? `\.aictx\/` files directly/);
     }
   });
 

@@ -26,6 +26,32 @@ const publicMcpContractTargets = [
   "docs/src/content/docs/viewer.md"
 ] as const;
 
+const localNowCloudLaterTargets = [
+  ...publicMcpContractTargets,
+  "integrations/templates/agent-guidance.md",
+  "integrations/codex/aictx/SKILL.md",
+  "integrations/claude/aictx/SKILL.md",
+  "integrations/claude/aictx.md",
+  "integrations/generic/aictx-agent-instructions.md"
+] as const;
+
+const futureAdapterMappingTargets = [
+  "README.md",
+  "docs/src/content/docs/index.md",
+  "docs/src/content/docs/getting-started.md",
+  "docs/src/content/docs/cli.md",
+  "docs/src/content/docs/mcp.md",
+  "docs/src/content/docs/agent-integration.md",
+  "docs/src/content/docs/reference.md",
+  "docs/src/content/docs/troubleshooting.md",
+  "docs/src/content/docs/viewer.md",
+  "integrations/templates/agent-guidance.md",
+  "integrations/codex/aictx/SKILL.md",
+  "integrations/claude/aictx/SKILL.md",
+  "integrations/claude/aictx.md",
+  "integrations/generic/aictx-agent-instructions.md"
+] as const;
+
 const generatedGuidanceTargets = [
   "integrations/templates/agent-guidance.md",
   "integrations/codex/aictx/SKILL.md",
@@ -166,6 +192,30 @@ describe("agent guidance content", () => {
       expect(content).not.toContain(
         "exactly `load_memory`, `search_memory`, `save_memory_patch`, and `diff_memory`"
       );
+    }
+  });
+
+  it("documents the local-now/cloud-later integration story", async () => {
+    for (const path of localNowCloudLaterTargets) {
+      const content = await readProjectFile(path);
+
+      expect(content).toMatch(/local MCP[\s\S]{0,80}near-term|near-term[\s\S]{0,80}local MCP/i);
+      expect(content).toMatch(
+        /remote(?:\s+MCP|\/cloud)?[\s\S]{0,160}(?:future|deferred)|(?:future|deferred)[\s\S]{0,160}remote(?:\s+MCP|\/cloud)?/i
+      );
+      expect(content).toMatch(
+        /ChatGPT App SDK[\s\S]{0,160}(?:future|deferred)|(?:future|deferred)[\s\S]{0,160}ChatGPT App SDK/i
+      );
+    }
+  });
+
+  it("documents search/fetch as future adapter aliases, not local MCP tools", async () => {
+    for (const path of futureAdapterMappingTargets) {
+      const content = await readProjectFile(path);
+
+      expect(content).toMatch(/`search`\/`fetch`|`search`[\s\S]{0,80}`fetch`/);
+      expect(content).toMatch(/adapter/i);
+      expect(content).toMatch(/not\s+local MCP tool names|must not register[\s\S]{0,40}`search`[\s\S]{0,40}`fetch`/i);
     }
   });
 

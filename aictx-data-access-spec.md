@@ -13,6 +13,7 @@ This spec does not define a hosted service, remote MCP, OAuth, tenancy, billing,
 * Canonical memory remains local under the resolved project `.aictx/` directory.
 * CLI remains the default routine path for agents.
 * Local MCP is a supported generic local-agent interface for harnesses that can launch `aictx-mcp`.
+* Local MCP is the near-term integration path; remote MCP, hosted sync, cloud hosting, OAuth or cloud auth, tenancy, billing, and ChatGPT App SDK UI are future work.
 * CLI and MCP must share one data-access implementation for routine reads and structured writes.
 * `save_memory_patch` remains the only MCP write primitive.
 * Data access must not expose arbitrary filesystem reads, arbitrary filesystem writes, shell execution, or low-level graph mutation.

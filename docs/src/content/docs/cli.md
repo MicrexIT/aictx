@@ -13,6 +13,10 @@ Local MCP exposes exactly `load_memory`, `search_memory`, `inspect_memory`,
 registry, viewer, docs, suggest, audit, stale, and graph workflows remain
 CLI-only. CLI-only capabilities are not MCP parity gaps.
 
+Local MCP is the near-term integration path for local agent harnesses. Remote
+MCP, hosted sync, cloud auth, cloud hosting, and ChatGPT App SDK UI are future
+work, and future `search`/`fetch` adapter names are not local MCP tool names.
+
 All CLI commands render human-readable output by default. Add `--json` for the
 shared response envelope:
 

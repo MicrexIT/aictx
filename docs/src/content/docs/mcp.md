@@ -56,6 +56,11 @@ Local MCP exposes exactly these tools in v1:
 - `save_memory_patch`
 - `diff_memory`
 
+Local MCP is the near-term integration path for MCP-capable local agent
+harnesses. Remote MCP endpoints, hosted sync, cloud APIs, OAuth or cloud-auth
+surfaces, tenancy layers, billing surfaces, and ChatGPT App SDK UI remain
+future work.
+
 Use MCP equivalents only when the client already exposes Aictx MCP tools:
 
 ```text
@@ -80,6 +85,11 @@ load_memory({
 `project_root` selects an initialized local Aictx project for the tool call. It
 is not arbitrary filesystem access; reads and writes remain scoped to the
 resolved project's `.aictx/` directory.
+
+Future ChatGPT-compatible or other host adapters may expose generic `search`
+and `fetch` names as aliases over Aictx search and inspect behavior. Those names
+are future adapter mappings only. The local MCP server must not register
+`search` or `fetch`; it exposes the five Aictx-specific tools above.
 
 ## CLI-only boundaries
 

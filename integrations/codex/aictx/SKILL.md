@@ -48,6 +48,8 @@ CLI-only capabilities are not MCP parity gaps. Do not add or ask for MCP tools s
 
 MCP tools are available only when the agent client has already launched and connected to `aictx-mcp`. `aictx init` does not start the MCP server, and starting `aictx-mcp` from a shell generally cannot add MCP tools to an already-running agent session. A globally launched MCP server can serve multiple initialized projects when tool calls include `project_root`. If MCP tools are unavailable, stay on the CLI path and tell the user they need to configure their MCP client to launch `aictx-mcp`.
 
+Local MCP is the near-term integration path. Remote MCP, cloud sync/hosting, OAuth or cloud-auth, tenancy, billing, and ChatGPT App SDK surfaces remain future work, not v1 surfaces. Future ChatGPT-compatible `search`/`fetch` names are adapter aliases over search/inspect behavior, not local MCP tool names.
+
 ## Default Workflow
 
 Before non-trivial coding, architecture, debugging, dependency, or configuration work:

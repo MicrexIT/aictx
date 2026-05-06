@@ -52,6 +52,10 @@ agent client already exposes Aictx MCP tools. Local MCP exposes exactly
 `load_memory`, `search_memory`, `inspect_memory`, `save_memory_patch`, and
 `diff_memory`.
 
+Local MCP is the near-term integration path; remote/cloud and ChatGPT App SDK
+integrations are future work, and future `search`/`fetch` adapter names are not
+local MCP tool names.
+
 ## Initialize a project
 
 Run this once at the project root:

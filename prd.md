@@ -99,6 +99,7 @@ Deferred from v1:
 * Team governance workflows
 * PR bots or GitHub/GitLab apps
 * Cloud MCP endpoint
+* ChatGPT App SDK UI
 * Full-project visual graph database
 * Enterprise policy engine
 * Slack, Teams, Jira, Confluence, hosted sync, background scanners, expert graphs, social graphs, and broad enterprise ingestion
@@ -635,7 +636,9 @@ Start a local loopback-only read-only web viewer for browsing canonical Aictx me
 
 7. MCP interface
 
-Local MCP is a near-term product priority because it lets agents talk with Aictx data from local harnesses that can launch `aictx-mcp`. Remote MCP, hosted sync, cloud auth, tenancy, billing, and ChatGPT App SDK UI remain deferred.
+Local MCP is a near-term product priority because it lets agents talk with Aictx data from local harnesses that can launch `aictx-mcp`. Remote MCP, hosted sync, cloud hosting, OAuth or cloud auth, tenancy, billing, and ChatGPT App SDK UI remain deferred.
+
+Future ChatGPT-compatible `search`/`fetch` naming may be reserved as adapter aliases over Aictx search and inspect behavior. Those names are not local MCP tool names, and the local MCP server should continue exposing only the Aictx-specific v1 tools.
 
 The MCP interface should be intentionally small but powerful enough to disappear into normal agent workflows.
 
@@ -2134,6 +2137,7 @@ Do not prioritize:
 * Two-way Obsidian sync or importing Obsidian edits back into Aictx
 * Custom Markdown editor
 * Hosted cloud-first architecture
+* Remote MCP, hosted sync, OAuth or cloud-auth, tenancy, billing, or ChatGPT App SDK UI
 * Complex ontology builder
 * Heavy approval workflows
 * Full enterprise policy engine

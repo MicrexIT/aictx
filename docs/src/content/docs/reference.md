@@ -42,6 +42,11 @@ Setup, maintenance, recovery, export, registry, viewer, docs, suggest, audit,
 stale, and graph workflows remain CLI-only. CLI-only capabilities are not MCP
 parity gaps.
 
+Local MCP is the near-term integration path for local agent harnesses. Remote
+MCP, hosted sync, cloud auth, cloud hosting, and ChatGPT App SDK UI are future
+work. Future ChatGPT-compatible `search`/`fetch` names are adapter aliases over
+search/inspect behavior; they are not local MCP tool names.
+
 ## Docs command
 
 ```bash

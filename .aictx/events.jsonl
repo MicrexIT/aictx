@@ -95,3 +95,4 @@
 {"actor":"agent","event":"memory.updated","id":"fact.data-access-contract-foundation","timestamp":"2026-05-06T18:35:02+02:00"}
 {"actor":"agent","event":"memory.updated","id":"fact.data-access-contract-foundation","timestamp":"2026-05-06T19:00:03+02:00"}
 {"actor":"agent","event":"memory.updated","id":"fact.data-access-contract-foundation","timestamp":"2026-05-06T19:13:18+02:00"}
+{"actor":"agent","event":"memory.updated","id":"source.agent-integration-guidance","timestamp":"2026-05-06T20:08:43+02:00"}

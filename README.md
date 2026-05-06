@@ -144,6 +144,12 @@ integration path when the agent client has already launched and connected to
 MCP exposes exactly `load_memory`, `search_memory`, `inspect_memory`,
 `save_memory_patch`, and `diff_memory` in v1.
 
+Local MCP is the near-term integration path for MCP-capable local agent
+harnesses. Remote MCP, hosted sync, cloud hosting, OAuth or cloud auth,
+tenancy, billing, and ChatGPT App SDK UI remain future work. Future
+ChatGPT-compatible `search`/`fetch` names are adapter aliases over Aictx
+search/inspect behavior, not local MCP tool names.
+
 Setup, maintenance, recovery, export, registry, viewer, docs, suggest, audit,
 stale, and graph workflows remain outside local MCP. CLI-only capabilities are
 not MCP parity gaps. Do not add or ask for MCP tools solely to mirror these CLI

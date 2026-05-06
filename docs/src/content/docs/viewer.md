@@ -57,3 +57,7 @@ Local MCP exposes exactly `load_memory`, `search_memory`, `inspect_memory`,
 `save_memory_patch`, and `diff_memory`. Setup, maintenance, recovery, export,
 registry, viewer, docs, suggest, audit, stale, and graph workflows remain
 CLI-only.
+
+Local MCP is the near-term integration path. Remote/cloud and ChatGPT App SDK
+surfaces are future work, and future `search`/`fetch` adapter names are not
+local MCP tool names.

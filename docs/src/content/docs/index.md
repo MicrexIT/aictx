@@ -31,6 +31,11 @@ Local MCP exposes exactly `load_memory`, `search_memory`, `inspect_memory`,
 registry, viewer, docs, suggest, audit, stale, and graph workflows remain
 CLI-only.
 
+Local MCP is the near-term integration path for local agent harnesses. Remote
+MCP, hosted sync, cloud auth, cloud hosting, and ChatGPT App SDK UI are future
+work. Future ChatGPT-compatible `search`/`fetch` names are adapter aliases, not
+local MCP tool names.
+
 ## Start here
 
 - [Getting started](/getting-started/) installs Aictx and walks through the first memory loop.
