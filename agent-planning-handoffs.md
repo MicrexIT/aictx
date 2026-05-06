@@ -64,10 +64,11 @@ Run:
 - pnpm vitest run test/unit/agent-capability-map.test.ts
 - pnpm vitest run test/unit/agent-guidance/content.test.ts
 - cmp prd.md specs/prd.md
+- cmp mcp-and-cli-api-spec.md specs/mcp-and-cli-api-spec.md
 - cmp implementation-roadmap.md specs/implementation-roadmap.md
 - cmp runtime-and-project-architecture-spec.md specs/runtime-and-project-architecture-spec.md
 - cmp aictx-data-access-spec.md specs/aictx-data-access-spec.md
-- run the repository stale-roadmap check from the task prompt
+- rg -n 'MCP \+ CLI capabilities: load, search, save, diff\.|CLI-only capabilities in v1:.*\binspect\b|MCP load/search/save flows|No network calls in init, load, search, save, diff, check, rebuild, history, restore, or MCP tools|exactly `load_memory`, `search_memory`, `save_memory_patch`, and `diff_memory`' prd.md specs/prd.md mcp-and-cli-api-spec.md specs/mcp-and-cli-api-spec.md runtime-and-project-architecture-spec.md specs/runtime-and-project-architecture-spec.md aictx-data-access-spec.md specs/aictx-data-access-spec.md implementation-roadmap.md specs/implementation-roadmap.md README.md docs/src/content/docs/agent-integration.md docs/src/content/docs/mcp.md docs/src/content/docs/reference.md integrations/templates/agent-guidance.md
 ```
 
 ## T002: Add `inspect_memory` to Local MCP

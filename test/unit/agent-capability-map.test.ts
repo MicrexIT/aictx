@@ -256,6 +256,32 @@ const packageManagerFallbacks = [
   "./node_modules/.bin/aictx-mcp"
 ] as const;
 
+const staleRoadmapDocs = [
+  "prd.md",
+  "specs/prd.md",
+  "mcp-and-cli-api-spec.md",
+  "specs/mcp-and-cli-api-spec.md",
+  "runtime-and-project-architecture-spec.md",
+  "specs/runtime-and-project-architecture-spec.md",
+  "aictx-data-access-spec.md",
+  "specs/aictx-data-access-spec.md",
+  "implementation-roadmap.md",
+  "specs/implementation-roadmap.md",
+  "README.md",
+  "docs/src/content/docs/agent-integration.md",
+  "docs/src/content/docs/mcp.md",
+  "docs/src/content/docs/reference.md",
+  "integrations/templates/agent-guidance.md"
+] as const;
+
+const deprecatedFourToolRoadmapPatterns = [
+  /MCP \+ CLI capabilities: load, search, save, diff\./,
+  /CLI-only capabilities in v1:.*\binspect\b/,
+  /MCP load\/search\/save flows/,
+  /No network calls in init, load, search, save, diff, check, rebuild, history, restore, or MCP tools/,
+  /exactly `load_memory`, `search_memory`, `save_memory_patch`, and `diff_memory`/
+] as const;
+
 interface CapabilityRow {
   capability: string;
   mcp: string;
@@ -417,9 +443,35 @@ describe("agent capability map guardrail", () => {
     expect(rows.filter((row) => row.mcp !== "none").map((row) => row.mcp)).toEqual([
       ...exactMcpTools
     ]);
-    expect(rows.filter((row) => row.mcp === "none").map((row) => row.cli)).toEqual([
+    const cliOnlyRows = rows.filter((row) => row.mcp === "none");
+    expect(cliOnlyRows.map((row) => row.cli)).toEqual([
       ...exactCliOnlyCommands
     ]);
+
+    for (const row of cliOnlyRows) {
+      expect(`${row.capability} ${row.cli} ${row.notes}`).not.toMatch(/\binspect\b/i);
+    }
+  });
+
+  it("rejects deprecated four-tool roadmap wording", async () => {
+    for (const path of staleRoadmapDocs) {
+      const content = await readProjectFile(path);
+
+      for (const pattern of deprecatedFourToolRoadmapPatterns) {
+        expect(content).not.toMatch(pattern);
+      }
+    }
+
+    for (const path of ["prd.md", "specs/prd.md"] as const) {
+      const content = await readProjectFile(path);
+
+      expect(content).toContain(
+        "* MCP + CLI capabilities: load, search, inspect object, save patch, diff."
+      );
+      expect(content).toContain(
+        "* CLI-only capabilities in v1: init, setup, patch review, check, rebuild, reset, upgrade, history, restore, rewind, stale, graph, export obsidian, projects, view, docs, suggest, audit."
+      );
+    }
   });
 
   it("keeps generated guidance template-derived", async () => {

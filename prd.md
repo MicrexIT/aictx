@@ -71,7 +71,7 @@ Required in v1:
 * events.jsonl as local semantic memory history
 * JSON Schema validation
 * Local generated SQLite index with FTS
-* CLI commands for init, load, save, diff, check, rebuild, history, restore, and rewind
+* CLI commands for init, load, search, inspect, save, diff, check, rebuild, history, restore, and rewind
 * MCP server with a small normalized tool set
 * Default repo-level agent guidance plus optional generated skill artifacts from one shared template
 * Memory discipline guidance for short linked memories, lifecycle updates, and save/no-save decisions
@@ -86,8 +86,8 @@ Required in v1:
 
 Agent capability split:
 
-* MCP + CLI capabilities: load, search, save, diff.
-* CLI-only capabilities in v1: init, check, rebuild, history, restore, rewind, inspect, stale, graph, export obsidian, view, suggest, audit.
+* MCP + CLI capabilities: load, search, inspect object, save patch, diff.
+* CLI-only capabilities in v1: init, setup, patch review, check, rebuild, reset, upgrade, history, restore, rewind, stale, graph, export obsidian, projects, view, docs, suggest, audit.
 * CLI-only capabilities are intentionally not MCP parity gaps and should not be added to MCP solely for command-list parity.
 * Agents should use supported MCP or CLI entrypoints instead of editing `.aictx/` files directly when a supported command exists.
 
@@ -112,7 +112,7 @@ Git availability clarification:
 * Aictx does not create or own a separate Git repository.
 * Git is optional for core memory operations in v1.
 * When the project is inside a Git worktree, Aictx uses Git for review, diff, dirty-state detection, history, and restore.
-* When the project is not inside a Git worktree, Aictx still supports init, load, save, search, check, rebuild, and MCP load/search/save flows.
+* When the project is not inside a Git worktree, Aictx still supports init, load, search, inspect, save, check, rebuild, and MCP load/search/inspect/save flows.
 * Git-only features such as history, restore, rewind, and Git diff return a clear Git-required error outside Git.
 
 ⸻
@@ -305,7 +305,7 @@ The default flow should feel local and immediate.
 V1 should optimize for:
 
 * No required configuration after `aictx init`.
-* No network calls in init, load, search, save, diff, check, rebuild, history, restore, or MCP tools.
+* No network calls in init, load, search, inspect, save, diff, check, rebuild, history, restore, or MCP tools.
 * Warm load and search operations that feel interactive on ordinary developer machines.
 * Generated indexes that can always be deleted and rebuilt.
 * Clear, actionable errors when validation, repair, recovery backup, or index rebuilds fail.

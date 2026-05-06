@@ -188,6 +188,10 @@ describe("agent guidance content", () => {
       expect(content).not.toContain("rebuild_memory");
       expect(content).not.toContain("restore_memory");
       expect(content).not.toContain("export_memory");
+      expect(content).not.toContain(
+        "exactly `load_memory`, `search_memory`, `save_memory_patch`, and `diff_memory`"
+      );
+      expect(content).not.toContain("MCP + CLI capabilities: load, search, save, diff.");
     }
   });
 
