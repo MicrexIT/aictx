@@ -17,21 +17,34 @@ The simplest setup is a global install:
 npm install -g @aictx/memory
 ```
 
-Configure your MCP client to launch:
+Configure your MCP client to launch the global binary:
 
 ```bash
 aictx-mcp
 ```
 
-If `aictx-mcp` is not on `PATH`, configure the client to launch it through the
-project package manager or local binary path:
+If the project has a local package install, configure the client to launch
+through the project package manager:
 
 ```bash
 pnpm exec aictx-mcp
 npm exec aictx-mcp
-./node_modules/.bin/aictx-mcp
+```
+
+For one-off package resolution, name the scoped package explicitly:
+
+```bash
 npx --package @aictx/memory -- aictx-mcp
 ```
+
+For a local binary path, configure the client to launch:
+
+```bash
+./node_modules/.bin/aictx-mcp
+```
+
+MCP uses stdout for the protocol. Startup diagnostics and failures are written
+to stderr.
 
 ## Tools
 
@@ -54,7 +67,7 @@ diff_memory({})
 ```
 
 If the MCP server was launched globally rather than from the project root, pass
-the target root explicitly:
+the target project root explicitly:
 
 ```text
 load_memory({
@@ -63,6 +76,10 @@ load_memory({
   mode: "coding"
 })
 ```
+
+`project_root` selects an initialized local Aictx project for the tool call. It
+is not arbitrary filesystem access; reads and writes remain scoped to the
+resolved project's `.aictx/` directory.
 
 ## CLI-only boundaries
 

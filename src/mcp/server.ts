@@ -30,6 +30,11 @@ export interface StartMcpServerOptions extends CreateAictxMcpServerOptions {
   stdout?: Writable;
 }
 
+export interface AictxMcpMainOptions extends StartMcpServerOptions {
+  stderr?: Writable;
+  startServer?: (options: StartMcpServerOptions) => Promise<AictxMcpServer>;
+}
+
 export function createAictxMcpServer(
   options: CreateAictxMcpServerOptions = {}
 ): AictxMcpServer {
@@ -61,13 +66,24 @@ export async function startMcpServer(
   return mcp;
 }
 
-export async function main(options: StartMcpServerOptions = {}): Promise<void> {
-  await startMcpServer(options);
+export async function main(options: AictxMcpMainOptions = {}): Promise<void> {
+  const startServer = options.startServer ?? startMcpServer;
+  const startOptions = toStartMcpServerOptions(options);
+
+  try {
+    await startServer(startOptions);
+  } catch (error: unknown) {
+    writeStartupFailure(error, {
+      cwd: resolve(options.cwd ?? process.cwd()),
+      stderr: options.stderr ?? process.stderr,
+      debug: process.env.AICTX_DEBUG === "1"
+    });
+    throw error;
+  }
 }
 
 if (isEntrypoint()) {
-  await main().catch((error: unknown) => {
-    process.stderr.write(`Aictx MCP server failed to start: ${formatError(error)}\n`);
+  await main().catch(() => {
     process.exitCode = 1;
   });
 }
@@ -88,10 +104,51 @@ function isEntrypoint(): boolean {
 
 function formatError(error: unknown): string {
   if (error instanceof Error) {
-    return error.message;
+    const name = error.name.length > 0 ? error.name : "Error";
+
+    return `${name}: ${error.message}`;
   }
 
   return String(error);
+}
+
+interface StartupFailureOptions {
+  cwd: string;
+  stderr: Writable;
+  debug: boolean;
+}
+
+function toStartMcpServerOptions(options: AictxMcpMainOptions): StartMcpServerOptions {
+  const startOptions: StartMcpServerOptions = {};
+
+  if (options.cwd !== undefined) {
+    startOptions.cwd = options.cwd;
+  }
+
+  if (options.stdin !== undefined) {
+    startOptions.stdin = options.stdin;
+  }
+
+  if (options.stdout !== undefined) {
+    startOptions.stdout = options.stdout;
+  }
+
+  return startOptions;
+}
+
+function writeStartupFailure(error: unknown, options: StartupFailureOptions): void {
+  const lines = [
+    "Aictx MCP server failed to start.",
+    `cwd: ${options.cwd}`,
+    `error: ${formatError(error)}`
+  ];
+
+  if (options.debug && error instanceof Error && error.stack !== undefined) {
+    lines.push("stack:");
+    lines.push(error.stack);
+  }
+
+  options.stderr.write(`${lines.join("\n")}\n`);
 }
 
 function registerTools(mcp: AictxMcpServer): void {

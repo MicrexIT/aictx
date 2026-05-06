@@ -1,16 +1,20 @@
-import { mkdtemp, readdir, realpath, rm } from "node:fs/promises";
+import { mkdtemp, readFile, readdir, realpath, rm } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { Readable } from "node:stream";
+import { PassThrough, Readable, Writable } from "node:stream";
 
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { initProject } from "../../../src/app/operations.js";
-import { createAictxMcpServer } from "../../../src/mcp/server.js";
+import {
+  createAictxMcpServer,
+  main as mcpMain,
+  startMcpServer
+} from "../../../src/mcp/server.js";
 import { version } from "../../../src/generated/version.js";
 
 const require = createRequire(import.meta.url);
@@ -61,6 +65,52 @@ describe("aictx MCP server bootstrap", () => {
 
     expect(started.stderr()).toBe("");
     await expect(readdir(projectRoot)).resolves.toEqual([]);
+  });
+
+  it("direct startup does not write non-protocol stdout", async () => {
+    const projectRoot = await createTempRoot("aictx-mcp-direct-");
+    const stdin = new PassThrough();
+    const stdout = createWritableCapture();
+    const mcp = await startMcpServer({
+      cwd: projectRoot,
+      stdin,
+      stdout: stdout.writable
+    });
+
+    try {
+      expect(mcp.server.isConnected()).toBe(true);
+      expect(stdout.text()).toBe("");
+    } finally {
+      await mcp.server.close();
+      stdin.destroy();
+    }
+
+    expect(stdout.text()).toBe("");
+    await expect(readdir(projectRoot)).resolves.toEqual([]);
+  });
+
+  it("reports startup failures to stderr without writing stdout", async () => {
+    const projectRoot = await createTempRoot("aictx-mcp-failure-");
+    const stdout = createWritableCapture();
+    const stderr = createWritableCapture();
+    const failure = new Error("simulated startup failure");
+    failure.name = "StartupTestError";
+
+    await expect(
+      mcpMain({
+        cwd: projectRoot,
+        stdout: stdout.writable,
+        stderr: stderr.writable,
+        startServer: async () => {
+          throw failure;
+        }
+      })
+    ).rejects.toThrow(failure);
+
+    expect(stdout.text()).toBe("");
+    expect(stderr.text()).toContain("Aictx MCP server failed to start.");
+    expect(stderr.text()).toContain(`cwd: ${projectRoot}`);
+    expect(stderr.text()).toContain("error: StartupTestError: simulated startup failure");
   });
 
   it("exposes only normalized Aictx tools and no CLI-only, shell, or filesystem tools", async () => {
@@ -119,6 +169,43 @@ describe("aictx MCP server bootstrap", () => {
 
     expect(started.stderr()).toBe("");
     await expect(readdir(projectRoot)).resolves.toEqual([]);
+  });
+
+  it("documents project_root as project selection in every MCP tool schema", async () => {
+    const projectRoot = await createTempRoot("aictx-mcp-schema-");
+    const started = await startMcpClient(projectRoot);
+
+    try {
+      const result = await started.client.listTools();
+      const descriptions = getProjectRootDescriptions(result.tools);
+
+      expect(descriptions).toHaveLength(5);
+
+      for (const description of descriptions) {
+        expect(description).toContain("select");
+        expect(description).toContain("not arbitrary filesystem access");
+        expect(description).toContain(".aictx");
+      }
+    } finally {
+      await started.close();
+    }
+
+    expect(started.stderr()).toBe("");
+    await expect(readdir(projectRoot)).resolves.toEqual([]);
+  });
+
+  it("documents supported MCP client launch forms", async () => {
+    const docsPath = join(repoRoot, "docs/src/content/docs/mcp.md");
+    const docs = await readFile(docsPath, "utf8");
+
+    expect(docs).toContain("Configure your MCP client to launch the global binary");
+    expect(docs).toContain("aictx-mcp");
+    expect(docs).toContain("pnpm exec aictx-mcp");
+    expect(docs).toContain("npm exec aictx-mcp");
+    expect(docs).toContain("npx --package @aictx/memory -- aictx-mcp");
+    expect(docs).toContain("./node_modules/.bin/aictx-mcp");
+    expect(docs).toContain("Startup diagnostics and failures are written");
+    expect(docs).toContain("not arbitrary filesystem access");
   });
 
   it("serves multiple isolated projects from one globally launched process", async () => {
@@ -285,4 +372,45 @@ function parseToolEnvelope<T>(result: unknown): T {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
+}
+
+function createWritableCapture(): { writable: Writable; text: () => string } {
+  const chunks: string[] = [];
+  const writable = new Writable({
+    write(chunk, _encoding, callback) {
+      chunks.push(Buffer.isBuffer(chunk) ? chunk.toString("utf8") : String(chunk));
+      callback();
+    }
+  });
+
+  return {
+    writable,
+    text: () => chunks.join("")
+  };
+}
+
+function getProjectRootDescriptions(tools: unknown[]): string[] {
+  const descriptions: string[] = [];
+
+  for (const tool of tools) {
+    if (!isRecord(tool) || !isRecord(tool.inputSchema)) {
+      continue;
+    }
+
+    const properties = tool.inputSchema.properties;
+
+    if (!isRecord(properties)) {
+      continue;
+    }
+
+    const projectRoot = properties.project_root;
+
+    if (!isRecord(projectRoot) || typeof projectRoot.description !== "string") {
+      continue;
+    }
+
+    descriptions.push(projectRoot.description);
+  }
+
+  return descriptions;
 }

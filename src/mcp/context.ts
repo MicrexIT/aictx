@@ -9,7 +9,7 @@ export interface ProjectScopedMcpArgs {
 }
 
 export const PROJECT_ROOT_ARGUMENT_DESCRIPTION =
-  "Optional project root to run this tool against. Use this when one globally started MCP server serves multiple Aictx projects. Relative paths resolve from the MCP server launch directory; absolute paths are recommended.";
+  "Optional initialized local Aictx project root to select for this tool call. Use this when one globally started MCP server serves multiple projects. This selects a project; it is not arbitrary filesystem access, and reads/writes remain confined to the resolved project's .aictx directory. Relative paths resolve from the MCP server launch directory; absolute paths are recommended.";
 
 export function resolveMcpProjectCwd(
   context: AictxMcpContext,
