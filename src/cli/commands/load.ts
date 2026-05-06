@@ -1,10 +1,10 @@
 import { CommanderError, type Command } from "commander";
 
 import {
-  loadMemory,
   type AppResult,
-  type LoadMemoryOptions
-} from "../../app/operations.js";
+  dataAccessService,
+  type DataAccessLoadInput
+} from "../../data-access/index.js";
 import type { LoadMemoryData, LoadMemorySource } from "../../context/compile.js";
 import type { LoadMemoryMode } from "../../context/modes.js";
 import type { ObjectId } from "../../core/types.js";
@@ -63,7 +63,7 @@ export function registerLoadCommand(
     .option("--history-window <duration>", "Git history window hint such as 30d, 12w, 6m, or 1y.")
     .action(async (task: string, commandOptions: LoadCommandFlags, command: Command) => {
       const hasExplicitTokenBudget = commandOptions.tokenBudget !== undefined;
-      const result = await loadMemory(
+      const result = await dataAccessService.load(
         loadMemoryOptions(options, task, commandOptions)
       );
       const rendered = renderAppResult(
@@ -91,9 +91,12 @@ function loadMemoryOptions(
   options: RegisterLoadCommandOptions,
   task: string,
   flags: LoadCommandFlags
-): LoadMemoryOptions {
+): DataAccessLoadInput {
   return {
-    cwd: options.cwd,
+    target: {
+      kind: "cwd",
+      cwd: options.cwd
+    },
     task,
     ...(flags.mode === undefined ? {} : { mode: flags.mode }),
     ...(flags.tokenBudget === undefined
@@ -103,7 +106,7 @@ function loadMemoryOptions(
   };
 }
 
-function hintsFromFlags(flags: LoadCommandFlags): Pick<LoadMemoryOptions, "hints"> {
+function hintsFromFlags(flags: LoadCommandFlags): Pick<DataAccessLoadInput, "hints"> {
   const hints = {
     files: flags.file ?? [],
     changed_files: flags.changedFile ?? [],

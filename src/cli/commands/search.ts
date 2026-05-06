@@ -1,9 +1,9 @@
 import { CommanderError, type Command } from "commander";
 
 import {
-  searchMemory,
-  type SearchMemoryOptions
-} from "../../app/operations.js";
+  dataAccessService,
+  type DataAccessSearchInput
+} from "../../data-access/index.js";
 import type { SearchMemoryData, SearchResult } from "../../index/search.js";
 import { CLI_EXIT_SUCCESS } from "../exit.js";
 import { renderAppResult } from "../render.js";
@@ -40,7 +40,7 @@ export function registerSearchCommand(
     .option("--subsystem <name>", "Subsystem retrieval hint.", collectRepeated, [])
     .option("--history-window <duration>", "Git history window hint such as 30d, 12w, 6m, or 1y.")
     .action(async (query: string, commandOptions: SearchCommandFlags, command: Command) => {
-      const result = await searchMemory(
+      const result = await dataAccessService.search(
         searchMemoryOptions(options, query, commandOptions)
       );
       const rendered = renderAppResult(result, {
@@ -65,16 +65,19 @@ function searchMemoryOptions(
   options: RegisterSearchCommandOptions,
   query: string,
   flags: SearchCommandFlags
-): SearchMemoryOptions {
+): DataAccessSearchInput {
   return {
-    cwd: options.cwd,
+    target: {
+      kind: "cwd",
+      cwd: options.cwd
+    },
     query,
     ...(flags.limit === undefined ? {} : { limit: Number(flags.limit) }),
     ...hintsFromFlags(flags)
   };
 }
 
-function hintsFromFlags(flags: SearchCommandFlags): Pick<SearchMemoryOptions, "hints"> {
+function hintsFromFlags(flags: SearchCommandFlags): Pick<DataAccessSearchInput, "hints"> {
   const hints = {
     files: flags.file ?? [],
     changed_files: flags.changedFile ?? [],

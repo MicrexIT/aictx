@@ -2,9 +2,9 @@ import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 
 import {
-  searchMemory,
-  type SearchMemoryOptions
-} from "../../app/operations.js";
+  dataAccessService,
+  type DataAccessSearchInput
+} from "../../data-access/index.js";
 import type { RetrievalHints } from "../../retrieval/hints.js";
 import {
   PROJECT_ROOT_ARGUMENT_DESCRIPTION,
@@ -59,7 +59,7 @@ async function callSearchMemoryTool(
   context: AictxMcpContext,
   args: SearchMemoryArgs
 ): Promise<CallToolResult> {
-  const result = await searchMemory(parseSearchMemoryArgs(context, args));
+  const result = await dataAccessService.search(parseSearchMemoryArgs(context, args));
 
   return toMcpToolResult(result);
 }
@@ -67,9 +67,12 @@ async function callSearchMemoryTool(
 function parseSearchMemoryArgs(
   context: AictxMcpContext,
   args: SearchMemoryArgs
-): SearchMemoryOptions {
-  const options: SearchMemoryOptions = {
-    cwd: resolveMcpProjectCwd(context, args),
+): DataAccessSearchInput {
+  const options: DataAccessSearchInput = {
+    target: {
+      kind: "cwd",
+      cwd: resolveMcpProjectCwd(context, args)
+    },
     query: args.query
   };
 

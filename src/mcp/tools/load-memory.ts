@@ -2,10 +2,10 @@ import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 
 import {
-  loadMemory,
   type AppResult,
-  type LoadMemoryOptions
-} from "../../app/operations.js";
+  dataAccessService,
+  type DataAccessLoadInput
+} from "../../data-access/index.js";
 import type { LoadMemoryData, LoadMemorySource } from "../../context/compile.js";
 import type { LoadMemoryMode } from "../../context/modes.js";
 import type { ObjectId } from "../../core/types.js";
@@ -85,7 +85,7 @@ async function callLoadMemoryTool(
   args: LoadMemoryArgs
 ): Promise<CallToolResult> {
   const parsed = parseLoadMemoryArgs(context, args);
-  const result = await loadMemory(parsed.options);
+  const result = await dataAccessService.load(parsed.options);
 
   return toMcpToolResult(cliLoadResult(result, parsed.hasExplicitTokenBudget));
 }
@@ -94,11 +94,14 @@ function parseLoadMemoryArgs(
   context: AictxMcpContext,
   args: LoadMemoryArgs
 ): {
-  options: LoadMemoryOptions;
+  options: DataAccessLoadInput;
   hasExplicitTokenBudget: boolean;
 } {
-  const options: LoadMemoryOptions = {
-    cwd: resolveMcpProjectCwd(context, args),
+  const options: DataAccessLoadInput = {
+    target: {
+      kind: "cwd",
+      cwd: resolveMcpProjectCwd(context, args)
+    },
     task: args.task
   };
   const hasExplicitTokenBudget = args.token_budget !== undefined;

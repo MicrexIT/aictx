@@ -1,11 +1,11 @@
 import { CommanderError, type Command } from "commander";
 
 import {
-  inspectMemory,
+  dataAccessService,
+  type DataAccessInspectInput,
   type InspectMemoryData,
-  type InspectMemoryOptions,
   type MemoryRelationSummary
-} from "../../app/operations.js";
+} from "../../data-access/index.js";
 import { CLI_EXIT_SUCCESS, type CliExitCode } from "../exit.js";
 import { renderAppResult } from "../render.js";
 
@@ -26,7 +26,7 @@ export function registerInspectCommand(
     .description("Show one Aictx memory object and its direct relations.")
     .argument("<id>", "Memory object ID to inspect.")
     .action(async (id: string, _commandOptions: unknown, command: Command) => {
-      const result = await inspectMemory(inspectMemoryOptions(options, id));
+      const result = await dataAccessService.inspect(inspectMemoryOptions(options, id));
       const rendered = renderAppResult(result, {
         json: isJsonMode(command),
         renderData: renderInspectData
@@ -44,9 +44,12 @@ export function registerInspectCommand(
 function inspectMemoryOptions(
   options: RegisterInspectCommandOptions,
   id: string
-): InspectMemoryOptions {
+): DataAccessInspectInput {
   return {
-    cwd: options.cwd,
+    target: {
+      kind: "cwd",
+      cwd: options.cwd
+    },
     id
   };
 }

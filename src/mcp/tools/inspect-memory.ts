@@ -1,7 +1,7 @@
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 
-import { inspectMemory } from "../../app/operations.js";
+import { dataAccessService } from "../../data-access/index.js";
 import {
   PROJECT_ROOT_ARGUMENT_DESCRIPTION,
   resolveMcpProjectCwd,
@@ -38,8 +38,11 @@ async function callInspectMemoryTool(
   context: AictxMcpContext,
   args: InspectMemoryArgs
 ): Promise<CallToolResult> {
-  const result = await inspectMemory({
-    cwd: resolveMcpProjectCwd(context, args),
+  const result = await dataAccessService.inspect({
+    target: {
+      kind: "cwd",
+      cwd: resolveMcpProjectCwd(context, args)
+    },
     id: args.id
   });
 

@@ -1,6 +1,6 @@
 {
   "body_path": "memory/facts/data-access-contract-foundation.md",
-  "content_hash": "sha256:57e43147ab53e1255187f5c3e850386a4a76a8b8d7d479e9489583398094d2c1",
+  "content_hash": "sha256:b07b9149ce7be1d4c1f72b06b6578dcbb51e1d34de37994a55b1f0dce7be1445",
   "created_at": "2026-05-06T18:10:26+02:00",
   "evidence": [
     {
@@ -12,7 +12,43 @@
       "kind": "file"
     },
     {
-      "id": "test/unit/data-access/service.test.ts",
+      "id": "src/cli/commands/load.ts",
+      "kind": "file"
+    },
+    {
+      "id": "src/cli/commands/search.ts",
+      "kind": "file"
+    },
+    {
+      "id": "src/cli/commands/inspect.ts",
+      "kind": "file"
+    },
+    {
+      "id": "src/cli/commands/diff.ts",
+      "kind": "file"
+    },
+    {
+      "id": "src/mcp/tools/load-memory.ts",
+      "kind": "file"
+    },
+    {
+      "id": "src/mcp/tools/search-memory.ts",
+      "kind": "file"
+    },
+    {
+      "id": "src/mcp/tools/inspect-memory.ts",
+      "kind": "file"
+    },
+    {
+      "id": "src/mcp/tools/diff-memory.ts",
+      "kind": "file"
+    },
+    {
+      "id": "test/integration/mcp/read-tools.test.ts",
+      "kind": "file"
+    },
+    {
+      "id": "test/integration/cli/read-only.test.ts",
       "kind": "file"
     }
   ],
@@ -20,7 +56,17 @@
     "applies_to": [
       "src/data-access/service.ts",
       "src/data-access/index.ts",
-      "test/unit/data-access/service.test.ts"
+      "src/cli/commands/load.ts",
+      "src/cli/commands/search.ts",
+      "src/cli/commands/inspect.ts",
+      "src/cli/commands/diff.ts",
+      "src/mcp/tools/load-memory.ts",
+      "src/mcp/tools/search-memory.ts",
+      "src/mcp/tools/inspect-memory.ts",
+      "src/mcp/tools/diff-memory.ts",
+      "test/unit/data-access/service.test.ts",
+      "test/integration/mcp/read-tools.test.ts",
+      "test/integration/cli/read-only.test.ts"
     ],
     "category": "architecture"
   },
@@ -38,9 +84,10 @@
   "status": "active",
   "tags": [
     "data-access",
-    "roadmap"
+    "roadmap",
+    "adapters"
   ],
-  "title": "Data-access contract foundation exists",
+  "title": "Data-access contract and read adapter wiring exist",
   "type": "fact",
-  "updated_at": "2026-05-06T18:10:26+02:00"
+  "updated_at": "2026-05-06T18:35:02+02:00"
 }

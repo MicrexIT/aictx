@@ -1,7 +1,7 @@
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 
-import { diffMemory } from "../../app/operations.js";
+import { dataAccessService } from "../../data-access/index.js";
 import {
   PROJECT_ROOT_ARGUMENT_DESCRIPTION,
   resolveMcpProjectCwd,
@@ -37,7 +37,12 @@ async function callDiffMemoryTool(
   context: AictxMcpContext,
   args: DiffMemoryArgs
 ): Promise<CallToolResult> {
-  const result = await diffMemory({ cwd: resolveMcpProjectCwd(context, args) });
+  const result = await dataAccessService.diff({
+    target: {
+      kind: "cwd",
+      cwd: resolveMcpProjectCwd(context, args)
+    }
+  });
 
   return toMcpToolResult(result);
 }

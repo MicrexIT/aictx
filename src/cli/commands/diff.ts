@@ -1,10 +1,10 @@
 import { CommanderError, type Command } from "commander";
 
 import {
-  diffMemory,
+  dataAccessService,
+  type DataAccessDiffInput,
   type DiffMemoryData,
-  type DiffMemoryOptions
-} from "../../app/operations.js";
+} from "../../data-access/index.js";
 import { CLI_EXIT_SUCCESS } from "../exit.js";
 import { renderAppResult } from "../render.js";
 
@@ -24,7 +24,7 @@ export function registerDiffCommand(
     .command("diff")
     .description("Show Aictx memory changes, including untracked memory files.")
     .action(async (_commandOptions: unknown, command: Command) => {
-      const result = await diffMemory(diffMemoryOptions(options));
+      const result = await dataAccessService.diff(diffMemoryOptions(options));
       const rendered = renderAppResult(result, {
         json: isJsonMode(command),
         renderData: renderDiffData
@@ -43,9 +43,12 @@ export function registerDiffCommand(
     });
 }
 
-function diffMemoryOptions(options: RegisterDiffCommandOptions): DiffMemoryOptions {
+function diffMemoryOptions(options: RegisterDiffCommandOptions): DataAccessDiffInput {
   return {
-    cwd: options.cwd
+    target: {
+      kind: "cwd",
+      cwd: options.cwd
+    }
   };
 }
 
