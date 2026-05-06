@@ -1,4 +1,4 @@
-import type { CallToolResult, ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
+import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 
 import {
@@ -16,6 +16,10 @@ import {
   type AictxMcpContext,
   type ProjectScopedMcpArgs
 } from "../context.js";
+import {
+  READ_ONLY_TOOL_ANNOTATIONS,
+  toMcpToolResult
+} from "./shared.js";
 
 type CliBudgetStatus = "not_requested" | "within_target" | "over_target";
 
@@ -67,13 +71,6 @@ const LOAD_MEMORY_INPUT_SCHEMA = z
 
 type LoadMemoryArgs = z.infer<typeof LOAD_MEMORY_INPUT_SCHEMA> & ProjectScopedMcpArgs;
 
-const READ_ONLY_TOOL_ANNOTATIONS: ToolAnnotations = {
-  readOnlyHint: true,
-  destructiveHint: false,
-  idempotentHint: true,
-  openWorldHint: false
-};
-
 export const loadMemoryTool = {
   name: "load_memory",
   title: "Load Aictx Memory",
@@ -90,7 +87,7 @@ async function callLoadMemoryTool(
   const parsed = parseLoadMemoryArgs(context, args);
   const result = await loadMemory(parsed.options);
 
-  return toToolResult(cliLoadResult(result, parsed.hasExplicitTokenBudget));
+  return toMcpToolResult(cliLoadResult(result, parsed.hasExplicitTokenBudget));
 }
 
 function parseLoadMemoryArgs(
@@ -178,17 +175,5 @@ function cliLoadResult(
     },
     warnings: result.warnings,
     meta: result.meta
-  };
-}
-
-function toToolResult(envelope: object): CallToolResult {
-  return {
-    content: [
-      {
-        type: "text",
-        text: JSON.stringify(envelope)
-      }
-    ],
-    structuredContent: envelope as Record<string, unknown>
   };
 }

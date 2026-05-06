@@ -1,4 +1,4 @@
-import type { CallToolResult, ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
+import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 
 import {
@@ -12,6 +12,10 @@ import {
   type AictxMcpContext,
   type ProjectScopedMcpArgs
 } from "../context.js";
+import {
+  READ_ONLY_TOOL_ANNOTATIONS,
+  toMcpToolResult
+} from "./shared.js";
 
 const RETRIEVAL_HINTS_SCHEMA = z
   .object({
@@ -42,13 +46,6 @@ const SEARCH_MEMORY_INPUT_SCHEMA = z
 
 type SearchMemoryArgs = z.infer<typeof SEARCH_MEMORY_INPUT_SCHEMA> & ProjectScopedMcpArgs;
 
-const READ_ONLY_TOOL_ANNOTATIONS: ToolAnnotations = {
-  readOnlyHint: true,
-  destructiveHint: false,
-  idempotentHint: true,
-  openWorldHint: false
-};
-
 export const searchMemoryTool = {
   name: "search_memory",
   title: "Search Aictx Memory",
@@ -64,7 +61,7 @@ async function callSearchMemoryTool(
 ): Promise<CallToolResult> {
   const result = await searchMemory(parseSearchMemoryArgs(context, args));
 
-  return toToolResult(result);
+  return toMcpToolResult(result);
 }
 
 function parseSearchMemoryArgs(
@@ -111,16 +108,4 @@ function compactRetrievalHints(value: z.infer<typeof RETRIEVAL_HINTS_SCHEMA>): R
   }
 
   return hints;
-}
-
-function toToolResult(envelope: object): CallToolResult {
-  return {
-    content: [
-      {
-        type: "text",
-        text: JSON.stringify(envelope)
-      }
-    ],
-    structuredContent: envelope as Record<string, unknown>
-  };
 }

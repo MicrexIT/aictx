@@ -1,4 +1,4 @@
-import type { CallToolResult, ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
+import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 
 import { saveMemoryPatch } from "../../app/operations.js";
@@ -20,6 +20,10 @@ import {
   type AictxMcpContext,
   type ProjectScopedMcpArgs
 } from "../context.js";
+import {
+  toMcpToolResult,
+  WRITE_TOOL_ANNOTATIONS
+} from "./shared.js";
 
 const OBJECT_ID_SCHEMA = z
   .string()
@@ -171,13 +175,6 @@ const SAVE_MEMORY_PATCH_INPUT_SCHEMA = z
 type SaveMemoryPatchArgs = z.infer<typeof SAVE_MEMORY_PATCH_INPUT_SCHEMA> &
   ProjectScopedMcpArgs;
 
-const WRITE_TOOL_ANNOTATIONS: ToolAnnotations = {
-  readOnlyHint: false,
-  destructiveHint: true,
-  idempotentHint: false,
-  openWorldHint: false
-};
-
 const writeQueues = new Map<string, Promise<void>>();
 
 export const saveMemoryPatchTool = {
@@ -202,7 +199,7 @@ async function callSaveMemoryPatchTool(
       patch: args.patch
     });
 
-    return toToolResult(result);
+    return toMcpToolResult(result);
   });
 }
 
@@ -238,18 +235,6 @@ async function serializeProjectWrite<T>(
       writeQueues.delete(projectKey);
     }
   }
-}
-
-function toToolResult(envelope: object): CallToolResult {
-  return {
-    content: [
-      {
-        type: "text",
-        text: JSON.stringify(envelope)
-      }
-    ],
-    structuredContent: envelope as Record<string, unknown>
-  };
 }
 
 function hasUniqueItems(items: readonly string[]): boolean {

@@ -1,4 +1,4 @@
-import type { CallToolResult, ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
+import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 
 import { inspectMemory } from "../../app/operations.js";
@@ -8,6 +8,10 @@ import {
   type AictxMcpContext,
   type ProjectScopedMcpArgs
 } from "../context.js";
+import {
+  READ_ONLY_TOOL_ANNOTATIONS,
+  toMcpToolResult
+} from "./shared.js";
 
 const INSPECT_MEMORY_INPUT_SCHEMA = z
   .object({
@@ -20,13 +24,6 @@ const INSPECT_MEMORY_INPUT_SCHEMA = z
   .strict();
 
 type InspectMemoryArgs = z.infer<typeof INSPECT_MEMORY_INPUT_SCHEMA> & ProjectScopedMcpArgs;
-
-const READ_ONLY_TOOL_ANNOTATIONS: ToolAnnotations = {
-  readOnlyHint: true,
-  destructiveHint: false,
-  idempotentHint: true,
-  openWorldHint: false
-};
 
 export const inspectMemoryTool = {
   name: "inspect_memory",
@@ -46,17 +43,5 @@ async function callInspectMemoryTool(
     id: args.id
   });
 
-  return toToolResult(result);
-}
-
-function toToolResult(envelope: object): CallToolResult {
-  return {
-    content: [
-      {
-        type: "text",
-        text: JSON.stringify(envelope)
-      }
-    ],
-    structuredContent: envelope as Record<string, unknown>
-  };
+  return toMcpToolResult(result);
 }

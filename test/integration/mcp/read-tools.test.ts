@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, readdir, realpath, rm, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -130,6 +130,17 @@ interface DiffEnvelope {
   };
 }
 
+interface ErrorEnvelope {
+  ok: false;
+  error: {
+    code: string;
+    message: string;
+    details?: unknown;
+  };
+  warnings: string[];
+  meta: unknown;
+}
+
 interface RelationSummary {
   id: string;
   from: string;
@@ -165,6 +176,13 @@ interface RelationFixture {
 interface TextContent {
   type: "text";
   text: string;
+}
+
+interface ToolAnnotationExpectation {
+  readOnlyHint: boolean;
+  destructiveHint: boolean;
+  idempotentHint: boolean;
+  openWorldHint: boolean;
 }
 
 afterEach(async () => {
@@ -222,11 +240,78 @@ describe("aictx MCP read tools", () => {
           "delete_relation"
         ])
       );
+      expectToolAnnotations(result.tools);
     } finally {
       await started.close();
     }
 
     expect(started.stderr()).toBe("");
+  });
+
+  it("rejects unknown read-tool input fields before service execution", async () => {
+    const projectRoot = await createTempRoot("aictx-mcp-read-invalid-input-");
+    const started = await startMcpClient(projectRoot);
+
+    try {
+      const invalidCalls = await Promise.all([
+        started.client.callTool({
+          name: "load_memory",
+          arguments: {
+            task: "Schema validation",
+            unexpected: true
+          }
+        }),
+        started.client.callTool({
+          name: "load_memory",
+          arguments: {
+            task: "Schema validation",
+            hints: {
+              files: [],
+              unexpected_hint: true
+            }
+          }
+        }),
+        started.client.callTool({
+          name: "search_memory",
+          arguments: {
+            query: "Schema validation",
+            unexpected: true
+          }
+        }),
+        started.client.callTool({
+          name: "search_memory",
+          arguments: {
+            query: "Schema validation",
+            hints: {
+              files: [],
+              unexpected_hint: true
+            }
+          }
+        }),
+        started.client.callTool({
+          name: "inspect_memory",
+          arguments: {
+            id: "decision.schema-validation",
+            unexpected: true
+          }
+        }),
+        started.client.callTool({
+          name: "diff_memory",
+          arguments: {
+            unexpected: true
+          }
+        })
+      ]);
+
+      for (const result of invalidCalls) {
+        expectToolError(result, /unexpected|unexpected_hint|unrecognized|unknown/i);
+      }
+    } finally {
+      await started.close();
+    }
+
+    expect(started.stderr()).toBe("");
+    await expect(readdir(projectRoot)).resolves.toEqual([]);
   });
 
   it("returns load_memory data matching CLI load JSON without an explicit token budget", async () => {
@@ -367,6 +452,10 @@ describe("aictx MCP read tools", () => {
     const started = await startMcpClient(projectRoot);
 
     try {
+      const cli = await runCli(
+        ["node", "aictx", "load", "Architecture", "--mode", "triage", "--json"],
+        projectRoot
+      );
       const mcp = await started.client.callTool({
         name: "load_memory",
         arguments: {
@@ -374,14 +463,12 @@ describe("aictx MCP read tools", () => {
           mode: "triage"
         }
       });
-      const envelope = parseToolEnvelope<{
-        ok: false;
-        error: { code: string; details?: Record<string, unknown> };
-      }>(mcp);
+      const cliEnvelope = parseCliErrorEnvelope<ErrorEnvelope>(cli);
+      const mcpEnvelope = parseToolEnvelope<ErrorEnvelope>(mcp);
 
-      expect(envelope.ok).toBe(false);
-      expect(envelope.error.code).toBe("AICtxValidationFailed");
-      expect(envelope.error.details).toMatchObject({
+      expect(mcpEnvelope).toEqual(cliEnvelope);
+      expect(mcpEnvelope.error.code).toBe("AICtxValidationFailed");
+      expect(mcpEnvelope.error.details).toMatchObject({
         field: "mode",
         actual: "triage"
       });
@@ -624,21 +711,48 @@ describe("aictx MCP read tools", () => {
     const started = await startMcpClient(projectRoot);
 
     try {
+      const cli = await runCli(
+        ["node", "aictx", "inspect", "decision.missing", "--json"],
+        projectRoot
+      );
       const mcp = await started.client.callTool({
         name: "inspect_memory",
         arguments: {
           id: "decision.missing"
         }
       });
-      const envelope = parseToolEnvelope<InspectErrorEnvelope>(mcp);
+      const cliEnvelope = parseCliErrorEnvelope<InspectErrorEnvelope & ErrorEnvelope>(cli);
+      const mcpEnvelope = parseToolEnvelope<InspectErrorEnvelope & ErrorEnvelope>(mcp);
 
-      expect(envelope.ok).toBe(false);
-      expect(envelope.error).toMatchObject({
+      expect(mcpEnvelope).toEqual(cliEnvelope);
+      expect(mcpEnvelope.error).toMatchObject({
         code: "AICtxObjectNotFound",
         details: {
           id: "decision.missing"
         }
       });
+    } finally {
+      await started.close();
+    }
+
+    expect(started.stderr()).toBe("");
+  });
+
+  it("returns diff_memory Git precondition errors matching CLI diff JSON", async () => {
+    const projectRoot = await createInitializedProject("aictx-mcp-diff-no-git-");
+    const started = await startMcpClient(projectRoot);
+
+    try {
+      const cli = await runCli(["node", "aictx", "diff", "--json"], projectRoot);
+      const mcp = await started.client.callTool({
+        name: "diff_memory",
+        arguments: {}
+      });
+      const cliEnvelope = parseCliErrorEnvelope<ErrorEnvelope>(cli);
+      const mcpEnvelope = parseToolEnvelope<ErrorEnvelope>(mcp);
+
+      expect(mcpEnvelope).toEqual(cliEnvelope);
+      expect(mcpEnvelope.error.code).toBe("AICtxGitRequired");
     } finally {
       await started.close();
     }
@@ -1088,6 +1202,35 @@ function parseCliEnvelope<T>(output: CliRunResult): T {
   return JSON.parse(output.stdout) as T;
 }
 
+function parseCliErrorEnvelope<T>(output: CliRunResult): T {
+  expect(output.exitCode).not.toBe(0);
+  expect(output.stderr).toBe("");
+  return JSON.parse(output.stdout) as T;
+}
+
+function expectToolError(result: unknown, message: RegExp): void {
+  expect(isRecord(result)).toBe(true);
+  if (!isRecord(result)) {
+    throw new Error("Expected MCP tool error result to be an object.");
+  }
+
+  expect(result.isError).toBe(true);
+  expect(Array.isArray(result.content)).toBe(true);
+
+  if (!Array.isArray(result.content)) {
+    throw new Error("Expected MCP tool error result content to be an array.");
+  }
+
+  const text = result.content.find(isTextContent);
+
+  expect(text).toBeDefined();
+  if (text === undefined) {
+    throw new Error("Expected MCP tool error result to include text content.");
+  }
+
+  expect(text.text).toMatch(message);
+}
+
 function parseToolEnvelope<T>(result: unknown): T {
   expect(isRecord(result)).toBe(true);
   if (!isRecord(result)) {
@@ -1115,6 +1258,54 @@ function parseToolEnvelope<T>(result: unknown): T {
   expect(JSON.parse(text.text) as unknown).toEqual(result.structuredContent);
 
   return result.structuredContent as T;
+}
+
+function expectToolAnnotations(tools: unknown[]): void {
+  expectToolAnnotation(tools, "load_memory", {
+    readOnlyHint: true,
+    destructiveHint: false,
+    idempotentHint: true,
+    openWorldHint: false
+  });
+  expectToolAnnotation(tools, "search_memory", {
+    readOnlyHint: true,
+    destructiveHint: false,
+    idempotentHint: true,
+    openWorldHint: false
+  });
+  expectToolAnnotation(tools, "inspect_memory", {
+    readOnlyHint: true,
+    destructiveHint: false,
+    idempotentHint: true,
+    openWorldHint: false
+  });
+  expectToolAnnotation(tools, "diff_memory", {
+    readOnlyHint: true,
+    destructiveHint: false,
+    idempotentHint: true,
+    openWorldHint: false
+  });
+  expectToolAnnotation(tools, "save_memory_patch", {
+    readOnlyHint: false,
+    destructiveHint: true,
+    idempotentHint: false,
+    openWorldHint: false
+  });
+}
+
+function expectToolAnnotation(
+  tools: unknown[],
+  name: string,
+  expected: ToolAnnotationExpectation
+): void {
+  const tool = tools.find((value) => isRecord(value) && value.name === name);
+
+  expect(tool).toBeDefined();
+  if (!isRecord(tool)) {
+    throw new Error(`Expected ${name} tool to be listed.`);
+  }
+
+  expect(tool.annotations).toEqual(expected);
 }
 
 function isTextContent(value: unknown): value is TextContent {

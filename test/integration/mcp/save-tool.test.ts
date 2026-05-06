@@ -52,6 +52,8 @@ interface SaveErrorEnvelope {
     message: string;
     details?: unknown;
   };
+  warnings: string[];
+  meta: unknown;
 }
 
 interface SaveData {
@@ -348,15 +350,92 @@ describe("aictx MCP save_memory_patch tool", () => {
           projectRoot
         }
       });
+      const unknownTopLevel = await started.client.callTool({
+        name: "save_memory_patch",
+        arguments: {
+          patch: createNotePatch("Ignored top level", "Should not run."),
+          unexpected: true
+        }
+      });
+      const unknownSourceField = await started.client.callTool({
+        name: "save_memory_patch",
+        arguments: {
+          patch: {
+            source: {
+              kind: "agent",
+              task: "Ignored source",
+              unexpected: true
+            },
+            changes: [
+              {
+                op: "create_object",
+                type: "note",
+                title: "Ignored source field",
+                body: "# Ignored source field\n\nShould not run.\n"
+              }
+            ]
+          }
+        }
+      });
+      const unknownPatchChangeField = await started.client.callTool({
+        name: "save_memory_patch",
+        arguments: {
+          patch: {
+            source: {
+              kind: "agent",
+              task: "Ignored change"
+            },
+            changes: [
+              {
+                op: "create_object",
+                type: "note",
+                title: "Ignored change field",
+                body: "# Ignored change field\n\nShould not run.\n",
+                unexpected: true
+              }
+            ]
+          }
+        }
+      });
 
       expectToolError(missingPatch, /patch/);
       expectToolError(unsupportedProjectRoot, /projectRoot/);
+      expectToolError(unknownTopLevel, /unexpected|unrecognized|unknown/i);
+      expectToolError(unknownSourceField, /unexpected|unrecognized|unknown/i);
+      expectToolError(unknownPatchChangeField, /unexpected|unrecognized|unknown/i);
     } finally {
       await started.close();
     }
 
     expect(started.stderr()).toBe("");
     await expect(readdir(projectRoot)).resolves.toEqual([]);
+  });
+
+  it("returns save_memory_patch app-error envelopes matching CLI save JSON", async () => {
+    const projectRoot = await createInitializedProject("aictx-mcp-save-error-parity-");
+    const patch = createMissingRelationPatch();
+    const started = await startMcpClient(projectRoot);
+
+    try {
+      const cli = await runCli(["node", "aictx", "save", "--stdin", "--json"], projectRoot, {
+        stdin: Readable.from([JSON.stringify(patch)])
+      });
+      const mcp = await started.client.callTool({
+        name: "save_memory_patch",
+        arguments: {
+          patch
+        }
+      });
+      const cliEnvelope = parseCliErrorEnvelope<SaveErrorEnvelope>(cli);
+      const mcpEnvelope = parseToolEnvelope<SaveErrorEnvelope>(mcp);
+
+      expect(mcpEnvelope).toEqual(cliEnvelope);
+      expect(mcpEnvelope.error.code).toBe("AICtxObjectNotFound");
+    } finally {
+      await started.close();
+    }
+
+    expect(started.stderr()).toBe("");
   });
 });
 
@@ -525,6 +604,23 @@ function createFacetedPatch() {
   };
 }
 
+function createMissingRelationPatch() {
+  return {
+    source: {
+      kind: "agent",
+      task: "Exercise save error envelope parity"
+    },
+    changes: [
+      {
+        op: "create_relation",
+        from: "decision.missing",
+        predicate: "requires",
+        to: "constraint.missing"
+      }
+    ]
+  };
+}
+
 async function expectSavedNote(projectRoot: string, id: string): Promise<void> {
   const storage = await readCanonicalStorage(projectRoot);
 
@@ -632,6 +728,12 @@ async function git(cwd: string, args: readonly string[]): Promise<string> {
 
 function parseCliEnvelope<T>(output: CliRunResult): T {
   expect(output.exitCode).toBe(0);
+  expect(output.stderr).toBe("");
+  return JSON.parse(output.stdout) as T;
+}
+
+function parseCliErrorEnvelope<T>(output: CliRunResult): T {
+  expect(output.exitCode).not.toBe(0);
   expect(output.stderr).toBe("");
   return JSON.parse(output.stdout) as T;
 }
