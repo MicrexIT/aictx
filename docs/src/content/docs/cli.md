@@ -8,6 +8,11 @@ description: Setup, routine work, inspection, recovery, export, docs, and viewer
 The CLI is the default path for routine Aictx work. MCP is supported only when
 the agent client has already launched and connected to `aictx-mcp`.
 
+Local MCP exposes exactly `load_memory`, `search_memory`, `inspect_memory`,
+`save_memory_patch`, and `diff_memory`. Setup, maintenance, recovery, export,
+registry, viewer, docs, suggest, audit, stale, and graph workflows remain
+CLI-only. CLI-only capabilities are not MCP parity gaps.
+
 All CLI commands render human-readable output by default. Add `--json` for the
 shared response envelope:
 
@@ -80,7 +85,7 @@ aictx view --open
 ```
 
 `aictx view` starts a local, read-only memory viewer. It is CLI-only in v1.
-CLI-only capabilities are not MCP parity gaps.
+Do not add `aictx view` to MCP.
 
 ## Documentation
 

@@ -1,10 +1,14 @@
 {
   "body_path": "memory/sources/agent-integration-guidance.md",
-  "content_hash": "sha256:bec71b5a0fc4f37ee63562fb7eb2e63aac6fc1856611fa7b732d6f89e1734527",
+  "content_hash": "sha256:1029b1c66d01b8bb637d06d3ef797603b75f72a3c08c25cb87cd80033c2056b1",
   "created_at": "2026-05-05T13:30:07+02:00",
   "evidence": [
     {
-      "id": "specs/agent-integration.md",
+      "id": "README.md",
+      "kind": "file"
+    },
+    {
+      "id": "docs/src/content/docs/mcp.md",
       "kind": "file"
     },
     {
@@ -16,18 +20,26 @@
       "kind": "file"
     },
     {
-      "id": "src/storage/init.ts",
+      "id": "test/unit/agent-guidance/content.test.ts",
+      "kind": "file"
+    },
+    {
+      "id": "test/integration/release/packaging.test.ts",
       "kind": "file"
     }
   ],
   "facets": {
     "applies_to": [
       "specs/agent-integration.md",
-      "docs/src/content/docs/agent-integration.md",
+      "README.md",
+      "docs/src/content/docs/",
       "integrations/templates/agent-guidance.md",
       "AGENTS.md",
       "CLAUDE.md",
-      "src/storage/init.ts"
+      "src/storage/init.ts",
+      "test/unit/agent-guidance/content.test.ts",
+      "test/unit/agent-guidance/generated-files.test.ts",
+      "test/integration/release/packaging.test.ts"
     ],
     "category": "source",
     "load_modes": [
@@ -51,9 +63,11 @@
   "tags": [
     "agent-guidance",
     "integrations",
-    "memory-discipline"
+    "memory-discipline",
+    "local-mcp",
+    "release-checks"
   ],
   "title": "Agent integration and generated guidance sources",
   "type": "source",
-  "updated_at": "2026-05-05T17:26:27+02:00"
+  "updated_at": "2026-05-06T17:30:28+02:00"
 }

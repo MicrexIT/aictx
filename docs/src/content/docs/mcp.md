@@ -48,7 +48,7 @@ to stderr.
 
 ## Tools
 
-MCP exposes exactly these tools in v1:
+Local MCP exposes exactly these tools in v1:
 
 - `load_memory`
 - `search_memory`
@@ -84,8 +84,17 @@ resolved project's `.aictx/` directory.
 ## CLI-only boundaries
 
 The CLI remains the supported path for setup, maintenance, recovery, export,
-registry management, local viewing, suggestion, and audit operations. Stale
-lists and graph neighborhoods also remain CLI-only.
+registry, viewer, docs, suggest, audit, stale, and graph workflows:
+
+- Setup: `aictx init`, `aictx setup`
+- Maintenance: `aictx check`, `aictx rebuild`, `aictx reset`, `aictx upgrade`
+- Recovery: `aictx history`, `aictx restore`, `aictx rewind`
+- Export: `aictx export obsidian`
+- Registry: `aictx projects`
+- Viewer: `aictx view`
+- Docs: `aictx docs`
+- Suggest and audit: `aictx suggest`, `aictx audit`
+- Stale and graph inspection: `aictx stale`, `aictx graph`
 
 CLI-only capabilities are not MCP parity gaps. Do not add or ask for MCP tools
 solely to mirror these CLI commands. In particular, do not add `aictx view` to

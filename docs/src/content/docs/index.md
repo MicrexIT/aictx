@@ -21,6 +21,16 @@ load relevant memory -> do work -> save durable memory
 Core memory commands do not require a cloud account, embeddings, hosted sync, an
 external model API, or network access.
 
+## CLI and MCP
+
+The CLI is the default path for routine memory work. MCP is available when the
+agent client already exposes Aictx MCP tools.
+
+Local MCP exposes exactly `load_memory`, `search_memory`, `inspect_memory`,
+`save_memory_patch`, and `diff_memory`. Setup, maintenance, recovery, export,
+registry, viewer, docs, suggest, audit, stale, and graph workflows remain
+CLI-only.
+
 ## Start here
 
 - [Getting started](/getting-started/) installs Aictx and walks through the first memory loop.

@@ -257,8 +257,13 @@ const requiredPackedPaths = [
   "docs/astro.config.mjs",
   "docs/public/CNAME",
   "docs/src/content/docs/agent-integration.md",
+  "docs/src/content/docs/cli.md",
   "docs/src/content/docs/getting-started.md",
+  "docs/src/content/docs/index.md",
+  "docs/src/content/docs/mcp.md",
   "docs/src/content/docs/reference.md",
+  "docs/src/content/docs/troubleshooting.md",
+  "docs/src/content/docs/viewer.md",
   "integrations/templates/agent-guidance.md",
   "integrations/codex/aictx/SKILL.md",
   "integrations/claude/aictx/SKILL.md",
@@ -266,12 +271,45 @@ const requiredPackedPaths = [
   "integrations/generic/aictx-agent-instructions.md"
 ];
 
+const publicMcpContractPaths = [
+  "README.md",
+  "docs/src/content/docs/agent-integration.md",
+  "docs/src/content/docs/cli.md",
+  "docs/src/content/docs/getting-started.md",
+  "docs/src/content/docs/index.md",
+  "docs/src/content/docs/mcp.md",
+  "docs/src/content/docs/reference.md",
+  "docs/src/content/docs/troubleshooting.md",
+  "docs/src/content/docs/viewer.md"
+] as const;
+
 const generatedGuidancePaths = [
   "integrations/templates/agent-guidance.md",
   "integrations/codex/aictx/SKILL.md",
   "integrations/claude/aictx/SKILL.md",
   "integrations/claude/aictx.md",
   "integrations/generic/aictx-agent-instructions.md"
+] as const;
+
+const mcpTools = [
+  "`load_memory`",
+  "`search_memory`",
+  "`inspect_memory`",
+  "`save_memory_patch`",
+  "`diff_memory`"
+] as const;
+
+const forbiddenMcpToolNames = [
+  "init_memory",
+  "check_memory",
+  "rebuild_memory",
+  "restore_memory",
+  "export_memory",
+  "view_memory",
+  "suggest_memory",
+  "audit_memory",
+  "stale_memory",
+  "graph_memory"
 ] as const;
 
 async function ensureBuiltPackageOutput(packageVersion: string): Promise<void> {
@@ -401,6 +439,12 @@ function exactDependencyVersion(version: string): string {
 }
 
 async function expectInstalledMemoryDisciplineDocs(installRoot: string): Promise<void> {
+  for (const relativePath of publicMcpContractPaths) {
+    const content = await readInstalledPackageFile(installRoot, relativePath);
+
+    expectMcpBoundaryContent(content);
+  }
+
   const agentIntegration = await readInstalledPackageFile(
     installRoot,
     "docs/src/content/docs/agent-integration.md"
@@ -413,11 +457,28 @@ async function expectInstalledMemoryDisciplineDocs(installRoot: string): Promise
     const content = await readInstalledPackageFile(installRoot, relativePath);
 
     expectMemoryDisciplineContent(content);
-    expect(content).toContain(
-      "MCP exposes exactly `load_memory`, `search_memory`, `inspect_memory`, `save_memory_patch`, and `diff_memory`"
-    );
-    expect(content).toContain("Use CLI for v1 setup");
+    expectMcpBoundaryContent(content);
+    expect(content).toContain("Use the CLI for v1 setup");
   }
+}
+
+function expectMcpBoundaryContent(content: string): void {
+  expect(content).toMatch(/MCP\s+exposes exactly/i);
+  expect(content).toMatch(
+    /setup,\s+maintenance,\s+recovery,\s+export,\s+registry,\s+viewer,\s+docs,\s+suggest,\s+audit,\s+stale,\s+and graph/i
+  );
+
+  for (const tool of mcpTools) {
+    expect(content).toContain(tool);
+  }
+
+  for (const forbiddenName of forbiddenMcpToolNames) {
+    expect(content).not.toContain(forbiddenName);
+  }
+
+  expect(content).not.toContain(
+    "exactly `load_memory`, `search_memory`, `save_memory_patch`, and `diff_memory`"
+  );
 }
 
 function expectMemoryDisciplineContent(content: string): void {

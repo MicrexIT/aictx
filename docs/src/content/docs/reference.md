@@ -7,6 +7,8 @@ description: Compact CLI, MCP, docs, object taxonomy, and structured patch refer
 
 ## CLI commands
 
+The CLI is the default path for routine memory work.
+
 | Area | Commands |
 | --- | --- |
 | Setup | `aictx init`, `aictx setup` |
@@ -27,6 +29,7 @@ aictx docs --json
 
 ## MCP tools
 
+MCP is available when the agent client already exposes Aictx MCP tools. Local
 MCP exposes exactly:
 
 - `load_memory`
@@ -35,7 +38,9 @@ MCP exposes exactly:
 - `save_memory_patch`
 - `diff_memory`
 
-CLI-only capabilities are not MCP parity gaps.
+Setup, maintenance, recovery, export, registry, viewer, docs, suggest, audit,
+stale, and graph workflows remain CLI-only. CLI-only capabilities are not MCP
+parity gaps.
 
 ## Docs command
 

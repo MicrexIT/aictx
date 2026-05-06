@@ -14,6 +14,18 @@ const guideTargets = [
   "integrations/generic/aictx-agent-instructions.md"
 ] as const;
 
+const publicMcpContractTargets = [
+  "README.md",
+  "docs/src/content/docs/index.md",
+  "docs/src/content/docs/getting-started.md",
+  "docs/src/content/docs/cli.md",
+  "docs/src/content/docs/mcp.md",
+  "docs/src/content/docs/agent-integration.md",
+  "docs/src/content/docs/reference.md",
+  "docs/src/content/docs/troubleshooting.md",
+  "docs/src/content/docs/viewer.md"
+] as const;
+
 const generatedGuidanceTargets = [
   "integrations/templates/agent-guidance.md",
   "integrations/codex/aictx/SKILL.md",
@@ -32,19 +44,40 @@ const mcpTools = [
 
 const cliOnlyCommands = [
   "`aictx init`",
+  "`aictx setup`",
   "`aictx check`",
   "`aictx rebuild`",
+  "`aictx reset`",
+  "`aictx upgrade`",
   "`aictx history`",
   "`aictx restore`",
   "`aictx rewind`",
   "`aictx stale`",
   "`aictx graph`",
   "`aictx export obsidian`",
+  "`aictx projects`",
   "`aictx view`",
   "`aictx docs`",
   "`aictx suggest`",
+  "`aictx patch review`",
   "`aictx audit`"
 ] as const;
+
+const forbiddenMcpToolNames = [
+  "init_memory",
+  "check_memory",
+  "rebuild_memory",
+  "restore_memory",
+  "export_memory",
+  "view_memory",
+  "suggest_memory",
+  "audit_memory",
+  "stale_memory",
+  "graph_memory"
+] as const;
+
+const cliOnlyCategoryBoundary =
+  /setup,\s+maintenance,\s+recovery,\s+export,\s+registry,\s+viewer,\s+docs,\s+suggest,\s+audit,\s+stale,\s+and graph/i;
 
 const objectTypes = [
   "`project`",
@@ -115,6 +148,27 @@ async function readProjectFile(path: string): Promise<string> {
 }
 
 describe("agent guidance content", () => {
+  it("locks the public local MCP contract and CLI-only boundary", async () => {
+    for (const path of publicMcpContractTargets) {
+      const content = await readProjectFile(path);
+
+      expect(content).toMatch(/MCP\s+exposes exactly/i);
+      expect(content).toMatch(cliOnlyCategoryBoundary);
+
+      for (const tool of mcpTools) {
+        expect(content).toContain(tool);
+      }
+
+      for (const forbiddenName of forbiddenMcpToolNames) {
+        expect(content).not.toContain(forbiddenName);
+      }
+
+      expect(content).not.toContain(
+        "exactly `load_memory`, `search_memory`, `save_memory_patch`, and `diff_memory`"
+      );
+    }
+  });
+
   it("keeps the guide within local-first safety boundaries", async () => {
     for (const path of guideTargets) {
       const content = await readProjectFile(path);
@@ -162,11 +216,12 @@ describe("agent guidance content", () => {
       const content = await readProjectFile(path);
 
       expect(content).toContain(
-        "Use CLI for v1 setup, maintenance, recovery, export, registry management, local viewing, public documentation, suggestion, and audit capabilities"
+        "Use the CLI for v1 setup, maintenance, recovery, export, registry, viewer, docs, suggest, audit, stale, and graph workflows"
       );
       expect(content).toContain(
-        "For setup, maintenance, export, registry management, local viewing, public documentation, suggestion, audit, recovery, stale-list, or graph-neighborhood operations that are not exposed by MCP, use the `aictx` CLI"
+        "For setup, maintenance, recovery, export, registry, viewer, docs, suggest, audit, stale, and graph workflows that are not exposed by MCP, use the `aictx` CLI"
       );
+      expect(content).toMatch(cliOnlyCategoryBoundary);
 
       for (const command of cliOnlyCommands) {
         expect(content).toContain(command);
@@ -184,10 +239,9 @@ describe("agent guidance content", () => {
 
       expect(content).not.toContain("`aictx init` or MCP");
       expect(content).not.toContain("init_memory");
-      expect(content).not.toContain("check_memory");
-      expect(content).not.toContain("rebuild_memory");
-      expect(content).not.toContain("restore_memory");
-      expect(content).not.toContain("export_memory");
+      for (const forbiddenName of forbiddenMcpToolNames) {
+        expect(content).not.toContain(forbiddenName);
+      }
       expect(content).not.toContain(
         "exactly `load_memory`, `search_memory`, `save_memory_patch`, and `diff_memory`"
       );

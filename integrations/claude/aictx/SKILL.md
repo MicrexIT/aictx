@@ -23,7 +23,7 @@ Use CLI first for routine memory work. Use MCP equivalents only when the agent c
 * `aictx save`; MCP equivalent: `save_memory_patch`
 * `aictx diff`; MCP equivalent: `diff_memory`
 
-Use CLI for v1 setup, maintenance, recovery, export, registry management, local viewing, public documentation, suggestion, and audit capabilities that are intentionally not exposed by MCP:
+Use the CLI for v1 setup, maintenance, recovery, export, registry, viewer, docs, suggest, audit, stale, and graph workflows that are intentionally not exposed by MCP:
 
 * `aictx init`
 * `aictx check`
@@ -104,7 +104,7 @@ save_memory_patch({ project_root: "/path/to/project", patch: { source, changes }
 
 Dirty or untracked `.aictx/` files are not by themselves a reason to skip saving durable memory. Attempt the supported CLI/MCP save when there is durable future value. Aictx backs up dirty touched files under `.aictx/recovery/` before overwrite/delete and continues where possible.
 
-For setup, maintenance, export, registry management, local viewing, public documentation, suggestion, audit, recovery, stale-list, or graph-neighborhood operations that are not exposed by MCP, use the `aictx` CLI instead of editing `.aictx/` files directly.
+For setup, maintenance, recovery, export, registry, viewer, docs, suggest, audit, stale, and graph workflows that are not exposed by MCP, use the `aictx` CLI instead of editing `.aictx/` files directly.
 
 Use `aictx suggest --from-diff --json` when current code changes need a memory suggestion packet before deciding what durable memory to save. Use `aictx suggest --bootstrap --json` for a first-run repo memory pass.
 

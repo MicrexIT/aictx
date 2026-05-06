@@ -144,7 +144,11 @@ integration path when the agent client has already launched and connected to
 MCP exposes exactly `load_memory`, `search_memory`, `inspect_memory`,
 `save_memory_patch`, and `diff_memory` in v1.
 
-CLI-only capabilities are not MCP parity gaps. Do not add or ask for MCP tools solely to mirror these CLI commands, and do not edit `.aictx/` files directly when a supported MCP tool or CLI command exists. Avoid editing `.aictx/` files directly.
+Setup, maintenance, recovery, export, registry, viewer, docs, suggest, audit,
+stale, and graph workflows remain outside local MCP. CLI-only capabilities are
+not MCP parity gaps. Do not add or ask for MCP tools solely to mirror these CLI
+commands, and do not edit `.aictx/` files directly when a supported MCP tool or
+CLI command exists.
 
 | Capability | MCP | CLI |
 | --- | --- | --- |
@@ -154,10 +158,12 @@ CLI-only capabilities are not MCP parity gaps. Do not add or ask for MCP tools s
 | Save memory patch | `save_memory_patch` | `aictx save` |
 | Show memory diff | `diff_memory` | `aictx diff` |
 | Initialize storage | none | `aictx init`, `aictx setup` |
-| Validate storage | none | `aictx check` |
-| Rebuild generated index | none | `aictx rebuild` |
-| Inspect memory neighborhoods | none | `aictx stale`, `aictx graph` |
-| Export projection | none | `aictx export obsidian` |
+| Maintain storage | none | `aictx check`, `aictx rebuild`, `aictx reset`, `aictx upgrade` |
+| Recover memory history | none | `aictx history`, `aictx restore`, `aictx rewind` |
+| Review patch files | none | `aictx patch review` |
+| Inspect stale memory and graph neighborhoods | none | `aictx stale`, `aictx graph` |
+| Export projections | none | `aictx export obsidian` |
+| Manage project registry | none | `aictx projects` |
 | View local memory | none | `aictx view` |
 | Suggest or audit memory | none | `aictx suggest`, `aictx audit` |
 | Read public docs | none | `aictx docs` |

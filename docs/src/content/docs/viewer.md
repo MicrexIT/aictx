@@ -52,3 +52,8 @@ That export writes generated projection files only.
 
 `aictx view` is CLI-only in v1. CLI-only capabilities are not MCP parity gaps.
 Do not add `aictx view` to MCP.
+
+Local MCP exposes exactly `load_memory`, `search_memory`, `inspect_memory`,
+`save_memory_patch`, and `diff_memory`. Setup, maintenance, recovery, export,
+registry, viewer, docs, suggest, audit, stale, and graph workflows remain
+CLI-only.

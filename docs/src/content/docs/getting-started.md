@@ -47,6 +47,11 @@ pnpm --package @aictx/memory dlx aictx init
 npx --package @aictx/memory -- aictx init
 ```
 
+The CLI is the default path for routine memory work. MCP is available when the
+agent client already exposes Aictx MCP tools. Local MCP exposes exactly
+`load_memory`, `search_memory`, `inspect_memory`, `save_memory_patch`, and
+`diff_memory`.
+
 ## Initialize a project
 
 Run this once at the project root:
@@ -86,6 +91,10 @@ aictx diff
 ```
 
 Aictx writes local files and never commits automatically.
+
+Setup, maintenance, recovery, export, registry, viewer, docs, suggest, audit,
+stale, and graph workflows remain CLI-only. CLI-only capabilities are not MCP
+parity gaps.
 
 ## Guided setup
 

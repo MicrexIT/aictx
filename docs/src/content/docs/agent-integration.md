@@ -89,6 +89,10 @@ npx --package @aictx/memory -- aictx-mcp
 
 The v1 agent model is CLI-first and MCP-compatible.
 
+MCP is available only when the client already exposes Aictx MCP tools. Local MCP
+exposes exactly `load_memory`, `search_memory`, `inspect_memory`,
+`save_memory_patch`, and `diff_memory`.
+
 | Capability | MCP | CLI |
 | --- | --- | --- |
 | Load task context | `load_memory` | `aictx load` |
@@ -115,8 +119,8 @@ The v1 agent model is CLI-first and MCP-compatible.
 
 CLI-only capabilities are not MCP parity gaps. Do not add or ask for MCP tools solely to mirror these CLI commands. Do not edit `.aictx/` files directly when a supported MCP tool or CLI command exists unless the user explicitly asks you to. Avoid editing `.aictx/` files directly.
 
-MCP exposes exactly `load_memory`, `search_memory`, `inspect_memory`,
-`save_memory_patch`, and `diff_memory` in v1.
+Setup, maintenance, recovery, export, registry, viewer, docs, suggest, audit,
+stale, and graph workflows remain outside local MCP.
 
 ## Memory discipline
 

@@ -33,6 +33,11 @@ An agent generally cannot start `aictx-mcp` in a shell and then use it as MCP
 tools in an already-running session. If MCP tools are not available, stay on the
 CLI path.
 
+Local MCP exposes exactly `load_memory`, `search_memory`, `inspect_memory`,
+`save_memory_patch`, and `diff_memory` when the client already exposes Aictx
+tools. Setup, maintenance, recovery, export, registry, viewer, docs, suggest,
+audit, stale, and graph workflows remain CLI-only.
+
 ## Memory is empty after init
 
 `aictx init` creates starter storage. It does not infer a full project memory
