@@ -3,8 +3,6 @@ title: Getting started
 description: Install Aictx, initialize memory, and run the first load/save loop.
 ---
 
-# Getting started
-
 Aictx works inside an existing project. It writes local, reviewable memory files
 under `.aictx/` and keeps generated indexes separate from canonical memory.
 

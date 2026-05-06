@@ -3,8 +3,6 @@ title: Troubleshooting
 description: Fix common install, PATH, MCP, schema, index, and recovery issues.
 ---
 
-# Troubleshooting
-
 ## `aictx` is not on PATH
 
 Package-manager and local-binary forms work without a global `PATH` entry:

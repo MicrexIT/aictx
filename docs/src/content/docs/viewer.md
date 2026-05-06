@@ -3,8 +3,6 @@ title: Local viewer
 description: Read-only local browser viewer for project memory inspection.
 ---
 
-# Local viewer
-
 `aictx view` starts a local, read-only browser viewer for human inspection.
 
 ```bash

@@ -99,3 +99,4 @@
 {"actor":"agent","event":"memory.updated","id":"source.user-public-docs-strategy","timestamp":"2026-05-06T21:51:56+02:00"}
 {"actor":"agent","event":"memory.updated","id":"synthesis.public-docs-architecture","timestamp":"2026-05-06T21:51:56+02:00"}
 {"actor":"agent","event":"memory.created","id":"gotcha.starlight-theme-tokens-invert-color-names-in-light-mode","timestamp":"2026-05-06T23:14:15+02:00"}
+{"actor":"agent","event":"memory.created","id":"gotcha.starlight-docs-render-frontmatter-titles-automatically","timestamp":"2026-05-06T23:25:39+02:00"}

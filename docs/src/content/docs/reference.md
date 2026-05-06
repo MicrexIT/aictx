@@ -3,8 +3,6 @@ title: Reference
 description: Compact CLI, MCP, docs, object taxonomy, and structured patch reference.
 ---
 
-# Reference
-
 ## CLI commands
 
 The CLI is the default interface for routine memory work.

@@ -3,8 +3,6 @@ title: MCP guide
 description: Configure Aictx MCP and understand the CLI/MCP capability boundary.
 ---
 
-# MCP guide
-
 `aictx-mcp` is an MCP stdio server. The MCP client must launch it and connect to
 its stdin/stdout.
 

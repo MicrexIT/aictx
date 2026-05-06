@@ -3,8 +3,6 @@ title: CLI guide
 description: Setup, routine work, inspection, recovery, export, docs, and viewer commands.
 ---
 
-# CLI guide
-
 The CLI is the default interface for Aictx. It covers setup, routine memory
 work, inspection, recovery, export, documentation, and the local viewer.
 

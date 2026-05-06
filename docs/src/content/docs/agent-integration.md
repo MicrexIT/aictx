@@ -3,8 +3,6 @@ title: Agent integration
 description: How Aictx fits into a coding-agent workflow.
 ---
 
-# Agent integration
-
 Aictx gives coding agents a local project-memory loop:
 
 ```text

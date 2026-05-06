@@ -3,8 +3,6 @@ title: Mental model
 description: How Aictx stores, indexes, retrieves, and inspects project memory.
 ---
 
-# Mental model
-
 Aictx is a memory discipline system, not just a storage folder.
 
 The goal is simple: future agents should not restart from zero when working in a

@@ -259,7 +259,7 @@ async function readTopicMarkdown(entry: DocsTopic, docsDir: string | undefined):
     try {
       const content = await readFile(path, "utf8");
 
-      return stripFrontmatter(content).trimStart();
+      return topicMarkdownWithTitle(entry, stripFrontmatter(content));
     } catch (error) {
       errors.push(`${path}: ${messageFromUnknown(error)}`);
     }
@@ -291,6 +291,16 @@ function stripFrontmatter(content: string): string {
   }
 
   return content.slice(end + "\n---\n".length);
+}
+
+function topicMarkdownWithTitle(entry: DocsTopic, content: string): string {
+  const body = content.trimStart();
+
+  if (body.startsWith(`# ${entry.title}`)) {
+    return body;
+  }
+
+  return `# ${entry.title}\n\n${body}`;
 }
 
 function summarizeTopic(entry: DocsTopic, baseUrl: string): DocsTopicSummary {

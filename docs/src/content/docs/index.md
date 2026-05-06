@@ -3,8 +3,6 @@ title: Aictx documentation
 description: Public documentation for local-first project memory for AI coding agents.
 ---
 
-# Aictx documentation
-
 Aictx is local-first project memory for AI coding agents.
 
 It stores project facts, decisions, constraints, gotchas, workflows, and
