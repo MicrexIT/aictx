@@ -86,6 +86,7 @@ import {
   readProjectRegistry,
   removeProjectFromRegistry,
   removeProjectRootFromRegistry,
+  removeProjectRootsFromRegistry,
   resolveProjectRegistryLocation,
   upsertCurrentProjectInRegistry,
   type ProjectRegistryEntry,
@@ -203,6 +204,7 @@ export interface RewindMemoryOptions extends GitWrapperOptions {
 export interface ResetAictxOptions extends GitWrapperOptions {
   cwd: string;
   destroy?: boolean;
+  aictxHome?: string;
 }
 
 export interface ExportObsidianProjectionOptions extends GitWrapperOptions {
@@ -438,6 +440,29 @@ export interface ResetAictxData {
   destroyed: boolean;
   backup_path: string | null;
   entries_removed: string[];
+}
+
+export interface ResetAllAictxProjectReset extends RegisteredProjectSummary {
+  destroyed: boolean;
+  backup_path: string | null;
+  entries_removed: string[];
+}
+
+export interface ResetAllAictxProjectSkipped extends RegisteredProjectSummary {
+  reason: string;
+}
+
+export interface ResetAllAictxProjectFailed extends RegisteredProjectSummary {
+  error: AictxError;
+  warnings: string[];
+}
+
+export interface ResetAllAictxData {
+  registry_path: string;
+  destroyed: boolean;
+  projects_reset: ResetAllAictxProjectReset[];
+  projects_skipped: ResetAllAictxProjectSkipped[];
+  projects_failed: ResetAllAictxProjectFailed[];
 }
 
 export type ExportObsidianProjectionData = ObsidianProjectionExportData;
@@ -1870,6 +1895,132 @@ export async function resetAictx(options: ResetAictxOptions): Promise<AppResult<
   };
 }
 
+export async function resetAllAictx(
+  options: ResetAictxOptions
+): Promise<AppResult<ResetAllAictxData>> {
+  const registry = await readProjectRegistry(options);
+  const meta = await buildBestEffortMeta(options);
+  const registryPath = resolveProjectRegistryLocation(options).registryPath;
+
+  if (!registry.ok) {
+    return {
+      ok: false,
+      error: registry.error,
+      warnings: registry.warnings,
+      meta
+    };
+  }
+
+  const warnings = [...registry.warnings];
+  const projectsReset: ResetAllAictxProjectReset[] = [];
+  const projectsSkipped: ResetAllAictxProjectSkipped[] = [];
+  const projectsFailed: ResetAllAictxProjectFailed[] = [];
+  const projectRootsToUnregister: string[] = [];
+
+  for (const entry of registry.data.registry.projects) {
+    const project = registeredProjectWithDerivedAictxRoot(entry);
+    const summary = summarizeRegisteredProject(project);
+    const missing = await isAictxRootMissing(project.aictx_root);
+
+    if (!missing.ok) {
+      projectsFailed.push({
+        ...summary,
+        error: missing.error,
+        warnings: missing.warnings
+      });
+      warnings.push(...missing.warnings);
+      continue;
+    }
+
+    if (missing.data) {
+      projectsSkipped.push({
+        ...summary,
+        reason: ".aictx directory does not exist."
+      });
+      projectRootsToUnregister.push(project.project_root);
+      continue;
+    }
+
+    if (options.destroy === true) {
+      const reset = await removeAictxRoot(project.aictx_root);
+
+      if (!reset.ok) {
+        projectsFailed.push({
+          ...summary,
+          error: reset.error,
+          warnings: reset.warnings
+        });
+        warnings.push(...reset.warnings);
+        continue;
+      }
+
+      warnings.push(...reset.warnings);
+      projectRootsToUnregister.push(project.project_root);
+
+      projectsReset.push({
+        ...summary,
+        destroyed: true,
+        backup_path: null,
+        entries_removed: [".aictx"]
+      });
+      continue;
+    }
+
+    const reset = await backupAndClearAictxRoot(project.project_root, project.aictx_root, options);
+
+    if (!reset.ok) {
+      projectsFailed.push({
+        ...summary,
+        error: reset.error,
+        warnings: reset.warnings
+      });
+      warnings.push(...reset.warnings);
+      continue;
+    }
+
+    warnings.push(...reset.warnings);
+    projectRootsToUnregister.push(project.project_root);
+
+    projectsReset.push({
+      ...summary,
+      destroyed: false,
+      backup_path: reset.data.backupPath,
+      entries_removed: reset.data.entriesRemoved
+    });
+  }
+
+  if (projectRootsToUnregister.length > 0) {
+    const unregistered = await removeProjectRootsFromRegistry({
+      ...options,
+      projectRoots: projectRootsToUnregister
+    });
+
+    if (!unregistered.ok) {
+      return {
+        ok: false,
+        error: unregistered.error,
+        warnings: [...warnings, ...unregistered.warnings],
+        meta
+      };
+    }
+
+    warnings.push(...unregistered.warnings);
+  }
+
+  return {
+    ok: true,
+    data: {
+      registry_path: registryPath,
+      destroyed: options.destroy === true,
+      projects_reset: projectsReset,
+      projects_skipped: projectsSkipped,
+      projects_failed: projectsFailed
+    },
+    warnings,
+    meta
+  };
+}
+
 export async function saveMemoryPatch(
   options: SaveMemoryPatchOptions
 ): Promise<AppResult<SaveMemoryData>> {
@@ -2017,6 +2168,16 @@ function summarizeRegisteredProject(entry: ProjectRegistryEntry): RegisteredProj
   };
 }
 
+function registeredProjectWithDerivedAictxRoot(entry: ProjectRegistryEntry): ProjectRegistryEntry {
+  const projectRoot = resolve(entry.project_root);
+
+  return {
+    ...entry,
+    project_root: projectRoot,
+    aictx_root: join(projectRoot, ".aictx")
+  };
+}
+
 function mergeRegistryEntries(
   registered: readonly ProjectRegistryEntry[],
   current: ResolvedProjectRegistryEntry | null,
@@ -2144,6 +2305,8 @@ export const applicationOperations = {
   rebuildIndex,
   registerCurrentProject,
   removeRegisteredProject,
+  resetAllAictx,
+  resetAictx,
   restoreMemory,
   rewindMemory,
   saveMemoryPatch,
@@ -3041,6 +3204,24 @@ async function removeAictxRoot(aictxRoot: string): Promise<Result<void>> {
   } catch (error) {
     return err(
       aictxError("AICtxValidationFailed", "Aictx root could not be deleted.", {
+        aictxRoot,
+        message: messageFromUnknown(error)
+      })
+    );
+  }
+}
+
+async function isAictxRootMissing(aictxRoot: string): Promise<Result<boolean>> {
+  try {
+    await lstat(aictxRoot);
+    return ok(false);
+  } catch (error) {
+    if (errorCode(error) === "ENOENT") {
+      return ok(true);
+    }
+
+    return err(
+      aictxError("AICtxValidationFailed", "Aictx root could not be read.", {
         aictxRoot,
         message: messageFromUnknown(error)
       })

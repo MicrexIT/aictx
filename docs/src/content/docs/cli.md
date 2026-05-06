@@ -23,6 +23,7 @@ aictx setup
 aictx check
 aictx rebuild
 aictx reset
+aictx reset --all
 ```
 
 - `init` creates `.aictx/` and optional repo-level agent guidance.
@@ -30,6 +31,8 @@ aictx reset
 - `check` validates canonical memory and generated index health.
 - `rebuild` regenerates indexes from canonical memory.
 - `reset` backs up and clears local `.aictx/` storage.
+- `reset --all` resets every project in the user-level registry. Add
+  `--destroy` to delete each registered `.aictx/` without backup.
 
 ## Routine memory work
 

@@ -229,6 +229,32 @@ export async function removeProjectRootFromRegistry(
   });
 }
 
+export async function removeProjectRootsFromRegistry(
+  options: ProjectRegistryOptions & { projectRoots: readonly string[] }
+): Promise<Result<ProjectRegistryEntry[]>> {
+  const projectRoots = new Set(
+    await Promise.all(options.projectRoots.map((projectRoot) => canonicalProjectRoot(projectRoot)))
+  );
+
+  return mutateProjectRegistry(options, async (registry) => {
+    const kept: ProjectRegistryEntry[] = [];
+    const removed: ProjectRegistryEntry[] = [];
+
+    for (const entry of registry.projects) {
+      const entryProjectRoot = await canonicalProjectRoot(entry.project_root);
+
+      if (projectRoots.has(entryProjectRoot)) {
+        removed.push(entry);
+      } else {
+        kept.push(entry);
+      }
+    }
+
+    registry.projects = kept;
+    return ok(removed);
+  });
+}
+
 export async function pruneProjectRegistry(
   options: ProjectRegistryOptions = {}
 ): Promise<Result<ProjectRegistryPruneData>> {

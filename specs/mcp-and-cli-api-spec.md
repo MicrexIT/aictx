@@ -588,7 +588,7 @@ aictx upgrade [--json]
 aictx patch review <file> [--json]
 aictx setup [--force] [--apply] [--view] [--open] [--json]
 aictx audit [--json]
-aictx reset [--destroy] [--json]
+aictx reset [--all] [--destroy] [--json]
 ```
 
 Most optional commands must not mutate canonical storage. `aictx export obsidian` and the explicit viewer Obsidian export action may write generated projection files only. `aictx reset` is the explicit destructive maintenance exception.
@@ -612,6 +612,9 @@ Minimum behavior:
 * `aictx audit` returns deterministic memory hygiene findings and does not write memory.
 * `aictx upgrade` migrates legacy storage and bundled schemas to storage v3 without inventing evidence.
 * `aictx reset` defaults to archiving `.aictx/` under `.aictx/.backup/` before clearing the remaining `.aictx/` contents; `--destroy` deletes `.aictx/` without backup.
+* `aictx reset --all` applies reset behavior to every project in the user-level project registry. It does not scan the filesystem for unregistered projects.
+* `aictx reset --all --destroy` deletes each registered project's `.aictx/` directory without backup. `aictx reset --all` without `--destroy` keeps the normal per-project backup behavior.
+* During `aictx reset --all`, entries whose `.aictx/` directory is already missing are reported as skipped and removed from the registry. Successfully reset and skipped projects are unregistered; failed projects remain registered.
 
 Source-package version maintenance is intentionally not an `aictx` CLI command. Use the repository npm script `npm run version:patch`, which runs `npm version patch --no-git-tag-version`, pins the README setup prompt install command to the new package version, and regenerates `src/generated/version.ts`.
 

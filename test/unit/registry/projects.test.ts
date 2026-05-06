@@ -10,6 +10,7 @@ import {
   readProjectRegistry,
   registryIdForProjectRoot,
   removeProjectFromRegistry,
+  removeProjectRootsFromRegistry,
   resolveProjectRegistryLocation,
   upsertCurrentProjectInRegistry
 } from "../../../src/registry/projects.js";
@@ -130,6 +131,37 @@ describe("project registry", () => {
 
     expect(pruned.data.removed).toHaveLength(1);
     expect(pruned.data.projects).toHaveLength(0);
+  });
+
+  it("removes multiple projects by canonical project root", async () => {
+    const aictxHome = await createTempRoot("aictx-registry-bulk-remove-home-");
+    const firstProject = await createInitializedProject("aictx-registry-bulk-first-project-");
+    const secondProject = await createInitializedProject("aictx-registry-bulk-second-project-");
+    const thirdProject = await createInitializedProject("aictx-registry-bulk-third-project-");
+
+    await upsertCurrentProjectInRegistry({ cwd: firstProject, aictxHome, source: "manual" });
+    await upsertCurrentProjectInRegistry({ cwd: secondProject, aictxHome, source: "manual" });
+    await upsertCurrentProjectInRegistry({ cwd: thirdProject, aictxHome, source: "manual" });
+
+    const removed = await removeProjectRootsFromRegistry({
+      aictxHome,
+      projectRoots: [join(firstProject, "."), secondProject]
+    });
+    const registry = await readProjectRegistry({ aictxHome });
+
+    expect(removed.ok).toBe(true);
+    expect(registry.ok).toBe(true);
+    if (!removed.ok || !registry.ok) {
+      throw new Error("Expected bulk registry removal to succeed.");
+    }
+
+    expect(removed.data.map((entry) => entry.project_root).sort()).toEqual([
+      firstProject,
+      secondProject
+    ].sort());
+    expect(registry.data.registry.projects.map((entry) => entry.project_root)).toEqual([
+      thirdProject
+    ]);
   });
 });
 

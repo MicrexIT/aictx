@@ -1,4 +1,4 @@
-import { access, mkdir, mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
+import { access, mkdir, mkdtemp, readdir, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -70,12 +70,171 @@ describe("maintenance CLI commands", () => {
     expect(output.stdout()).toContain("Deleted .aictx.");
     await expect(access(join(root, ".aictx"))).rejects.toMatchObject({ code: "ENOENT" });
   });
+
+  it("backs up and clears .aictx for every registered project when --all is passed", async () => {
+    const aictxHome = await createTempRoot("aictx-cli-reset-all-home-");
+    const firstProject = await createRegisteredProject("aictx-cli-reset-all-first-", aictxHome);
+    const secondProject = await createRegisteredProject("aictx-cli-reset-all-second-", aictxHome);
+
+    const reset = await runCli(
+      ["node", "aictx", "reset", "--all", "--json"],
+      firstProject,
+      aictxHome
+    );
+    const envelope = parseJson<{
+      ok: true;
+      data: {
+        destroyed: boolean;
+        projects_reset: Array<{ project_root: string; backup_path: string | null }>;
+        projects_skipped: unknown[];
+        projects_failed: unknown[];
+      };
+    }>(reset.stdout);
+
+    expect(reset.exitCode).toBe(0);
+    expect(reset.stderr).toBe("");
+    expect(envelope.data.destroyed).toBe(false);
+    expect(envelope.data.projects_reset.map((project) => project.project_root).sort()).toEqual([
+      firstProject,
+      secondProject
+    ].sort());
+    expect(envelope.data.projects_reset.every((project) => project.backup_path !== null)).toBe(true);
+    expect(envelope.data.projects_skipped).toHaveLength(0);
+    expect(envelope.data.projects_failed).toHaveLength(0);
+    await expect(readdir(join(firstProject, ".aictx"))).resolves.toEqual([".backup"]);
+    await expect(readdir(join(secondProject, ".aictx"))).resolves.toEqual([".backup"]);
+    await expectRegisteredProjectCount(firstProject, aictxHome, 0);
+  });
+
+  it("deletes .aictx for every registered project when --all and --destroy are passed", async () => {
+    const aictxHome = await createTempRoot("aictx-cli-reset-all-destroy-home-");
+    const firstProject = await createRegisteredProject(
+      "aictx-cli-reset-all-destroy-first-",
+      aictxHome
+    );
+    const secondProject = await createRegisteredProject(
+      "aictx-cli-reset-all-destroy-second-",
+      aictxHome
+    );
+
+    const reset = await runCli(
+      ["node", "aictx", "reset", "--all", "--destroy", "--json"],
+      firstProject,
+      aictxHome
+    );
+    const envelope = parseJson<{
+      ok: true;
+      data: {
+        destroyed: boolean;
+        projects_reset: unknown[];
+        projects_skipped: unknown[];
+        projects_failed: unknown[];
+      };
+    }>(reset.stdout);
+
+    expect(reset.exitCode).toBe(0);
+    expect(reset.stderr).toBe("");
+    expect(envelope.data.destroyed).toBe(true);
+    expect(envelope.data.projects_reset).toHaveLength(2);
+    expect(envelope.data.projects_skipped).toHaveLength(0);
+    expect(envelope.data.projects_failed).toHaveLength(0);
+    await expect(access(join(firstProject, ".aictx"))).rejects.toMatchObject({ code: "ENOENT" });
+    await expect(access(join(secondProject, ".aictx"))).rejects.toMatchObject({ code: "ENOENT" });
+    await expectRegisteredProjectCount(firstProject, aictxHome, 0);
+  });
+
+  it("skips stale registered projects during reset --all and unregisters them", async () => {
+    const aictxHome = await createTempRoot("aictx-cli-reset-all-stale-home-");
+    const projectRoot = await createRegisteredProject("aictx-cli-reset-all-stale-project-", aictxHome);
+    await rm(join(projectRoot, ".aictx"), { recursive: true, force: true });
+
+    const reset = await runCli(
+      ["node", "aictx", "reset", "--all", "--json"],
+      projectRoot,
+      aictxHome
+    );
+    const envelope = parseJson<{
+      ok: true;
+      data: {
+        projects_reset: unknown[];
+        projects_skipped: Array<{ project_root: string; reason: string }>;
+        projects_failed: unknown[];
+      };
+    }>(reset.stdout);
+
+    expect(reset.exitCode).toBe(0);
+    expect(reset.stderr).toBe("");
+    expect(envelope.data.projects_reset).toHaveLength(0);
+    expect(envelope.data.projects_skipped).toMatchObject([
+      {
+        project_root: projectRoot,
+        reason: ".aictx directory does not exist."
+      }
+    ]);
+    expect(envelope.data.projects_failed).toHaveLength(0);
+    await expectRegisteredProjectCount(projectRoot, aictxHome, 0);
+  });
 });
+
+async function createRegisteredProject(prefix: string, aictxHome: string): Promise<string> {
+  const projectRoot = await createTempRoot(prefix);
+  const init = await runCli(["node", "aictx", "init", "--json"], projectRoot, aictxHome);
+  expect(init.exitCode).toBe(0);
+  expect(init.stderr).toBe("");
+
+  const added = await runCli(
+    ["node", "aictx", "projects", "add", projectRoot, "--json"],
+    projectRoot,
+    aictxHome
+  );
+  expect(added.exitCode).toBe(0);
+  expect(added.stderr).toBe("");
+
+  return projectRoot;
+}
+
+async function expectRegisteredProjectCount(
+  cwd: string,
+  aictxHome: string,
+  count: number
+): Promise<void> {
+  const listed = await runCli(["node", "aictx", "projects", "list", "--json"], cwd, aictxHome);
+
+  expect(listed.exitCode).toBe(0);
+  expect(parseJson<{ ok: true; data: { projects: unknown[] } }>(listed.stdout).data.projects)
+    .toHaveLength(count);
+}
+
+async function runCli(
+  argv: string[],
+  cwd: string,
+  aictxHome: string
+): Promise<{ exitCode: number; stdout: string; stderr: string }> {
+  const output = createCapturedOutput();
+  const exitCode = await main(argv, {
+    ...output.writers,
+    cwd,
+    registry: {
+      aictxHome
+    }
+  });
+
+  return {
+    exitCode,
+    stdout: output.stdout(),
+    stderr: output.stderr()
+  };
+}
+
+function parseJson<T>(text: string): T {
+  return JSON.parse(text) as T;
+}
 
 async function createTempRoot(prefix: string): Promise<string> {
   const path = await mkdtemp(join(tmpdir(), prefix));
-  tempRoots.push(path);
-  return path;
+  const resolvedPath = await realpath(path);
+  tempRoots.push(resolvedPath);
+  return resolvedPath;
 }
 
 function createCapturedOutput(): {

@@ -87,3 +87,4 @@
 {"actor":"agent","event":"memory.updated","id":"question.demand-driven-context-roadmap","timestamp":"2026-05-06T14:53:05+02:00"}
 {"actor":"agent","event":"memory.updated","id":"synthesis.context-engine-comparison-takeaways","timestamp":"2026-05-06T14:53:05+02:00"}
 {"actor":"agent","event":"memory.updated","id":"synthesis.agent-memory-guidance","timestamp":"2026-05-06T14:53:05+02:00"}
+{"actor":"agent","event":"memory.created","id":"fact.reset-all-registry-semantics","timestamp":"2026-05-06T15:31:48+02:00"}
