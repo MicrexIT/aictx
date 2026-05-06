@@ -118,6 +118,7 @@ describe("suggest discipline packets", () => {
         "Prefer updating, marking stale, or superseding existing memory over creating duplicates.",
         "Use current code, tests, manifests, and user instructions as evidence.",
         "Right-size memory: atomic for precise claims, source for provenance, synthesis for compact area-level understanding.",
+        "Treat failure, confusion, user correction, and memory conflicts as signals to repair durable memory.",
         "Save nothing if the work produced no durable future value."
       ]
     });
@@ -216,10 +217,77 @@ describe("suggest discipline packets", () => {
       { kind: "file", id: "test/billing/webhook.test.ts" }
     ]);
     expect(packet.recommended_facets).toEqual(
-      expect.arrayContaining(["testing", "decision-rationale", "abandoned-attempt"])
+      expect.arrayContaining([
+        "testing",
+        "decision-rationale",
+        "abandoned-attempt",
+        "domain",
+        "bounded-context",
+        "capability",
+        "business-rule"
+      ])
     );
+    expect(packet.recommended_facets).not.toContain("unresolved-conflict");
     expect(packet.save_decision_checklist).toContain(
       "Save memory only when the task produced durable future value."
+    );
+    expect(packet.save_decision_checklist).toContain(
+      "Back durable synthesis memory with source evidence or source provenance relations when possible."
+    );
+  });
+
+  it("recommends unresolved-conflict facets for conflict and correction task signals", () => {
+    const storage = storageSnapshot({
+      objects: [],
+      relations: []
+    });
+
+    const packet = buildSuggestAfterTaskPacket({
+      task: "Capture corrections for stale assumptions and conflicts",
+      changedFiles: [],
+      storage
+    });
+
+    expect(packet.recommended_facets).toContain("unresolved-conflict");
+  });
+
+  it("recommends unresolved-conflict facets for active conflicting related memory", () => {
+    const storage = storageSnapshot({
+      objects: [
+        memoryObject({
+          id: "decision.webhook-worker",
+          type: "decision",
+          status: "active",
+          title: "Webhook worker retries",
+          body: "Webhook worker retry behavior references src/billing/webhook.ts."
+        }),
+        memoryObject({
+          id: "decision.webhook-handler",
+          type: "decision",
+          status: "active",
+          title: "Webhook handler retries",
+          body: "Webhook handler retry behavior references src/billing/webhook.ts."
+        })
+      ],
+      relations: [
+        relation({
+          id: "rel.webhook-worker-conflicts-handler",
+          from: "decision.webhook-worker",
+          predicate: "conflicts_with",
+          to: "decision.webhook-handler"
+        })
+      ]
+    });
+
+    const packet = buildSuggestAfterTaskPacket({
+      task: "Resolve webhook retry behavior",
+      changedFiles: ["src/billing/webhook.ts"],
+      storage
+    });
+
+    expect(packet.recommended_facets).toContain("unresolved-conflict");
+    expect(packet.save_decision_checklist).toContain(
+      "Use unresolved-conflict questions when current evidence cannot resolve contradictory active memory."
     );
   });
 
@@ -237,6 +305,7 @@ describe("suggest discipline packets", () => {
 
     expect(packet.recommended_memory).toContain("synthesis");
     expect(packet.recommended_facets).toContain("product-feature");
+    expect(packet.recommended_facets).toContain("capability");
     expect(packet.recommended_evidence).toEqual([
       { kind: "file", id: "app/dashboard/page.tsx" }
     ]);
@@ -1081,21 +1150,19 @@ function relation(options: {
   id: string;
   from: ObjectId;
   to: ObjectId;
-  fileEvidence: string;
+  predicate?: MemoryRelation["predicate"];
+  fileEvidence?: string;
 }): StoredMemoryRelation {
   const relationData: MemoryRelation = {
     id: options.id,
     from: options.from,
-    predicate: "affects",
+    predicate: options.predicate ?? "affects",
     to: options.to,
     status: "active",
     confidence: "medium",
-    evidence: [
-      {
-        kind: "file",
-        id: options.fileEvidence
-      }
-    ],
+    ...(options.fileEvidence === undefined
+      ? {}
+      : { evidence: [{ kind: "file", id: options.fileEvidence }] }),
     content_hash: "sha256:relation",
     created_at: TIMESTAMP,
     updated_at: TIMESTAMP

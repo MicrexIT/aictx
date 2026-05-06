@@ -12,6 +12,7 @@ describe("aictx docs", () => {
     expect(output.stderr()).toBe("");
     expect(output.stdout()).toContain("Aictx docs: https://docs.aictx.dev/");
     expect(output.stdout()).toContain("- getting-started:");
+    expect(output.stdout()).toContain("- demand-driven-memory:");
     expect(output.stdout()).toContain("- agent-integration:");
   });
 
@@ -52,6 +53,17 @@ describe("aictx docs", () => {
     expect(envelope.data.topic).toBe("agent-integration");
     expect(envelope.data.url).toBe("https://docs.aictx.dev/agent-integration/");
     expect(envelope.data.content).toContain("# Agent integration");
+  });
+
+  it("prints the bundled demand-driven memory topic", async () => {
+    const output = createCapturedOutput();
+
+    const exitCode = await main(["node", "aictx", "docs", "memory-quality"], output.writers);
+
+    expect(exitCode).toBe(0);
+    expect(output.stderr()).toBe("");
+    expect(output.stdout()).toContain("# Demand-driven memory");
+    expect(output.stdout()).toContain("load -> work/fail/correction");
   });
 
   it("opens the hosted docs URL through the injected opener", async () => {

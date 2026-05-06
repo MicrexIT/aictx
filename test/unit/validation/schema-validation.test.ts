@@ -423,6 +423,52 @@ describe("schema validators", () => {
     expect(validatePatch(validators, patch).valid).toBe(true);
   });
 
+  it("accepts memory organization facets and source evidence", async () => {
+    const validators = await compileFixtureProject();
+
+    for (const category of [
+      "domain",
+      "bounded-context",
+      "capability",
+      "business-rule",
+      "unresolved-conflict"
+    ]) {
+      expect(
+        validateObject(
+          validators,
+          {
+            ...validObject,
+            id: `question.${category}`,
+            type: "question",
+            status: "open",
+            title: `Question for ${category}`,
+            body_path: `memory/questions/${category}.md`,
+            facets: {
+              category
+            }
+          },
+          `.aictx/memory/questions/${category}.json`
+        ).valid
+      ).toBe(true);
+    }
+
+    expect(
+      validatePatch(validators, {
+        source: { kind: "agent" },
+        changes: [
+          {
+            op: "create_object",
+            type: "synthesis",
+            title: "Source-backed synthesis",
+            body: "This synthesis is backed by source memory.",
+            facets: { category: "domain" },
+            evidence: [{ kind: "source", id: "source.readme" }]
+          }
+        ]
+      }).valid
+    ).toBe(true);
+  });
+
   it("keeps history, task-note, and feature invalid object types", async () => {
     const validators = await compileFixtureProject();
 

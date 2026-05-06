@@ -56,6 +56,13 @@ Object types are `project`, `architecture`, `source`, `synthesis`, `decision`,
 
 Do not create `history`, `task-note`, or `feature` object types.
 
+Facet categories include `project-description`, `architecture`, `stack`,
+`convention`, `file-layout`, `product-feature`, `testing`,
+`decision-rationale`, `abandoned-attempt`, `workflow`, `gotcha`,
+`debugging-fact`, `source`, `product-intent`, `feature-map`, `roadmap`,
+`agent-guidance`, `concept`, `open-question`, `domain`, `bounded-context`,
+`capability`, `business-rule`, and `unresolved-conflict`.
+
 ## Structured patch
 
 The structured patch is the only write contract.

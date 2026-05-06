@@ -393,12 +393,24 @@ V3 facet categories:
 * `workflow`
 * `gotcha`
 * `debugging-fact`
+* `source`
+* `product-intent`
+* `feature-map`
+* `roadmap`
+* `agent-guidance`
 * `concept`
 * `open-question`
+* `domain`
+* `bounded-context`
+* `capability`
+* `business-rule`
+* `unresolved-conflict`
 
 Rules:
 
 * Use facets instead of adding narrower object types.
+* Use `domain`, `bounded-context`, `capability`, and `business-rule` as optional plain-language organization hints.
+* Use `unresolved-conflict` for open questions that represent unresolved contradictory active memory.
 * Represent current product capabilities as `concept` objects with `facets.category: "product-feature"`.
 * Link product features from the owning project with `implements` when deterministic evidence shows the project provides the feature.
 * Use `mark_stale` for removed product features and `supersede_object` when a new feature replaces an older one.

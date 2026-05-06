@@ -19,6 +19,7 @@ export type AuditRule =
   | "missing_tags"
   | "missing_facets"
   | "missing_object_evidence"
+  | "synthesis_missing_source_provenance"
   | "task_diary_like_memory"
   | "oversized_vague_memory"
   | "duplicate_like_facet_category"
@@ -75,6 +76,7 @@ const RELATED_TO_WARNING_MINIMUM = 5;
 const RELATED_TO_WARNING_RATIO = 0.5;
 const REPEATED_CHANGE_MINIMUM = 2;
 const RATIONALE_TYPES = new Set(["decision", "fact", "gotcha", "synthesis"]);
+const SOURCE_PROVENANCE_PREDICATES = new Set(["derived_from", "summarizes", "documents"]);
 const SEVERITY_ORDER = new Map<AuditSeverity, number>([
   ["warning", 0],
   ["info", 1]
@@ -95,6 +97,7 @@ export async function buildAuditFindings(
   findings.push(...missingTagFindings(options.storage.objects));
   findings.push(...missingFacetFindings(options.storage));
   findings.push(...missingObjectEvidenceFindings(options.storage));
+  findings.push(...synthesisMissingSourceProvenanceFindings(options.storage));
   findings.push(...taskDiaryLikeFindings(options.storage.objects));
   findings.push(...oversizedVagueMemoryFindings(options.storage.objects));
   findings.push(...duplicateFacetCategoryFindings(options.storage.objects));
@@ -155,6 +158,63 @@ function missingObjectEvidenceFindings(storage: CanonicalStorageSnapshot): Audit
       message: "Decision, fact, and gotcha memory should include object-level evidence when possible.",
       evidence: [{ kind: "memory", id: object.sidecar.id }]
     }));
+}
+
+function synthesisMissingSourceProvenanceFindings(
+  storage: CanonicalStorageSnapshot
+): AuditFinding[] {
+  if (storage.config.version < 2) {
+    return [];
+  }
+
+  const activeSourceIds = new Set(
+    currentObjects(storage.objects, TAG_REQUIRED_STATUSES)
+      .filter((object) => object.sidecar.type === "source")
+      .map((object) => object.sidecar.id)
+  );
+
+  return currentObjects(storage.objects, TAG_REQUIRED_STATUSES)
+    .filter((object) => object.sidecar.type === "synthesis")
+    .filter((object) => !hasActiveSourceEvidence(object, activeSourceIds))
+    .filter((object) => !hasActiveSourceProvenanceRelation(storage, object, activeSourceIds))
+    .map((object) => ({
+      severity: "info",
+      rule: "synthesis_missing_source_provenance",
+      memory_id: object.sidecar.id,
+      message: "Synthesis memory should be backed by source evidence or an active source provenance relation.",
+      evidence: [{ kind: "memory", id: object.sidecar.id }]
+    }));
+}
+
+function hasActiveSourceEvidence(
+  object: StoredMemoryObject,
+  activeSourceIds: ReadonlySet<ObjectId>
+): boolean {
+  return (object.sidecar.evidence ?? []).some(
+    (evidence) => evidence.kind === "source" && activeSourceIds.has(evidence.id)
+  );
+}
+
+function hasActiveSourceProvenanceRelation(
+  storage: CanonicalStorageSnapshot,
+  object: StoredMemoryObject,
+  activeSourceIds: ReadonlySet<ObjectId>
+): boolean {
+  return storage.relations.some((relation) => {
+    if (
+      relation.relation.status !== "active" ||
+      !SOURCE_PROVENANCE_PREDICATES.has(relation.relation.predicate)
+    ) {
+      return false;
+    }
+
+    const fromMatches =
+      relation.relation.from === object.sidecar.id && activeSourceIds.has(relation.relation.to);
+    const toMatches =
+      relation.relation.to === object.sidecar.id && activeSourceIds.has(relation.relation.from);
+
+    return fromMatches || toMatches;
+  });
 }
 
 function taskDiaryLikeFindings(objects: readonly StoredMemoryObject[]): AuditFinding[] {

@@ -52,7 +52,7 @@ const TAGS_SCHEMA = z
 const EVIDENCE_SCHEMA = z.array(
   z
     .object({
-      kind: z.enum(["memory", "relation", "file", "commit", "task"]),
+      kind: z.enum(["memory", "relation", "file", "commit", "task", "source"]),
       id: z.string().min(1)
     })
     .strict()

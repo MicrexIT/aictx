@@ -17,6 +17,7 @@ type ContextSectionTitle =
   | "Architecture Snapshot"
   | "Relevant syntheses"
   | "Do not do"
+  | "Memory conflicts to resolve"
   | "Rationale Gaps"
   | "Linked History"
   | "Relevant decisions"
@@ -43,8 +44,17 @@ export interface RenderContextPackInput {
   git: GitState;
   mode?: LoadMemoryMode;
   ranked: RankedMemoryCandidates;
+  memoryConflicts?: readonly MemoryConflict[];
   linkedHistory?: readonly LinkedHistoryEntry[];
   rationaleGaps?: readonly RationaleGap[];
+}
+
+export interface MemoryConflict {
+  relationId: string;
+  fromId: ObjectId;
+  fromTitle: string;
+  toId: ObjectId;
+  toTitle: string;
 }
 
 export interface RenderContextPackOutput {
@@ -154,6 +164,7 @@ function buildSectionCandidates(
       sectionRequired("Relevant syntheses", mode)
     ),
     doNotDoSection(primaryItems),
+    memoryConflictsSection(input.memoryConflicts ?? []),
     rationaleGapsSection(input.rationaleGaps ?? []),
     linkedHistorySection(input.linkedHistory ?? []),
     memorySection(
@@ -391,6 +402,18 @@ function doNotDoSection(items: readonly RankedMemoryItem[]): SectionCandidate {
     title: "Do not do",
     required: true,
     bullets
+  };
+}
+
+function memoryConflictsSection(conflicts: readonly MemoryConflict[]): SectionCandidate {
+  return {
+    title: "Memory conflicts to resolve",
+    required: true,
+    bullets: conflicts.map((conflict) => ({
+      text: `- ${formatInline(conflict.fromTitle)} (${conflict.fromId}) conflicts with ${formatInline(conflict.toTitle)} (${conflict.toId}) via ${conflict.relationId}; prefer current code, tests, and the user request, then update, mark stale, supersede, or delete memory.`,
+      compactText: `- ${conflict.fromId} conflicts with ${conflict.toId} via ${conflict.relationId}; resolve memory before relying on either claim.`,
+      sourceIds: [conflict.fromId, conflict.toId]
+    }))
   };
 }
 

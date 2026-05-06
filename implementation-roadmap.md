@@ -2865,7 +2865,19 @@ Reasoning:
 * CLI and MCP adapters share command registration and response rendering.
 * Viewer server and UI tasks share the local API contract and browser workflow.
 
-## 19. Recommended Pull Request Slices
+## 19. Memory Quality and Demand-Driven Curation
+
+Near-term task:
+
+* Add docs, specs, guidance, facet categories, conflict rendering, source-backed synthesis audit, and suggestion hints for demand-driven memory repair.
+
+Later optional tasks:
+
+* Improve `aictx suggest --after-task` so real task outcomes more clearly surface missing, stale, duplicate, or conflicting memory.
+* Improve `aictx audit` to group memory quality issues around repeated failures, unresolved conflicts, and source-less syntheses.
+* Keep external systems deferred until local memory discipline is strong.
+
+## 20. Recommended Pull Request Slices
 
 If implementing via PRs, use these slices:
 
@@ -2899,7 +2911,7 @@ Rules:
 * A PR should not combine unrelated phases.
 * A PR should include tests for the behavior it adds.
 
-## 20. V1 Completion Criteria
+## 21. V1 Completion Criteria
 
 V1 implementation is complete when:
 

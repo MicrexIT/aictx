@@ -263,6 +263,78 @@ describe("audit discipline findings", () => {
     expect(rules.has("duplicate_like_facet_category")).toBe(true);
   });
 
+  it("reports active syntheses without source evidence or source provenance relations", async () => {
+    const projectRoot = await createTempRoot("aictx-discipline-audit-synthesis-source-");
+    const storage = storageSnapshot({
+      projectRoot,
+      version: 3,
+      objects: [
+        memoryObject({
+          id: "source.readme",
+          type: "source",
+          title: "Source README",
+          body: longBody("README source record for synthesis provenance."),
+          facets: { category: "source" },
+          evidence: [{ kind: "file", id: "README.md" }]
+        }),
+        memoryObject({
+          id: "synthesis.no-source",
+          type: "synthesis",
+          title: "Synthesis without source",
+          body: longBody("This synthesis lacks source provenance."),
+          facets: { category: "product-intent" },
+          evidence: []
+        }),
+        memoryObject({
+          id: "synthesis.source-evidence",
+          type: "synthesis",
+          title: "Synthesis with source evidence",
+          body: longBody("This synthesis uses source evidence."),
+          facets: { category: "product-intent" },
+          evidence: [{ kind: "source", id: "source.readme" }]
+        }),
+        memoryObject({
+          id: "synthesis.source-relation",
+          type: "synthesis",
+          title: "Synthesis with source relation",
+          body: longBody("This synthesis uses a source provenance relation."),
+          facets: { category: "product-intent" },
+          evidence: []
+        })
+      ],
+      relations: [
+        relation({
+          id: "rel.synthesis-derived-from-readme",
+          from: "synthesis.source-relation",
+          predicate: "derived_from",
+          to: "source.readme"
+        })
+      ]
+    });
+
+    const findings = await buildAuditFindings({ projectRoot, storage });
+
+    expect(findings).toContainEqual(
+      expect.objectContaining({
+        rule: "synthesis_missing_source_provenance",
+        memory_id: "synthesis.no-source",
+        evidence: [{ kind: "memory", id: "synthesis.no-source" }]
+      })
+    );
+    expect(findings).not.toContainEqual(
+      expect.objectContaining({
+        rule: "synthesis_missing_source_provenance",
+        memory_id: "synthesis.source-evidence"
+      })
+    );
+    expect(findings).not.toContainEqual(
+      expect.objectContaining({
+        rule: "synthesis_missing_source_provenance",
+        memory_id: "synthesis.source-relation"
+      })
+    );
+  });
+
   it("reports weak connectivity, unlinked applicability overlap, related_to overuse, and missing rationale gaps", async () => {
     const projectRoot = await createTempRoot("aictx-discipline-audit-connectivity-");
     const storage = storageSnapshot({

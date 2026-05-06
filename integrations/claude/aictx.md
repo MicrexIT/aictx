@@ -137,6 +137,14 @@ When Aictx memory changed, mention that asynchronous inspection is available thr
 
 Apply the memory discipline lifecycle: load narrowly before non-trivial work, save only durable knowledge directly as active memory, update existing memory before creating duplicates, stale or supersede wrong old memory, delete memory that should not persist, prefer current code and user requests over loaded memory, report whether memory changed, and save nothing when there is no durable future value.
 
+After failure or correction, treat the event as a memory-quality signal:
+
+* Did the agent need missing project context?
+* Did loaded memory conflict with current evidence?
+* Did the user correct a stale assumption?
+* Should existing memory be updated, marked stale, superseded, or deleted?
+* Should an open `question`, `gotcha`, `source`, or `synthesis` be saved?
+
 Save durable project knowledge, such as:
 
 * Architecture decisions
@@ -236,8 +244,20 @@ Use facets to make broad object types retrieval-friendly without inventing new o
 * `feature-map`
 * `roadmap`
 * `agent-guidance`
+* `domain`
+* `bounded-context`
+* `capability`
+* `business-rule`
+* `unresolved-conflict`
 
 Use `facets.applies_to` for relevant files, directories, subsystems, commands, or config names. Use `facets.load_modes` only when a memory is especially relevant to `coding`, `debugging`, `review`, `architecture`, or `onboarding`.
+
+Memory organization hints:
+
+* Use `domain`, `bounded-context`, and `capability` for plain-language product areas, subsystems, workflows, APIs, or capabilities. These are optional organization hints, not mandatory DDD terminology.
+* Use `business-rule` for durable product or domain rules.
+* Use `unresolved-conflict` on open `question` memory when active memories disagree and current evidence cannot resolve the contradiction.
+* Durable syntheses should usually have source evidence or active source provenance relations.
 
 Use object-level `evidence` for the current proof behind durable claims, such as `{ "kind": "file", "id": "src/billing/webhook.ts" }`, `{ "kind": "commit", "id": "abc123" }`, `{ "kind": "memory", "id": "decision.billing-retries" }`, `{ "kind": "relation", "id": "rel.example" }`, `{ "kind": "source", "id": "source.readme" }`, or `{ "kind": "task", "id": "Fix Stripe webhook retries" }`.
 

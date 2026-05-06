@@ -14,9 +14,13 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { initProject, loadMemory, rebuildIndex } from "../../../src/app/operations.js";
 import type { Evidence, ObjectFacets, ObjectStatus, ObjectType } from "../../../src/core/types.js";
-import { computeObjectContentHash } from "../../../src/storage/hashes.js";
+import {
+  computeObjectContentHash,
+  computeRelationContentHash
+} from "../../../src/storage/hashes.js";
 import type { AictxConfig, MemoryObjectSidecar } from "../../../src/storage/objects.js";
 import { readCanonicalStorage } from "../../../src/storage/read.js";
+import type { MemoryRelation } from "../../../src/storage/relations.js";
 import {
   createFixedTestClock,
   FIXED_TIMESTAMP,
@@ -173,6 +177,150 @@ describe("loadMemory integration", () => {
     expect(result.data.context_pack).toContain("Agent memory guidance");
     expect(result.data.context_pack).toContain("## Relevant sources");
     expect(result.data.context_pack).toContain("Source: docs/agent-integration.md");
+  });
+
+  it("surfaces active memory conflicts from conflicts_with relations", async () => {
+    const projectRoot = await createInitializedProject("aictx-load-conflicts-");
+    await writeMemoryObject(projectRoot, {
+      id: "decision.webhook-worker-retries",
+      type: "decision",
+      status: "active",
+      title: "Webhook retries run in the worker",
+      bodyPath: "memory/decisions/webhook-worker-retries.md",
+      body: "# Webhook retries run in the worker\n\nWebhook retry execution happens in the worker.\n",
+      tags: ["webhook", "retries"],
+      facets: { category: "decision-rationale" },
+      updatedAt: FIXED_TIMESTAMP_NEXT_MINUTE
+    });
+    await writeMemoryObject(projectRoot, {
+      id: "decision.webhook-handler-retries",
+      type: "decision",
+      status: "active",
+      title: "Webhook retries run in the handler",
+      bodyPath: "memory/decisions/webhook-handler-retries.md",
+      body: "# Webhook retries run in the handler\n\nWebhook retry execution happens in the handler.\n",
+      tags: ["webhook", "retries"],
+      facets: { category: "decision-rationale" },
+      updatedAt: FIXED_TIMESTAMP_NEXT_MINUTE
+    });
+    await writeMemoryRelation(projectRoot, {
+      id: "rel.webhook-worker-conflicts-handler",
+      from: "decision.webhook-worker-retries",
+      predicate: "conflicts_with",
+      to: "decision.webhook-handler-retries",
+      status: "active",
+      confidence: "high",
+      created_at: FIXED_TIMESTAMP_NEXT_MINUTE,
+      updated_at: FIXED_TIMESTAMP_NEXT_MINUTE
+    });
+    const rebuilt = await rebuildIndex({
+      cwd: projectRoot,
+      clock: createFixedTestClock(FIXED_TIMESTAMP_NEXT_MINUTE)
+    });
+
+    expect(rebuilt.ok).toBe(true);
+
+    const result = await loadMemory({
+      cwd: projectRoot,
+      task: "resolve webhook retry conflict",
+      clock: createFixedTestClock(FIXED_TIMESTAMP_NEXT_MINUTE)
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+
+    expect(result.data.context_pack).toContain("## Memory conflicts to resolve");
+    expect(result.data.context_pack).toContain("rel.webhook-worker-conflicts-handler");
+    expect(result.data.included_ids).toEqual(
+      expect.arrayContaining([
+        "decision.webhook-worker-retries",
+        "decision.webhook-handler-retries"
+      ])
+    );
+    expect(result.data.excluded_ids).toEqual(
+      expect.arrayContaining([
+        "decision.webhook-worker-retries",
+        "decision.webhook-handler-retries"
+      ])
+    );
+    expect(sectionText(result.data.context_pack, "Must know")).not.toContain(
+      "Webhook retries run in the worker"
+    );
+    expect(sectionText(result.data.context_pack, "Must know")).not.toContain(
+      "Webhook retries run in the handler"
+    );
+  });
+
+  it("does not surface conflicts from out-of-scope memory endpoints", async () => {
+    const projectRoot = await createInitializedProject("aictx-load-conflicts-scope-");
+    const storage = await readStorageOrThrow(projectRoot);
+
+    await writeMemoryObject(projectRoot, {
+      id: "decision.webhook-project-retries",
+      type: "decision",
+      status: "active",
+      title: "Webhook retries use project policy",
+      bodyPath: "memory/decisions/webhook-project-retries.md",
+      body:
+        "# Webhook retries use project policy\n\nWebhook retry conflict resolution follows the project policy.\n",
+      tags: ["webhook", "retries", "conflict"],
+      facets: { category: "decision-rationale" },
+      updatedAt: FIXED_TIMESTAMP_NEXT_MINUTE
+    });
+    await writeMemoryObject(projectRoot, {
+      id: "decision.webhook-branch-retries",
+      type: "decision",
+      status: "active",
+      title: "Webhook retries use task-only policy",
+      bodyPath: "memory/decisions/webhook-branch-retries.md",
+      body:
+        "# Webhook retries use task-only policy\n\nWebhook retry conflict resolution follows a task-only policy.\n",
+      tags: ["webhook", "retries", "conflict"],
+      scope: {
+        kind: "task",
+        project: storage.config.project.id,
+        branch: null,
+        task: "migrate billing ledger"
+      },
+      facets: { category: "decision-rationale" },
+      updatedAt: FIXED_TIMESTAMP_NEXT_MINUTE
+    });
+    await writeMemoryRelation(projectRoot, {
+      id: "rel.webhook-project-conflicts-branch",
+      from: "decision.webhook-project-retries",
+      predicate: "conflicts_with",
+      to: "decision.webhook-branch-retries",
+      status: "active",
+      confidence: "high",
+      created_at: FIXED_TIMESTAMP_NEXT_MINUTE,
+      updated_at: FIXED_TIMESTAMP_NEXT_MINUTE
+    });
+    const rebuilt = await rebuildIndex({
+      cwd: projectRoot,
+      clock: createFixedTestClock(FIXED_TIMESTAMP_NEXT_MINUTE)
+    });
+
+    expect(rebuilt.ok).toBe(true);
+
+    const result = await loadMemory({
+      cwd: projectRoot,
+      task: "resolve webhook retry conflict",
+      clock: createFixedTestClock(FIXED_TIMESTAMP_NEXT_MINUTE)
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+
+    expect(result.data.context_pack).not.toContain("## Memory conflicts to resolve");
+    expect(sectionText(result.data.context_pack, "Must know")).toContain(
+      "Webhook retries use project policy"
+    );
+    expect(result.data.included_ids).toContain("decision.webhook-project-retries");
+    expect(result.data.excluded_ids).not.toContain("decision.webhook-project-retries");
   });
 
   it("applies mode-aware ranking and rendering through loadMemory", async () => {
@@ -446,6 +594,7 @@ interface MemoryFixture {
   bodyPath: string;
   body: string;
   tags: string[];
+  scope?: MemoryObjectSidecar["scope"];
   facets?: ObjectFacets;
   evidence?: Evidence[];
   updatedAt?: string;
@@ -569,7 +718,7 @@ async function writeMemoryObject(projectRoot: string, fixture: MemoryFixture): P
     status: fixture.status,
     title: fixture.title,
     body_path: fixture.bodyPath,
-    scope: {
+    scope: fixture.scope ?? {
       kind: "project",
       project: storage.config.project.id,
       branch: null,
@@ -597,6 +746,22 @@ async function writeMemoryObject(projectRoot: string, fixture: MemoryFixture): P
   );
 }
 
+async function writeMemoryRelation(
+  projectRoot: string,
+  relation: Omit<MemoryRelation, "content_hash">
+): Promise<void> {
+  const withHash: MemoryRelation = {
+    ...relation,
+    content_hash: computeRelationContentHash(relation)
+  };
+
+  await writeJsonProjectFile(
+    projectRoot,
+    `.aictx/relations/${relation.id.replace(/^rel\./u, "")}.json`,
+    withHash
+  );
+}
+
 async function updateConfig(
   projectRoot: string,
   update: (config: AictxConfig) => void
@@ -617,6 +782,18 @@ async function readStorageOrThrow(projectRoot: string) {
   }
 
   return storage.data;
+}
+
+function sectionText(markdown: string, title: string): string {
+  const start = markdown.indexOf(`## ${title}`);
+
+  if (start === -1) {
+    return "";
+  }
+
+  const next = markdown.indexOf("\n## ", start + 1);
+
+  return next === -1 ? markdown.slice(start) : markdown.slice(start, next);
 }
 
 async function writeProjectFile(

@@ -144,13 +144,18 @@ const RECOMMENDED_FACETS: FacetCategory[] = [
   "file-layout",
   "stack",
   "abandoned-attempt",
-  "open-question"
+  "open-question",
+  "domain",
+  "bounded-context",
+  "capability",
+  "business-rule"
 ];
 const AGENT_CHECKLIST = [
   "Create memory only for durable future value.",
   "Prefer updating, marking stale, or superseding existing memory over creating duplicates.",
   "Use current code, tests, manifests, and user instructions as evidence.",
   "Right-size memory: atomic for precise claims, source for provenance, synthesis for compact area-level understanding.",
+  "Treat failure, confusion, user correction, and memory conflicts as signals to repair durable memory.",
   "Save nothing if the work produced no durable future value."
 ] as const;
 const BOOTSTRAP_PRODUCT_FEATURE_CHECKLIST_ITEM =
@@ -162,8 +167,10 @@ const SAVE_DECISION_CHECKLIST = [
   "Save memory only when the task produced durable future value.",
   "Prefer updating, marking stale, or superseding related memory over creating duplicates.",
   "Choose the right layer: atomic memory for precise claims, source records for provenance, synthesis records for compact area-level summaries.",
+  "Back durable synthesis memory with source evidence or source provenance relations when possible.",
   "Add facets.category and evidence when creating or updating durable memory.",
   "Use facets.applies_to for relevant files, subsystems, commands, or configs.",
+  "Use unresolved-conflict questions when current evidence cannot resolve contradictory active memory.",
   "Record abandoned approaches as active abandoned-attempt memory only when future agents should avoid retrying them."
 ] as const;
 const STALE_CANDIDATE_STATUSES = new Set<ObjectStatus>([
@@ -300,7 +307,7 @@ export function buildSuggestAfterTaskPacket(
     recommended_memory: recommendedMemoryForTask(options.task, changedFiles),
     recommended_evidence: recommendedFileEvidence(changedFiles),
     recommended_relations: recommendedRelations(options.storage, changedFiles),
-    recommended_facets: recommendedFacetsForTask(options.task, changedFiles),
+    recommended_facets: recommendedFacetsForTask(options.task, changedFiles, options.storage),
     save_decision_checklist: [...SAVE_DECISION_CHECKLIST],
     agent_checklist: [...AGENT_CHECKLIST]
   };
@@ -547,7 +554,8 @@ function recommendedMemoryForTask(task: string, changedFiles: readonly string[])
 
 function recommendedFacetsForTask(
   task: string,
-  changedFiles: readonly string[]
+  changedFiles: readonly string[],
+  storage: CanonicalStorageSnapshot
 ): FacetCategory[] {
   const recommended = new Set<FacetCategory>();
   const taskText = task.toLowerCase();
@@ -568,13 +576,48 @@ function recommendedFacetsForTask(
 
   if (isProductFeatureTask(task, changedFiles)) {
     recommended.add("product-feature");
+    recommended.add("capability");
+  }
+
+  if (/\b(domain|bounded context|subsystem|product area|business rule)\b/u.test(taskText)) {
+    recommended.add("domain");
+    recommended.add("bounded-context");
+    recommended.add("business-rule");
   }
 
   for (const facet of RECOMMENDED_FACETS) {
     recommended.add(facet);
   }
 
+  if (hasConflictSignal(taskText) || activeConflictsTouchRelatedMemory(storage, changedFiles)) {
+    recommended.add("unresolved-conflict");
+  }
+
   return [...recommended];
+}
+
+function hasConflictSignal(taskText: string): boolean {
+  return /\b(conflicts?|contradictions?|contradictory|stale|corrections?|corrected|wrong assumptions?|ambiguous|ambiguity)\b/u.test(
+    taskText
+  );
+}
+
+function activeConflictsTouchRelatedMemory(
+  storage: CanonicalStorageSnapshot,
+  changedFiles: readonly string[]
+): boolean {
+  const related = new Set(relatedMemoryIds(storage, changedFiles));
+
+  if (related.size === 0) {
+    return false;
+  }
+
+  return storage.relations.some(
+    (relation) =>
+      relation.relation.status === "active" &&
+      relation.relation.predicate === "conflicts_with" &&
+      (related.has(relation.relation.from) || related.has(relation.relation.to))
+  );
 }
 
 function isTestPath(path: string): boolean {

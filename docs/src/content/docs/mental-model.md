@@ -43,6 +43,19 @@ Do not create `history`, `task-note`, or `feature` object types. Use Git,
 events, and object statuses for history; branch or task scope for temporary task
 context; and `concept` or `synthesis` facets for product capabilities.
 
+## Demand-driven memory quality
+
+Use real work to improve memory. Agent failure, confusion, stale loaded context,
+and user correction are signals that durable memory may need repair.
+
+The lean loop is:
+
+```text
+load -> work/fail/correction -> identify memory gap -> save memory repair
+```
+
+See [Demand-driven memory](/demand-driven-memory/) for the user-facing workflow.
+
 ## Retrieval
 
 `aictx load "<task summary>"` compiles a task-focused context pack. Load modes

@@ -22,7 +22,7 @@ export default defineConfig({
       sidebar: [
         {
           label: "Start Here",
-          items: ["getting-started", "mental-model"]
+          items: ["getting-started", "mental-model", "demand-driven-memory"]
         },
         {
           label: "Use Aictx",

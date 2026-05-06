@@ -574,6 +574,8 @@ Rendering rules:
 * `Linked History` may show recent Git file-change metadata for hinted files as "this changed" evidence only.
 * `Relevant files` should include path-like references found in selected memory bodies, source payloads, `facets.applies_to`, and file evidence; omit the section when no file references are available.
 * Memories with `facets.category: "abandoned-attempt"` should render as active warnings in `Abandoned approaches`, not as stale memory.
+* Active memories connected by active `conflicts_with` relations should be excluded from `Must know` and rendered in `Memory conflicts to resolve` with both memory IDs and the relation ID.
+* `Memory conflicts to resolve` should tell agents to prefer current code, tests, and the user request before updating, marking stale, superseding, or deleting memory.
 * Token target, estimated token count, budget status, truncation status, and omitted IDs are structured output metadata, not Markdown context.
 
 Example:

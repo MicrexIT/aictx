@@ -102,6 +102,14 @@ const memoryPatchOperations = [
   "`create_relation`"
 ] as const;
 
+const organizationFacets = [
+  "`domain`",
+  "`bounded-context`",
+  "`capability`",
+  "`business-rule`",
+  "`unresolved-conflict`"
+] as const;
+
 async function readProjectFile(path: string): Promise<string> {
   return readFile(join(root, path), "utf8");
 }
@@ -225,6 +233,9 @@ describe("agent guidance content", () => {
       expect(content).toMatch(/Update-before-create/i);
       expect(content).toMatch(/Create a new object only when no existing memory should be updated, marked stale, or superseded/i);
       expect(content).toMatch(/Save-nothing-is-valid/i);
+      expect(content).toMatch(/After failure or correction/i);
+      expect(content).toContain("Did loaded memory conflict with current evidence?");
+      expect(content).toContain("Should existing memory be updated, marked stale, superseded, or deleted?");
 
       for (const operation of memoryPatchOperations) {
         expect(content).toContain(operation);
@@ -260,6 +271,8 @@ describe("agent guidance content", () => {
       expect(content).toContain("product-feature");
       expect(content).toMatch(/source[- ](?:backed|records?)/i);
       expect(content).toMatch(/synthes/i);
+      expect(content).toContain("Durable syntheses should usually have source evidence or active source provenance relations.");
+      expect(content).toContain("not mandatory DDD terminology");
       expect(content).toContain("Do not create `history`, `task-note`, or `feature` object types");
       expect(content).toContain("why is memory empty?");
       expect(content).toContain("run the bootstrap workflow proactively");
@@ -283,6 +296,10 @@ describe("agent guidance content", () => {
 
       for (const objectType of objectTypes) {
         expect(content).toContain(objectType);
+      }
+
+      for (const facet of organizationFacets) {
+        expect(content).toContain(facet);
       }
 
       expect(content).toContain("Do not create `history`, `task-note`, or `feature` object types");

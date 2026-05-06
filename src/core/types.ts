@@ -43,7 +43,12 @@ export const FACET_CATEGORIES = [
   "roadmap",
   "agent-guidance",
   "concept",
-  "open-question"
+  "open-question",
+  "domain",
+  "bounded-context",
+  "capability",
+  "business-rule",
+  "unresolved-conflict"
 ] as const;
 
 export type FacetCategory = (typeof FACET_CATEGORIES)[number];

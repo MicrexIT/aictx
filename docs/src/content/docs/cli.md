@@ -84,6 +84,7 @@ CLI-only capabilities are not MCP parity gaps.
 ```bash
 aictx docs
 aictx docs getting-started
+aictx docs demand-driven-memory
 aictx docs agent-integration --open
 ```
 

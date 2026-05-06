@@ -132,6 +132,14 @@ Apply the lifecycle consistently:
   the viewer, `aictx diff`, or Git tools.
 - Save nothing when the task produced no durable future value.
 
+After failure or correction, check whether memory needs repair:
+
+- Did the agent need missing project context?
+- Did loaded memory conflict with current evidence?
+- Did the user correct a stale assumption?
+- Should existing memory be updated, marked stale, superseded, or deleted?
+- Should an open `question`, `gotcha`, `source`, or `synthesis` be saved?
+
 Right-size memory:
 
 - Atomic memories normally carry one durable claim.
@@ -170,6 +178,12 @@ Object types are `project`, `architecture`, `decision`, `constraint`,
 `synthesis`.
 
 Use `gotcha` for known failure modes and traps. Use `workflow` for repeated project procedures. Do not create `history`, `task-note`, or `feature` object types.
+
+Use organization facets such as `domain`, `bounded-context`, `capability`,
+`business-rule`, and `unresolved-conflict` as plain-language retrieval hints.
+These are optional organization hints, not mandatory DDD terminology.
+
+Durable syntheses should usually have source evidence or active source provenance relations.
 
 ## Good memory examples
 
@@ -223,3 +237,5 @@ During setup, capture explicit product features with the `product-feature`
 facet when needed. Prefer source-backed syntheses for product intent, feature
 maps, roadmap, architecture, conventions, agent guidance, and repeated
 workflows.
+
+For the full memory-quality loop, see [Demand-driven memory](/demand-driven-memory/).

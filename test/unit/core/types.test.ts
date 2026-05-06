@@ -48,7 +48,12 @@ describe("core domain type constants", () => {
       "roadmap",
       "agent-guidance",
       "concept",
-      "open-question"
+      "open-question",
+      "domain",
+      "bounded-context",
+      "capability",
+      "business-rule",
+      "unresolved-conflict"
     ]);
   });
 

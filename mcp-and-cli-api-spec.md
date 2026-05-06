@@ -637,6 +637,8 @@ Behavior:
 * `--from-diff` reads the current non-generated project diff and related Aictx memory but does not create memory patches.
 * `--bootstrap` works with or without Git and lists likely files for the agent to inspect before creating seed memory.
 * `--after-task` packages changed files, related memory, duplicate or stale candidates, recommended facets, and a save/no-save checklist for the completed task.
+* `--after-task` should recommend `unresolved-conflict` when related active memory is connected by `conflicts_with` or the task mentions conflict, correction, stale assumptions, or ambiguity.
+* Suggestion packets should recommend source-backed syntheses and plain-language organization facets such as `domain`, `bounded-context`, `capability`, and `business-rule` when useful.
 * `--patch` is valid only with `--bootstrap`; it emits a conservative proposed patch suitable for inspection and `aictx save --file`.
 * `--bootstrap --patch` updates init-created project and architecture placeholders when deterministic evidence is strong, creates source records for important repo files and guidance, creates maintained syntheses for product intent, feature map, and agent guidance when evidence supports them, creates small workflow or constraint memories from package metadata when useful, proposes provenance relations such as `derived_from`, `summarizes`, and `documents`, proposes the starter project-to-architecture relation when it is missing, and emits no patch only when there is no deterministic source, synthesis, workflow, constraint, or starter relation to create.
 * All suggestion modes must be deterministic, local-only, and read-only for canonical memory.

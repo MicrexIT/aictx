@@ -79,6 +79,14 @@ const DOC_TOPICS = [
     aliases: ["model", "memory-model"]
   },
   {
+    topic: "demand-driven-memory",
+    title: "Demand-driven memory",
+    description: "Use agent failure, confusion, and correction to improve durable project memory.",
+    file: "demand-driven-memory.md",
+    path: "/demand-driven-memory/",
+    aliases: ["demand-driven", "memory-quality", "context-engine"]
+  },
+  {
     topic: "cli",
     title: "CLI guide",
     description: "Use setup, routine memory, inspection, recovery, export, viewer, and docs commands.",

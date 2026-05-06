@@ -1,0 +1,17 @@
+{
+  "confidence": "high",
+  "content_hash": "sha256:4fb21a8e6ee17dec6fed3a901ee096b571a0a3eb25d1d1de15cd2c6202c1f512",
+  "created_at": "2026-05-06T09:53:46+02:00",
+  "evidence": [
+    {
+      "id": "source.demand-driven-context-transcript",
+      "kind": "source"
+    }
+  ],
+  "from": "question.demand-driven-context-roadmap",
+  "id": "rel.question-demand-driven-context-roadmap-derived-from-source-demand-driven-context-transcript",
+  "predicate": "derived_from",
+  "status": "active",
+  "to": "source.demand-driven-context-transcript",
+  "updated_at": "2026-05-06T09:53:46+02:00"
+}

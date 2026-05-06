@@ -308,11 +308,13 @@ Create a relation with `create_relation` when the connection is durable and usef
 }
 ```
 
-The object types remain broad: `project`, `architecture`, `decision`, `constraint`, `question`, `fact`, `gotcha`, `workflow`, `note`, `concept`, `source`, and `synthesis`. Use facets for more specific durable categories such as `stack`, `convention`, `testing`, `file-layout`, `product-feature`, `feature-map`, `product-intent`, `roadmap`, `agent-guidance`, `source`, `decision-rationale`, `abandoned-attempt`, `workflow`, `gotcha`, and `debugging-fact`. Do not create `history`, `task-note`, or `feature` object types; use Git/events/statuses for history, branch/task scope for temporary task context, and `concept` or `synthesis` facets for product capabilities.
+The object types remain broad: `project`, `architecture`, `decision`, `constraint`, `question`, `fact`, `gotcha`, `workflow`, `note`, `concept`, `source`, and `synthesis`. Use facets for more specific durable categories such as `stack`, `convention`, `testing`, `file-layout`, `product-feature`, `feature-map`, `product-intent`, `roadmap`, `agent-guidance`, `source`, `decision-rationale`, `abandoned-attempt`, `workflow`, `gotcha`, `debugging-fact`, `domain`, `bounded-context`, `capability`, `business-rule`, and `unresolved-conflict`. Do not create `history`, `task-note`, or `feature` object types; use Git/events/statuses for history, branch/task scope for temporary task context, and `concept` or `synthesis` facets for product capabilities.
 
 After meaningful work, prefer `aictx suggest --after-task "<task>" --json` before saving memory when the right durable update is not obvious. The helper is read-only and packages changed files, related memory, stale or duplicate candidates, recommended facets, and a save/no-save checklist.
 
 Use `facets.applies_to` to tie memory to relevant files, tests, configs, routes, UI modules, or subsystems. Add object-level `evidence` when a durable decision, gotcha, fact, convention, or product feature depends on a file, commit, memory object, relation, or task. Leave evidence empty rather than inventing support.
+
+After failure, confusion, or user correction, check whether memory needs repair: missing context, stale assumptions, conflicting active memory, or tribal knowledge should usually become an update, stale/supersede/delete operation, `gotcha`, `question`, `source`, or maintained `synthesis`.
 
 Do not save secrets, tokens, credentials, private keys, sensitive logs, unverified speculation, or short-lived implementation notes.
 

@@ -20,7 +20,7 @@ import {
   normalizeLoadMemoryMode,
   type LoadMemoryMode
 } from "./modes.js";
-import { renderContextPack } from "./render.js";
+import { renderContextPack, type MemoryConflict } from "./render.js";
 import { MAX_TOKEN_BUDGET, normalizeTokenBudget } from "./tokens.js";
 import {
   hintedFiles,
@@ -190,6 +190,21 @@ export async function compileContextPack(
     hints: hints.data,
     searchResults: searched.data.matches
   });
+  const relations = storage.data.relations.map((relation) => relation.relation);
+  const preliminaryRanked = rankMemoryCandidates({
+    task: task.data,
+    hints: hints.data,
+    mode: mode.data,
+    projectId: storage.data.config.project.id,
+    git: options.git,
+    candidates,
+    relations
+  });
+  const scopedCandidateIds = new Set(preliminaryRanked.items.map((item) => item.id));
+  const memoryConflicts = memoryConflictsForCandidates(
+    candidates.filter((candidate) => scopedCandidateIds.has(candidate.id)),
+    relations
+  );
   const ranked = rankMemoryCandidates({
     task: task.data,
     hints: hints.data,
@@ -197,7 +212,8 @@ export async function compileContextPack(
     projectId: storage.data.config.project.id,
     git: options.git,
     candidates,
-    relations: storage.data.relations.map((relation) => relation.relation)
+    relations,
+    conflictedIds: conflictedIdsFromConflicts(memoryConflicts)
   });
   const rendered = renderContextPack({
     task: task.data,
@@ -206,6 +222,7 @@ export async function compileContextPack(
     git: options.git,
     mode: mode.data,
     ranked,
+    memoryConflicts,
     linkedHistory: linkedHistoryEntries(options.gitFileChanges ?? [], hints.data),
     rationaleGaps: rationaleGaps({
       storage: storage.data,
@@ -698,6 +715,64 @@ function rankCandidateFromStoredObject(object: StoredMemoryObject): RankMemoryCa
     ...(sidecar.evidence === undefined ? {} : { evidence: sidecar.evidence }),
     updated_at: sidecar.updated_at
   };
+}
+
+function memoryConflictsForCandidates(
+  candidates: readonly RankMemoryCandidate[],
+  relations: readonly MemoryRelation[]
+): MemoryConflict[] {
+  const currentCandidates = new Map(
+    candidates
+      .filter(isCurrentConflictCandidate)
+      .map((candidate) => [candidate.id, candidate] as const)
+  );
+  const conflicts: MemoryConflict[] = [];
+
+  for (const relation of relations) {
+    if (relation.status !== "active" || relation.predicate !== "conflicts_with") {
+      continue;
+    }
+
+    const from = currentCandidates.get(relation.from);
+    const to = currentCandidates.get(relation.to);
+
+    if (from === undefined || to === undefined) {
+      continue;
+    }
+
+    conflicts.push({
+      relationId: relation.id,
+      fromId: from.id,
+      fromTitle: from.title,
+      toId: to.id,
+      toTitle: to.title
+    });
+  }
+
+  return conflicts.sort(compareMemoryConflicts);
+}
+
+function isCurrentConflictCandidate(candidate: RankMemoryCandidate): boolean {
+  return candidate.status === "active" || candidate.status === "open";
+}
+
+function conflictedIdsFromConflicts(conflicts: readonly MemoryConflict[]): ObjectId[] {
+  const ids = new Set<ObjectId>();
+
+  for (const conflict of conflicts) {
+    ids.add(conflict.fromId);
+    ids.add(conflict.toId);
+  }
+
+  return [...ids].sort();
+}
+
+function compareMemoryConflicts(left: MemoryConflict, right: MemoryConflict): number {
+  return (
+    left.relationId.localeCompare(right.relationId) ||
+    left.fromId.localeCompare(right.fromId) ||
+    left.toId.localeCompare(right.toId)
+  );
 }
 
 function normalizedObjectStatus(object: StoredMemoryObject): ObjectStatus | null {

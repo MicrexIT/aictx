@@ -237,7 +237,8 @@ describe("aictx MCP save_memory_patch tool", () => {
       });
       expect(saved?.sidecar.evidence).toEqual([
         { kind: "file", id: "src/mcp/tools/save-memory-patch.ts" },
-        { kind: "task", id: "Save MCP faceted memory" }
+        { kind: "task", id: "Save MCP faceted memory" },
+        { kind: "source", id: "source.mcp-docs" }
       ]);
     } finally {
       await started.close();
@@ -515,7 +516,8 @@ function createFacetedPatch() {
         },
         evidence: [
           { kind: "file", id: "src/mcp/tools/save-memory-patch.ts" },
-          { kind: "task", id: "Save MCP faceted memory" }
+          { kind: "task", id: "Save MCP faceted memory" },
+          { kind: "source", id: "source.mcp-docs" }
         ]
       }
     ]

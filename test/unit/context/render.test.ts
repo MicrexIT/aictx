@@ -306,6 +306,66 @@ describe("context pack rendering", () => {
     expect(result.excludedIds).toEqual(["constraint.conflicted-webhook"]);
   });
 
+  it("renders memory conflicts with relation metadata after do-not-do guidance", () => {
+    const active = item({
+      id: "constraint.active-webhook",
+      type: "constraint",
+      title: "Active webhook behavior",
+      body: "Do not retry synchronously inside webhook handlers."
+    });
+    const left = item({
+      id: "decision.webhook-worker",
+      type: "decision",
+      title: "Retries run in the worker",
+      conflicted: true
+    });
+    const right = item({
+      id: "decision.webhook-handler",
+      type: "decision",
+      title: "Retries run in the handler",
+      conflicted: true
+    });
+    const result = renderContextPack(
+      input({
+        ranked: ranked({
+          items: [active, left, right],
+          mustKnow: [active],
+          excluded: [
+            excluded(left, "conflicted_high_priority"),
+            excluded(right, "conflicted_high_priority")
+          ]
+        }),
+        memoryConflicts: [
+          {
+            relationId: "rel.worker-conflicts-handler",
+            fromId: "decision.webhook-worker",
+            fromTitle: "Retries run in the worker",
+            toId: "decision.webhook-handler",
+            toTitle: "Retries run in the handler"
+          }
+        ]
+      })
+    );
+    const conflicts = sectionText(result.markdown, "Memory conflicts to resolve");
+
+    expect(sectionIndex(result.markdown, "Do not do")).toBeLessThan(
+      sectionIndex(result.markdown, "Memory conflicts to resolve")
+    );
+    expect(conflicts).toContain("Retries run in the worker");
+    expect(conflicts).toContain("decision.webhook-handler");
+    expect(conflicts).toContain("rel.worker-conflicts-handler");
+    expect(conflicts).toContain("prefer current code, tests, and the user request");
+    expect(result.includedIds).toEqual([
+      "constraint.active-webhook",
+      "decision.webhook-worker",
+      "decision.webhook-handler"
+    ]);
+    expect(result.excludedIds).toEqual([
+      "decision.webhook-worker",
+      "decision.webhook-handler"
+    ]);
+  });
+
   it("renders all selected content when no token target is requested", () => {
     const mustKnow = Array.from({ length: 24 }, (_, index) =>
       item({
@@ -627,6 +687,10 @@ function input(overrides: Partial<RenderContextPackInput> = {}): RenderContextPa
 
   if (overrides.rationaleGaps !== undefined) {
     result.rationaleGaps = overrides.rationaleGaps;
+  }
+
+  if (overrides.memoryConflicts !== undefined) {
+    result.memoryConflicts = overrides.memoryConflicts;
   }
 
   return result;

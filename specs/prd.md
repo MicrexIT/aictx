@@ -80,6 +80,7 @@ Required in v1:
 * Basic secret detection before saving memory
 * Mode-aware context loading for coding, debugging, review, architecture, and onboarding work
 * CLI-only deterministic memory suggestion and audit packets for agent-assisted memory maintenance
+* Demand-driven memory quality guidance that treats agent failure, confusion, conflicts, and user correction as signals to repair durable memory
 * One-way generated Obsidian projection export for viewing memory in Obsidian
 * Local read-only web viewer for human memory inspection
 
@@ -100,6 +101,7 @@ Deferred from v1:
 * Cloud MCP endpoint
 * Full-project visual graph database
 * Enterprise policy engine
+* Slack, Teams, Jira, Confluence, hosted sync, background scanners, expert graphs, social graphs, and broad enterprise ingestion
 
 Extension points may be reserved for embeddings, cross-project/workspace/global scopes, and hosted team workflows, but they must not complicate the v1 local-first developer experience.
 
@@ -140,11 +142,15 @@ Aictx is:
 
 The product should feel like:
 
-load context -> do work -> save memory -> inspect later when needed
+load context -> do work -> repair memory after durable discoveries, failures, or corrections -> inspect later when needed
 
 Not like:
 
 design ontology → maintain graph DB → manage knowledge base → configure AI pipeline
+
+Aictx should improve local memory quality before expanding retrieval or input
+sources. External systems can become future inputs only after the local
+load/save memory discipline is strong.
 
 ⸻
 
