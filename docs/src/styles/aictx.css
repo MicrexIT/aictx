@@ -1,20 +1,10 @@
 :root {
   --sl-font: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --sl-font-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
-  --sl-color-accent-low: #dfe8e2;
-  --sl-color-accent: #35433f;
-  --sl-color-accent-high: #15211e;
-  --sl-color-white: #fbfaf6;
-  --sl-color-gray-1: #f2f1eb;
-  --sl-color-gray-2: #e7e5dc;
-  --sl-color-gray-3: #c8c7bf;
-  --sl-color-gray-4: #878b86;
-  --sl-color-gray-5: #5f6661;
-  --sl-color-gray-6: #303733;
-  --sl-color-black: #101311;
   letter-spacing: 0;
 }
 
+:root,
 :root[data-theme="dark"] {
   --sl-color-accent-low: #1e2c28;
   --sl-color-accent: #9fb2aa;
@@ -27,6 +17,26 @@
   --sl-color-gray-5: #303833;
   --sl-color-gray-6: #1d2421;
   --sl-color-black: #0d100f;
+}
+
+:root[data-theme="light"] {
+  --sl-color-accent-low: #dfe8e2;
+  --sl-color-accent: #35433f;
+  --sl-color-accent-high: #15211e;
+  --sl-color-white: #15211e;
+  --sl-color-gray-1: #1f2a26;
+  --sl-color-gray-2: #303733;
+  --sl-color-gray-3: #5f6661;
+  --sl-color-gray-4: #878b86;
+  --sl-color-gray-5: #c8c7bf;
+  --sl-color-gray-6: #e7e5dc;
+  --sl-color-gray-7: #f2f1eb;
+  --sl-color-black: #fbfaf6;
+  --sl-color-bg-nav: var(--sl-color-gray-7);
+  --sl-color-bg-sidebar: var(--sl-color-bg);
+  --sl-color-bg-inline-code: var(--sl-color-gray-6);
+  --sl-color-hairline-light: var(--sl-color-gray-6);
+  --sl-color-hairline-shade: var(--sl-color-gray-6);
 }
 
 body {

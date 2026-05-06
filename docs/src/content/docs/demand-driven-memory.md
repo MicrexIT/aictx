@@ -42,9 +42,3 @@ Existing Aictx objects cover the common repair cases:
 Facets such as `domain`, `bounded-context`, `capability`, `business-rule`, and
 `unresolved-conflict` are organization hints. They are optional and should stay
 plain-language.
-
-## Keep it local-first
-
-Demand-driven memory is not broad enterprise ingestion. Aictx improves local
-memory quality before adding external inputs such as Slack, Jira, Confluence,
-hosted sync, embeddings, background scanners, or expert graphs.
