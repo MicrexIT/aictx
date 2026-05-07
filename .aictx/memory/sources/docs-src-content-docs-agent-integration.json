@@ -1,0 +1,39 @@
+{
+  "body_path": "memory/sources/docs-src-content-docs-agent-integration.md",
+  "content_hash": "sha256:16a144d2474945aaa709e378042a787a23267c9f0665751360e786c223b11ab3",
+  "created_at": "2026-05-07T18:30:51+02:00",
+  "evidence": [
+    {
+      "id": "docs/src/content/docs/agent-integration.md",
+      "kind": "file"
+    }
+  ],
+  "facets": {
+    "applies_to": [
+      "docs/src/content/docs/agent-integration.md"
+    ],
+    "category": "source",
+    "load_modes": [
+      "onboarding",
+      "architecture"
+    ]
+  },
+  "id": "source.docs-src-content-docs-agent-integration",
+  "scope": {
+    "branch": null,
+    "kind": "project",
+    "project": "project.aictx",
+    "task": null
+  },
+  "source": {
+    "kind": "cli",
+    "task": "Proposed bootstrap memory patch from deterministic repository analysis"
+  },
+  "status": "active",
+  "tags": [
+    "source"
+  ],
+  "title": "Source: docs/src/content/docs/agent-integration.md",
+  "type": "source",
+  "updated_at": "2026-05-07T18:30:51+02:00"
+}

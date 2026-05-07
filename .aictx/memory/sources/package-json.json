@@ -1,6 +1,6 @@
 {
-  "body_path": "memory/workflows/post-task-verification.md",
-  "content_hash": "sha256:7975938fc92cf72a0d1d47aefcce33df1301bf50e139fc05278da94c987cddf2",
+  "body_path": "memory/sources/package-json.md",
+  "content_hash": "sha256:1bd77e745d70bb6d0faf4615da8c280b407d76b7430bb4cc4e2a22a69edbd5f9",
   "created_at": "2026-05-07T18:30:51+02:00",
   "evidence": [
     {
@@ -12,14 +12,13 @@
     "applies_to": [
       "package.json"
     ],
-    "category": "testing",
+    "category": "source",
     "load_modes": [
-      "coding",
-      "debugging",
-      "review"
+      "onboarding",
+      "architecture"
     ]
   },
-  "id": "workflow.post-task-verification",
+  "id": "source.package-json",
   "scope": {
     "branch": null,
     "kind": "project",
@@ -32,11 +31,9 @@
   },
   "status": "active",
   "tags": [
-    "verification",
-    "testing",
-    "workflow"
+    "source"
   ],
-  "title": "Post-task verification",
-  "type": "workflow",
+  "title": "Source: package.json",
+  "type": "source",
   "updated_at": "2026-05-07T18:30:51+02:00"
 }

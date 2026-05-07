@@ -1,1 +1,0 @@
-Public docs pages under `docs/src/content/docs/` should not include a top-level Markdown `#` that duplicates the frontmatter `title`, because Starlight renders that title as the page H1. The `aictx docs` CLI preserves terminal-friendly Markdown titles by synthesizing `# <title>` from topic metadata in `src/cli/commands/docs.ts`.

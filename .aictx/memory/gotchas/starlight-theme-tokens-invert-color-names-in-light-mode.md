@@ -1,1 +1,0 @@
-The docs custom CSS must define separate light and dark Starlight palettes in `docs/src/styles/aictx.css`. In Starlight, `--sl-color-black` is the page background token and becomes light in light mode, while `--sl-color-white` becomes dark text; putting dark values only on `:root` makes light mode keep a dark page with light header controls.

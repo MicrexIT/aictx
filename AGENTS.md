@@ -21,5 +21,5 @@ Right-size memory: use atomic memories for precise reusable claims, source recor
 
 If loaded memory conflicts with the user request, current code, or test results, prefer current evidence and mention the conflict.
 
-Before finalizing, say whether Aictx memory changed. If it changed, mention that asynchronous inspection is available through `aictx view`, `aictx diff`, Git tools, or MCP `diff_memory` when available.
+Before finalizing, say whether Aictx memory changed. If it changed, mention that asynchronous inspection is available through `inspect_memory`, `aictx view`, `aictx diff`, Git tools, or MCP `diff_memory` when available.
 <!-- aictx-memory:end -->

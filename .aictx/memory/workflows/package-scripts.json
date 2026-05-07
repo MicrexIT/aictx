@@ -1,34 +1,8 @@
 {
   "body_path": "memory/workflows/package-scripts.md",
-  "content_hash": "sha256:1a776827d2b222b4510549a2ea49ff0c543ea3e091d6bbd7dfbbdb20db4a1ee2",
-  "created_at": "2026-05-04T20:21:52+02:00",
-  "evidence": [
-    {
-      "id": "package.json",
-      "kind": "file"
-    },
-    {
-      "id": "scripts/sync-setup-prompt-install-version.mjs",
-      "kind": "file"
-    },
-    {
-      "id": "README.md",
-      "kind": "file"
-    },
-    {
-      "id": "docs/src/content/docs/index.md",
-      "kind": "file"
-    }
-  ],
-  "facets": {
-    "applies_to": [
-      "package.json",
-      "scripts/sync-setup-prompt-install-version.mjs",
-      "README.md",
-      "docs/src/content/docs/index.md"
-    ],
-    "category": "workflow"
-  },
+  "content_hash": "sha256:3762ab2b61b9e9a541bb4e5ac382704b34e00829b999c7c7f0c12fbc7cddac2d",
+  "created_at": "2026-05-07T18:30:51+02:00",
+  "evidence": [],
   "id": "workflow.package-scripts",
   "scope": {
     "branch": null,
@@ -43,10 +17,9 @@
   "status": "active",
   "tags": [
     "package",
-    "workflow",
-    "release"
+    "workflow"
   ],
   "title": "Package scripts",
   "type": "workflow",
-  "updated_at": "2026-05-07T17:50:16+02:00"
+  "updated_at": "2026-05-07T18:30:51+02:00"
 }

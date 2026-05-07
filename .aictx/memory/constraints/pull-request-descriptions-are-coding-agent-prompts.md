@@ -1,1 +1,0 @@
-Pull request descriptions should be written as prompts another coding agent can use to reproduce, review, or continue the work. The PR template asks for goal, context, files to inspect first, required changes, constraints, out-of-scope notes, acceptance criteria, verification commands, and the Aictx memory decision.

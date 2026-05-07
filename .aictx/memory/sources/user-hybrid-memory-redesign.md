@@ -1,1 +1,0 @@
-On 2026-05-05, the user stated that AICTX should replace reusable context a human normally collects while coding, including repo docs, agent rules, external references, and user-held context. Agents should create and maintain useful memory autonomously, while humans supervise through an understandable viewer.

@@ -1,3 +1,3 @@
 # Package manager
 
-Use pnpm for dependency workflows; this is inferred from `pnpm-lock.yaml`.
+Use `pnpm@10.11.0` for dependency workflows; this is declared in `package.json`.

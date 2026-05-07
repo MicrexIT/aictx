@@ -1,5 +1,0 @@
-Agents should right-size memory: use source records for provenance, syntheses for compact area-level understanding, and atomic memories for precise reusable claims. Treat agent failure, confusion, stale loaded memory, active memory conflicts, and user correction as signals that durable project memory may need repair.
-
-After meaningful work or correction, decide whether to update existing memory, mark it stale, supersede it, delete it, or save an open question, gotcha, source, synthesis, decision, constraint, fact, workflow, concept, or note. For routine autonomous saves, use `aictx remember --stdin` or MCP `remember_memory`; Aictx compiles that intent-first input into a structured patch and writes active memory immediately after validation. Use `aictx save` or `save_memory_patch` only for advanced patch-shaped writes.
-
-Durable syntheses should usually have source evidence or active source provenance relations. Agents should report whether memory changed, and humans can inspect accepted memory asynchronously through the viewer, `aictx diff`, or Git tools.

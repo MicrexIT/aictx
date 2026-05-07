@@ -1,1 +1,0 @@
-The npm package allowlist should include dist, integrations, README, LICENSE, and bundled public docs markdown under docs/src/content/docs. It should not include docs/.astro, docs/dist, docs/node_modules, site, src, test, scripts, or raw viewer source. The release packaging test asserts these exclusions.

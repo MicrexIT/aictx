@@ -1,29 +1,26 @@
 {
   "body_path": "memory/syntheses/feature-map.md",
-  "content_hash": "sha256:01eb2c6a8abce7d651750f7f5296c91f095791c8e198c4e4ef8ee69b5cfba940",
-  "created_at": "2026-05-05T13:30:07+02:00",
+  "content_hash": "sha256:c4c0fd5488e97921034a21d488cb66e553846af02214203690c0a21fb1e4b00b",
+  "created_at": "2026-05-07T18:30:51+02:00",
   "evidence": [
     {
-      "id": "source.product-requirements",
-      "kind": "source"
-    },
-    {
-      "id": "source.storage-and-context-specs",
+      "id": "source.package-json",
       "kind": "source"
     }
   ],
   "facets": {
     "applies_to": [
-      "src",
-      "docs",
-      "integrations",
-      "viewer"
+      "package.json",
+      "src/cli/commands/audit.ts",
+      "src/cli/commands/check.ts",
+      "src/cli/commands/diff.ts",
+      "src/cli/commands/docs.ts",
+      "src/cli/commands/export.ts"
     ],
     "category": "feature-map",
     "load_modes": [
-      "architecture",
-      "onboarding",
-      "coding"
+      "coding",
+      "onboarding"
     ]
   },
   "id": "synthesis.feature-map",
@@ -34,15 +31,15 @@
     "task": null
   },
   "source": {
-    "kind": "agent",
-    "task": "dogfood hybrid source and synthesis memory redesign"
+    "kind": "cli",
+    "task": "Proposed bootstrap memory patch from deterministic repository analysis"
   },
   "status": "active",
   "tags": [
-    "feature-map",
-    "product-feature"
+    "synthesis",
+    "features"
   ],
-  "title": "AICTX feature map",
+  "title": "Feature map",
   "type": "synthesis",
-  "updated_at": "2026-05-05T13:30:07+02:00"
+  "updated_at": "2026-05-07T18:30:51+02:00"
 }

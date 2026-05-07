@@ -1,25 +1,24 @@
 {
-  "body_path": "memory/workflows/post-task-verification.md",
-  "content_hash": "sha256:7975938fc92cf72a0d1d47aefcce33df1301bf50e139fc05278da94c987cddf2",
+  "body_path": "memory/sources/readme.md",
+  "content_hash": "sha256:22e502741478fb7c9304b505e12436f9434dcd4492b9bf9efa9f9cb1aae29cbc",
   "created_at": "2026-05-07T18:30:51+02:00",
   "evidence": [
     {
-      "id": "package.json",
+      "id": "README.md",
       "kind": "file"
     }
   ],
   "facets": {
     "applies_to": [
-      "package.json"
+      "README.md"
     ],
-    "category": "testing",
+    "category": "source",
     "load_modes": [
-      "coding",
-      "debugging",
-      "review"
+      "onboarding",
+      "architecture"
     ]
   },
-  "id": "workflow.post-task-verification",
+  "id": "source.readme",
   "scope": {
     "branch": null,
     "kind": "project",
@@ -32,11 +31,9 @@
   },
   "status": "active",
   "tags": [
-    "verification",
-    "testing",
-    "workflow"
+    "source"
   ],
-  "title": "Post-task verification",
-  "type": "workflow",
+  "title": "Source: README.md",
+  "type": "source",
   "updated_at": "2026-05-07T18:30:51+02:00"
 }

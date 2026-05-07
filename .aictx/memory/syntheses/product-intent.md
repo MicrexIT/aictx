@@ -1,1 +1,5 @@
-AICTX is local-first project memory for AI coding agents. Its default job is to replace durable context a human would otherwise collect while coding: product intent, architecture, conventions, feature state, roadmap, workflows, gotchas, constraints, and user-stated context. Agents should maintain memory directly, and the viewer should make agent work easy for humans to supervise.
+# Product intent
+
+Local-first project memory for AI coding agents.
+
+Maintain this synthesis when the project's purpose, user promise, or product direction changes.
