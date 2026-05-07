@@ -1,0 +1,1 @@
+The GitHub CI test job must build package artifacts before running Vitest because viewer integration tests read dist/viewer/index.html and the release packaging test exercises built dist binaries/assets. CI must also run pnpm exec playwright install --with-deps chromium before pnpm test because the Playwright package install does not provide browser executables on a fresh runner.

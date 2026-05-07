@@ -29,3 +29,5 @@
 {"actor":"agent","event":"memory.created","id":"fact.public-aictx-urls","timestamp":"2026-05-07T23:27:19+02:00"}
 {"actor":"agent","event":"memory.updated","id":"workflow.package-scripts","timestamp":"2026-05-07T23:42:20+02:00"}
 {"actor":"agent","event":"memory.updated","id":"workflow.package-scripts","timestamp":"2026-05-07T23:42:41+02:00"}
+{"actor":"agent","event":"memory.created","id":"workflow.ci-test-prerequisites","timestamp":"2026-05-08T00:13:13+02:00"}
+{"actor":"agent","event":"memory.created","id":"gotcha.lockless-packed-package-installs-should-not-require-pnpm-offline-mode","timestamp":"2026-05-08T00:13:13+02:00"}

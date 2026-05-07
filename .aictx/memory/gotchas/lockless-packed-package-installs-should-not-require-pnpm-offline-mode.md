@@ -1,0 +1,1 @@
+In test/integration/release/packaging.test.ts, the temporary install project has no lockfile. Use pnpm add --prefer-offline for the packed tarball rather than --offline; pure offline mode can fail when semver resolution selects a newer transitive tarball than the root pnpm-lock.yaml fetched into the CI store, for example jose under @modelcontextprotocol/sdk.

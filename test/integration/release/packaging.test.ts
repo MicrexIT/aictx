@@ -177,8 +177,8 @@ describe("release package", () => {
       expect(packedPathSet.has(requiredPath)).toBe(true);
     }
 
-    await writeOfflineInstallPackageJson(installRoot, packageJson);
-    await expectSuccessfulCommand("pnpm", ["add", "--offline", pack.filename], installRoot);
+    await writeInstallPackageJson(installRoot, packageJson);
+    await expectSuccessfulCommand("pnpm", ["add", "--prefer-offline", pack.filename], installRoot);
     await expectInstalledMemoryDisciplineDocs(installRoot);
 
     const viewerProjectRoot = await createTempRoot("aictx-release-viewer-project-");
@@ -419,12 +419,26 @@ async function expectSuccessfulCommand(
     throw new Error(result.error.message);
   }
 
-  expect(result.data.exitCode).toBe(0);
+  if (result.data.exitCode !== 0) {
+    throw new Error(
+      [
+        `Command failed: ${formatCommand(command, args)}`,
+        `cwd: ${cwd}`,
+        `exit: ${String(result.data.exitCode)}`,
+        result.data.stdout.length > 0 ? `stdout:\n${result.data.stdout}` : "stdout: <empty>",
+        result.data.stderr.length > 0 ? `stderr:\n${result.data.stderr}` : "stderr: <empty>"
+      ].join("\n\n")
+    );
+  }
 
   return {
     stdout: result.data.stdout,
     stderr: result.data.stderr
   };
+}
+
+function formatCommand(command: string, args: readonly string[]): string {
+  return [command, ...args].join(" ");
 }
 
 function parsePnpmPackOutput(output: { stdout: string }): PnpmPackOutput {
@@ -479,7 +493,7 @@ async function expectCliSymlinkRuns(packageVersion: string): Promise<void> {
   expect(result.stdout).toBe(`${packageVersion}\n`);
 }
 
-async function writeOfflineInstallPackageJson(
+async function writeInstallPackageJson(
   installRoot: string,
   packageJson: PackageJson
 ): Promise<void> {
