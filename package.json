@@ -1,6 +1,6 @@
 {
   "name": "@aictx/memory",
-  "version": "0.1.25",
+  "version": "0.1.26",
   "license": "MIT",
   "type": "module",
   "packageManager": "pnpm@10.11.0",
