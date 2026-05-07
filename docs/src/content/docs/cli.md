@@ -64,7 +64,10 @@ aictx remember --stdin
 The routine loop is narrow load, work, and save only durable knowledge as active
 memory. A task that produced no reusable project knowledge does not need a save.
 Use `remember` for normal intent-first memory creation, and `save` only when
-you need to submit a structured patch directly.
+you need to submit a structured patch directly. In `suggest --after-task --json`,
+use `recommended_actions` as the primary advisory save/no-save aid; fill in
+semantic `title`, `body`, and `reason` fields yourself because Aictx does not
+infer durable project meaning from diffs.
 
 Commands that support structured output accept `--json`:
 

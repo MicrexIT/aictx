@@ -1,6 +1,6 @@
 {
   "body_path": "memory/syntheses/agent-guidance.md",
-  "content_hash": "sha256:6e5cc975f6adbb5a3c1fc7c2e937810bc9d74c1d124ef7cf740b131332044386",
+  "content_hash": "sha256:937bbb9ca30384b81220d8fdf50b7aab1b638030f0793bcf21771ca0045a6f75",
   "created_at": "2026-05-07T19:14:19+02:00",
   "evidence": [
     {
@@ -9,6 +9,10 @@
     },
     {
       "id": "scripts/generate-agent-guidance.mjs",
+      "kind": "file"
+    },
+    {
+      "id": "docs/src/content/docs/agent-integration.md",
       "kind": "file"
     },
     {
@@ -31,6 +35,7 @@
       "integrations/generic/aictx-agent-instructions.md",
       "scripts/generate-agent-guidance.mjs",
       "docs/src/content/docs/agent-recipes.md",
+      "docs/src/content/docs/agent-integration.md",
       "package.json"
     ],
     "category": "agent-guidance",
@@ -59,5 +64,5 @@
   ],
   "title": "Agent guidance",
   "type": "synthesis",
-  "updated_at": "2026-05-07T20:14:45+02:00"
+  "updated_at": "2026-05-07T22:37:03+02:00"
 }

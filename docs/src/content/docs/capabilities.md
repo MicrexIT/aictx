@@ -68,7 +68,8 @@ aictx graph <id>
 ```
 
 - `suggest --after-task` gives an agent a read-only decision packet at the end
-  of work.
+  of work. Its `recommended_actions` field is the primary advisory save/no-save
+  guide; agents still fill in semantic memory content themselves.
 - `suggest --from-diff` looks at current Git changes and proposes memory
   maintenance ideas.
 - `audit` reports deterministic hygiene issues.

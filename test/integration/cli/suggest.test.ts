@@ -34,12 +34,22 @@ interface CliRunResult {
 interface SuggestSuccessEnvelope {
   ok: true;
   data: {
-    mode: "from_diff" | "bootstrap";
+    mode: "from_diff" | "bootstrap" | "after_task";
     changed_files: string[];
     related_memory_ids: string[];
     possible_stale_ids: string[];
     recommended_memory: string[];
     recommended_facets?: string[];
+    remember_template?: unknown;
+    recommended_actions?: Array<{
+      rank: number;
+      action: string;
+      confidence: string;
+      reason: string;
+      guidance: string;
+      memory_kind?: string;
+      category?: string;
+    }>;
     agent_checklist: string[];
   };
   warnings: string[];
@@ -196,6 +206,73 @@ describe("aictx suggest CLI", () => {
     expect(envelope.meta.git.available).toBe(true);
     expect(envelope.meta.git.dirty).toBe(false);
     await expect(readCanonicalSnapshot(repo)).resolves.toEqual(before);
+  });
+
+  it("does not render empty recommended action sections for from-diff text output", async () => {
+    const repo = await createInitializedSuggestGitProject("aictx-cli-suggest-diff-text-");
+    await writeProjectFile(
+      repo,
+      "src/billing/webhook.ts",
+      "export function handleWebhook() { return 'changed'; }\n"
+    );
+
+    const output = await runCli(["node", "aictx", "suggest", "--from-diff"], repo);
+
+    expect(output.exitCode).toBe(0);
+    expect(output.stdout).not.toContain("Top recommendation:");
+    expect(output.stdout).not.toContain("Candidate actions:");
+  });
+
+  it("renders after-task top recommendations in non-JSON output", async () => {
+    const projectRoot = await createInitializedLocalProject("aictx-cli-after-text-");
+
+    const output = await runCli(
+      ["node", "aictx", "suggest", "--after-task", "Summarize recent discussion"],
+      projectRoot
+    );
+
+    expect(output.exitCode).toBe(0);
+    expect(output.stderr).toContain("Git is unavailable; after-task changed_files is empty.");
+    expect(output.stdout).toContain("Top recommendation: #1 save_nothing (high)");
+    expect(output.stdout).toContain("Reason: No changed files, related memory, or durable task signals were detected.");
+    expect(output.stdout).toContain("Candidate actions:");
+    expect(output.stdout).toContain("Remember template: available in --json output");
+  });
+
+  it("includes additive recommended_actions in after-task JSON output", async () => {
+    const projectRoot = await createInitializedLocalProject("aictx-cli-after-json-");
+
+    const output = await runCli(
+      ["node", "aictx", "suggest", "--after-task", "Document release smoke test checklist", "--json"],
+      projectRoot
+    );
+
+    expect(output.exitCode).toBe(0);
+    expect(output.stderr).toBe("");
+    const envelope = JSON.parse(output.stdout) as SuggestSuccessEnvelope;
+    expect(envelope.ok).toBe(true);
+    expect(envelope.warnings).toContain("Git is unavailable; after-task changed_files is empty.");
+    expect(envelope.data.mode).toBe("after_task");
+    expect(envelope.data.recommended_memory).toEqual([
+      "workflow",
+      "synthesis",
+      "decision",
+      "constraint",
+      "gotcha",
+      "fact",
+      "question"
+    ]);
+    expect(envelope.data.remember_template).toBeDefined();
+    expect(envelope.data.recommended_actions?.[0]).toMatchObject({
+      rank: 1,
+      action: "create_memory",
+      confidence: "high",
+      memory_kind: "workflow",
+      category: "workflow"
+    });
+    expect(envelope.data.agent_checklist).toContain(
+      "Create memory only for durable future value."
+    );
   });
 
   it("returns AICtxGitRequired for from-diff outside Git", async () => {

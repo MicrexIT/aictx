@@ -6,7 +6,10 @@ import {
   type SuggestMemoryData,
   type SuggestMemoryOptions
 } from "../../app/operations.js";
-import type { SuggestBootstrapPatchProposal } from "../../discipline/suggest.js";
+import type {
+  SuggestBootstrapPatchProposal,
+  SuggestedMemoryAction
+} from "../../discipline/suggest.js";
 import { CLI_EXIT_SUCCESS, type CliExitCode } from "../exit.js";
 import { renderAppResult } from "../render.js";
 
@@ -78,6 +81,7 @@ function renderSuggestData(data: SuggestMemoryData): string {
 
   return [
     `Aictx suggest packet (${packet.mode}):`,
+    ...renderRecommendedActionSections(packet.recommended_actions),
     renderList("Changed files", packet.changed_files),
     renderList("Related memory", packet.related_memory_ids),
     renderList("Possible stale memory", packet.possible_stale_ids),
@@ -89,6 +93,47 @@ function renderSuggestData(data: SuggestMemoryData): string {
       : "Remember template: available in --json output",
     renderList("Checklist", packet.agent_checklist)
   ].join("\n");
+}
+
+function renderRecommendedActionSections(
+  actions: readonly SuggestedMemoryAction[] | undefined
+): string[] {
+  return actions === undefined
+    ? []
+    : [renderTopRecommendation(actions), renderCandidateActions(actions)];
+}
+
+function renderTopRecommendation(actions: readonly SuggestedMemoryAction[]): string {
+  const top = actions[0];
+
+  if (top === undefined) {
+    return "Top recommendation: none";
+  }
+
+  return `Top recommendation: ${renderActionSummary(top)}\nReason: ${top.reason}`;
+}
+
+function renderCandidateActions(actions: readonly SuggestedMemoryAction[]): string {
+  if (actions.length === 0) {
+    return "Candidate actions:\n- none";
+  }
+
+  return `Candidate actions:\n${actions
+    .slice(0, 6)
+    .map((action) => `- ${renderActionSummary(action)}`)
+    .join("\n")}`;
+}
+
+function renderActionSummary(action: SuggestedMemoryAction): string {
+  const details = [
+    action.memory_kind === undefined ? null : action.memory_kind,
+    action.category === undefined ? null : action.category,
+    action.target_id === undefined ? null : `target ${action.target_id}`
+  ].filter((value): value is string => value !== null);
+
+  return `#${action.rank} ${action.action} (${action.confidence})${
+    details.length === 0 ? "" : ` - ${details.join(", ")}`
+  }`;
 }
 
 function renderSuggestPatchResult(result: AppResult<SuggestMemoryData>): {

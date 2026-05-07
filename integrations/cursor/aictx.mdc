@@ -131,8 +131,8 @@ do not repeat the same mistake.
 
 Use `aictx suggest --after-task "<task>" --json` when the right save/no-save
 decision is not obvious. It returns related memory, stale candidates, evidence,
-and a `remember_template` skeleton. Fill in the semantic title/body/reason
-fields yourself; Aictx does not infer durable project meaning from diffs.
+ranked `recommended_actions`, and a `remember_template` skeleton. Treat
+`recommended_actions` as the primary advisory decision aid. Aictx does not infer durable project meaning from diffs; write the semantic title/body/reason fields yourself.
 
 ## Safety
 

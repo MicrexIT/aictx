@@ -263,8 +263,11 @@ aictx check
 ```
 
 `aictx suggest --from-diff --json` creates a memory suggestion packet from
-current code changes. `aictx audit --json` reports grouped, actionable memory
-hygiene issues.
+current code changes. `aictx suggest --after-task --json` includes ranked
+`recommended_actions`; treat them as advisory defaults, not authoritative
+semantic memory. Agents still fill in durable `title`, `body`, and `reason`
+fields from current evidence. `aictx audit --json` reports grouped, actionable
+memory hygiene issues.
 
 During setup, product features can use the `product-feature` facet. Durable
 project how-tos use the existing `workflow` object type and `workflow` facet.

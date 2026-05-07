@@ -318,6 +318,7 @@ describe("agent guidance content", () => {
       expect(content).toContain("`source` preserves where context came from");
       expect(content).toMatch(/Prefer updating, marking stale, superseding, or deleting existing memory/i);
       expect(content).toContain("Save nothing when the task produced no durable future value.");
+      expect(content).toContain("recommended_actions");
       expect(content).toContain("remember_template");
     }
   });
@@ -342,6 +343,7 @@ describe("agent guidance content", () => {
       expect(content).toContain('aictx suggest --after-task "<task>" --json');
       expect(content).toMatch(/source[- ](?:backed|records?)/i);
       expect(content).toMatch(/synthes/i);
+      expect(content).toContain("recommended_actions");
       expect(content).toContain("remember_template");
 
       for (const fallback of packageManagerFallbacks) {

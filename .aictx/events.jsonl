@@ -24,3 +24,5 @@
 {"actor":"agent","event":"relation.created","relation_id":"rel.synthesis-feature-map-derived-from-source-docs-src-content-docs-agent-recipes","timestamp":"2026-05-07T20:14:45+02:00"}
 {"actor":"agent","event":"relation.created","relation_id":"rel.synthesis-agent-guidance-derived-from-source-docs-src-content-docs-agent-recipes","timestamp":"2026-05-07T20:14:45+02:00"}
 {"actor":"agent","event":"memory.created","id":"decision.how-to-memory-uses-workflow","timestamp":"2026-05-07T20:53:49+02:00"}
+{"actor":"agent","event":"memory.updated","id":"synthesis.feature-map","timestamp":"2026-05-07T22:37:03+02:00"}
+{"actor":"agent","event":"memory.updated","id":"synthesis.agent-guidance","timestamp":"2026-05-07T22:37:03+02:00"}

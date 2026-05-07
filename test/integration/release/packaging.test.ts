@@ -547,6 +547,7 @@ function expectMemoryDisciplineContent(content: string): void {
 function expectGeneratedGuidanceContent(content: string): void {
   expect(content).toContain("aictx remember --stdin");
   expect(content).toContain('aictx suggest --after-task "<task>" --json');
+  expect(content).toContain("recommended_actions");
   expect(content).toContain("remember_template");
   expect(content).toContain("`gotcha`");
   expect(content).toContain("`workflow`");

@@ -12,6 +12,7 @@ Verification workflows:
 Generated guidance workflow:
 - `integrations/templates/agent-guidance.md` is the canonical generated-guidance body.
 - `pnpm build:guidance` generates Codex, Claude, Cursor, Cline, and generic integration artifacts under `integrations/`.
+- Generated guidance tells agents to treat `suggest --after-task --json` `recommended_actions` as the primary advisory save/no-save aid while still writing semantic title/body/reason fields themselves.
 - Public `agent-recipes` docs describe where users should copy those artifacts and keep CLI as the default routine path.
 
 Update this synthesis when agent instructions, conventions, generated integration targets, or verification workflows change.

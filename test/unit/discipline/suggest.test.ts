@@ -234,6 +234,34 @@ describe("suggest discipline packets", () => {
     expect(packet.save_decision_checklist).toContain(
       "Back durable synthesis memory with source evidence or source provenance relations when possible."
     );
+    expect(packet.recommended_actions?.[0]).toMatchObject({
+      action: "update_existing",
+      confidence: "high",
+      target_id: "decision.webhook-retries"
+    });
+    expect(packet.recommended_actions?.some((action) => action.action === "save_nothing")).toBe(
+      true
+    );
+  });
+
+  it("ranks save-nothing first when no durable after-task signal is detected", () => {
+    const storage = storageSnapshot({
+      objects: [],
+      relations: []
+    });
+
+    const packet = buildSuggestAfterTaskPacket({
+      task: "Summarize recent discussion",
+      changedFiles: [],
+      storage
+    });
+
+    expect(packet.recommended_actions?.[0]).toMatchObject({
+      rank: 1,
+      action: "save_nothing",
+      confidence: "high"
+    });
+    expect(packet.recommended_actions?.[0]?.remember_template).toBeUndefined();
   });
 
   it("prefers workflow memory and facets for reusable how-to procedure tasks", () => {
@@ -259,6 +287,28 @@ describe("suggest discipline packets", () => {
         { kind: "file", id: "package.json" }
       ]
     });
+    expect(packet.recommended_actions?.[0]).toMatchObject({
+      action: "create_memory",
+      memory_kind: "workflow",
+      category: "workflow",
+      confidence: "high",
+      remember_template: {
+        task: "Document how to run the release smoke test checklist",
+        memories: [
+          {
+            kind: "workflow",
+            title: "",
+            body: "",
+            category: "workflow",
+            applies_to: ["docs/release-runbook.md", "package.json"],
+            evidence: [
+              { kind: "file", id: "docs/release-runbook.md" },
+              { kind: "file", id: "package.json" }
+            ]
+          }
+        ]
+      }
+    });
   });
 
   it("recommends unresolved-conflict facets for conflict and correction task signals", () => {
@@ -274,6 +324,32 @@ describe("suggest discipline packets", () => {
     });
 
     expect(packet.recommended_facets).toContain("unresolved-conflict");
+    expect(packet.recommended_actions?.[0]).toMatchObject({
+      action: "create_memory",
+      memory_kind: "question",
+      category: "unresolved-conflict",
+      confidence: "high"
+    });
+  });
+
+  it("recommends gotcha memory for repeated failure and debugging lessons", () => {
+    const storage = storageSnapshot({
+      objects: [],
+      relations: []
+    });
+
+    const packet = buildSuggestAfterTaskPacket({
+      task: "Capture root cause for broken export retry regression",
+      changedFiles: ["src/export/retry.ts"],
+      storage
+    });
+
+    expect(packet.recommended_actions?.[0]).toMatchObject({
+      action: "create_memory",
+      memory_kind: "gotcha",
+      category: "gotcha",
+      confidence: "high"
+    });
   });
 
   it("recommends unresolved-conflict facets for active conflicting related memory", () => {
@@ -314,6 +390,14 @@ describe("suggest discipline packets", () => {
     expect(packet.save_decision_checklist).toContain(
       "Use unresolved-conflict questions when current evidence cannot resolve contradictory active memory."
     );
+    expect(packet.recommended_actions?.[0]).toMatchObject({
+      action: "mark_stale",
+      confidence: "high",
+      target_id: "decision.webhook-handler"
+    });
+    expect(packet.recommended_actions?.some((action) => action.action === "supersede_existing")).toBe(
+      true
+    );
   });
 
   it("recommends synthesis memory and product-feature facets for feature work", () => {
@@ -334,6 +418,22 @@ describe("suggest discipline packets", () => {
     expect(packet.recommended_evidence).toEqual([
       { kind: "file", id: "app/dashboard/page.tsx" }
     ]);
+    expect(packet.recommended_actions?.[0]).toMatchObject({
+      action: "create_memory",
+      memory_kind: "synthesis",
+      category: "feature-map",
+      confidence: "medium"
+    });
+    expect(packet.recommended_actions?.[0]?.remember_template).toMatchObject({
+      memories: [
+        {
+          kind: "synthesis",
+          category: "feature-map",
+          applies_to: ["app/dashboard/page.tsx"],
+          evidence: [{ kind: "file", id: "app/dashboard/page.tsx" }]
+        }
+      ]
+    });
   });
 
   it("builds a conservative schema-valid bootstrap patch from deterministic evidence", async () => {

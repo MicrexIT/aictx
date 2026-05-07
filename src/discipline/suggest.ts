@@ -36,10 +36,32 @@ export interface SuggestReviewPacket {
   recommended_evidence?: Evidence[];
   recommended_relations?: SuggestedRelation[];
   recommended_facets?: FacetCategory[];
+  recommended_actions?: SuggestedMemoryAction[];
   save_decision_checklist?: string[];
   remember_template?: RememberMemoryInput;
   task?: string;
   agent_checklist: string[];
+}
+
+export type SuggestedMemoryActionType =
+  | "save_nothing"
+  | "update_existing"
+  | "mark_stale"
+  | "supersede_existing"
+  | "create_memory"
+  | "create_relation";
+
+export interface SuggestedMemoryAction {
+  rank: number;
+  action: SuggestedMemoryActionType;
+  confidence: RelationConfidence;
+  reason: string;
+  guidance: string;
+  target_id?: ObjectId;
+  memory_kind?: RememberMemoryKind;
+  category?: FacetCategory;
+  evidence?: Evidence[];
+  remember_template?: RememberMemoryInput;
 }
 
 export interface SuggestedRelation {
@@ -319,6 +341,15 @@ export function buildSuggestAfterTaskPacket(
     recommended_evidence: recommendedEvidence,
     recommended_relations: recommendedRelationsForChanges,
     recommended_facets: recommendedFacets,
+    recommended_actions: recommendedActionsForAfterTask({
+      task: options.task,
+      changedFiles,
+      relatedMemoryIds: related,
+      possibleStaleIds: possibleStale,
+      recommendedEvidence,
+      recommendedRelations: recommendedRelationsForChanges,
+      hasRelatedMemoryConflict: activeConflictsTouchRelatedMemory(options.storage, changedFiles)
+    }),
     save_decision_checklist: [...SAVE_DECISION_CHECKLIST],
     remember_template: rememberTemplateForAfterTask({
       task: options.task,
@@ -585,7 +616,7 @@ function recommendedFacetsForTask(
   const recommended = new Set<FacetCategory>();
   const taskText = task.toLowerCase();
 
-  if (hasWorkflowSignal(task)) {
+  if (hasWorkflowSignal(task) && (!hasDebuggingSignal(taskText) || hasProcedureSignal(taskText))) {
     recommended.add("workflow");
   }
 
@@ -636,6 +667,16 @@ interface RememberTemplateForAfterTaskOptions {
   recommendedFacets: readonly FacetCategory[];
 }
 
+interface RecommendedActionsForAfterTaskOptions {
+  task: string;
+  changedFiles: readonly string[];
+  relatedMemoryIds: readonly ObjectId[];
+  possibleStaleIds: readonly ObjectId[];
+  recommendedEvidence: readonly Evidence[];
+  recommendedRelations: readonly SuggestedRelation[];
+  hasRelatedMemoryConflict: boolean;
+}
+
 function rememberTemplateForAfterTask(
   options: RememberTemplateForAfterTaskOptions
 ): RememberMemoryInput {
@@ -677,6 +718,269 @@ function rememberTemplateForAfterTask(
   };
 }
 
+function recommendedActionsForAfterTask(
+  options: RecommendedActionsForAfterTaskOptions
+): SuggestedMemoryAction[] {
+  const actions: SuggestedMemoryAction[] = [];
+  const taskText = options.task.toLowerCase();
+  const appliesTo = appliesToForChangedFiles(options.changedFiles);
+  const evidence = [...options.recommendedEvidence];
+  const hasStaleOrConflictSignal =
+    hasStaleSignal(taskText) || hasConflictSignal(taskText) || options.hasRelatedMemoryConflict;
+  const createRecommendation = createMemoryRecommendationForTask(options.task, options.changedFiles);
+  const shouldCreateConflictQuestion =
+    hasStaleOrConflictSignal && options.possibleStaleIds.length === 0;
+  const hasDurableSignals =
+    hasStaleOrConflictSignal ||
+    createRecommendation !== null ||
+    hasDebuggingSignal(taskText) ||
+    hasArchitectureSignal(options.task, options.changedFiles);
+
+  if (
+    options.changedFiles.length === 0 &&
+    options.relatedMemoryIds.length === 0 &&
+    !hasDurableSignals
+  ) {
+    actions.push({
+      rank: 0,
+      action: "save_nothing",
+      confidence: "high",
+      reason: "No changed files, related memory, or durable task signals were detected.",
+      guidance: "Report that no Aictx memory changed instead of inventing a memory entry."
+    });
+  }
+
+  if (hasStaleOrConflictSignal) {
+    for (const id of options.possibleStaleIds.slice(0, 5)) {
+      actions.push({
+        rank: 0,
+        action: "mark_stale",
+        confidence: "high",
+        target_id: id,
+        reason: "The task mentions stale, corrected, or conflicting memory and this related memory may need repair.",
+        guidance: "Use this when current evidence shows the target memory is wrong or no longer useful.",
+        remember_template: {
+          task: options.task,
+          stale: [{ id, reason: "" }]
+        }
+      });
+      actions.push({
+        rank: 0,
+        action: "supersede_existing",
+        confidence: "medium",
+        target_id: id,
+        reason: "The task may replace an older memory with a newer durable claim.",
+        guidance:
+          "Use this only after creating or selecting the replacement memory, then fill superseded_by with that memory id."
+      });
+    }
+  }
+
+  for (const id of options.relatedMemoryIds.slice(0, 5)) {
+    actions.push({
+      rank: 0,
+      action: "update_existing",
+      confidence: "high",
+      target_id: id,
+      reason: "Existing memory overlaps the changed files; updating it avoids creating a near-duplicate.",
+      guidance: "Prefer this when the work refined an existing durable claim instead of adding a separate one.",
+      ...(evidence.length === 0 ? {} : { evidence }),
+      remember_template: {
+        task: options.task,
+        updates: [
+          {
+            id,
+            body: "",
+            ...(appliesTo.length === 0 ? {} : { applies_to: appliesTo }),
+            ...(evidence.length === 0 ? {} : { evidence })
+          }
+        ]
+      }
+    });
+  }
+
+  if (shouldCreateConflictQuestion) {
+    actions.push(createMemoryAction({
+      task: options.task,
+      kind: "question",
+      category: "unresolved-conflict",
+      confidence: "high",
+      evidence,
+      appliesTo,
+      reason: "The task mentions stale, corrected, or conflicting memory but no specific stale target was detected.",
+      guidance:
+        "Use this only when current evidence cannot resolve the contradiction and future agents need the open question."
+    }));
+  }
+
+  if (
+    createRecommendation !== null &&
+    !(
+      shouldCreateConflictQuestion &&
+      createRecommendation.kind === "question" &&
+      createRecommendation.category === "unresolved-conflict"
+    )
+  ) {
+    actions.push(createMemoryAction({
+      task: options.task,
+      kind: createRecommendation.kind,
+      category: createRecommendation.category,
+      confidence: createRecommendation.confidence,
+      evidence,
+      appliesTo,
+      reason: createRecommendation.reason,
+      guidance: createRecommendation.guidance
+    }));
+  }
+
+  for (const relation of options.recommendedRelations.slice(0, 5)) {
+    actions.push({
+      rank: 0,
+      action: "create_relation",
+      confidence: "medium",
+      target_id: relation.to,
+      reason: relation.reason,
+      guidance: `Create a ${relation.predicate} relation only if the link is durable and useful for future agents.`,
+      ...(evidence.length === 0 ? {} : { evidence }),
+      remember_template: {
+        task: options.task,
+        relations: [
+          {
+            from: relation.from,
+            predicate: relation.predicate,
+            to: relation.to,
+            confidence: "medium",
+            ...(evidence.length === 0 ? {} : { evidence })
+          }
+        ]
+      }
+    });
+  }
+
+  if (actions.every((action) => action.action !== "save_nothing")) {
+    actions.push({
+      rank: 0,
+      action: "save_nothing",
+      confidence: hasDurableSignals || options.changedFiles.length > 0 ? "medium" : "high",
+      reason: "Saving memory is optional; many tasks produce no durable future value.",
+      guidance:
+        "Choose this when Git history, existing memory, or the final response already captures everything future agents need."
+    });
+  }
+
+  return rankSuggestedMemoryActions(actions);
+}
+
+function createMemoryAction(input: {
+  task: string;
+  kind: RememberMemoryKind;
+  category: FacetCategory;
+  confidence: RelationConfidence;
+  reason: string;
+  guidance: string;
+  evidence: readonly Evidence[];
+  appliesTo: readonly string[];
+}): SuggestedMemoryAction {
+  return {
+    rank: 0,
+    action: "create_memory",
+    confidence: input.confidence,
+    memory_kind: input.kind,
+    category: input.category,
+    reason: input.reason,
+    guidance: input.guidance,
+    ...(input.evidence.length === 0 ? {} : { evidence: [...input.evidence] }),
+    remember_template: {
+      task: input.task,
+      memories: [
+        {
+          kind: input.kind,
+          title: "",
+          body: "",
+          category: input.category,
+          ...(input.appliesTo.length === 0 ? {} : { applies_to: [...input.appliesTo] }),
+          ...(input.evidence.length === 0 ? {} : { evidence: [...input.evidence] })
+        }
+      ]
+    }
+  };
+}
+
+function rankSuggestedMemoryActions(
+  actions: readonly SuggestedMemoryAction[]
+): SuggestedMemoryAction[] {
+  return actions.map((action, index) => ({ ...action, rank: index + 1 }));
+}
+
+function appliesToForChangedFiles(changedFiles: readonly string[]): string[] {
+  return changedFiles.length === 0 ? [] : [...changedFiles];
+}
+
+function createMemoryRecommendationForTask(
+  task: string,
+  changedFiles: readonly string[]
+): {
+  kind: RememberMemoryKind;
+  category: FacetCategory;
+  confidence: RelationConfidence;
+  reason: string;
+  guidance: string;
+} | null {
+  const taskText = task.toLowerCase();
+
+  if (hasWorkflowSignal(task) && (!hasDebuggingSignal(taskText) || hasProcedureSignal(taskText))) {
+    return {
+      kind: "workflow",
+      category: "workflow",
+      confidence: "high",
+      reason: "The task describes a reusable procedure, runbook, command sequence, or verification routine.",
+      guidance: "Save a workflow only when future agents should repeat the procedure."
+    };
+  }
+
+  if (hasConflictSignal(taskText)) {
+    return {
+      kind: "question",
+      category: "unresolved-conflict",
+      confidence: "high",
+      reason: "The task mentions conflicting or ambiguous memory that may need an explicit unresolved question.",
+      guidance: "Use this only when current code and evidence cannot settle the conflict."
+    };
+  }
+
+  if (hasDebuggingSignal(taskText)) {
+    return {
+      kind: "gotcha",
+      category: "gotcha",
+      confidence: "high",
+      reason: "The task describes debugging, failure, or a repeated trap future agents should avoid.",
+      guidance: "Save the gotcha as a concise failure mode with the current workaround or correction."
+    };
+  }
+
+  if (isProductFeatureTask(task, changedFiles)) {
+    return {
+      kind: "synthesis",
+      category: "feature-map",
+      confidence: "medium",
+      reason: "The task appears to change user-facing product capability or feature-map context.",
+      guidance: "Update an existing feature-map synthesis when possible; create one only for a new durable area summary."
+    };
+  }
+
+  if (hasArchitectureSignal(task, changedFiles)) {
+    return {
+      kind: "decision",
+      category: "decision-rationale",
+      confidence: "medium",
+      reason: "The task touches architecture, schema, docs, or design rationale.",
+      guidance: "Save a decision only when the work established a durable architectural choice."
+    };
+  }
+
+  return null;
+}
+
 function firstRememberMemoryKind(values: readonly ObjectType[]): RememberMemoryKind | null {
   for (const value of values) {
     if (
@@ -705,6 +1009,32 @@ function firstRememberFacet(values: readonly FacetCategory[]): FacetCategory | u
 function hasConflictSignal(taskText: string): boolean {
   return /\b(conflicts?|contradictions?|contradictory|stale|corrections?|corrected|wrong assumptions?|ambiguous|ambiguity)\b/u.test(
     taskText
+  );
+}
+
+function hasStaleSignal(taskText: string): boolean {
+  return /\b(stale|outdated|obsolete|supersed(?:e|ed|es|ing)|replaced?|retired|deprecated)\b/u.test(
+    taskText
+  );
+}
+
+function hasDebuggingSignal(taskText: string): boolean {
+  return /\b(debug|debugging|failure|failed|bug|regression|broken|trap|gotcha|workaround|root cause)\b/u.test(
+    taskText
+  );
+}
+
+function hasProcedureSignal(taskText: string): boolean {
+  return /\b(how[-\s]?to|procedure|procedures|checklist|runbook|setup|onboarding|release|migration|migrate|maintenance|verification|verify|smoke test|recovery|recover|restore|command sequence|commands|routine|workflow)\b/u.test(
+    taskText
+  );
+}
+
+function hasArchitectureSignal(task: string, changedFiles: readonly string[]): boolean {
+  return (
+    /\b(architecture|architectural|design|schema|data model|interface|api contract|rationale)\b/u.test(
+      task.toLowerCase()
+    ) || changedFiles.some(isDocsOrArchitecturePath)
   );
 }
 

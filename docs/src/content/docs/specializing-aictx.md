@@ -106,6 +106,11 @@ useful:
 aictx suggest --after-task "change auth routes" --json
 ```
 
+Use the packet's `recommended_actions` as the primary advisory save/no-save
+guide. Aictx can suggest the memory action and skeleton shape, but the agent
+must still write the durable project meaning in the `title`, `body`, and
+`reason` fields.
+
 When current code changes are already present:
 
 ```bash
