@@ -84,6 +84,9 @@ function renderSuggestData(data: SuggestMemoryData): string {
     renderList("Recommended memory", packet.recommended_memory),
     renderList("Recommended facets", packet.recommended_facets ?? []),
     renderList("Save decision checklist", packet.save_decision_checklist ?? []),
+    packet.remember_template === undefined
+      ? "Remember template: none"
+      : "Remember template: available in --json output",
     renderList("Checklist", packet.agent_checklist)
   ].join("\n");
 }

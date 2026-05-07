@@ -108,10 +108,10 @@ Load memory before non-trivial work:
 aictx load "change auth routes"
 ```
 
-After work creates durable knowledge for future agents, save a structured patch:
+After work creates durable knowledge for future agents, save intent-first memory:
 
 ```bash
-aictx save --stdin
+aictx remember --stdin
 ```
 
 Saved memory is active immediately after Aictx validates and writes it. A task
@@ -135,7 +135,7 @@ The CLI is the default interface for routine memory work. MCP is available when
 the agent client has launched and connected to `aictx-mcp`.
 
 MCP exposes exactly `load_memory`, `search_memory`, `inspect_memory`,
-`save_memory_patch`, and `diff_memory`. Setup, maintenance, recovery, export,
+`remember_memory`, `save_memory_patch`, and `diff_memory`. Setup, maintenance, recovery, export,
 registry, viewer, docs, suggest, audit, stale, and graph workflows are CLI-only
 in v1. These CLI-only commands are part of the v1 integration model rather than
 MCP parity gaps.

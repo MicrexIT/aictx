@@ -106,7 +106,7 @@ aictx load "change auth routes"
 Save durable memory after meaningful work:
 
 ```bash
-aictx save --stdin
+aictx remember --stdin
 ```
 
 Inspect memory asynchronously when needed:
@@ -153,7 +153,7 @@ integration path when the agent client has already launched and connected to
 `aictx-mcp`.
 
 MCP exposes exactly `load_memory`, `search_memory`, `inspect_memory`,
-`save_memory_patch`, and `diff_memory` in v1.
+`remember_memory`, `save_memory_patch`, and `diff_memory` in v1.
 
 Local MCP is the near-term integration path for MCP-capable local agent
 harnesses. Remote MCP, hosted sync, cloud hosting, OAuth or cloud auth,
@@ -172,7 +172,8 @@ CLI command exists.
 | Load task context | `load_memory` | `aictx load` |
 | Search memory | `search_memory` | `aictx search` |
 | Inspect memory | `inspect_memory` | `aictx inspect` |
-| Save memory patch | `save_memory_patch` | `aictx save` |
+| Remember durable context | `remember_memory` | `aictx remember` |
+| Save structured patch | `save_memory_patch` | `aictx save` |
 | Show memory diff | `diff_memory` | `aictx diff` |
 | Initialize storage | none | `aictx init`, `aictx setup` |
 | Maintain storage | none | `aictx check`, `aictx rebuild`, `aictx reset`, `aictx upgrade` |

@@ -13,6 +13,7 @@ import type { AictxMcpContext } from "./context.js";
 import { diffMemoryTool } from "./tools/diff-memory.js";
 import { inspectMemoryTool } from "./tools/inspect-memory.js";
 import { loadMemoryTool } from "./tools/load-memory.js";
+import { rememberMemoryTool } from "./tools/remember-memory.js";
 import { saveMemoryPatchTool } from "./tools/save-memory-patch.js";
 import { searchMemoryTool } from "./tools/search-memory.js";
 
@@ -191,6 +192,16 @@ function registerTools(mcp: AictxMcpServer): void {
       annotations: saveMemoryPatchTool.annotations
     },
     (args) => saveMemoryPatchTool.call(mcp.context, args)
+  );
+  mcp.server.registerTool(
+    rememberMemoryTool.name,
+    {
+      title: rememberMemoryTool.title,
+      description: rememberMemoryTool.description,
+      inputSchema: rememberMemoryTool.inputSchema,
+      annotations: rememberMemoryTool.annotations
+    },
+    (args) => rememberMemoryTool.call(mcp.context, args)
   );
   mcp.server.registerTool(
     diffMemoryTool.name,

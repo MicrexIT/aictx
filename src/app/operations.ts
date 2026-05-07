@@ -76,6 +76,10 @@ import {
   type SearchMemoryInput
 } from "../index/search.js";
 import {
+  buildRememberMemoryPatch,
+  type RememberMemoryPatch
+} from "../remember/plan.js";
+import {
   hintedFiles,
   normalizeRetrievalHints
 } from "../retrieval/hints.js";
@@ -109,6 +113,7 @@ import {
   applyMemoryPatch,
   restoreCanonicalStorageFromCommit
 } from "../storage/write.js";
+import { planMemoryPatch } from "../storage/patch.js";
 import {
   upgradeStorageToV3,
   type UpgradeStorageData
@@ -248,6 +253,13 @@ export interface SaveMemoryPatchOptions extends GitWrapperOptions {
   clock?: Clock;
 }
 
+export interface RememberMemoryOptions extends GitWrapperOptions {
+  cwd: string;
+  input?: unknown;
+  dryRun?: boolean;
+  clock?: Clock;
+}
+
 export interface SaveMemoryData {
   files_changed: string[];
   recovery_files: {
@@ -264,6 +276,11 @@ export interface SaveMemoryData {
   relations_deleted: RelationId[];
   events_appended: number;
   index_updated: boolean;
+}
+
+export interface RememberMemoryData extends SaveMemoryData {
+  dry_run: boolean;
+  patch: RememberMemoryPatch;
 }
 
 export interface DiffMemoryData {
@@ -2150,6 +2167,144 @@ export async function saveMemoryPatch(
     data: saved.data,
     warnings: saved.warnings,
     meta: refreshedMeta.meta
+  };
+}
+
+export async function rememberMemory(
+  options: RememberMemoryOptions
+): Promise<AppResult<RememberMemoryData>> {
+  const clock = options.clock ?? systemClock;
+  const paths = await resolveProjectPaths({
+    cwd: options.cwd,
+    mode: "require-initialized",
+    runner: options.runner
+  });
+
+  if (!paths.ok) {
+    return {
+      ok: false,
+      error: paths.error,
+      warnings: paths.warnings,
+      meta: await buildBestEffortMeta(options)
+    };
+  }
+
+  const meta = await buildMeta(paths.data, options);
+
+  if (!meta.ok) {
+    return meta;
+  }
+
+  if (options.input === undefined) {
+    return {
+      ok: false,
+      error: aictxError("AICtxPatchRequired", "Remember input is required."),
+      warnings: [],
+      meta: meta.meta
+    };
+  }
+
+  const storage = await readCanonicalStorage(paths.data.projectRoot);
+
+  if (!storage.ok) {
+    return {
+      ok: false,
+      error: storage.error,
+      warnings: storage.warnings,
+      meta: meta.meta
+    };
+  }
+
+  const patch = buildRememberMemoryPatch({
+    input: options.input,
+    storage: storage.data
+  });
+
+  if (!patch.ok) {
+    return {
+      ok: false,
+      error: patch.error,
+      warnings: [...storage.warnings, ...patch.warnings],
+      meta: meta.meta
+    };
+  }
+
+  if (options.dryRun === true) {
+    const secrets = rejectPatchSecrets(patch.data);
+
+    if (!secrets.ok) {
+      return {
+        ok: false,
+        error: secrets.error,
+        warnings: [...storage.warnings, ...secrets.warnings],
+        meta: meta.meta
+      };
+    }
+
+    const planned = await planMemoryPatch({
+      projectRoot: paths.data.projectRoot,
+      patch: patch.data,
+      git: meta.meta.git,
+      clock,
+      runner: options.runner
+    });
+
+    if (!planned.ok) {
+      return {
+        ok: false,
+        error: planned.error,
+        warnings: [...storage.warnings, ...secrets.warnings, ...planned.warnings],
+        meta: meta.meta
+      };
+    }
+
+    return {
+      ok: true,
+      data: {
+        dry_run: true,
+        patch: patch.data,
+        files_changed: planned.data.files_changed,
+        recovery_files: planned.data.recovery_files,
+        repairs_applied: planned.data.repairs_applied,
+        memory_created: planned.data.memory_created,
+        memory_updated: planned.data.memory_updated,
+        memory_deleted: planned.data.memory_deleted,
+        relations_created: planned.data.relations_created,
+        relations_updated: planned.data.relations_updated,
+        relations_deleted: planned.data.relations_deleted,
+        events_appended: planned.data.events_appended,
+        index_updated: false
+      },
+      warnings: [...storage.warnings, ...secrets.warnings, ...planned.warnings],
+      meta: meta.meta
+    };
+  }
+
+  const saved = await saveMemoryPatch({
+    cwd: paths.data.projectRoot,
+    patch: patch.data,
+    clock,
+    runner: options.runner
+  });
+
+  if (!saved.ok) {
+    return {
+      ok: false,
+      error: saved.error,
+      warnings: [...storage.warnings, ...saved.warnings],
+      meta: saved.meta
+    };
+  }
+
+  return {
+    ok: true,
+    data: {
+      dry_run: false,
+      patch: patch.data,
+      ...saved.data
+    },
+    warnings: [...storage.warnings, ...saved.warnings],
+    meta: saved.meta
   };
 }
 

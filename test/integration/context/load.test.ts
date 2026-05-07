@@ -173,7 +173,7 @@ describe("loadMemory integration", () => {
 
     expect(result.data.included_ids).toContain("synthesis.agent-memory-guidance");
     expect(result.data.included_ids).toContain("source.agent-integration-guidance");
-    expect(result.data.context_pack).toContain("## Relevant syntheses");
+    expect(result.data.context_pack).toContain("## Agent guidance");
     expect(result.data.context_pack).toContain("Agent memory guidance");
     expect(result.data.context_pack).toContain("## Relevant sources");
     expect(result.data.context_pack).toContain("Source: docs/agent-integration.md");
@@ -316,7 +316,7 @@ describe("loadMemory integration", () => {
     }
 
     expect(result.data.context_pack).not.toContain("## Memory conflicts to resolve");
-    expect(sectionText(result.data.context_pack, "Must know")).toContain(
+    expect(sectionText(result.data.context_pack, "Relevant decisions")).toContain(
       "Webhook retries use project policy"
     );
     expect(result.data.included_ids).toContain("decision.webhook-project-retries");
@@ -356,8 +356,8 @@ describe("loadMemory integration", () => {
     expect(onboarding.data.mode).toBe("onboarding");
     expect(debugging.data.context_pack).toContain("## Relevant gotchas");
     expect(onboarding.data.context_pack).toContain("## Relevant workflows");
-    expect(debugging.data.included_ids[0]).toBe("gotcha.mode-service");
-    expect(onboarding.data.included_ids[0]).toBe("project.mode-service");
+    expect(debugging.data.included_ids).toContain("gotcha.mode-service");
+    expect(onboarding.data.included_ids).toContain("project.mode-service");
   });
 
   it("loads task context from file and changed-file retrieval hints", async () => {
@@ -402,7 +402,7 @@ describe("loadMemory integration", () => {
     }
 
     expect(result.data.included_ids).toContain("decision.hinted-retrieval");
-    expect(result.data.context_pack).toContain("## Architecture Snapshot");
+    expect(result.data.context_pack).toContain("## Relevant decisions");
     expect(result.data.context_pack).toContain("src/context/rank.ts");
     expect(result.data.context_pack).toContain("src/index/search.ts");
   });

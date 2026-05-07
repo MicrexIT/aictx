@@ -21,6 +21,7 @@ import { registerLoadCommand } from "./commands/load.js";
 import { registerPatchCommand } from "./commands/patch.js";
 import { registerProjectsCommand } from "./commands/projects.js";
 import { registerRebuildCommand } from "./commands/rebuild.js";
+import { registerRememberCommand } from "./commands/remember.js";
 import { registerResetCommand } from "./commands/reset.js";
 import { registerRestoreCommand } from "./commands/restore.js";
 import { registerRewindCommand } from "./commands/rewind.js";
@@ -219,6 +220,12 @@ export function createCliProgram(options: CliMainOptions = {}): Command {
       : { aictxHome: options.registry.aictxHome })
   });
   registerSaveCommand(program, {
+    cwd: options.cwd ?? process.cwd(),
+    stdin: options.stdin ?? process.stdin,
+    stdout: writeOut,
+    stderr: writeErr
+  });
+  registerRememberCommand(program, {
     cwd: options.cwd ?? process.cwd(),
     stdin: options.stdin ?? process.stdin,
     stdout: writeOut,

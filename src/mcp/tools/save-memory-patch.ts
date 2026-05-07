@@ -2,7 +2,6 @@ import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 
 import { LOAD_MEMORY_MODES } from "../../context/modes.js";
-import { resolveProjectPaths } from "../../core/paths.js";
 import { dataAccessService } from "../../data-access/index.js";
 import {
   ACTORS,
@@ -24,6 +23,10 @@ import {
   toMcpToolResult,
   WRITE_TOOL_ANNOTATIONS
 } from "./shared.js";
+import {
+  resolveWriteQueueKey,
+  serializeProjectWrite
+} from "./write-queue.js";
 
 const OBJECT_ID_SCHEMA = z
   .string()
@@ -175,8 +178,6 @@ const SAVE_MEMORY_PATCH_INPUT_SCHEMA = z
 type SaveMemoryPatchArgs = z.infer<typeof SAVE_MEMORY_PATCH_INPUT_SCHEMA> &
   ProjectScopedMcpArgs;
 
-const writeQueues = new Map<string, Promise<void>>();
-
 export const saveMemoryPatchTool = {
   name: "save_memory_patch",
   title: "Save Aictx Memory Patch",
@@ -204,40 +205,6 @@ async function callSaveMemoryPatchTool(
 
     return toMcpToolResult(result);
   });
-}
-
-async function resolveWriteQueueKey(cwd: string): Promise<string> {
-  const paths = await resolveProjectPaths({
-    cwd,
-    mode: "require-initialized"
-  });
-
-  return paths.ok ? paths.data.projectRoot : cwd;
-}
-
-async function serializeProjectWrite<T>(
-  projectKey: string,
-  operation: () => Promise<T>
-): Promise<T> {
-  const previous = writeQueues.get(projectKey) ?? Promise.resolve();
-  let releaseCurrent!: () => void;
-  const current = new Promise<void>((resolve) => {
-    releaseCurrent = resolve;
-  });
-  const queued = previous.catch(() => undefined).then(() => current);
-
-  writeQueues.set(projectKey, queued);
-  await previous.catch(() => undefined);
-
-  try {
-    return await operation();
-  } finally {
-    releaseCurrent();
-
-    if (writeQueues.get(projectKey) === queued) {
-      writeQueues.delete(projectKey);
-    }
-  }
 }
 
 function hasUniqueItems(items: readonly string[]): boolean {

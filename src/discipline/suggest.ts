@@ -20,6 +20,10 @@ import type {
 import type { CanonicalStorageSnapshot } from "../storage/read.js";
 import type { StoredMemoryObject } from "../storage/objects.js";
 import type { StoredMemoryRelation } from "../storage/relations.js";
+import type {
+  RememberMemoryInput,
+  RememberMemoryKind
+} from "../remember/types.js";
 
 export type SuggestMode = "from_diff" | "bootstrap" | "after_task";
 
@@ -33,6 +37,7 @@ export interface SuggestReviewPacket {
   recommended_relations?: SuggestedRelation[];
   recommended_facets?: FacetCategory[];
   save_decision_checklist?: string[];
+  remember_template?: RememberMemoryInput;
   task?: string;
   agent_checklist: string[];
 }
@@ -297,18 +302,34 @@ export function buildSuggestAfterTaskPacket(
   options: BuildSuggestAfterTaskPacketOptions
 ): SuggestReviewPacket {
   const changedFiles = uniqueSorted(options.changedFiles);
+  const related = relatedMemoryIds(options.storage, changedFiles);
+  const possibleStale = possibleStaleIds(options.storage, changedFiles);
+  const recommendedRelationsForChanges = recommendedRelations(options.storage, changedFiles);
+  const recommendedMemory = recommendedMemoryForTask(options.task, changedFiles);
+  const recommendedFacets = recommendedFacetsForTask(options.task, changedFiles, options.storage);
+  const recommendedEvidence = recommendedFileEvidence(changedFiles);
 
   return {
     mode: "after_task",
     task: options.task,
     changed_files: changedFiles,
-    related_memory_ids: relatedMemoryIds(options.storage, changedFiles),
-    possible_stale_ids: possibleStaleIds(options.storage, changedFiles),
-    recommended_memory: recommendedMemoryForTask(options.task, changedFiles),
-    recommended_evidence: recommendedFileEvidence(changedFiles),
-    recommended_relations: recommendedRelations(options.storage, changedFiles),
-    recommended_facets: recommendedFacetsForTask(options.task, changedFiles, options.storage),
+    related_memory_ids: related,
+    possible_stale_ids: possibleStale,
+    recommended_memory: recommendedMemory,
+    recommended_evidence: recommendedEvidence,
+    recommended_relations: recommendedRelationsForChanges,
+    recommended_facets: recommendedFacets,
     save_decision_checklist: [...SAVE_DECISION_CHECKLIST],
+    remember_template: rememberTemplateForAfterTask({
+      task: options.task,
+      changedFiles,
+      relatedMemoryIds: related,
+      possibleStaleIds: possibleStale,
+      recommendedMemory,
+      recommendedEvidence,
+      recommendedRelations: recommendedRelationsForChanges,
+      recommendedFacets
+    }),
     agent_checklist: [...AGENT_CHECKLIST]
   };
 }
@@ -594,6 +615,83 @@ function recommendedFacetsForTask(
   }
 
   return [...recommended];
+}
+
+interface RememberTemplateForAfterTaskOptions {
+  task: string;
+  changedFiles: readonly string[];
+  relatedMemoryIds: readonly ObjectId[];
+  possibleStaleIds: readonly ObjectId[];
+  recommendedMemory: readonly ObjectType[];
+  recommendedEvidence: readonly Evidence[];
+  recommendedRelations: readonly SuggestedRelation[];
+  recommendedFacets: readonly FacetCategory[];
+}
+
+function rememberTemplateForAfterTask(
+  options: RememberTemplateForAfterTaskOptions
+): RememberMemoryInput {
+  const kind = firstRememberMemoryKind(options.recommendedMemory) ?? "fact";
+  const category = firstRememberFacet(options.recommendedFacets);
+  const appliesTo = options.changedFiles.length === 0 ? [] : [...options.changedFiles];
+  const evidence = [...options.recommendedEvidence];
+
+  return {
+    task: options.task,
+    memories: [
+      {
+        kind,
+        title: "",
+        body: "",
+        ...(appliesTo.length === 0 ? {} : { applies_to: appliesTo }),
+        ...(category === undefined ? {} : { category }),
+        ...(evidence.length === 0 ? {} : { evidence })
+      }
+    ],
+    updates: options.relatedMemoryIds.map((id) => ({
+      id,
+      body: "",
+      ...(appliesTo.length === 0 ? {} : { applies_to: appliesTo }),
+      ...(category === undefined ? {} : { category }),
+      ...(evidence.length === 0 ? {} : { evidence })
+    })),
+    stale: options.possibleStaleIds.map((id) => ({
+      id,
+      reason: ""
+    })),
+    relations: options.recommendedRelations.map((relation) => ({
+      from: relation.from,
+      predicate: relation.predicate,
+      to: relation.to,
+      confidence: "medium",
+      ...(evidence.length === 0 ? {} : { evidence })
+    }))
+  };
+}
+
+function firstRememberMemoryKind(values: readonly ObjectType[]): RememberMemoryKind | null {
+  for (const value of values) {
+    if (
+      value === "source" ||
+      value === "synthesis" ||
+      value === "decision" ||
+      value === "constraint" ||
+      value === "fact" ||
+      value === "gotcha" ||
+      value === "workflow" ||
+      value === "question" ||
+      value === "concept" ||
+      value === "note"
+    ) {
+      return value;
+    }
+  }
+
+  return null;
+}
+
+function firstRememberFacet(values: readonly FacetCategory[]): FacetCategory | undefined {
+  return values[0];
 }
 
 function hasConflictSignal(taskText: string): boolean {

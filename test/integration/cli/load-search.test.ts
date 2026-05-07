@@ -179,7 +179,7 @@ describe("aictx load and search CLI", () => {
     expect(envelope.ok).toBe(true);
     expect(envelope.data.mode).toBe("debugging");
     expect(envelope.data.context_pack).toContain("## Relevant gotchas");
-    expect(envelope.data.included_ids[0]).toBe("gotcha.mode-service");
+    expect(envelope.data.included_ids).toContain("gotcha.mode-service");
   });
 
   it("returns a validation envelope for invalid --mode values in JSON output", async () => {

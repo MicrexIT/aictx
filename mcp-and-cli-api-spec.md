@@ -54,7 +54,8 @@ When a supported MCP or CLI entrypoint exists, agents must use that entrypoint i
 | Load task context | `load_memory` | `aictx load` | Default routine agent path is CLI; MCP equivalent is supported when configured. |
 | Search memory | `search_memory` | `aictx search` | Default routine agent path is CLI; MCP equivalent is supported when configured. |
 | Inspect object | `inspect_memory` | `aictx inspect` | Full-object local-agent read path with direct relation summaries. |
-| Save memory patch | `save_memory_patch` | `aictx save` | All writes use structured patches. |
+| Remember memory | `remember_memory` | `aictx remember` | Intent-first routine write path compiles to a structured patch. |
+| Save structured patch | `save_memory_patch` | `aictx save` | Advanced structured patch write path. |
 | Show memory diff | `diff_memory` | `aictx diff` | Git-backed async inspection and recovery path. |
 | Initialize storage | none | `aictx init`, `aictx setup` | Setup remains CLI-only in v1. |
 | Review patch file | none | `aictx patch review` | Patch review remains CLI-only in v1. |
@@ -313,7 +314,42 @@ JSON success data:
 
 When no token budget is requested, `token_target` is `null`, `budget_status` is `not_requested`, and no budget-driven omission or compression is applied. `excluded_ids` are retrieval/status/scope/conflict exclusions; `omitted_ids` are selected memory IDs left out of rendered Markdown due to explicit token-target packaging.
 
-### 5.3 `aictx save`
+### 5.3 `aictx remember`
+
+Purpose:
+
+Create or repair Aictx memory from intent-first agent input.
+
+Syntax:
+
+```bash
+aictx remember --stdin [--dry-run] [--json]
+```
+
+Minimal stdin input:
+
+```json
+{
+  "task": "Document billing retry behavior",
+  "memories": [
+    {
+      "kind": "decision",
+      "title": "Billing retries run in the worker",
+      "body": "Billing retry execution happens in the queue worker, not inside the HTTP webhook handler."
+    }
+  ]
+}
+```
+
+Behavior:
+
+* Require initialized `.aictx/`.
+* Parse intent-first JSON from stdin.
+* Convert it to the structured patch format.
+* With `--dry-run`, validate and summarize the generated patch without writing canonical memory.
+* Without `--dry-run`, apply the generated patch through the same write path as `aictx save`.
+
+### 5.4 `aictx save`
 
 Purpose:
 
@@ -383,7 +419,7 @@ Success data:
 }
 ```
 
-### 5.4 `aictx diff`
+### 5.5 `aictx diff`
 
 Purpose:
 
@@ -911,6 +947,7 @@ V1 MCP must expose only these required tools:
 * `load_memory`
 * `search_memory`
 * `inspect_memory`
+* `remember_memory`
 * `save_memory_patch`
 * `diff_memory`
 
@@ -1095,7 +1132,38 @@ Output data:
 }
 ```
 
-### 6.4 `save_memory_patch`
+### 6.4 `remember_memory`
+
+Input:
+
+```json
+{
+  "project_root": "/repo",
+  "task": "Fix Stripe webhook retries",
+  "memories": [
+    {
+      "kind": "decision",
+      "title": "Billing retries run in the worker",
+      "body": "Stripe webhook retries execute in the queue worker, not inside the HTTP handler.",
+      "tags": ["billing", "stripe", "webhooks"],
+      "applies_to": ["services/billing/src/webhooks/handler.ts"],
+      "evidence": [
+        { "kind": "file", "id": "services/billing/src/webhooks/handler.ts" }
+      ]
+    }
+  ]
+}
+```
+
+Behavior:
+
+* Convert intent-first memory input into the structured patch format.
+* Default patch source to `{ "kind": "agent", "task": task }`.
+* Support `memories`, `updates`, `stale`, `supersede`, and `relations`.
+* Must not infer semantic memory from code diffs; the agent supplies title, body, and reasons.
+* Apply the generated patch through the same core path as `save_memory_patch`.
+
+### 6.5 `save_memory_patch`
 
 Input:
 
@@ -1185,11 +1253,11 @@ Local MCP tool names are intentionally Aictx-specific: `search_memory` and `insp
 
 Future hosts that require generic tool names may map their adapter-level `search` operation to the shared search behavior and their adapter-level `fetch` operation to the shared inspect behavior. That mapping is a host adapter concern and must not rename the local MCP tools.
 
-The current local MCP server must not register `search` or `fetch`; it must continue to register only the five v1 local MCP tools unless a future implementation explicitly selects a non-local profile. Future generic profiles are inactive metadata only and do not implement remote MCP, cloud hosting, OAuth, hosted sync, or ChatGPT App SDK UI.
+The current local MCP server must not register `search` or `fetch`; it must continue to register only the six v1 local MCP tools unless a future implementation explicitly selects a non-local profile. Future generic profiles are inactive metadata only and do not implement remote MCP, cloud hosting, OAuth, hosted sync, or ChatGPT App SDK UI.
 
 ## 7. Structured Patch Format
 
-The structured patch is the only write contract.
+The structured patch is the canonical advanced write contract. Intent-first `remember` inputs compile to this shape before validation and storage writes.
 
 Top-level shape:
 

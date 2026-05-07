@@ -11,7 +11,7 @@ Most days, an agent only needs:
 
 ```bash
 aictx load "task summary"
-aictx save --stdin
+aictx remember --stdin
 aictx diff
 ```
 
@@ -56,11 +56,13 @@ aictx search "auth route conventions"
 aictx inspect decision.auth-route-conventions
 aictx suggest --after-task "change auth routes" --json
 aictx audit --json
-aictx save --stdin
+aictx remember --stdin
 ```
 
 The routine loop is narrow load, work, and save only durable knowledge as active
 memory. A task that produced no reusable project knowledge does not need a save.
+Use `remember` for normal intent-first memory creation, and `save` only when
+you need to submit a structured patch directly.
 
 Commands that support structured output accept `--json`:
 
@@ -127,7 +129,7 @@ MCP is available when the agent client has launched and connected to
 `aictx-mcp`.
 
 MCP exposes exactly `load_memory`, `search_memory`, `inspect_memory`,
-`save_memory_patch`, and `diff_memory`. Setup, maintenance, recovery, export,
+`remember_memory`, `save_memory_patch`, and `diff_memory`. Setup, maintenance, recovery, export,
 registry, viewer, docs, suggest, audit, stale, and graph workflows are CLI-only
 in v1. These CLI-only commands are part of the v1 integration model rather than
 MCP parity gaps.

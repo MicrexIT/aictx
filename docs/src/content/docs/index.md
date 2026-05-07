@@ -46,8 +46,8 @@ export".
 
 1. Initialize Aictx inside an existing project with `aictx init`.
 2. Load task-focused context with `aictx load "<task summary>"`.
-3. Save durable knowledge with `aictx save --stdin` or `save_memory_patch` when
-   MCP is already configured.
+3. Save durable knowledge with `aictx remember --stdin` or `remember_memory`
+   when MCP is already configured.
 4. Inspect the result later with `aictx view`, `aictx diff`, Git tools, or MCP
    `diff_memory` when available.
 
@@ -73,7 +73,7 @@ The CLI is the default interface for routine memory work. MCP is available when
 the agent client has launched and connected to `aictx-mcp`.
 
 MCP exposes exactly `load_memory`, `search_memory`, `inspect_memory`,
-`save_memory_patch`, and `diff_memory`. Setup, maintenance, recovery, export,
+`remember_memory`, `save_memory_patch`, and `diff_memory`. Setup, maintenance, recovery, export,
 registry, viewer, docs, suggest, audit, stale, and graph workflows are CLI-only
 in v1. These CLI-only commands are part of the v1 integration model rather than
 MCP parity gaps.

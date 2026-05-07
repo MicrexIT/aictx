@@ -9,9 +9,11 @@ Before non-trivial coding, architecture, debugging, dependency, or configuration
 - Default CLI: `aictx load "<task summary>"`
 - MCP equivalent when available: `load_memory({ task: "<task summary>" })`
 
-After meaningful work, make a save/no-save decision. Use `aictx suggest --after-task "<task>" --json` when useful, then save durable project knowledge directly as active memory. Saved memory is active immediately after Aictx validates and writes it:
-- Default CLI: `aictx save --stdin`
-- MCP equivalent when available: `save_memory_patch({ patch: { source, changes } })`
+After meaningful work, make a save/no-save decision. Use `aictx suggest --after-task "<task>" --json` when useful, then save durable project knowledge through the intent-first API:
+- Default CLI: `aictx remember --stdin`
+- MCP equivalent when available: `remember_memory({ task, memories, updates, stale, supersede, relations })`
+
+Use `aictx save --stdin` or `save_memory_patch({ patch })` only for advanced structured patch writes. Saved memory is active immediately after Aictx validates and writes it.
 
 Save durable decisions, architecture or behavior changes, constraints, conventions, workflows, gotchas, debugging facts, open questions, user-stated context, source records, and maintained syntheses. Do not save task diaries, secrets, sensitive logs, speculation, or short-lived implementation notes.
 

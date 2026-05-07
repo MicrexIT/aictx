@@ -47,16 +47,22 @@ load_memory({ project_root: "/path/to/project", task: "<task summary>", mode: "c
 After meaningful work:
 
 ```bash
-aictx save --stdin
+aictx remember --stdin
 ```
 
 MCP equivalent when available:
 
 ```text
-save_memory_patch({ patch: { source, changes } })
+remember_memory({ task, memories, updates, stale, supersede, relations })
 ```
 
-Saved memory is active immediately after Aictx validates and writes the patch. Dirty or untracked `.aictx/` files are not by themselves a reason to skip saving durable memory. Attempt the supported CLI/MCP save when there is durable future value. Aictx backs up dirty touched files under `.aictx/recovery/` before overwrite/delete and continues where possible.
+`remember` is the routine intent-first write path. It generates a structured
+patch internally, then uses the same validation and write path as `aictx save`
+and `save_memory_patch`. Saved memory is active immediately after Aictx
+validates and writes the patch. Dirty or untracked `.aictx/` files are not by
+themselves a reason to skip saving durable memory. Attempt the supported CLI/MCP
+save when there is durable future value. Aictx backs up dirty touched files
+under `.aictx/recovery/` before overwrite/delete and continues where possible.
 
 If `aictx` is not on `PATH`, run the same commands through the project package manager or local binary path:
 
@@ -104,7 +110,8 @@ The v1 agent model is CLI-first and MCP-compatible. CLI handles routine memory w
 | Load task context | `load_memory` | `aictx load` |
 | Search memory | `search_memory` | `aictx search` |
 | Inspect object | `inspect_memory` | `aictx inspect` |
-| Save memory patch | `save_memory_patch` | `aictx save` |
+| Remember durable context | `remember_memory` | `aictx remember` |
+| Save structured patch | `save_memory_patch` | `aictx save` |
 | Show memory diff | `diff_memory` | `aictx diff` |
 | Initialize storage | none | `aictx init`, `aictx setup` |
 | Review patch file | none | `aictx patch review` |
@@ -126,7 +133,7 @@ CLI-only capabilities are not MCP parity gaps. Do not expose setup, maintenance,
 
 Agents may use the CLI for supported setup, maintenance, recovery, export, registry management, local viewing, suggestion, audit, stale-list, and graph-neighborhood operations. They should use supported MCP or CLI entrypoints instead of editing `.aictx/` files directly when a supported command exists.
 
-MCP exposes exactly `load_memory`, `search_memory`, `inspect_memory`, `save_memory_patch`, and `diff_memory` in v1.
+MCP exposes exactly `load_memory`, `search_memory`, `inspect_memory`, `remember_memory`, `save_memory_patch`, and `diff_memory` in v1.
 
 ## Local Viewer
 

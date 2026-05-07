@@ -14,8 +14,8 @@ This spec does not define a hosted service, remote MCP, OAuth, tenancy, billing,
 * CLI remains the default routine path for agents.
 * Local MCP is a supported generic local-agent interface for harnesses that can launch `aictx-mcp`.
 * Local MCP is the near-term integration path; remote MCP, hosted sync, cloud hosting, OAuth or cloud auth, tenancy, billing, and ChatGPT App SDK UI are future work.
-* CLI and MCP must share one data-access implementation for routine reads and structured writes.
-* `save_memory_patch` remains the only MCP write primitive.
+* CLI and MCP must share one data-access implementation for routine reads, intent-first writes, and structured writes.
+* `remember_memory` is the routine MCP write primitive; `save_memory_patch` remains the advanced structured patch primitive.
 * Data access must not expose arbitrary filesystem reads, arbitrary filesystem writes, shell execution, or low-level graph mutation.
 * Generated indexes, exports, and viewers are rebuildable and are not canonical storage.
 * Future host adapters may rename operations at the adapter boundary, but must not fork core behavior.
@@ -30,6 +30,7 @@ search(input): Promise<AppResult<SearchMemoryData>>
 inspect(input): Promise<AppResult<InspectMemoryData>>
 diff(input): Promise<AppResult<DiffMemoryData>>
 applyPatch(input): Promise<AppResult<SaveMemoryData>>
+remember(input): Promise<AppResult<RememberMemoryData>>
 ```
 
 Inputs must include a resolved or resolvable project target. Adapters may accept `cwd`, `project_root`, or a host-specific project selector, but the data-access boundary must resolve that selector to one project root and one `.aictx/` storage root before reading or writing.
@@ -53,6 +54,8 @@ meta
 
 `diff` returns the same Git-backed `.aictx/` diff, changed files, untracked files, changed memory IDs, changed relation IDs, and `AICtxGitRequired` behavior as `aictx diff --json` and `diff_memory`.
 
+`remember` converts intent-first agent memory input into a structured patch, then applies it with the same safety, validation, lock, repair, dirty backup, event append, index update, and result semantics as `aictx remember --stdin` and `remember_memory`.
+
 `applyPatch` validates and applies a structured memory patch with the same safety, lock, repair, dirty backup, event append, index update, and result semantics as `aictx save --stdin` and `save_memory_patch`.
 
 ## 5. Adapter Profiles
@@ -67,6 +70,7 @@ The local MCP adapter profile exposes exactly these tool names:
 load_memory
 search_memory
 inspect_memory
+remember_memory
 save_memory_patch
 diff_memory
 ```
@@ -77,6 +81,7 @@ The CLI adapter profile exposes the matching routine commands:
 aictx load
 aictx search
 aictx inspect
+aictx remember
 aictx save
 aictx diff
 ```
@@ -85,9 +90,9 @@ Future ChatGPT-compatible or other host profiles may map a generic `search` oper
 
 ## 6. Write Boundary
 
-Structured patch application is the only shared write operation in this contract.
+Structured patch application remains the canonical write operation in this contract. Intent-first remember operations must compile to structured patches before writing canonical memory.
 
-Adapters must not add independent create/update/delete object tools, relation mutation tools, generated-index mutation tools, or direct file-write tools. Any future write adapter must still submit structured patches to `applyPatch`.
+Adapters must not add independent create/update/delete object tools, relation mutation tools, generated-index mutation tools, or direct file-write tools. Any future write adapter must still submit structured patches to `applyPatch` or compile intent-first input through `remember`.
 
 ## 7. Tests
 

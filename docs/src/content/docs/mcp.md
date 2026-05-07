@@ -60,6 +60,7 @@ Local MCP exposes exactly these tools in v1:
 - `load_memory`
 - `search_memory`
 - `inspect_memory`
+- `remember_memory`
 - `save_memory_patch`
 - `diff_memory`
 
@@ -69,6 +70,10 @@ MCP equivalents are available when the client already exposes Aictx MCP tools:
 load_memory({ task: "<task summary>", mode: "coding" })
 search_memory({ query: "auth route conventions" })
 inspect_memory({ id: "decision.auth-route-conventions" })
+remember_memory({
+  task: "<task summary>",
+  memories: [{ kind: "fact", title: "Durable fact", body: "Reusable project context." }]
+})
 save_memory_patch({ patch: { source, changes } })
 diff_memory({})
 ```
@@ -109,7 +114,7 @@ MCP memory operation, so `aictx view` has no MCP equivalent.
 
 Future ChatGPT-compatible or other host adapters may expose generic `search`
 and `fetch` names as aliases over Aictx search and inspect behavior. Those names
-are future adapter mappings only. The local MCP server exposes the five
+are future adapter mappings only. The local MCP server exposes the six
 Aictx-specific tools above; generic `search` and `fetch` are not local MCP tool
 names.
 

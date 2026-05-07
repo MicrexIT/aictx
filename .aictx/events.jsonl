@@ -101,3 +101,6 @@
 {"actor":"agent","event":"memory.created","id":"gotcha.starlight-theme-tokens-invert-color-names-in-light-mode","timestamp":"2026-05-06T23:14:15+02:00"}
 {"actor":"agent","event":"memory.created","id":"gotcha.starlight-docs-render-frontmatter-titles-automatically","timestamp":"2026-05-06T23:25:39+02:00"}
 {"actor":"agent","event":"memory.updated","id":"synthesis.public-docs-architecture","timestamp":"2026-05-07T15:14:10+02:00"}
+{"actor":"agent","event":"memory.created","id":"decision.context-rendering-uses-one-primary-section-per-memory","timestamp":"2026-05-07T17:14:18+02:00"}
+{"actor":"agent","event":"memory.updated","id":"fact.data-access-contract-foundation","timestamp":"2026-05-07T17:14:18+02:00"}
+{"actor":"agent","event":"memory.updated","id":"synthesis.agent-memory-guidance","timestamp":"2026-05-07T17:14:18+02:00"}

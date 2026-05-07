@@ -13,7 +13,7 @@ The CLI is the default interface for routine memory work.
 | --- | --- |
 | Setup | `aictx init`, `aictx setup` |
 | Maintenance | `aictx check`, `aictx rebuild`, `aictx reset`, `aictx upgrade` |
-| Routine memory | `aictx load`, `aictx search`, `aictx suggest`, `aictx audit`, `aictx save` |
+| Routine memory | `aictx load`, `aictx search`, `aictx suggest`, `aictx audit`, `aictx remember`, `aictx save` |
 | Inspection | `aictx inspect`, `aictx stale`, `aictx graph` |
 | Inspection and recovery | `aictx diff`, `aictx history`, `aictx restore`, `aictx rewind` |
 | Export | `aictx export obsidian` |
@@ -35,6 +35,7 @@ MCP exposes exactly:
 - `load_memory`
 - `search_memory`
 - `inspect_memory`
+- `remember_memory`
 - `save_memory_patch`
 - `diff_memory`
 
@@ -76,9 +77,32 @@ Facet categories include `project-description`, `architecture`, `stack`,
 `agent-guidance`, `concept`, `open-question`, `domain`, `bounded-context`,
 `capability`, `business-rule`, and `unresolved-conflict`.
 
+## Remember input
+
+`remember` is the routine agent write primitive. It accepts intent-first JSON
+and generates a structured patch internally.
+
+```json
+{
+  "task": "Fix Stripe webhook retries",
+  "memories": [
+    {
+      "kind": "decision",
+      "title": "Billing retries run in the worker",
+      "body": "Stripe webhook retries execute in the queue worker.",
+      "tags": ["billing", "stripe"],
+      "applies_to": ["services/billing/src/webhooks/handler.ts"]
+    }
+  ]
+}
+```
+
+Supported top-level action arrays are `memories`, `updates`, `stale`,
+`supersede`, and `relations`.
+
 ## Structured patch
 
-The structured patch is the only write contract.
+The structured patch is the canonical advanced write contract.
 
 ```json
 {

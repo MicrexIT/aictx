@@ -108,6 +108,7 @@ describe("aictx MCP save_memory_patch tool", () => {
         "diff_memory",
         "inspect_memory",
         "load_memory",
+        "remember_memory",
         "save_memory_patch",
         "search_memory"
       ]);
@@ -161,6 +162,114 @@ describe("aictx MCP save_memory_patch tool", () => {
       expect(schema).toContain("abandoned-attempt");
       expect(schema).toContain("product-feature");
       expect(schema).not.toContain("additionalProperties\":{}");
+    } finally {
+      await started.close();
+    }
+
+    expect(started.stderr()).toBe("");
+  });
+
+  it("remembers intent-first memory through globally targeted MCP writes", async () => {
+    const serverRoot = await createProjectRoot("aictx-mcp-remember-server-");
+    const projectRoot = await createInitializedProject("aictx-mcp-remember-project-");
+    const started = await startMcpClient(serverRoot);
+
+    try {
+      const mcp = await started.client.callTool({
+        name: "remember_memory",
+        arguments: {
+          project_root: projectRoot,
+          task: "Add MCP remember coverage",
+          memories: [
+            {
+              kind: "decision",
+              title: "MCP remember uses intent-first writes",
+              body: "The remember_memory tool accepts semantic memory input and routes it through the shared save path.",
+              tags: ["mcp", "remember"],
+              applies_to: ["src/mcp/tools/remember-memory.ts"],
+              evidence: [{ kind: "file", id: "src/mcp/tools/remember-memory.ts" }]
+            }
+          ]
+        }
+      });
+      const envelope = parseToolEnvelope<SaveEnvelope>(mcp);
+
+      expect(envelope.ok).toBe(true);
+      expect(envelope.data.memory_created).toEqual([
+        "decision.mcp-remember-uses-intent-first-writes"
+      ]);
+
+      const storage = await readCanonicalStorage(projectRoot);
+
+      expect(storage.ok).toBe(true);
+      if (!storage.ok) {
+        return;
+      }
+
+      const saved = storage.data.objects.find(
+        (object) =>
+          object.sidecar.id === "decision.mcp-remember-uses-intent-first-writes"
+      );
+
+      expect(saved?.body).toContain("semantic memory input");
+      expect(saved?.sidecar.facets).toEqual({
+        category: "decision-rationale",
+        applies_to: ["src/mcp/tools/remember-memory.ts"]
+      });
+      expect(saved?.sidecar.evidence).toEqual([
+        { kind: "file", id: "src/mcp/tools/remember-memory.ts" }
+      ]);
+    } finally {
+      await started.close();
+    }
+
+    expect(started.stderr()).toBe("");
+  });
+
+  it("shares write serialization between remember_memory and save_memory_patch", async () => {
+    const projectRoot = await createInitializedProject("aictx-mcp-remember-queue-");
+    const started = await startMcpClient(projectRoot);
+
+    try {
+      const [remember, save] = await Promise.all([
+        started.client.callTool({
+          name: "remember_memory",
+          arguments: {
+            task: "Exercise mixed MCP write queue",
+            memories: [
+              {
+                kind: "fact",
+                title: "Mixed MCP queue remember write",
+                body: "remember_memory and save_memory_patch serialize through the same project write queue."
+              }
+            ]
+          }
+        }),
+        started.client.callTool({
+          name: "save_memory_patch",
+          arguments: {
+            patch: createNotePatch(
+              "Mixed MCP queue save write",
+              "save_memory_patch shares the project write queue with remember_memory."
+            )
+          }
+        })
+      ]);
+      const rememberEnvelope = parseToolEnvelope<SaveEnvelope>(remember);
+      const saveEnvelope = parseToolEnvelope<SaveEnvelope>(save);
+
+      expect(rememberEnvelope.data.memory_created).toEqual([
+        "fact.mixed-mcp-queue-remember-write"
+      ]);
+      expect(saveEnvelope.data.memory_created).toEqual([
+        "note.mixed-mcp-queue-save-write"
+      ]);
+      await expect(readMemoryIds(projectRoot)).resolves.toEqual(
+        expect.arrayContaining([
+          "fact.mixed-mcp-queue-remember-write",
+          "note.mixed-mcp-queue-save-write"
+        ])
+      );
     } finally {
       await started.close();
     }

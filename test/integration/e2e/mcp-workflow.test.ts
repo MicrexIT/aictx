@@ -153,6 +153,7 @@ const REQUIRED_MCP_TOOLS = [
   "diff_memory",
   "inspect_memory",
   "load_memory",
+  "remember_memory",
   "save_memory_patch",
   "search_memory"
 ] as const;

@@ -38,6 +38,7 @@ const REQUIRED_MCP_TOOLS = [
   "diff_memory",
   "inspect_memory",
   "load_memory",
+  "remember_memory",
   "save_memory_patch",
   "search_memory"
 ] as const;
@@ -323,15 +324,18 @@ describe("integration security regression guardrails", () => {
       projectRoot
     );
     const envelope = parseSuccessfulCliEnvelope<LoadEnvelope>(output);
-    const mustKnow = extractMarkdownSection(envelope.data.context_pack, "Must know");
+    const activeDecisions = extractMarkdownSection(
+      envelope.data.context_pack,
+      "Relevant decisions"
+    );
     const staleSection = extractMarkdownSection(
       envelope.data.context_pack,
       "Stale or superseded memory to avoid"
     );
 
-    expect(mustKnow).toContain("decision.security-active");
-    expect(mustKnow).not.toContain("decision.security-stale");
-    expect(mustKnow).not.toContain("decision.security-superseded");
+    expect(activeDecisions).toContain("decision.security-active");
+    expect(activeDecisions).not.toContain("decision.security-stale");
+    expect(activeDecisions).not.toContain("decision.security-superseded");
     expect(staleSection).toContain("decision.security-stale");
     expect(staleSection).toContain("decision.security-superseded");
     expect(envelope.data.included_ids).toContain("decision.security-active");

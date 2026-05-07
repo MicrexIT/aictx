@@ -9,7 +9,7 @@ import {
 } from "../../../src/data-access/index.js";
 
 describe("data-access adapter profiles", () => {
-  it("maps the local MCP profile to the five Aictx-specific data-access operations", () => {
+  it("maps the local MCP profile to the Aictx-specific data-access operations", () => {
     const profile = selectHostAdapterProfile("local-mcp");
 
     expect(profile).toMatchObject({
@@ -20,6 +20,7 @@ describe("data-access adapter profiles", () => {
       load_memory: "load",
       search_memory: "search",
       inspect_memory: "inspect",
+      remember_memory: "remember",
       save_memory_patch: "applyPatch",
       diff_memory: "diff"
     });
@@ -51,6 +52,7 @@ describe("data-access adapter profiles", () => {
       "load_memory",
       "search_memory",
       "inspect_memory",
+      "remember_memory",
       "save_memory_patch",
       "diff_memory"
     ]);

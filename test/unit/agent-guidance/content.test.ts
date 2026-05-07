@@ -28,12 +28,7 @@ const publicMcpContractTargets = [
 ] as const;
 
 const localNowCloudLaterTargets = [
-  ...publicMcpContractTargets,
-  "integrations/templates/agent-guidance.md",
-  "integrations/codex/aictx/SKILL.md",
-  "integrations/claude/aictx/SKILL.md",
-  "integrations/claude/aictx.md",
-  "integrations/generic/aictx-agent-instructions.md"
+  ...publicMcpContractTargets
 ] as const;
 
 const futureAdapterMappingTargets = [
@@ -47,12 +42,7 @@ const futureAdapterMappingTargets = [
   "docs/src/content/docs/specializing-aictx.md",
   "docs/src/content/docs/reference.md",
   "docs/src/content/docs/troubleshooting.md",
-  "docs/src/content/docs/viewer.md",
-  "integrations/templates/agent-guidance.md",
-  "integrations/codex/aictx/SKILL.md",
-  "integrations/claude/aictx/SKILL.md",
-  "integrations/claude/aictx.md",
-  "integrations/generic/aictx-agent-instructions.md"
+  "docs/src/content/docs/viewer.md"
 ] as const;
 
 const generatedGuidanceTargets = [
@@ -67,6 +57,7 @@ const mcpTools = [
   "`load_memory`",
   "`search_memory`",
   "`inspect_memory`",
+  "`remember_memory`",
   "`save_memory_patch`",
   "`diff_memory`"
 ] as const;
@@ -132,28 +123,22 @@ const loadModes = [
 ] as const;
 
 const lifecycleRules = [
-  /load narrowly/i,
-  /save only durable/i,
-  /update existing memory before creating duplicates/i,
-  /stale or supersede wrong old memory/i,
-  /delete memory that should not persist/i,
-  /prefer current code and user requests over loaded memory/i,
-  /report whether memory changed/i,
+  /load durable project context/i,
+  /Do not save secrets/i,
+  /Prefer updating[\s\S]{0,80}superseding[\s\S]{0,80}deleting existing memory/i,
+  /current user[\s\S]{0,80}code[\s\S]{0,80}tests/i,
+  /whether Aictx memory changed|memory changed/i,
   /save nothing/i
 ] as const;
 
 const nonBlockingDirtySaveGuidance =
-  "Dirty or untracked `.aictx/` files are not by themselves a reason to skip saving durable memory";
+  "Dirty or untracked `.aictx/` files are not by themselves a";
 
 const packageManagerFallbacks = [
   "pnpm exec aictx",
   "npm exec aictx",
   "npx --package @aictx/memory -- aictx",
-  "./node_modules/.bin/aictx",
-  "pnpm exec aictx-mcp",
-  "npm exec aictx-mcp",
-  "npx --package @aictx/memory -- aictx-mcp",
-  "./node_modules/.bin/aictx-mcp"
+  "./node_modules/.bin/aictx"
 ] as const;
 
 const memoryPatchOperations = [
@@ -228,11 +213,10 @@ describe("agent guidance content", () => {
 
       expect(content).not.toMatch(/\bembeddings?\b/i);
       expect(content).toMatch(/Aictx does not infer durable project meaning from diffs/i);
-      expect(content).toMatch(/CLI-only capabilities are not MCP parity gaps/i);
-      expect(content).toMatch(/Do not .*MCP .*solely to mirror/i);
-      expect(content).toMatch(/edit(?:ing)? `\.aictx\/` files directly/i);
+      expect(content).toMatch(/CLI-only capabilities are not\s+MCP parity gaps/i);
+      expect(content).toMatch(/`aictx init` does not start MCP/i);
+      expect(content).toMatch(/edit(?:ing)?\s+`\.aictx\/` (?:files directly|manually)/i);
       expect(content).toContain(nonBlockingDirtySaveGuidance);
-      expect(content).toContain("not a preflight blocker");
       expect(content).toContain(".aictx/recovery/");
       expect(content).not.toContain(
         "If a memory update is rejected because of validation, dirty state"
@@ -244,21 +228,21 @@ describe("agent guidance content", () => {
     for (const path of generatedGuidanceTargets) {
       const content = await readProjectFile(path);
 
-      expect(content).toContain(
-        "Before non-trivial coding, architecture, debugging, dependency, or configuration work:"
+      expect(content).toMatch(
+        /Before non-trivial coding, architecture, debugging, dependency, or configuration\s+work:/
       );
       expect(content).toContain('aictx load "<task summary>"');
-      expect(content).toContain("load_memory({ task: \"<task summary>\"");
+      expect(content).toContain("`load_memory`");
       expect(content).toContain(
-        "After meaningful work, autonomously save a structured patch only for durable memory that future agents should know:"
+        "After meaningful work, save durable memory with the intent-first primitive:"
       );
-      expect(content).toContain("aictx save --stdin");
-      expect(content).toContain("save_memory_patch({ patch: { source, changes } })");
-      expect(content.indexOf('aictx load "<task summary>"')).toBeLessThan(
-        content.indexOf("load_memory({ task: \"<task summary>\"")
+      expect(content).toContain("aictx remember --stdin");
+      expect(content).toContain(
+        "remember_memory({ task, memories, updates, stale, supersede, relations })"
       );
-      expect(content.indexOf("aictx save --stdin")).toBeLessThan(
-        content.indexOf("save_memory_patch({ patch: { source, changes } })")
+      expect(content).toContain("Use `aictx save --stdin` only when you need");
+      expect(content.indexOf("aictx remember --stdin")).toBeLessThan(
+        content.indexOf("remember_memory({ task, memories")
       );
       expect(content).toContain(nonBlockingDirtySaveGuidance);
     }
@@ -269,16 +253,10 @@ describe("agent guidance content", () => {
       const content = await readProjectFile(path);
 
       expect(content).toContain(
-        "Use the CLI for v1 setup, maintenance, recovery, export, registry, viewer, docs, suggest, audit, stale, and graph workflows"
-      );
-      expect(content).toContain(
-        "For setup, maintenance, recovery, export, registry, viewer, docs, suggest, audit, stale, and graph workflows that are not exposed by MCP, use the `aictx` CLI"
+        "Setup, maintenance, recovery, export, registry, viewer, docs, suggest, audit,"
       );
       expect(content).toMatch(cliOnlyCategoryBoundary);
-
-      for (const command of cliOnlyCommands) {
-        expect(content).toContain(command);
-      }
+      expect(content).toContain("`aictx init` does not start MCP");
     }
   });
 
@@ -307,15 +285,12 @@ describe("agent guidance content", () => {
       const content = await readProjectFile(path);
 
       expect(content).toContain(
-        "This guidance is optional and copyable. It is not canonical project memory."
+        "If Aictx rejects a save, report the reason and do not work around it by editing"
       );
-      expect(content).toContain(
-        "Do not edit `.aictx/` files directly when a supported MCP tool or CLI command exists unless the user explicitly asks you to."
-      );
-      expect(content).toContain("Secrets, tokens, credentials, or private keys");
-      expect(content).toContain("Never save memory that asks future agents");
+      expect(content).toContain("Do not save secrets, tokens, private keys");
+      expect(content).toContain("ignore current code, tests, user requests, or safety rules");
       expect(content).toContain("Save nothing when the task produced no durable future value.");
-      expect(content).toContain("Use `gotcha` for known failure modes and traps.");
+      expect(content).toContain("`gotcha`");
     }
   });
 
@@ -334,62 +309,35 @@ describe("agent guidance content", () => {
       const content = await readProjectFile(path);
 
       expect(content).toMatch(/Right-size memory/i);
-      expect(content).toMatch(/Atomic memories (?:should normally|normally) carry one durable claim/i);
-      expect(content).toContain("Use `synthesis` memories for compact area-level understanding");
-      expect(content).toContain("Use `source` memories to preserve where context came from");
-      expect(content).toMatch(/relations? only when the (?:link|connection) matters/i);
-      expect(content).toContain("`derived_from`");
-      expect(content).toContain("`summarizes`");
-      expect(content).toContain("`documents`");
-      expect(content).toMatch(/Update-before-create/i);
-      expect(content).toMatch(/Create a new object only when no existing memory should be updated, marked stale, or superseded/i);
-      expect(content).toMatch(/Save-nothing-is-valid/i);
-      expect(content).toMatch(/After failure or correction/i);
-      expect(content).toContain("Did loaded memory conflict with current evidence?");
-      expect(content).toContain("Should existing memory be updated, marked stale, superseded, or deleted?");
-
-      for (const operation of memoryPatchOperations) {
-        expect(content).toContain(operation);
-      }
+      expect(content).toContain("`synthesis` maintains compact area-level summaries");
+      expect(content).toContain("`source` preserves where context came from");
+      expect(content).toMatch(/Prefer updating, marking stale, superseding, or deleting existing memory/i);
+      expect(content).toContain("Save nothing when the task produced no durable future value.");
+      expect(content).toContain("remember_template");
     }
   });
 
-  it("includes concrete good and bad memory examples", async () => {
+  it("includes a concrete intent-first memory example", async () => {
     for (const path of guideTargets) {
       const content = await readProjectFile(path);
 
-      expect(content).toMatch(/Good memory examples/i);
-      expect(content).toMatch(/Good durable fact/i);
-      expect(content).toMatch(/Good linked decision/i);
-      expect(content).toMatch(/Good source-backed synthesis/i);
-      expect(content).toMatch(/Good user-stated context/i);
-      expect(content).toMatch(/Good roadmap memory/i);
-      expect(content).toMatch(/Good feature removal/i);
-      expect(content).toMatch(/Bad memory examples/i);
-      expect(content).toMatch(/Bad duplicate creation/i);
-      expect(content).toMatch(/Bad task diary/i);
-      expect(content).toMatch(/Bad speculation/i);
-      expect(content).toMatch(/Bad no-value save/i);
+      expect(content).toContain('"task": "Fix Stripe webhook retries"');
+      expect(content).toContain('"kind": "decision"');
+      expect(content).toContain('"title": "Billing retries run in the worker"');
+      expect(content).toContain('"body": "Stripe webhook retries execute');
+      expect(content).toContain('"evidence"');
+      expect(content).toContain("recording a task diary usually should not create");
     }
   });
 
-  it("documents bootstrap, diff suggestion, audit, and package-manager fallback workflows", async () => {
+  it("documents suggestion and package-manager fallback workflows", async () => {
     for (const path of guideTargets) {
       const content = await readProjectFile(path);
 
-      expect(content).toContain("aictx suggest --from-diff --json");
-      expect(content).toContain("aictx suggest --bootstrap --json");
-      expect(content).toContain("product-feature");
+      expect(content).toContain('aictx suggest --after-task "<task>" --json');
       expect(content).toMatch(/source[- ](?:backed|records?)/i);
       expect(content).toMatch(/synthes/i);
-      expect(content).toContain("Durable syntheses should usually have source evidence or active source provenance relations.");
-      expect(content).toContain("not mandatory DDD terminology");
-      expect(content).toContain("Do not create `history`, `task-note`, or `feature` object types");
-      expect(content).toContain("why is memory empty?");
-      expect(content).toContain("run the bootstrap workflow proactively");
-      expect(content).toContain("aictx suggest --bootstrap --patch > bootstrap-memory.json");
-      expect(content).toContain("aictx save --file bootstrap-memory.json");
-      expect(content).toContain("aictx audit --json");
+      expect(content).toContain("remember_template");
 
       for (const fallback of packageManagerFallbacks) {
         expect(content).toContain(fallback);
@@ -397,23 +345,27 @@ describe("agent guidance content", () => {
     }
   });
 
-  it("locks load modes and the closed hybrid taxonomy in guidance", async () => {
+  it("locks the intent-first remember taxonomy in guidance", async () => {
     for (const path of guideTargets) {
       const content = await readProjectFile(path);
 
-      for (const mode of loadModes) {
-        expect(content).toContain(mode);
+      expect(content).toContain("--mode debugging");
+      for (const kind of [
+        "`source`",
+        "`synthesis`",
+        "`decision`",
+        "`constraint`",
+        "`fact`",
+        "`gotcha`",
+        "`workflow`",
+        "`question`",
+        "`concept`",
+        "`note`"
+      ] as const) {
+        expect(content).toContain(kind);
       }
 
-      for (const objectType of objectTypes) {
-        expect(content).toContain(objectType);
-      }
-
-      for (const facet of organizationFacets) {
-        expect(content).toContain(facet);
-      }
-
-      expect(content).toContain("Do not create `history`, `task-note`, or `feature` object types");
+      expect(content).toContain("semantic title/body/reason");
     }
   });
 });

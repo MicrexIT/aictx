@@ -58,7 +58,7 @@ Acceptance:
 - Capability maps list object inspection as a shared `inspect_memory` and `aictx inspect` capability.
 - Object inspection is absent from CLI-only capability lists.
 - Legacy roadmap references and deprecated four-tool wording are removed.
-- Guardrail tests expect the five local MCP tools.
+- Guardrail tests expect the local MCP tool set.
 
 Run:
 - pnpm vitest run test/unit/agent-capability-map.test.ts
@@ -68,7 +68,7 @@ Run:
 - cmp implementation-roadmap.md specs/implementation-roadmap.md
 - cmp runtime-and-project-architecture-spec.md specs/runtime-and-project-architecture-spec.md
 - cmp aictx-data-access-spec.md specs/aictx-data-access-spec.md
-- rg -n 'MCP \+ CLI capabilities: load, search, save, diff\.|CLI-only capabilities in v1:.*\binspect\b|MCP load/search/save flows|No network calls in init, load, search, save, diff, check, rebuild, history, restore, or MCP tools|exactly `load_memory`, `search_memory`, `save_memory_patch`, and `diff_memory`' prd.md specs/prd.md mcp-and-cli-api-spec.md specs/mcp-and-cli-api-spec.md runtime-and-project-architecture-spec.md specs/runtime-and-project-architecture-spec.md aictx-data-access-spec.md specs/aictx-data-access-spec.md implementation-roadmap.md specs/implementation-roadmap.md README.md docs/src/content/docs/agent-integration.md docs/src/content/docs/mcp.md docs/src/content/docs/reference.md integrations/templates/agent-guidance.md
+- rg -n 'MCP \+ CLI capabilities: load, search, save, diff\.|CLI-only capabilities in v1:.*\binspect\b|MCP load/search/save flows|No network calls in init, load, search, save, diff, check, rebuild, history, restore, or MCP tools' prd.md specs/prd.md mcp-and-cli-api-spec.md specs/mcp-and-cli-api-spec.md runtime-and-project-architecture-spec.md specs/runtime-and-project-architecture-spec.md aictx-data-access-spec.md specs/aictx-data-access-spec.md implementation-roadmap.md specs/implementation-roadmap.md README.md docs/src/content/docs/agent-integration.md docs/src/content/docs/mcp.md docs/src/content/docs/reference.md integrations/templates/agent-guidance.md
 ```
 
 ## T002: Add `inspect_memory` to Local MCP
@@ -204,7 +204,7 @@ Do not modify:
 - Runtime behavior except small fixes required for the tests to pass.
 
 Acceptance:
-- Workflow tests call all five MCP tools.
+- Workflow tests call all routine MCP tools.
 - Tests prove global MCP can target multiple initialized projects via `project_root`.
 - Tests prove MCP does not expose CLI-only, shell, filesystem, or low-level graph mutation tools.
 - Tests prove stderr/stdout safety for client launch.
@@ -244,7 +244,7 @@ Do not modify:
 - Unrelated public site pages.
 
 Acceptance:
-- README, public docs, and generated guidance list the five MCP tools.
+- README, public docs, and generated guidance list the local MCP tools.
 - Guidance says CLI is default and MCP is available when the client already exposes Aictx tools.
 - Docs keep setup, maintenance, recovery, export, registry, viewer, docs, suggest, audit, stale, and graph outside local MCP.
 - Release/package checks validate updated guidance.

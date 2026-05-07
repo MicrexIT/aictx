@@ -5,6 +5,7 @@ import {
   inspectMemory,
   loadMemory,
   saveMemoryPatch,
+  rememberMemory,
   searchMemory,
   type AppResult,
   type DiffMemoryData,
@@ -13,6 +14,8 @@ import {
   type LoadMemoryOptions,
   type SaveMemoryData,
   type SaveMemoryPatchOptions,
+  type RememberMemoryData,
+  type RememberMemoryOptions,
   type SearchMemoryOptions
 } from "../app/operations.js";
 import type { Clock } from "../core/clock.js";
@@ -52,12 +55,18 @@ export interface DataAccessApplyPatchInput extends DataAccessBaseInput {
   patch?: unknown;
 }
 
+export interface DataAccessRememberInput extends DataAccessBaseInput {
+  input?: unknown;
+  dryRun?: boolean;
+}
+
 export interface DataAccessService {
   load(input: DataAccessLoadInput): Promise<AppResult<LoadMemoryData>>;
   search(input: DataAccessSearchInput): Promise<AppResult<SearchMemoryData>>;
   inspect(input: DataAccessInspectInput): Promise<AppResult<InspectMemoryData>>;
   diff(input: DataAccessDiffInput): Promise<AppResult<DiffMemoryData>>;
   applyPatch(input: DataAccessApplyPatchInput): Promise<AppResult<SaveMemoryData>>;
+  remember(input: DataAccessRememberInput): Promise<AppResult<RememberMemoryData>>;
 }
 
 export function createDataAccessService(): DataAccessService {
@@ -82,6 +91,10 @@ export function createDataAccessService(): DataAccessService {
     applyPatch: async (input) =>
       withResolvedProject(input, async (paths) =>
         saveMemoryPatch(toSaveMemoryPatchOptions(input, paths))
+      ),
+    remember: async (input) =>
+      withResolvedProject(input, async (paths) =>
+        rememberMemory(toRememberMemoryOptions(input, paths))
       )
   };
 }
@@ -165,6 +178,19 @@ function toSaveMemoryPatchOptions(
     ...gitWrapperOptions(input),
     ...clockOption(input),
     ...(input.patch === undefined ? {} : { patch: input.patch })
+  };
+}
+
+function toRememberMemoryOptions(
+  input: DataAccessRememberInput,
+  paths: ProjectPaths
+): RememberMemoryOptions {
+  return {
+    cwd: paths.projectRoot,
+    ...gitWrapperOptions(input),
+    ...clockOption(input),
+    ...(input.input === undefined ? {} : { input: input.input }),
+    ...(input.dryRun === undefined ? {} : { dryRun: input.dryRun })
   };
 }
 

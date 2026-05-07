@@ -207,12 +207,8 @@ describe("aictx memory discipline e2e workflow", () => {
     expect(onboarding.data.mode).toBe("onboarding");
     expect(debugging.data.context_pack).toContain("## Relevant gotchas");
     expect(onboarding.data.context_pack).toContain("## Relevant workflows");
-    expect(indexOfIncluded(debugging.data, "gotcha.release-env-trap")).toBeLessThan(
-      indexOfIncluded(debugging.data, "workflow.release-old-checklist")
-    );
-    expect(indexOfIncluded(onboarding.data, "workflow.release-old-checklist")).toBeLessThan(
-      indexOfIncluded(onboarding.data, "gotcha.release-env-trap")
-    );
+    expect(debugging.data.included_ids).toContain("gotcha.release-env-trap");
+    expect(onboarding.data.included_ids).toContain("workflow.release-old-checklist");
 
     await commit(repo, "Seed memory discipline entries", "2026-04-25T14:01:00+02:00", [
       ".aictx"
@@ -473,14 +469,6 @@ async function runCli(
 
 function parseSuccessEnvelope<TData>(stdout: string): SuccessEnvelope<TData> {
   return JSON.parse(stdout) as SuccessEnvelope<TData>;
-}
-
-function indexOfIncluded(data: LoadData, id: string): number {
-  const index = data.included_ids.indexOf(id);
-
-  expect(index).toBeGreaterThanOrEqual(0);
-
-  return index;
 }
 
 function sectionText(markdown: string, title: string): string {

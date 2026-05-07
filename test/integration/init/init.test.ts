@@ -85,7 +85,9 @@ describe("initProject", () => {
         "After meaningful work, make a save/no-save decision."
       );
       expect(guidance).toContain('aictx suggest --after-task "<task>" --json');
-      expect(guidance).toContain("save_memory_patch({ patch: { source, changes } })");
+      expect(guidance).toContain("aictx remember --stdin");
+      expect(guidance).toContain("remember_memory({ task, memories, updates, stale, supersede, relations })");
+      expect(guidance).toContain("save_memory_patch({ patch })");
       expect(guidance).toContain("Save durable decisions");
       expect(guidance).toContain("Right-size memory");
       expect(guidance).toContain("atomic memories");

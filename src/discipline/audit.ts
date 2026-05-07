@@ -495,7 +495,8 @@ function changedFileMissingRationaleFindings(options: {
 
   const changesByFile = groupGitChangesByFile(options.gitFileChanges);
   const rationaleObjects = activeRationaleObjects(options.storage.objects);
-  const findings: AuditFinding[] = [];
+  const missingFiles: string[] = [];
+  const missingCommits = new Set<string>();
 
   for (const [file, changes] of [...changesByFile.entries()].sort(compareEntriesByKey)) {
     const commitIds = uniqueSorted(changes.map((change) => change.commit));
@@ -507,19 +508,32 @@ function changedFileMissingRationaleFindings(options: {
       continue;
     }
 
-    findings.push({
+    missingFiles.push(file);
+
+    for (const commit of commitIds.slice(0, 5)) {
+      missingCommits.add(commit);
+    }
+  }
+
+  if (missingFiles.length === 0) {
+    return [];
+  }
+
+  return [
+    {
       severity: "info",
       rule: "changed_file_missing_rationale",
       memory_id: options.storage.config.project.id,
-      message: "File has repeated recent Git changes but no active rationale memory linked to it.",
+      message:
+        "Multiple files have repeated recent Git changes but no active rationale memory linked to them.",
       evidence: [
-        { kind: "file", id: file },
-        ...commitIds.slice(0, 5).map((commit) => ({ kind: "commit", id: commit }) satisfies Evidence)
+        ...missingFiles.slice(0, 12).map((file) => ({ kind: "file", id: file }) satisfies Evidence),
+        ...uniqueSorted([...missingCommits])
+          .slice(0, 12)
+          .map((commit) => ({ kind: "commit", id: commit }) satisfies Evidence)
       ]
-    });
-  }
-
-  return findings;
+    }
+  ];
 }
 
 async function referencedFileMissingFindings(options: {

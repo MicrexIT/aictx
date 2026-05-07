@@ -219,6 +219,7 @@ describe("aictx MCP read tools", () => {
         "diff_memory",
         "inspect_memory",
         "load_memory",
+        "remember_memory",
         "save_memory_patch",
         "search_memory"
       ]);
@@ -398,8 +399,9 @@ describe("aictx MCP read tools", () => {
 
       expect(mcpEnvelope).toEqual(cliEnvelope);
       expect(mcpEnvelope.data.mode).toBe("debugging");
-      expect(mcpEnvelope.data.context_pack).toContain("## Relevant gotchas");
-      expect(mcpEnvelope.data.included_ids[0]).toBe("gotcha.mode-service");
+      expect(mcpEnvelope.data.context_pack).toContain("## Must know");
+      expect(mcpEnvelope.data.context_pack).toContain("Mode service overview gotcha");
+      expect(mcpEnvelope.data.included_ids).toContain("gotcha.mode-service");
     } finally {
       await started.close();
     }
@@ -453,7 +455,8 @@ describe("aictx MCP read tools", () => {
 
       expect(mcpEnvelope).toEqual(cliEnvelope);
       expect(mcpEnvelope.data.included_ids).toContain("decision.facet-aware-context");
-      expect(mcpEnvelope.data.context_pack).toContain("## Relevant testing");
+      expect(mcpEnvelope.data.context_pack).toContain("## Must know");
+      expect(mcpEnvelope.data.context_pack).toContain("Relevant testing memory applies");
       expect(mcpEnvelope.data.context_pack).toContain("src/mcp/tools/load-memory.ts");
     } finally {
       await started.close();

@@ -299,6 +299,7 @@ const mcpTools = [
   "`load_memory`",
   "`search_memory`",
   "`inspect_memory`",
+  "`remember_memory`",
   "`save_memory_patch`",
   "`diff_memory`"
 ] as const;
@@ -460,9 +461,7 @@ async function expectInstalledMemoryDisciplineDocs(installRoot: string): Promise
   for (const relativePath of generatedGuidancePaths) {
     const content = await readInstalledPackageFile(installRoot, relativePath);
 
-    expectMemoryDisciplineContent(content);
-    expectMcpBoundaryContent(content);
-    expect(content).toContain("Use the CLI for v1 setup");
+    expectGeneratedGuidanceContent(content);
   }
 }
 
@@ -494,6 +493,31 @@ function expectMemoryDisciplineContent(content: string): void {
   expect(content).toContain("`supersede_object`");
   expect(
     /report whether memory changed/i.test(content) ||
+      /inspect(?:ion)?[\s\S]{0,40}asynchron/i.test(content) ||
+      /async inspection/i.test(content)
+  ).toBe(true);
+}
+
+function expectGeneratedGuidanceContent(content: string): void {
+  expect(content).toContain("aictx remember --stdin");
+  expect(content).toContain('aictx suggest --after-task "<task>" --json');
+  expect(content).toContain("remember_template");
+  expect(content).toContain("`gotcha`");
+  expect(content).toContain("`workflow`");
+  expect(content).toMatch(
+    /setup,\s+maintenance,\s+recovery,\s+export,\s+registry,\s+viewer,\s+docs,\s+suggest,\s+audit,\s+stale,\s+and graph/i
+  );
+
+  for (const tool of mcpTools) {
+    expect(content).toContain(tool);
+  }
+
+  for (const forbiddenName of forbiddenMcpToolNames) {
+    expect(content).not.toContain(forbiddenName);
+  }
+
+  expect(
+    /whether Aictx memory changed/i.test(content) ||
       /inspect(?:ion)?[\s\S]{0,40}asynchron/i.test(content) ||
       /async inspection/i.test(content)
   ).toBe(true);

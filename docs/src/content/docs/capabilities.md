@@ -16,7 +16,7 @@ Use these on most tasks:
 aictx load "fix Stripe webhook retries"
 aictx search "webhook retry convention"
 aictx inspect decision.billing-retries
-aictx save --stdin
+aictx remember --stdin
 aictx diff
 ```
 
@@ -117,7 +117,7 @@ The CLI is the default interface for routine memory work. MCP is available when
 the agent client has launched and connected to `aictx-mcp`.
 
 MCP exposes exactly `load_memory`, `search_memory`, `inspect_memory`,
-`save_memory_patch`, and `diff_memory`. Setup, maintenance, recovery, export,
+`remember_memory`, `save_memory_patch`, and `diff_memory`. Setup, maintenance, recovery, export,
 registry, viewer, docs, suggest, audit, stale, and graph workflows are CLI-only
 in v1. These CLI-only commands are part of the v1 integration model rather than
 MCP parity gaps.

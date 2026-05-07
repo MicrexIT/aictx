@@ -9,7 +9,9 @@ import { estimateTokenCount } from "./tokens.js";
 
 const MAX_BODY_SNIPPET_LENGTH = 180;
 const MAX_DIRECTIVES_PER_ITEM = 2;
+const MAX_AGENT_GUIDANCE_ITEMS = 3;
 const MAX_RELEVANT_FILES = 25;
+const MAX_RELEVANT_AREAS = 25;
 const MAX_ONBOARDING_GOTCHAS = 2;
 
 type ContextSectionTitle =
@@ -22,6 +24,7 @@ type ContextSectionTitle =
   | "Linked History"
   | "Relevant decisions"
   | "Relevant constraints"
+  | "Agent guidance"
   | "Relevant stack"
   | "Relevant conventions"
   | "Relevant testing"
@@ -32,6 +35,7 @@ type ContextSectionTitle =
   | "Relevant sources"
   | "Abandoned approaches"
   | "Relevant files"
+  | "Relevant areas"
   | "Open questions"
   | "Stale or superseded memory to avoid";
 
@@ -154,80 +158,108 @@ function buildSectionCandidates(
   mode: LoadMemoryMode
 ): SectionCandidate[] {
   const primaryItems = primaryItemsForMode(ranked.mustKnow, mode);
+  const consumedIds = new Set<ObjectId>();
+  const agentGuidanceItems = consumeItems(
+    primaryItems,
+    consumedIds,
+    (item) => item.candidate.facets?.category === "agent-guidance",
+    MAX_AGENT_GUIDANCE_ITEMS
+  );
+  const architectureItems = architectureSnapshotItems(primaryItems, mode, consumedIds);
+  const synthesisItems = consumeItems(
+    primaryItems,
+    consumedIds,
+    (item) => item.type === "synthesis"
+  );
+  const stackItems = consumeItems(
+    primaryItems,
+    consumedIds,
+    (item) => item.candidate.facets?.category === "stack"
+  );
+  const conventionItems = consumeItems(
+    primaryItems,
+    consumedIds,
+    (item) => item.candidate.facets?.category === "convention"
+  );
+  const testingItems = consumeItems(
+    primaryItems,
+    consumedIds,
+    (item) => item.candidate.facets?.category === "testing"
+  );
+  const fileLayoutItems = consumeItems(
+    primaryItems,
+    consumedIds,
+    (item) => item.candidate.facets?.category === "file-layout"
+  );
+  const abandonedItems = consumeItems(
+    primaryItems,
+    consumedIds,
+    (item) => item.candidate.facets?.category === "abandoned-attempt"
+  );
+  const decisionItems = consumeItems(
+    primaryItems,
+    consumedIds,
+    (item) => item.type === "decision"
+  );
+  const constraintItems = consumeItems(
+    primaryItems,
+    consumedIds,
+    (item) => item.type === "constraint"
+  );
+  const gotchaItems = consumeItems(
+    primaryItems,
+    consumedIds,
+    (item) => item.type === "gotcha"
+  );
+  const workflowItems = consumeItems(
+    primaryItems,
+    consumedIds,
+    (item) => item.type === "workflow"
+  );
+  const factItems = consumeItems(
+    primaryItems,
+    consumedIds,
+    (item) => item.type === "fact"
+  );
+  const sourceItems = consumeItems(
+    primaryItems,
+    consumedIds,
+    (item) => item.type === "source"
+  );
+  const questionItems = consumeItems(
+    primaryItems,
+    consumedIds,
+    (item) => item.type === "question"
+  );
+  const mustKnowItems = consumeItems(primaryItems, consumedIds, () => true);
 
   return [
-    memorySection("Must know", primaryItems, sectionRequired("Must know", mode)),
-    architectureSnapshotSection(primaryItems, mode),
+    primaryMemorySection("Must know", mustKnowItems, mode),
     memorySection(
-      "Relevant syntheses",
-      primaryItems.filter((item) => item.type === "synthesis"),
-      sectionRequired("Relevant syntheses", mode)
+      "Agent guidance",
+      agentGuidanceItems,
+      agentGuidanceItems.length > 0 || sectionRequired("Agent guidance", mode)
     ),
+    architectureSnapshotSection(architectureItems, mode),
+    primaryMemorySection("Relevant syntheses", synthesisItems, mode),
     doNotDoSection(primaryItems),
     memoryConflictsSection(input.memoryConflicts ?? []),
     rationaleGapsSection(input.rationaleGaps ?? []),
     linkedHistorySection(input.linkedHistory ?? []),
-    memorySection(
-      "Relevant decisions",
-      primaryItems.filter((item) => item.type === "decision"),
-      sectionRequired("Relevant decisions", mode)
-    ),
-    memorySection(
-      "Relevant constraints",
-      primaryItems.filter((item) => item.type === "constraint"),
-      sectionRequired("Relevant constraints", mode)
-    ),
-    memorySection(
-      "Relevant stack",
-      primaryItems.filter((item) => item.candidate.facets?.category === "stack"),
-      sectionRequired("Relevant stack", mode)
-    ),
-    memorySection(
-      "Relevant conventions",
-      primaryItems.filter((item) => item.candidate.facets?.category === "convention"),
-      sectionRequired("Relevant conventions", mode)
-    ),
-    memorySection(
-      "Relevant testing",
-      primaryItems.filter((item) => item.candidate.facets?.category === "testing"),
-      sectionRequired("Relevant testing", mode)
-    ),
-    memorySection(
-      "Relevant file layout",
-      primaryItems.filter((item) => item.candidate.facets?.category === "file-layout"),
-      sectionRequired("Relevant file layout", mode)
-    ),
-    memorySection(
-      "Relevant gotchas",
-      primaryItems.filter((item) => item.type === "gotcha"),
-      sectionRequired("Relevant gotchas", mode)
-    ),
-    memorySection(
-      "Relevant workflows",
-      primaryItems.filter((item) => item.type === "workflow"),
-      sectionRequired("Relevant workflows", mode)
-    ),
-    memorySection(
-      "Relevant facts",
-      primaryItems.filter((item) => item.type === "fact"),
-      sectionRequired("Relevant facts", mode)
-    ),
-    memorySection(
-      "Relevant sources",
-      primaryItems.filter((item) => item.type === "source"),
-      sectionRequired("Relevant sources", mode)
-    ),
-    memorySection(
-      "Abandoned approaches",
-      primaryItems.filter((item) => item.candidate.facets?.category === "abandoned-attempt"),
-      sectionRequired("Abandoned approaches", mode)
-    ),
+    primaryMemorySection("Relevant decisions", decisionItems, mode),
+    primaryMemorySection("Relevant constraints", constraintItems, mode),
+    primaryMemorySection("Relevant stack", stackItems, mode),
+    primaryMemorySection("Relevant conventions", conventionItems, mode),
+    primaryMemorySection("Relevant testing", testingItems, mode),
+    primaryMemorySection("Relevant file layout", fileLayoutItems, mode),
+    primaryMemorySection("Relevant gotchas", gotchaItems, mode),
+    primaryMemorySection("Relevant workflows", workflowItems, mode),
+    primaryMemorySection("Relevant facts", factItems, mode),
+    primaryMemorySection("Relevant sources", sourceItems, mode),
+    primaryMemorySection("Abandoned approaches", abandonedItems, mode),
     relevantFilesSection(primaryItems),
-    memorySection(
-      "Open questions",
-      primaryItems.filter((item) => item.type === "question"),
-      sectionRequired("Open questions", mode)
-    ),
+    relevantAreasSection(primaryItems),
+    primaryMemorySection("Open questions", questionItems, mode),
     memorySection("Stale or superseded memory to avoid", ranked.staleOrSuperseded)
   ].filter((section) => section.bullets.length > 0);
 }
@@ -252,6 +284,30 @@ function primaryItemsForMode(
   });
 }
 
+function consumeItems(
+  items: readonly RankedMemoryItem[],
+  consumedIds: Set<ObjectId>,
+  predicate: (item: RankedMemoryItem) => boolean,
+  limit = Number.POSITIVE_INFINITY
+): RankedMemoryItem[] {
+  const consumed: RankedMemoryItem[] = [];
+
+  for (const item of items) {
+    if (consumed.length >= limit) {
+      break;
+    }
+
+    if (consumedIds.has(item.id) || !predicate(item)) {
+      continue;
+    }
+
+    consumedIds.add(item.id);
+    consumed.push(item);
+  }
+
+  return consumed;
+}
+
 function sectionRequired(title: ContextSectionTitle, mode: LoadMemoryMode): boolean {
   if (title === "Must know" || title === "Do not do") {
     return true;
@@ -268,21 +324,24 @@ function sectionRequired(title: ContextSectionTitle, mode: LoadMemoryMode): bool
         title === "Relevant decisions" ||
         title === "Relevant gotchas" ||
         title === "Relevant conventions" ||
-        title === "Relevant testing"
+        title === "Relevant testing" ||
+        title === "Agent guidance"
       );
     case "architecture":
       return (
         title === "Relevant decisions" ||
         title === "Relevant constraints" ||
         title === "Relevant syntheses" ||
-        title === "Open questions"
+        title === "Open questions" ||
+        title === "Agent guidance"
       );
     case "onboarding":
       return (
         title === "Relevant syntheses" ||
         title === "Relevant workflows" ||
         title === "Relevant stack" ||
-        title === "Relevant file layout"
+        title === "Relevant file layout" ||
+        title === "Agent guidance"
       );
   }
 }
@@ -297,6 +356,14 @@ function memorySection(
     required,
     bullets: items.map((item) => memoryBullet(item))
   };
+}
+
+function primaryMemorySection(
+  title: ContextSectionTitle,
+  items: readonly RankedMemoryItem[],
+  mode: LoadMemoryMode
+): SectionCandidate {
+  return memorySection(title, items, items.length > 0 || sectionRequired(title, mode));
 }
 
 function memoryBullet(item: RankedMemoryItem): BulletCandidate {
@@ -325,33 +392,36 @@ function statusLabel(item: RankedMemoryItem): string | null {
   }
 }
 
-function architectureSnapshotSection(
+function architectureSnapshotItems(
   items: readonly RankedMemoryItem[],
-  mode: LoadMemoryMode
-): SectionCandidate {
-  if (!["coding", "review", "architecture"].includes(mode)) {
-    return {
-      title: "Architecture Snapshot",
-      required: false,
-      bullets: []
-    };
+  mode: LoadMemoryMode,
+  consumedIds: Set<ObjectId>
+): RankedMemoryItem[] {
+  if (mode !== "architecture") {
+    return [];
   }
 
-  const snapshotItems = items
-    .filter(
-      (item) =>
-        item.type === "architecture" ||
-        item.type === "synthesis" ||
-        item.type === "constraint" ||
-        item.type === "decision" ||
-        item.type === "gotcha" ||
-        item.type === "question" ||
-        item.candidate.facets?.category === "architecture" ||
-        item.candidate.facets?.category === "decision-rationale" ||
-        item.candidate.facets?.category === "open-question"
-    )
-    .slice(0, 8);
+  return consumeItems(
+    items,
+    consumedIds,
+    (item) =>
+      item.type === "architecture" ||
+      item.type === "synthesis" ||
+      item.type === "constraint" ||
+      item.type === "decision" ||
+      item.type === "gotcha" ||
+      item.type === "question" ||
+      item.candidate.facets?.category === "architecture" ||
+      item.candidate.facets?.category === "decision-rationale" ||
+      item.candidate.facets?.category === "open-question",
+    8
+  );
+}
 
+function architectureSnapshotSection(
+  snapshotItems: readonly RankedMemoryItem[],
+  mode: LoadMemoryMode
+): SectionCandidate {
   return {
     title: "Architecture Snapshot",
     required: mode === "architecture",
@@ -446,7 +516,9 @@ function relevantFilesSection(items: readonly RankedMemoryItem[]): SectionCandid
 
   for (const item of items) {
     for (const path of item.candidate.facets?.applies_to ?? []) {
-      paths.add(path);
+      if (isFileLikePath(path)) {
+        paths.add(path);
+      }
 
       if (paths.size >= MAX_RELEVANT_FILES) {
         break;
@@ -490,6 +562,36 @@ function relevantFilesSection(items: readonly RankedMemoryItem[]): SectionCandid
     bullets: [...paths].map((path) => ({
       text: `- ${path}`,
       compactText: `- ${path}`,
+      sourceIds: []
+    }))
+  };
+}
+
+function relevantAreasSection(items: readonly RankedMemoryItem[]): SectionCandidate {
+  const areas = new Set<string>();
+
+  for (const item of items) {
+    for (const value of item.candidate.facets?.applies_to ?? []) {
+      if (!isFileLikePath(value)) {
+        areas.add(value);
+      }
+
+      if (areas.size >= MAX_RELEVANT_AREAS) {
+        break;
+      }
+    }
+
+    if (areas.size >= MAX_RELEVANT_AREAS) {
+      break;
+    }
+  }
+
+  return {
+    title: "Relevant areas",
+    required: false,
+    bullets: [...areas].map((area) => ({
+      text: `- ${area}`,
+      compactText: `- ${area}`,
       sourceIds: []
     }))
   };
@@ -736,6 +838,20 @@ function extractFilePaths(text: string): string[] {
   }
 
   return [...paths];
+}
+
+function isFileLikePath(value: string): boolean {
+  const normalized = trimPathPunctuation(value.trim());
+
+  if (normalized === "" || isAictxGeneratedPath(normalized)) {
+    return false;
+  }
+
+  if (/\.[A-Za-z0-9]+$/u.test(normalized)) {
+    return true;
+  }
+
+  return /^(?:\.{1,2}\/)?(?:[A-Za-z0-9_@.-]+\/)+[A-Za-z0-9_@.-]+$/u.test(normalized);
 }
 
 function isAictxGeneratedPath(path: string): boolean {

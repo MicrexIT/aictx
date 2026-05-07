@@ -43,7 +43,7 @@ tools in an already-running session. When MCP tools are not available, the CLI
 path provides the same routine memory workflow.
 
 Local MCP exposes exactly `load_memory`, `search_memory`, `inspect_memory`,
-`save_memory_patch`, and `diff_memory` when the client already exposes Aictx
+`remember_memory`, `save_memory_patch`, and `diff_memory` when the client already exposes Aictx
 tools. Setup, maintenance, recovery, export, registry, viewer, docs, suggest,
 audit, stale, and graph workflows remain CLI-only.
 
@@ -52,8 +52,9 @@ auth, cloud hosting, and ChatGPT App SDK surfaces are future work, and future
 `search`/`fetch` adapter names are not local MCP tool names.
 
 :::tip
-If you need to keep working right now, use `aictx load` and `aictx save --stdin`
-from the CLI. Configure MCP later in the client settings.
+If you need to keep working right now, use `aictx load` and
+`aictx remember --stdin` from the CLI. Configure MCP later in the client
+settings.
 :::
 
 ## Memory is empty after init

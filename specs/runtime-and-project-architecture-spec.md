@@ -691,7 +691,7 @@ Rules:
 * The discipline module must not call a model, embeddings service, network API, or hosted service.
 * The discipline module must not apply memory patches or mutate storage.
 * The discipline module must not mutate canonical files, generated indexes, events, exports, or Git state.
-* Agents use discipline outputs as evidence and save structured patches through `save_memory_patch` or `aictx save`.
+* Agents use discipline outputs as evidence and save routine durable memory through `remember_memory` or `aictx remember`; advanced callers may still submit structured patches through `save_memory_patch` or `aictx save`.
 
 ## 17. Projection Export Module Responsibilities
 

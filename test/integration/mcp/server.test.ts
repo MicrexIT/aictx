@@ -127,6 +127,7 @@ describe("aictx MCP server bootstrap", () => {
         "diff_memory",
         "inspect_memory",
         "load_memory",
+        "remember_memory",
         "save_memory_patch",
         "search_memory"
       ]);
@@ -179,7 +180,7 @@ describe("aictx MCP server bootstrap", () => {
       const result = await started.client.listTools();
       const descriptions = getProjectRootDescriptions(result.tools);
 
-      expect(descriptions).toHaveLength(5);
+      expect(descriptions).toHaveLength(6);
 
       for (const description of descriptions) {
         expect(description).toContain("select");
@@ -198,7 +199,8 @@ describe("aictx MCP server bootstrap", () => {
     const docsPath = join(repoRoot, "docs/src/content/docs/mcp.md");
     const docs = await readFile(docsPath, "utf8");
 
-    expect(docs).toContain("Configure your MCP client to launch the global binary");
+    expect(docs).toContain("Configure your MCP client to launch the");
+    expect(docs).toContain("global binary");
     expect(docs).toContain("aictx-mcp");
     expect(docs).toContain("pnpm exec aictx-mcp");
     expect(docs).toContain("npm exec aictx-mcp");

@@ -42,8 +42,8 @@ const loadModes = [
 ] as const;
 
 const lifecycleRules = [
-  /load(?:s)?(?: stay)? narrow|load narrowly/i,
-  /save only durable|only durable knowledge is saved/i,
+  /load(?:s)?(?: stay)? narrow|load narrowly|load durable project context/i,
+  /save only durable|only durable knowledge is saved|save durable memory/i,
   /updat(?:e|ed|ing)[\s\S]*stale[\s\S]*supersed/i,
   /current code[\s\S]*user/i,
   /memory changed|async inspection/i,
@@ -70,10 +70,16 @@ const mcpAndCliCapabilities = [
     notes: "Full-object local-agent read path with direct relation summaries."
   },
   {
-    capability: "Save memory patch",
+    capability: "Remember memory",
+    mcp: "`remember_memory`",
+    cli: "`aictx remember`",
+    notes: "Intent-first routine write path compiles to a structured patch."
+  },
+  {
+    capability: "Save structured patch",
     mcp: "`save_memory_patch`",
     cli: "`aictx save`",
-    notes: "All writes use structured patches."
+    notes: "Advanced structured patch write path."
   },
   {
     capability: "Show memory diff",
@@ -192,6 +198,7 @@ const exactMcpTools = [
   "`load_memory`",
   "`search_memory`",
   "`inspect_memory`",
+  "`remember_memory`",
   "`save_memory_patch`",
   "`diff_memory`"
 ] as const;
@@ -249,7 +256,10 @@ const packageManagerFallbacks = [
   "pnpm exec aictx",
   "npm exec aictx",
   "npx --package @aictx/memory -- aictx",
-  "./node_modules/.bin/aictx",
+  "./node_modules/.bin/aictx"
+] as const;
+
+const mcpPackageManagerFallbacks = [
   "pnpm exec aictx-mcp",
   "npm exec aictx-mcp",
   "npx --package @aictx/memory -- aictx-mcp",
@@ -286,8 +296,7 @@ const localNowCloudLaterDocs = [
   "README.md",
   "docs/src/content/docs/mcp.md",
   "docs/src/content/docs/agent-integration.md",
-  "docs/src/content/docs/reference.md",
-  "integrations/templates/agent-guidance.md"
+  "docs/src/content/docs/reference.md"
 ] as const;
 
 const futureAdapterMappingDocs = [
@@ -302,8 +311,7 @@ const futureAdapterMappingDocs = [
   "README.md",
   "docs/src/content/docs/mcp.md",
   "docs/src/content/docs/agent-integration.md",
-  "docs/src/content/docs/reference.md",
-  "integrations/templates/agent-guidance.md"
+  "docs/src/content/docs/reference.md"
 ] as const;
 
 const deprecatedFourToolRoadmapPatterns = [
@@ -388,8 +396,7 @@ describe("agent capability map guardrail", () => {
       "storage-format-spec.md",
       "schemas-and-validation-spec.md",
       "README.md",
-      "docs/src/content/docs/agent-integration.md",
-      "integrations/templates/agent-guidance.md"
+      "docs/src/content/docs/agent-integration.md"
     ] as const;
 
     for (const path of taxonomyDocs) {
@@ -412,8 +419,7 @@ describe("agent capability map guardrail", () => {
       "prd.md",
       "runtime-and-project-architecture-spec.md",
       "README.md",
-      "docs/src/content/docs/agent-integration.md",
-      "integrations/templates/agent-guidance.md"
+      "docs/src/content/docs/agent-integration.md"
     ] as const;
 
     for (const path of lifecycleDocs) {
@@ -426,18 +432,26 @@ describe("agent capability map guardrail", () => {
   });
 
   it("keeps setup docs explicit about package-manager fallback commands", async () => {
-    const fallbackDocs = [
+    const cliFallbackDocs = [
       "README.md",
       "docs/src/content/docs/agent-integration.md",
       "integrations/templates/agent-guidance.md"
     ] as const;
 
-    for (const path of fallbackDocs) {
+    for (const path of cliFallbackDocs) {
       const content = await readProjectFile(path);
 
       expect(content).toMatch(/(?:If|When) `aictx` is not on `PATH`/);
 
       for (const fallback of packageManagerFallbacks) {
+        expect(content).toContain(fallback);
+      }
+    }
+
+    for (const path of ["README.md", "docs/src/content/docs/agent-integration.md"] as const) {
+      const content = await readProjectFile(path);
+
+      for (const fallback of mcpPackageManagerFallbacks) {
         expect(content).toContain(fallback);
       }
     }
@@ -449,8 +463,7 @@ describe("agent capability map guardrail", () => {
       "mcp-and-cli-api-spec.md",
       "runtime-and-project-architecture-spec.md",
       "README.md",
-      "docs/src/content/docs/agent-integration.md",
-      "integrations/templates/agent-guidance.md"
+      "docs/src/content/docs/agent-integration.md"
     ] as const;
 
     for (const path of modeDocs) {
@@ -498,7 +511,7 @@ describe("agent capability map guardrail", () => {
       const content = await readProjectFile(path);
 
       expect(content).toContain(
-        "* MCP + CLI capabilities: load, search, inspect object, save patch, diff."
+        "* MCP + CLI capabilities: load, search, inspect object, remember memory, save patch, diff."
       );
       expect(content).toContain(
         "* CLI-only capabilities in v1: init, setup, patch review, check, rebuild, reset, upgrade, history, restore, rewind, stale, graph, export obsidian, projects, view, docs, suggest, audit."
@@ -539,8 +552,8 @@ describe("agent capability map guardrail", () => {
     const claude = await readProjectFile("integrations/claude/aictx.md");
     const generic = await readProjectFile("integrations/generic/aictx-agent-instructions.md");
 
-    expect(codex).toBe(`---\nname: aictx-memory\ndescription: Use this skill when working in a project that uses Aictx project memory. It guides the agent to load relevant memory before non-trivial coding work, save durable memory patches after meaningful changes, and keep memory inspectable through Aictx and Git when available.\n---\n\n${generatedNotice}\n\n${template}\n`);
-    expect(claudeSkill).toBe(`---\nname: aictx-memory\ndescription: Use this skill when working in a project that uses Aictx project memory. It guides the agent to load relevant memory before non-trivial coding work, save durable memory patches after meaningful changes, and keep memory inspectable through Aictx and Git when available.\n---\n\n${generatedNotice}\n\n${template}\n`);
+    expect(codex).toBe(`---\nname: aictx-memory\ndescription: Use this skill when working in a project that uses Aictx project memory. It guides the agent to load relevant memory before non-trivial coding work, save durable memory after meaningful changes, and keep memory inspectable through Aictx and Git when available.\n---\n\n${generatedNotice}\n\n${template}\n`);
+    expect(claudeSkill).toBe(`---\nname: aictx-memory\ndescription: Use this skill when working in a project that uses Aictx project memory. It guides the agent to load relevant memory before non-trivial coding work, save durable memory after meaningful changes, and keep memory inspectable through Aictx and Git when available.\n---\n\n${generatedNotice}\n\n${template}\n`);
     expect(claude).toBe(`${generatedNotice}\n\n${template}\n`);
     expect(generic).toBe(`${generatedNotice}\n\n${template}\n`);
   });
@@ -549,32 +562,33 @@ describe("agent capability map guardrail", () => {
     for (const path of guidanceTargets) {
       const guidance = await readProjectFile(path);
 
-      const cliFirstIndex = guidance.indexOf("Use CLI first for routine memory work");
+      const cliFirstIndex = guidance.indexOf("Use the CLI by default");
       const cliOnlyIndex = guidance.search(
-        /Use (?:the )?CLI for v1 setup, maintenance, recovery, export, registry(?: management)?, (?:viewer|local viewing), (?:docs|public documentation), suggest, audit/i
+        /Setup,\s+maintenance,\s+recovery,\s+export,\s+registry,\s+viewer,\s+docs,\s+suggest,\s+audit/i
       );
 
       expect(cliFirstIndex).toBeGreaterThanOrEqual(0);
       expect(cliOnlyIndex).toBeGreaterThanOrEqual(0);
       expect(cliFirstIndex).toBeLessThan(cliOnlyIndex);
-      expect(guidance.indexOf("aictx load \"<task summary>\"")).toBeLessThan(
-        guidance.indexOf("load_memory({ task: \"<task summary>\"")
-      );
-      expect(guidance).toContain("autonomously save a structured patch");
-      expect(guidance).toContain("save_memory_patch({ patch: { source, changes } })");
-      expect(guidance).toContain("Use MCP only when the client already exposes Aictx MCP tools:");
-      expect(guidance).toContain("CLI-only capabilities are not MCP parity gaps.");
+      expect(guidance.indexOf("aictx load \"<task summary>\"")).toBeGreaterThanOrEqual(0);
+      expect(guidance).toContain("`load_memory`");
+      expect(guidance).toContain("save durable memory with the intent-first primitive");
+      expect(guidance).toContain("aictx remember --stdin");
       expect(guidance).toContain(
-        "Do not edit `.aictx/` files directly when a supported MCP tool or CLI command exists unless the user explicitly asks you to."
+        "remember_memory({ task, memories, updates, stale, supersede, relations })"
+      );
+      expect(guidance).toContain("Use `aictx save --stdin` only when you need");
+      expect(guidance).toContain("Use MCP only when the client already exposes Aictx tools.");
+      expect(guidance).toMatch(/CLI-only capabilities are not\s+MCP parity gaps\./);
+      expect(guidance).toContain(
+        "do not work around it by editing"
       );
 
       for (const tool of exactMcpTools) {
         expect(guidance).toContain(tool);
       }
 
-      for (const command of exactCliOnlyGuidanceCommands) {
-        expect(guidance).toContain(command);
-      }
+      expect(guidance).toContain("`aictx init` does not start MCP");
     }
   });
 
@@ -592,11 +606,11 @@ describe("agent capability map guardrail", () => {
     for (const path of docsAndGuidance) {
       const content = await readProjectFile(path);
 
-      expect(content).toMatch(/CLI-only capabilities[\s\S]{0,80}not MCP parity gaps/);
+      expect(content).toMatch(/CLI-only capabilities[\s\S]{0,80}not\s+MCP parity gaps/);
       expect(content).toMatch(
-        /do not add[\s\S]{0,200}to MCP|do not add MCP tools|not (?:be )?added to MCP|do not add or ask for MCP tools solely to mirror these CLI\s+commands|has no MCP equivalent|have no MCP equivalents?|part of the v1 integration model rather than MCP parity gaps|CLI is the supported interface/i
+        /do not add[\s\S]{0,200}to MCP|do not add MCP tools|not (?:be )?added to MCP|do not add or ask for MCP tools solely to mirror these CLI\s+commands|has no MCP equivalent|have no MCP equivalents?|part of the v1 integration model rather than MCP parity gaps|CLI-only capabilities are not\s+MCP parity gaps|CLI is the supported interface/i
       );
-      expect(content).toMatch(/edit(?:ing)? `\.aictx\/` files directly/);
+      expect(content).toMatch(/edit(?:ing)?\s+`\.aictx\/` (?:files directly|manually)/);
     }
   });
 

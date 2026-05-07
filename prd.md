@@ -86,7 +86,7 @@ Required in v1:
 
 Agent capability split:
 
-* MCP + CLI capabilities: load, search, inspect object, save patch, diff.
+* MCP + CLI capabilities: load, search, inspect object, remember memory, save patch, diff.
 * CLI-only capabilities in v1: init, setup, patch review, check, rebuild, reset, upgrade, history, restore, rewind, stale, graph, export obsidian, projects, view, docs, suggest, audit.
 * CLI-only capabilities are intentionally not MCP parity gaps and should not be added to MCP solely for command-list parity.
 * Agents should use supported MCP or CLI entrypoints instead of editing `.aictx/` files directly when a supported command exists.

@@ -49,18 +49,21 @@ load_memory({
 Load modes are `coding`, `debugging`, `review`, `architecture`, and
 `onboarding`. Modes tune deterministic ranking and rendering only.
 
-After meaningful work, save a structured patch only for durable knowledge that
-future agents should know:
+After meaningful work, save durable knowledge that future agents should know:
 
 ```bash
-aictx save --stdin
+aictx remember --stdin
 ```
 
 MCP equivalent when available:
 
 ```text
-save_memory_patch({ patch: { source, changes } })
+remember_memory({ task, memories, updates, stale, supersede, relations })
 ```
+
+`remember` is the normal intent-first write path. It converts semantic agent
+input into the structured patch format internally. Use `aictx save --stdin` or
+`save_memory_patch({ patch })` only for advanced patch-shaped writes.
 
 Saved memory is active immediately after Aictx validates and writes it. Dirty
 or untracked `.aictx/` files are not by themselves a reason to skip saving
@@ -101,7 +104,7 @@ reduce repeated context work, not record every step an agent took.
 The v1 agent model is CLI-first and MCP-compatible.
 
 Local MCP exposes exactly `load_memory`, `search_memory`, `inspect_memory`,
-`save_memory_patch`, and `diff_memory`. Setup, maintenance, recovery, export,
+`remember_memory`, `save_memory_patch`, and `diff_memory`. Setup, maintenance, recovery, export,
 registry, viewer, docs, suggest, audit, stale, and graph workflows are CLI-only
 in v1. CLI-only capabilities are v1 surfaces, not MCP parity gaps.
 
@@ -115,7 +118,8 @@ aliases over search/inspect behavior, not local MCP tool names.
 | Load task context | `load_memory` | `aictx load` |
 | Search memory | `search_memory` | `aictx search` |
 | Inspect object | `inspect_memory` | `aictx inspect` |
-| Save memory patch | `save_memory_patch` | `aictx save` |
+| Remember durable context | `remember_memory` | `aictx remember` |
+| Save structured patch | `save_memory_patch` | `aictx save` |
 | Show memory diff | `diff_memory` | `aictx diff` |
 | Initialize storage | none | `aictx init`, `aictx setup` |
 | Review patch file | none | `aictx patch review` |

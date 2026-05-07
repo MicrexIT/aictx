@@ -23,8 +23,8 @@ Implementation must preserve these invariants:
 * Canonical memory lives in `.aictx/`; generated indexes, exports, and viewers are rebuildable.
 * CLI remains the default routine agent path.
 * Local MCP is a supported generic local-agent interface for harnesses that can launch `aictx-mcp`.
-* MCP exposes exactly `load_memory`, `search_memory`, `inspect_memory`, `save_memory_patch`, and `diff_memory`.
-* `save_memory_patch` is the only MCP write primitive.
+* MCP exposes exactly `load_memory`, `search_memory`, `inspect_memory`, `remember_memory`, `save_memory_patch`, and `diff_memory`.
+* `remember_memory` is the routine MCP write primitive; `save_memory_patch` remains the advanced structured patch primitive.
 * CLI and MCP behavior must converge through shared application/data-access services.
 * Future ChatGPT-compatible `search`/`fetch` naming is an adapter profile over search/inspect, not the local MCP tool contract.
 * Remote MCP, OAuth, hosted sync, tenancy, billing, ChatGPT App SDK UI, cloud architecture, and hosted data access remain deferred.
@@ -54,7 +54,7 @@ Each implementation task is done only when:
 
 Goal:
 
-Rebaseline product and API docs around the five-tool local MCP contract and local-now/cloud-later integration story.
+Rebaseline product and API docs around the local MCP contract and local-now/cloud-later integration story.
 
 Acceptance:
 
@@ -62,7 +62,7 @@ Acceptance:
 * Capability maps list object inspection as a shared `inspect_memory` and `aictx inspect` capability.
 * Object inspection is absent from CLI-only capability lists.
 * Legacy roadmap references and deprecated four-tool wording are removed.
-* Guardrail tests expect the five local MCP tools.
+* Guardrail tests expect the local MCP tool set.
 
 ### T002: Add `inspect_memory` to Local MCP
 
@@ -95,7 +95,7 @@ Acceptance:
 
 Goal:
 
-Make local MCP schemas and results mirror current CLI behavior for the five tools.
+Make local MCP schemas and results mirror current CLI behavior for the routine tools.
 
 Acceptance:
 
@@ -112,7 +112,7 @@ Cover load, search, inspect, save patch, diff, global project targeting, and std
 
 Acceptance:
 
-* Workflow tests call all five MCP tools.
+* Workflow tests call all routine MCP tools.
 * Tests prove global MCP can target multiple initialized projects via `project_root`.
 * Tests prove MCP does not expose CLI-only, shell, filesystem, or low-level graph mutation tools.
 * Tests prove stderr/stdout safety for client launch.
@@ -121,11 +121,11 @@ Acceptance:
 
 Goal:
 
-Bring user-facing docs and generated agent guidance in line with the five-tool local MCP story.
+Bring user-facing docs and generated agent guidance in line with the local MCP story.
 
 Acceptance:
 
-* README, public docs, and generated guidance list the five MCP tools.
+* README, public docs, and generated guidance list the local MCP tools.
 * Guidance says CLI is default and MCP is available when the client already exposes Aictx tools.
 * Docs keep setup, maintenance, recovery, export, registry, viewer, docs, suggest, audit, stale, and graph outside local MCP.
 * Release/package checks validate updated guidance.
@@ -176,7 +176,7 @@ Represent local MCP now and future ChatGPT-compatible search/fetch mapping later
 
 Acceptance:
 
-* Local MCP profile preserves the five Aictx-specific tool names.
+* Local MCP profile preserves the Aictx-specific tool names.
 * Future generic `search` maps to data-access search.
 * Future generic `fetch` maps to data-access inspect.
 * Future profile code or docs remain inactive unless explicitly selected.
@@ -228,9 +228,9 @@ Rules:
 
 This sequence is complete when:
 
-* Local MCP exposes exactly `load_memory`, `search_memory`, `inspect_memory`, `save_memory_patch`, and `diff_memory`.
+* Local MCP exposes exactly `load_memory`, `search_memory`, `inspect_memory`, `remember_memory`, `save_memory_patch`, and `diff_memory`.
 * `inspect_memory` returns the same object/body/relation envelope as `aictx inspect --json`.
-* `save_memory_patch` remains the only MCP write primitive.
+* `remember_memory` is the routine MCP write primitive; `save_memory_patch` remains the advanced structured patch primitive.
 * CLI and MCP shared operations use the host-neutral data-access service.
 * Root/spec mirrors and generated guidance are synchronized.
 * Tests cover local MCP workflow, global project targeting, stdout safety, and CLI/MCP shared behavior.
