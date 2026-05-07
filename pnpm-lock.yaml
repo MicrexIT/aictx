@@ -27,9 +27,6 @@ importers:
         specifier: ^4.3.6
         version: 4.3.6
     devDependencies:
-      '@aictx/memory':
-        specifier: ^0.1.10
-        version: 0.1.10
       '@astrojs/starlight':
         specifier: ^0.38.4
         version: 0.38.4(astro@6.2.2(@types/node@25.6.0)(jiti@2.6.1)(lightningcss@1.32.0)(rollup@4.60.2)(tsx@4.21.0))
@@ -83,11 +80,6 @@ importers:
         version: 4.88.0
 
 packages:
-
-  '@aictx/memory@0.1.10':
-    resolution: {integrity: sha512-+Czs2BJoTxxMRNJmN5iDwo8oOvhO08UCM0jwn0iscWfPLeTyoG5obceJ2bPmTgrLdCXX6LOBi/Ar2Pci6W4w1A==}
-    engines: {node: '>=22'}
-    hasBin: true
 
   '@astrojs/compiler@4.0.0':
     resolution: {integrity: sha512-eouss7G8ygdZqHuke033VMcVw5HTZUu+PXd/h06DGDUg/jt5btPYPqh66ENWw/mU78rBrf/oeC4oqoBwMtDMNA==}
@@ -3322,18 +3314,6 @@ packages:
     resolution: {integrity: sha512-bXE4cR/kVZhKZX/RjPEflHaKVhUVl85noU3v6b8apfQEc1x4A+zBxjZ4lN8LqGd6WZ3dl98pY4o717VFmoPp+A==}
 
 snapshots:
-
-  '@aictx/memory@0.1.10':
-    dependencies:
-      '@modelcontextprotocol/sdk': 1.29.0(zod@4.3.6)
-      '@sqlite.org/sqlite-wasm': 3.53.0-build1
-      ajv: 8.20.0
-      commander: 14.0.3
-      fast-glob: 3.3.3
-      zod: 4.3.6
-    transitivePeerDependencies:
-      - '@cfworker/json-schema'
-      - supports-color
 
   '@astrojs/compiler@4.0.0': {}
 
