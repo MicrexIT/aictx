@@ -288,7 +288,7 @@ Copy and paste this prompt into an AI coding agent to set up a repository:
 Set up fresh Aictx memory for this Aictx source repository.
 
 First reinstall the current Aictx package globally:
-npm install -g @aictx/memory@0.1.28
+npm install -g @aictx/memory@0.1.29
 
 Then reset the local `.aictx/` state with the Aictx CLI:
 aictx reset

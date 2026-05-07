@@ -69,7 +69,7 @@ agent from the project root:
 Set up fresh Aictx memory for this repository.
 
 First install the current Aictx package globally:
-npm install -g @aictx/memory@0.1.28
+npm install -g @aictx/memory@0.1.29
 
 Then initialize local Aictx storage and agent guidance:
 aictx init
