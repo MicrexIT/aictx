@@ -10,6 +10,10 @@ import { runSubprocess } from "../../../src/core/subprocess.js";
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
 const tempRoots: string[] = [];
 
+interface PackageJson {
+  scripts?: Record<string, string>;
+}
+
 afterEach(async () => {
   await Promise.all(
     tempRoots.splice(0).map((path) => rm(path, { recursive: true, force: true }))
@@ -17,6 +21,20 @@ afterEach(async () => {
 });
 
 describe("repo maintenance scripts", () => {
+  it("keeps version:patch building generated public docs", async () => {
+    const packageJson = JSON.parse(
+      await readFile(join(repoRoot, "package.json"), "utf8")
+    ) as PackageJson;
+    const expectedScript = [
+      "npm version patch --no-git-tag-version",
+      "node scripts/sync-setup-prompt-install-version.mjs",
+      "pnpm build",
+      "pnpm build:docs"
+    ].join(" && ");
+
+    expect(packageJson.scripts?.["version:patch"]).toBe(expectedScript);
+  });
+
   it("pins setup prompt install commands to the current package version", async () => {
     const root = await createTempRoot("aictx-script-prompts-");
     await writeFile(join(root, "package.json"), JSON.stringify({ version: "9.8.7" }));

@@ -124,7 +124,7 @@ describe("release package", () => {
       type: "git",
       url: "git+https://github.com/MicrexIT/aictx.git"
     });
-    expect(packageJson.homepage).toBe("https://docs.aictx.dev");
+    expect(packageJson.homepage).toBe("https://aictx.dev");
     expect(packageJson.bugs).toEqual({
       url: "https://github.com/MicrexIT/aictx/issues"
     });
@@ -139,9 +139,18 @@ describe("release package", () => {
     });
     expect(packageJson.scripts?.build).toContain("pnpm build:viewer");
     expect(packageJson.scripts?.build).toContain("pnpm build:version");
+    const expectedVersionPatchScript = [
+      "npm version patch --no-git-tag-version",
+      "node scripts/sync-setup-prompt-install-version.mjs",
+      "pnpm build",
+      "pnpm build:docs"
+    ].join(" && ");
+
     expect(packageJson.scripts?.["build:docs"]).toBe("astro build --root docs");
     expect(packageJson.scripts?.["build:version"]).toBe("node scripts/generate-version.mjs");
     expect(packageJson.scripts?.["build:viewer"]).toBe("vite build --config viewer/vite.config.ts");
+    expect(packageJson.scripts?.["version:patch"]).toBe(expectedVersionPatchScript);
+    await expectBuiltPublicDocs(packageVersion);
     expect(packageJson.devDependencies).toEqual(
       expect.objectContaining({
         "@astrojs/starlight": expect.any(String),
@@ -384,6 +393,19 @@ async function ensureBuiltPackageOutput(packageVersion: string): Promise<void> {
   }
 
   await expectSuccessfulCommand("pnpm", ["build"], repoRoot);
+}
+
+async function expectBuiltPublicDocs(packageVersion: string): Promise<void> {
+  await expectSuccessfulCommand("pnpm", ["build:docs"], repoRoot);
+  await expect(
+    readFile(join(repoRoot, "docs", "dist", "agent-recipes", "index.html"), "utf8")
+  ).resolves.toContain("Agent recipes");
+
+  for (const filename of ["llms-small.txt", "llms-full.txt"] as const) {
+    await expect(readFile(join(repoRoot, "docs", "dist", filename), "utf8")).resolves.toContain(
+      `npm install -g @aictx/memory@${packageVersion}`
+    );
+  }
 }
 
 async function expectSuccessfulCommand(

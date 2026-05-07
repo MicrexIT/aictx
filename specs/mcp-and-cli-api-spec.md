@@ -656,7 +656,7 @@ Minimum behavior:
 * `aictx reset --all --destroy` deletes each registered project's `.aictx/` directory without backup. `aictx reset --all` without `--destroy` keeps the normal per-project backup behavior.
 * During `aictx reset --all`, entries whose `.aictx/` directory is already missing are reported as skipped and removed from the registry. Successfully reset and skipped projects are unregistered; failed projects remain registered.
 
-Source-package version maintenance is intentionally not an `aictx` CLI command. Use the repository npm script `npm run version:patch`, which runs `npm version patch --no-git-tag-version`, pins the README and public-doc setup prompt install commands to the new package version, and regenerates `src/generated/version.ts`.
+Source-package version maintenance is intentionally not an `aictx` CLI command. Use the repository npm script `npm run version:patch`, which runs `npm version patch --no-git-tag-version`, pins the README and public-doc setup prompt install commands to the new package version, regenerates `src/generated/version.ts`, and builds the public docs output including generated LLM text files.
 
 ### 5.11 `aictx suggest`
 

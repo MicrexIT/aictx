@@ -5,7 +5,7 @@
   "license": "MIT",
   "type": "module",
   "packageManager": "pnpm@10.11.0",
-  "homepage": "https://docs.aictx.dev",
+  "homepage": "https://aictx.dev",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/MicrexIT/aictx.git"
@@ -57,7 +57,7 @@
     "dev:docs": "astro dev --root docs",
     "dev:mcp": "tsx src/mcp/server.ts",
     "dev:site": "astro dev --root site",
-    "version:patch": "npm version patch --no-git-tag-version && node scripts/sync-setup-prompt-install-version.mjs && pnpm build",
+    "version:patch": "npm version patch --no-git-tag-version && node scripts/sync-setup-prompt-install-version.mjs && pnpm build && pnpm build:docs",
     "test": "vitest run",
     "test:local": "pnpm typecheck && pnpm test:package",
     "test:package": "vitest run test/integration/release/packaging.test.ts",

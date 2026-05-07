@@ -46,7 +46,8 @@ sessions, branches, and reviews.
 
 ## Documentation
 
-Public docs live at [docs.aictx.dev](https://docs.aictx.dev).
+The landing page lives at [aictx.dev](https://aictx.dev). Public docs live at
+[docs.aictx.dev](https://docs.aictx.dev).
 
 Good starting points:
 

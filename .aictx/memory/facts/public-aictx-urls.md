@@ -1,0 +1,1 @@
+Use https://aictx.dev as the Aictx landing page and package homepage; use https://docs.aictx.dev as the public documentation site and CLI docs base URL.
