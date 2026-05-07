@@ -13,3 +13,5 @@
 {"actor":"cli","event":"memory.created","id":"workflow.post-task-verification","timestamp":"2026-05-07T18:30:51+02:00"}
 {"actor":"cli","event":"memory.created","id":"constraint.node-engine","timestamp":"2026-05-07T18:30:51+02:00"}
 {"actor":"cli","event":"memory.created","id":"constraint.package-manager","timestamp":"2026-05-07T18:30:51+02:00"}
+{"actor":"agent","event":"memory.created","id":"gotcha.published-0-1-27-cli-version-stale","timestamp":"2026-05-07T18:39:22+02:00"}
+{"actor":"agent","event":"memory.updated","id":"workflow.package-scripts","timestamp":"2026-05-07T18:49:43+02:00"}

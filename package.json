@@ -57,7 +57,7 @@
     "dev:docs": "astro dev --root docs",
     "dev:mcp": "tsx src/mcp/server.ts",
     "dev:site": "astro dev --root site",
-    "version:patch": "npm version patch --no-git-tag-version && node scripts/sync-setup-prompt-install-version.mjs && node scripts/generate-version.mjs",
+    "version:patch": "npm version patch --no-git-tag-version && node scripts/sync-setup-prompt-install-version.mjs && pnpm build",
     "test": "vitest run",
     "test:local": "pnpm typecheck && pnpm test:package",
     "test:package": "vitest run test/integration/release/packaging.test.ts",
