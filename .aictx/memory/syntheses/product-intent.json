@@ -1,7 +1,7 @@
 {
   "body_path": "memory/syntheses/product-intent.md",
-  "content_hash": "sha256:431b674f94f3fe725f6bd356a97bd9907a98ae2a2a20f7d18dfaf202cc5600ff",
-  "created_at": "2026-05-07T18:30:51+02:00",
+  "content_hash": "sha256:21bbcdebb5ad9ec7201cb5f8932467000ab5d3543cd32cc154b57d5dc1081596",
+  "created_at": "2026-05-07T19:09:50+02:00",
   "evidence": [
     {
       "id": "source.package-json",
@@ -38,5 +38,5 @@
   ],
   "title": "Product intent",
   "type": "synthesis",
-  "updated_at": "2026-05-07T18:30:51+02:00"
+  "updated_at": "2026-05-07T19:09:50+02:00"
 }

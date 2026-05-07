@@ -1,1 +1,0 @@
-Installing @aictx/memory@0.1.27 globally under asdf Node 24.1.0 installs package metadata version 0.1.27, but the packaged dist/cli/main.js embeds src/generated/version.ts as 0.1.26, so `aictx --version` reports 0.1.26. This is a stale dist artifact in the published package, not an asdf reshim or PATH problem.

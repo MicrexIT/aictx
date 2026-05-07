@@ -1,7 +1,7 @@
 {
   "body_path": "memory/sources/docs-src-content-docs-agent-integration.md",
-  "content_hash": "sha256:16a144d2474945aaa709e378042a787a23267c9f0665751360e786c223b11ab3",
-  "created_at": "2026-05-07T18:30:51+02:00",
+  "content_hash": "sha256:3468eb6f191426ad5c148ba4c4bf555c82dd7141d3f8506a734b13203944e49c",
+  "created_at": "2026-05-07T19:09:50+02:00",
   "evidence": [
     {
       "id": "docs/src/content/docs/agent-integration.md",
@@ -35,5 +35,5 @@
   ],
   "title": "Source: docs/src/content/docs/agent-integration.md",
   "type": "source",
-  "updated_at": "2026-05-07T18:30:51+02:00"
+  "updated_at": "2026-05-07T19:09:50+02:00"
 }

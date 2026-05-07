@@ -1,7 +1,7 @@
 {
   "confidence": "high",
-  "content_hash": "sha256:84a7a98336e714f4982dceabf66e8fcf7ccc3a0b02b3d6897c02c25a9a4ff84b",
-  "created_at": "2026-05-07T18:30:51+02:00",
+  "content_hash": "sha256:abd61dd3d1f0f474654251de30fcce2f9e608f457db22fc3179aa71a2ef22d04",
+  "created_at": "2026-05-07T19:09:50+02:00",
   "evidence": [
     {
       "id": "source.package-json",
@@ -13,5 +13,5 @@
   "predicate": "derived_from",
   "status": "active",
   "to": "source.package-json",
-  "updated_at": "2026-05-07T18:30:51+02:00"
+  "updated_at": "2026-05-07T19:09:50+02:00"
 }

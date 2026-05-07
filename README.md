@@ -271,7 +271,7 @@ Then reset the local `.aictx/` state with the Aictx CLI:
 aictx reset
 
 Run the initial onboarding and apply the conservative bootstrap memory patch:
-aictx setup --apply
+aictx setup --apply --force
 
 Finally, run:
 aictx check

@@ -9,4 +9,3 @@ Use the package scripts in `package.json` for repeated project workflows:
 - `build:site`: `astro build --root site`
 - `build:version`: `node scripts/generate-version.mjs`
 - `build:viewer`: `vite build --config viewer/vite.config.ts`
-- `version:patch`: `npm version patch --no-git-tag-version && node scripts/sync-setup-prompt-install-version.mjs && pnpm build`; this bumps the manifest, syncs setup guidance, and rebuilds generated artifacts so publishable `dist/` output embeds the new CLI version.

@@ -1,21 +1,8 @@
 {
   "body_path": "memory/workflows/package-scripts.md",
-  "content_hash": "sha256:36baddb9d2b8a28626046f696ac0875ce16e9588b13c2e2ed0027a293fae8fe8",
-  "created_at": "2026-05-07T18:30:51+02:00",
-  "evidence": [
-    {
-      "id": "package.json",
-      "kind": "file"
-    }
-  ],
-  "facets": {
-    "applies_to": [
-      "package.json",
-      "release workflow",
-      "version bumps"
-    ],
-    "category": "workflow"
-  },
+  "content_hash": "sha256:c15763c21c70f01bc8bb20949de29decc10483a8b9a505603d301d3dd9e979d3",
+  "created_at": "2026-05-07T19:09:50+02:00",
+  "evidence": [],
   "id": "workflow.package-scripts",
   "scope": {
     "branch": null,
@@ -34,5 +21,5 @@
   ],
   "title": "Package scripts",
   "type": "workflow",
-  "updated_at": "2026-05-07T18:49:43+02:00"
+  "updated_at": "2026-05-07T19:09:50+02:00"
 }
