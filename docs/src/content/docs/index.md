@@ -48,11 +48,38 @@ export".
 2. Load task-focused context with `aictx load "<task summary>"`.
 3. Save durable knowledge with `aictx remember --stdin` or `remember_memory`
    when MCP is already configured.
-4. Inspect the result later with `aictx view`, `aictx diff`, Git tools, or MCP
-   `diff_memory` when available.
+4. Inspect the result later in the local viewer with `aictx view`.
 
 Saved memory is active immediately after Aictx validates and writes it. Aictx
-never commits for you.
+never commits for you. As a human, mainly look directly at the viewer.
+Use `aictx diff`, Git tools, or MCP `diff_memory` when available for
+change review and audit.
+
+## First-time setup prompt
+
+Copy this prompt into [Codex](https://developers.openai.com/codex/cli),
+[Claude Code](https://code.claude.com/docs/en/setup),
+[Cursor](https://docs.cursor.com/context/rules-for-ai), or another coding
+agent from the project root:
+
+```text
+Set up fresh Aictx memory for this repository.
+
+First install the current Aictx package globally:
+npm install -g @aictx/memory@0.1.26
+
+Then initialize local Aictx storage and agent guidance:
+aictx init
+
+Run first-run onboarding and apply the conservative bootstrap memory patch:
+aictx setup --apply
+
+Finally validate memory:
+aictx check
+
+When this is done, tell the human to inspect the accepted memory with:
+aictx view
+```
 
 ## Start here
 

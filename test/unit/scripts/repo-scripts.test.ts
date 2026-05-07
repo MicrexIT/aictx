@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -17,8 +17,8 @@ afterEach(async () => {
 });
 
 describe("repo maintenance scripts", () => {
-  it("pins the README setup prompt install command to the current package version", async () => {
-    const root = await createTempRoot("aictx-script-readme-");
+  it("pins setup prompt install commands to the current package version", async () => {
+    const root = await createTempRoot("aictx-script-prompts-");
     await writeFile(join(root, "package.json"), JSON.stringify({ version: "9.8.7" }));
     await writeFile(
       join(root, "README.md"),
@@ -46,26 +46,59 @@ describe("repo maintenance scripts", () => {
         ""
       ].join("\n")
     );
+    await writeDocsIndex(root, [
+      "---",
+      "title: Aictx documentation",
+      "---",
+      "",
+      "## Install",
+      "",
+      "```bash",
+      "npm install -g @aictx/memory",
+      "```",
+      "",
+      "## First-time setup prompt",
+      "",
+      "Copy this prompt into [Codex](https://developers.openai.com/codex/cli),",
+      "[Claude Code](https://code.claude.com/docs/en/setup),",
+      "[Cursor](https://docs.cursor.com/context/rules-for-ai), or another coding",
+      "agent from the project root:",
+      "",
+      "```text",
+      "Set up fresh Aictx memory for this repository.",
+      "",
+      "First install the current Aictx package globally:",
+      "npm install -g @aictx/memory@latest",
+      "",
+      "Then initialize local Aictx storage and agent guidance:",
+      "aictx init",
+      "",
+      "Run first-run onboarding and apply the conservative bootstrap memory patch:",
+      "aictx setup --apply",
+      "```",
+      ""
+    ]);
 
-    const result = await runScript("sync-readme-install-version.mjs", ["--root", root]);
+    const result = await runScript("sync-setup-prompt-install-version.mjs", ["--root", root]);
 
     expect(result.exitCode).toBe(0);
     expect(result.stderr).toBe("");
     expect(result.stdout).toContain("@aictx/memory@9.8.7");
-    await expect(readFile(join(root, "README.md"), "utf8")).resolves.toContain(
-      "npm install -g @aictx/memory@9.8.7"
-    );
-    await expect(readFile(join(root, "README.md"), "utf8")).resolves.toContain(
-      "npm install -g @aictx/memory\n"
-    );
-    await expect(readFile(join(root, "README.md"), "utf8")).resolves.toContain("aictx reset");
-    await expect(readFile(join(root, "README.md"), "utf8")).resolves.toContain(
-      "aictx setup --apply"
-    );
+    const readme = await readFile(join(root, "README.md"), "utf8");
+    const docsIndex = await readFile(join(root, "docs/src/content/docs/index.md"), "utf8");
+
+    expect(readme).toContain("npm install -g @aictx/memory@9.8.7");
+    expect(readme).toContain("npm install -g @aictx/memory\n");
+    expect(readme).toContain("aictx reset");
+    expect(readme).toContain("aictx setup --apply");
+    expect(docsIndex).toContain("npm install -g @aictx/memory@9.8.7");
+    expect(docsIndex).toContain("npm install -g @aictx/memory\n");
+    expect(docsIndex).toContain("aictx init");
+    expect(docsIndex).toContain("aictx setup --apply");
   });
 
-  it("updates an already pinned README setup prompt on later version bumps", async () => {
-    const root = await createTempRoot("aictx-script-readme-existing-pin-");
+  it("updates already pinned setup prompts on later version bumps", async () => {
+    const root = await createTempRoot("aictx-script-prompts-existing-pin-");
     await writeFile(join(root, "package.json"), JSON.stringify({ version: "2.0.1" }));
     await writeFile(
       join(root, "README.md"),
@@ -79,11 +112,26 @@ describe("repo maintenance scripts", () => {
         ""
       ].join("\n")
     );
+    await writeDocsIndex(root, [
+      "Copy this prompt into [Codex](https://developers.openai.com/codex/cli),",
+      "[Claude Code](https://code.claude.com/docs/en/setup),",
+      "[Cursor](https://docs.cursor.com/context/rules-for-ai), or another coding",
+      "agent from the project root:",
+      "",
+      "```text",
+      "If `aictx` is not installed globally, install it first with:",
+      "npm install -g @aictx/memory@2.0.0",
+      "```",
+      ""
+    ]);
 
-    const result = await runScript("sync-readme-install-version.mjs", ["--root", root]);
+    const result = await runScript("sync-setup-prompt-install-version.mjs", ["--root", root]);
 
     expect(result.exitCode).toBe(0);
     await expect(readFile(join(root, "README.md"), "utf8")).resolves.toContain(
+      "npm install -g @aictx/memory@2.0.1"
+    );
+    await expect(readFile(join(root, "docs/src/content/docs/index.md"), "utf8")).resolves.toContain(
       "npm install -g @aictx/memory@2.0.1"
     );
   });
@@ -104,4 +152,11 @@ async function createTempRoot(prefix: string): Promise<string> {
   const path = await mkdtemp(join(tmpdir(), prefix));
   tempRoots.push(path);
   return path;
+}
+
+async function writeDocsIndex(root: string, lines: readonly string[]): Promise<void> {
+  const docsDir = join(root, "docs/src/content/docs");
+
+  await mkdir(docsDir, { recursive: true });
+  await writeFile(join(docsDir, "index.md"), lines.join("\n"));
 }

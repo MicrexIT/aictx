@@ -246,7 +246,7 @@ First reinstall the current Aictx package globally:
 npm install -g @aictx/memory@0.1.26
 
 Then reset the local `.aictx/` state with the Aictx CLI:
-aictx reset --all
+aictx reset 
 
 Run the initial onboarding and apply the conservative bootstrap memory patch:
 aictx setup --apply

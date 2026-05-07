@@ -104,3 +104,4 @@
 {"actor":"agent","event":"memory.created","id":"decision.context-rendering-uses-one-primary-section-per-memory","timestamp":"2026-05-07T17:14:18+02:00"}
 {"actor":"agent","event":"memory.updated","id":"fact.data-access-contract-foundation","timestamp":"2026-05-07T17:14:18+02:00"}
 {"actor":"agent","event":"memory.updated","id":"synthesis.agent-memory-guidance","timestamp":"2026-05-07T17:14:18+02:00"}
+{"actor":"agent","event":"memory.updated","id":"workflow.package-scripts","timestamp":"2026-05-07T17:50:16+02:00"}
