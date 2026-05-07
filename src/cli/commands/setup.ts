@@ -172,8 +172,8 @@ async function runSetup(
       next_step:
         save === null && proposal.proposed
           ? "Run `aictx setup --apply` to apply the proposed bootstrap memory patch."
-          : proposal.proposed
-            ? null
+          : save !== null
+            ? 'Run `aictx load "onboard to this repository"` to see the first task-focused memory pack.'
             : "No bootstrap memory patch to apply."
     },
     warnings,

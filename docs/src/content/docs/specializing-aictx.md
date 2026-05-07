@@ -22,6 +22,11 @@ If your agent client uses optional skills or instruction files, Aictx also ships
 copyable generated guidance under `integrations/`. These files are setup aids,
 not canonical memory.
 
+Generated setup aids currently cover Codex, Claude Code, Cursor, Cline, and a
+generic Markdown guidance file. OpenCode can use the root `AGENTS.md` that
+`aictx init` creates. See [Agent recipes](/agent-recipes/) for copyable setup
+prompts and exact target paths.
+
 :::tip
 Treat agent guidance as the operating manual, and `.aictx/` memory as the
 project knowledge the agent can retrieve. Keep both small enough that a human
@@ -56,7 +61,7 @@ Good bootstrap memory usually includes:
 - `source` records for README files, package manifests, agent guidance, product
   docs, or stable external references recorded by an agent.
 - `synthesis` records for product intent, feature map, roadmap, architecture,
-  conventions, agent guidance, and repeated workflows.
+  conventions, agent guidance, and repeated workflows or how-to collections.
 - Atomic `decision`, `constraint`, `fact`, `gotcha`, `workflow`, `question`,
   `note`, or `concept` objects only when a precise durable claim is useful.
 
@@ -72,7 +77,8 @@ Good candidates:
 - product intent that explains why the app exists
 - capabilities and feature boundaries
 - architecture decisions and constraints
-- setup, release, migration, or debugging workflows
+- setup, release, migration, debugging, recovery, verification, or maintenance
+  workflows/how-tos
 - gotchas and repeated failure modes
 - current conventions that affect future edits
 - open questions that block safe implementation
@@ -84,6 +90,7 @@ Bad candidates:
 - guesses that are not supported by code, docs, or the user
 - secrets, tokens, credentials, private keys, or sensitive raw logs
 - temporary implementation notes with no future value
+- generic tutorials that are not project-specific
 
 :::tip
 If a memory would be obsolete as soon as the current branch is merged, it is

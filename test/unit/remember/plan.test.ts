@@ -173,6 +173,43 @@ describe("buildRememberMemoryPatch", () => {
     }
   });
 
+  it("defaults workflow memories to the workflow facet category", () => {
+    const result = buildRememberMemoryPatch({
+      storage: storageSnapshot([]),
+      input: {
+        task: "Document release smoke test",
+        memories: [
+          {
+            kind: "workflow",
+            title: "Release smoke test",
+            body: "Before tagging a release, run package verification and inspect the Aictx memory diff.",
+            applies_to: ["package.json"]
+          }
+        ]
+      }
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+
+    expect(result.data.changes).toEqual([
+      {
+        op: "create_object",
+        id: "workflow.release-smoke-test",
+        type: "workflow",
+        title: "Release smoke test",
+        body:
+          "Before tagging a release, run package verification and inspect the Aictx memory diff.",
+        facets: {
+          category: "workflow",
+          applies_to: ["package.json"]
+        }
+      }
+    ]);
+  });
+
   it("rejects unsupported memory kinds", () => {
     const result = buildRememberMemoryPatch({
       storage: storageSnapshot([]),

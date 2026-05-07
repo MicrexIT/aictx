@@ -118,7 +118,9 @@ describe("initProject", () => {
       ],
       optional_skills: [
         "integrations/codex/aictx/SKILL.md",
-        "integrations/claude/aictx/SKILL.md"
+        "integrations/claude/aictx/SKILL.md",
+        "integrations/cursor/aictx.mdc",
+        "integrations/cline/aictx.md"
       ]
     });
 
@@ -166,7 +168,7 @@ describe("initProject", () => {
       "Saved memory is active immediately after Aictx validates and writes it. Inspect memory asynchronously with `inspect_memory`, `aictx view`, `aictx diff`, Git tools, or MCP `diff_memory` when available."
     );
     expect(nextSteps).not.toContain("`aictx check`, and `aictx diff`");
-    expect(nextSteps).toContain("integrations/codex");
+    expect(nextSteps).toContain("Codex, Claude Code, Cursor, Cline");
 
     const validation = await validateProject(projectRoot);
     expect(validation).toEqual({

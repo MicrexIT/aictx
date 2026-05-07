@@ -267,6 +267,7 @@ const requiredPackedPaths = [
   "dist/schemas/relation.schema.json",
   "dist/viewer/index.html",
   "docs/src/content/docs/agent-integration.md",
+  "docs/src/content/docs/agent-recipes.md",
   "docs/src/content/docs/capabilities.md",
   "docs/src/content/docs/cli.md",
   "docs/src/content/docs/demand-driven-memory.md",
@@ -281,6 +282,8 @@ const requiredPackedPaths = [
   "integrations/codex/aictx/SKILL.md",
   "integrations/claude/aictx/SKILL.md",
   "integrations/claude/aictx.md",
+  "integrations/cursor/aictx.mdc",
+  "integrations/cline/aictx.md",
   "integrations/generic/aictx-agent-instructions.md"
 ];
 
@@ -321,6 +324,7 @@ const publicMcpContractPaths = [
   "docs/src/content/docs/getting-started.md",
   "docs/src/content/docs/index.md",
   "docs/src/content/docs/mcp.md",
+  "docs/src/content/docs/agent-recipes.md",
   "docs/src/content/docs/reference.md",
   "docs/src/content/docs/specializing-aictx.md",
   "docs/src/content/docs/troubleshooting.md",
@@ -332,6 +336,8 @@ const generatedGuidancePaths = [
   "integrations/codex/aictx/SKILL.md",
   "integrations/claude/aictx/SKILL.md",
   "integrations/claude/aictx.md",
+  "integrations/cursor/aictx.mdc",
+  "integrations/cline/aictx.md",
   "integrations/generic/aictx-agent-instructions.md"
 ] as const;
 

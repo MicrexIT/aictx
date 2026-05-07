@@ -1,0 +1,36 @@
+{
+  "body_path": "memory/sources/oss-ai-devtool-research-2026-05-07.md",
+  "content_hash": "sha256:477212277ac0aec36663fba713c8735b85c8c9966a0e40d5b9f4ed4322ff2ce8",
+  "created_at": "2026-05-07T19:21:07+02:00",
+  "evidence": [
+    {
+      "id": "research successful OSS AI agent/devtool projects 2026-05-07",
+      "kind": "task"
+    }
+  ],
+  "facets": {
+    "category": "source"
+  },
+  "id": "source.oss-ai-devtool-research-2026-05-07",
+  "scope": {
+    "branch": null,
+    "kind": "project",
+    "project": "project.aictx",
+    "task": null
+  },
+  "source": {
+    "kind": "agent",
+    "task": "researched successful open-source AI agent/devtool projects and identified alpha direction for Aictx"
+  },
+  "status": "active",
+  "tags": [
+    "source",
+    "oss",
+    "ai-devtools",
+    "growth",
+    "alpha"
+  ],
+  "title": "Source: May 2026 OSS AI devtool research",
+  "type": "source",
+  "updated_at": "2026-05-07T19:21:07+02:00"
+}

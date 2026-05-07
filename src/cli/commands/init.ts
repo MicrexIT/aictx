@@ -106,7 +106,7 @@ function renderAgentGuidance(agentGuidance: {
   return [
     "Agent guidance installed:",
     ...agentGuidance.targets.map((target) => `- ${target.path}: ${target.status}`),
-    `Optional bundled skills: ${agentGuidance.optional_skills.join(", ")}`
+    `Optional bundled guidance: ${agentGuidance.optional_skills.join(", ")}`
   ];
 }
 

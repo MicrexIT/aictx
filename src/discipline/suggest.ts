@@ -568,9 +568,13 @@ function recommendedBootstrapMemory(hasProductFeatures: boolean): ObjectType[] {
 }
 
 function recommendedMemoryForTask(task: string, changedFiles: readonly string[]): ObjectType[] {
-  return isProductFeatureTask(task, changedFiles)
+  const recommended = isProductFeatureTask(task, changedFiles)
     ? uniqueObjectTypes([...AFTER_TASK_RECOMMENDED_MEMORY, "synthesis"])
     : [...AFTER_TASK_RECOMMENDED_MEMORY];
+
+  return hasWorkflowSignal(task)
+    ? uniqueObjectTypes(["workflow", ...recommended])
+    : recommended;
 }
 
 function recommendedFacetsForTask(
@@ -580,6 +584,10 @@ function recommendedFacetsForTask(
 ): FacetCategory[] {
   const recommended = new Set<FacetCategory>();
   const taskText = task.toLowerCase();
+
+  if (hasWorkflowSignal(task)) {
+    recommended.add("workflow");
+  }
 
   if (/\b(test|spec|vitest|coverage)\b/u.test(taskText) || changedFiles.some(isTestPath)) {
     recommended.add("testing");
@@ -697,6 +705,12 @@ function firstRememberFacet(values: readonly FacetCategory[]): FacetCategory | u
 function hasConflictSignal(taskText: string): boolean {
   return /\b(conflicts?|contradictions?|contradictory|stale|corrections?|corrected|wrong assumptions?|ambiguous|ambiguity)\b/u.test(
     taskText
+  );
+}
+
+function hasWorkflowSignal(task: string): boolean {
+  return /\b(how[-\s]?to|procedure|procedures|checklist|runbook|setup|onboarding|release|migration|migrate|debugging|debug|maintenance|verification|verify|smoke test|recovery|recover|restore|command sequence|commands|routine|workflow)\b/u.test(
+    task.toLowerCase()
   );
 }
 

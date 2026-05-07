@@ -44,7 +44,8 @@ pnpm dev:site
 - Update README or public docs when user-visible behavior changes.
 - Run the verification commands that match the changed area.
 - Keep generated guidance files in sync by running `pnpm build:guidance` when
-  editing `integrations/templates/agent-guidance.md`.
+  editing `integrations/templates/agent-guidance.md`; generated integration
+  artifacts live under `integrations/`.
 - Do not edit `.aictx/` canonical memory files directly when the Aictx CLI can
   make the change.
 

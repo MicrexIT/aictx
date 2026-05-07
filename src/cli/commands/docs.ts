@@ -127,6 +127,24 @@ const DOC_TOPICS = [
     aliases: ["agents", "agent", "guidance"]
   },
   {
+    topic: "agent-recipes",
+    title: "Agent recipes",
+    description: "Copyable Aictx setup and routine-loop recipes for common coding agents.",
+    file: "agent-recipes.md",
+    path: "/agent-recipes/",
+    aliases: [
+      "recipes",
+      "agent-setup",
+      "codex",
+      "claude",
+      "claude-code",
+      "cursor",
+      "cline",
+      "opencode",
+      "open-code"
+    ]
+  },
+  {
     topic: "viewer",
     title: "Local viewer",
     description: "Inspect project memory through the local read-only browser viewer.",

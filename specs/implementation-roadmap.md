@@ -117,15 +117,15 @@ Acceptance:
 * Tests prove MCP does not expose CLI-only, shell, filesystem, or low-level graph mutation tools.
 * Tests prove stderr/stdout safety for client launch.
 
-### T006: Update MCP Docs, README, Agent Guidance, Install Examples, and Release Checks
+### T006: Update MCP Docs, README, Agent Guidance, Agent Recipes, Install Examples, and Release Checks
 
 Goal:
 
-Bring user-facing docs and generated agent guidance in line with the local MCP story.
+Bring user-facing docs, agent recipes, and generated agent guidance in line with the local MCP story.
 
 Acceptance:
 
-* README, public docs, and generated guidance list the local MCP tools.
+* README, public docs, agent recipes, and generated guidance list the local MCP tools.
 * Guidance says CLI is default and MCP is available when the client already exposes Aictx tools.
 * Docs keep setup, maintenance, recovery, export, registry, viewer, docs, suggest, audit, stale, and graph outside local MCP.
 * Release/package checks validate updated guidance.
@@ -232,6 +232,6 @@ This sequence is complete when:
 * `inspect_memory` returns the same object/body/relation envelope as `aictx inspect --json`.
 * `remember_memory` is the routine MCP write primitive; `save_memory_patch` remains the advanced structured patch primitive.
 * CLI and MCP shared operations use the host-neutral data-access service.
-* Root/spec mirrors and generated guidance are synchronized.
+* Root/spec mirrors, agent recipes, and generated guidance are synchronized.
 * Tests cover local MCP workflow, global project targeting, stdout safety, and CLI/MCP shared behavior.
 * No remote MCP, OAuth, hosted sync, tenancy, billing, embeddings, ChatGPT App SDK UI, or cloud architecture has been implemented as part of this sequence.

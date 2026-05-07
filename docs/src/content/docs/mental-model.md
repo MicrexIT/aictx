@@ -18,6 +18,33 @@ canonical memory -> generated index -> task-focused context pack
 Canonical memory is the durable source of truth. Generated state is rebuildable.
 The context pack is what an agent gets for a specific task.
 
+## Alternatives
+
+Aictx exists because the common alternatives each solve only part of the agent
+memory problem.
+
+`AGENTS.md` and similar instruction files are still useful. They are the right
+place for short operating rules: when to load memory, when to save, and which
+tooling boundaries matter. They are not a good long-term store for every
+product decision, source record, gotcha, workflow, and evolving synthesis; if
+they carry all of that, they become broad, stale, and expensive for every agent
+to reread.
+
+Vector databases and RAG systems are useful when you need a large retrieval
+service. Aictx v1 takes a narrower path: source-backed local files, deterministic
+indexes, Git review, and no required embeddings, hosted sync, cloud account, or
+model API for core memory commands.
+
+Long-context models help a single session hold more text, but context windows
+are not durable memory. They do not decide what should be remembered, preserve
+reviewable provenance, clean up stale facts, or help the next agent start from
+the right compact packet.
+
+Plain local files are the right foundation. Aictx intentionally stores canonical
+memory as inspectable files, then adds validation, object types, generated
+indexes, task-focused loading, relation-aware inspection, and a save/no-save
+discipline so the files stay useful instead of becoming another notes folder.
+
 ## Canonical memory
 
 `.aictx/` contains canonical memory and generated support files.
@@ -47,7 +74,7 @@ Aictx uses three layers:
   `fact`, `gotcha`, `workflow`, `question`, `note`, or `concept` objects.
 - `synthesis` records maintain compact summaries for product intent, feature
   maps, roadmap, architecture, conventions, agent guidance, and repeated
-  workflows.
+  workflows or how-to collections.
 
 Object types are `project`, `architecture`, `source`, `synthesis`, `decision`,
 `constraint`, `question`, `fact`, `gotcha`, `workflow`, `note`, and `concept`.
@@ -55,6 +82,11 @@ Object types are `project`, `architecture`, `source`, `synthesis`, `decision`,
 object statuses cover history. Branch or task scope covers temporary task
 context. Product capabilities fit `concept` objects or `synthesis` objects with
 feature facets.
+
+`workflow` is the existing home for durable project-specific how-tos:
+procedures, runbooks, command sequences, release/debugging/migration paths,
+verification routines, and maintenance steps. Generic tutorials, one-off task
+notes, and task diaries should not become workflow memory.
 
 :::tip
 Keep memories shaped like things future agents can use. A `synthesis` should

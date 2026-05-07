@@ -41,7 +41,9 @@ Existing Aictx objects cover the common repair cases:
 - `question` for missing knowledge or unresolved conflict.
 - `gotcha` for repeated failure modes.
 - `synthesis` for compact maintained context.
-- `decision`, `constraint`, `fact`, `workflow`, and `concept` for precise claims.
+- `workflow` for project-specific how-tos, runbooks, command sequences, and
+  repeated procedures.
+- `decision`, `constraint`, `fact`, and `concept` for precise claims.
 - Relations when the link matters.
 
 Facets such as `domain`, `bounded-context`, `capability`, `business-rule`, and

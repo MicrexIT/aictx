@@ -13,6 +13,7 @@ Before opening an issue, check:
 aictx --version
 node --version
 aictx check
+aictx docs agent-recipes
 ```
 
 Include sanitized command output when it helps reproduce the problem. Do not

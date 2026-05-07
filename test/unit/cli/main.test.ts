@@ -13,6 +13,13 @@ describe("CLI main", () => {
     expect(program.helpInformation()).toContain("--json");
   });
 
+  it("documents workflow and how-to memory in remember help", () => {
+    const program = createCliProgram();
+    const remember = program.commands.find((command) => command.name() === "remember");
+
+    expect(remember?.description()).toContain("workflows/how-tos");
+  });
+
   it("returns exit 2 for unknown options", async () => {
     const output = createCapturedOutput();
 

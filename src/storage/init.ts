@@ -46,7 +46,9 @@ const AGENT_GUIDANCE_END_MARKER = "<!-- aictx-memory:end -->";
 const AGENT_GUIDANCE_TARGETS = ["AGENTS.md", "CLAUDE.md"] as const;
 const OPTIONAL_AGENT_SKILLS = [
   "integrations/codex/aictx/SKILL.md",
-  "integrations/claude/aictx/SKILL.md"
+  "integrations/claude/aictx/SKILL.md",
+  "integrations/cursor/aictx.mdc",
+  "integrations/cline/aictx.md"
 ] as const;
 const AGENT_GUIDANCE_BLOCK = `${[
   AGENT_GUIDANCE_START_MARKER,
@@ -66,7 +68,7 @@ const AGENT_GUIDANCE_BLOCK = `${[
   "",
   "Use `aictx save --stdin` or `save_memory_patch({ patch })` only for advanced structured patch writes. Saved memory is active immediately after Aictx validates and writes it.",
   "",
-  "Save durable decisions, architecture or behavior changes, constraints, conventions, workflows, gotchas, debugging facts, open questions, user-stated context, source records, and maintained syntheses. Do not save task diaries, secrets, sensitive logs, speculation, or short-lived implementation notes.",
+  "Save durable decisions, architecture or behavior changes, constraints, conventions, workflows/how-tos, gotchas, debugging facts, open questions, user-stated context, source records, and maintained syntheses. Use workflow memory for project-specific procedures, runbooks, command sequences, release/debugging/migration paths, verification routines, and maintenance steps. Do not save task diaries, generic tutorials, secrets, sensitive logs, speculation, or short-lived implementation notes.",
   "",
   "Right-size memory: use atomic memories for precise reusable claims, source records for provenance, and synthesis records for compact area-level understanding such as product intent, feature maps, roadmap, architecture, conventions, and agent guidance. Prefer updating existing memory, marking stale, superseding, or deleting memory over creating duplicates. Save nothing when there is no durable future value.",
   "",
@@ -985,10 +987,10 @@ function countOccurrences(value: string, search: string): number {
 function nextSteps(agentGuidance: AgentGuidanceData): string[] {
   return [
     agentGuidanceNextStep(agentGuidance),
-    "`aictx init` creates linked starter placeholders only. To seed useful first-run memory, run `aictx setup` for a bootstrap preview or `aictx setup --apply` to apply the conservative bootstrap patch. For manual patch inspection, run `aictx suggest --bootstrap --patch > bootstrap-memory.json`, `aictx patch review bootstrap-memory.json`, `aictx save --file bootstrap-memory.json`, and `aictx check`.",
+    "`aictx init` creates linked starter placeholders only. To seed useful first-run memory, run `aictx setup` for a bootstrap preview, `aictx setup --apply` to apply the conservative bootstrap patch, or `aictx setup --apply --view` for the agent-led first-run path with a viewer URL. For manual patch inspection, run `aictx suggest --bootstrap --patch > bootstrap-memory.json`, `aictx patch review bootstrap-memory.json`, `aictx save --file bootstrap-memory.json`, and `aictx check`.",
     "`aictx init` does not start MCP; agents should use `aictx load` and `aictx remember --stdin` by default. Configure agent clients that support MCP to launch `aictx-mcp` only when you want MCP equivalents such as `load_memory`, `inspect_memory`, `remember_memory`, and `save_memory_patch`. A globally launched MCP server can serve this project when tool calls include this project root as `project_root`. If `aictx` is not on `PATH`, use the project package-manager form such as `pnpm exec aictx`, `npm exec aictx`, or `./node_modules/.bin/aictx`, but treat package-manager and local-binary fallbacks as version-sensitive and update stale local installs before trusting schema errors.",
     "Saved memory is active immediately after Aictx validates and writes it. Inspect memory asynchronously with `inspect_memory`, `aictx view`, `aictx diff`, Git tools, or MCP `diff_memory` when available.",
-    "Optional bundled skills are available under `integrations/codex/` and `integrations/claude/`."
+    "Optional bundled guidance is available under `integrations/` for Codex, Claude Code, Cursor, Cline, and generic Markdown instructions."
   ];
 }
 

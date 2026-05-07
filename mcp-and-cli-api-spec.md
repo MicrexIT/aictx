@@ -225,15 +225,17 @@ Success data:
     ],
     "optional_skills": [
       "integrations/codex/aictx/SKILL.md",
-      "integrations/claude/aictx/SKILL.md"
+      "integrations/claude/aictx/SKILL.md",
+      "integrations/cursor/aictx.mdc",
+      "integrations/cline/aictx.md"
     ]
   },
   "next_steps": [
     "Agents are now instructed through `AGENTS.md` and `CLAUDE.md` to load and save Aictx memory.",
     "`aictx init` creates linked starter placeholders only. To seed useful first-run memory, run `aictx setup` for a bootstrap preview or `aictx setup --apply` to apply the conservative bootstrap patch. For manual patch inspection, run `aictx suggest --bootstrap --patch > bootstrap-memory.json`, `aictx patch review bootstrap-memory.json`, `aictx save --file bootstrap-memory.json`, and `aictx check`.",
-    "`aictx init` does not start MCP; agents should use `aictx load` and `aictx save --stdin` by default. Configure agent clients that support MCP to launch `aictx-mcp` only when you want MCP equivalents such as `load_memory`, `inspect_memory`, and `save_memory_patch`. A globally launched MCP server can serve this project when tool calls include this project root as `project_root`.",
+    "`aictx init` does not start MCP; agents should use `aictx load` and `aictx remember --stdin` by default. Configure agent clients that support MCP to launch `aictx-mcp` only when you want MCP equivalents such as `load_memory`, `inspect_memory`, `remember_memory`, and `save_memory_patch`. A globally launched MCP server can serve this project when tool calls include this project root as `project_root`.",
     "Saved memory is active immediately after Aictx validates and writes it. Inspect memory asynchronously with `inspect_memory`, `aictx view`, `aictx diff`, Git tools, or MCP `diff_memory` when available.",
-    "Optional bundled skills are available under `integrations/codex/` and `integrations/claude/`."
+    "Optional bundled guidance is available under `integrations/` for Codex, Claude Code, Cursor, Cline, and generic Markdown instructions."
   ]
 }
 ```
@@ -318,7 +320,7 @@ When no token budget is requested, `token_target` is `null`, `budget_status` is 
 
 Purpose:
 
-Create or repair Aictx memory from intent-first agent input.
+Create or repair Aictx memory, including durable workflows/how-tos, from intent-first agent input.
 
 Syntax:
 
@@ -678,6 +680,7 @@ Behavior:
 * `--from-diff` reads the current non-generated project diff and related Aictx memory but does not create memory patches.
 * `--bootstrap` works with or without Git and lists likely files for the agent to inspect before creating seed memory.
 * `--after-task` packages changed files, related memory, duplicate or stale candidates, recommended facets, and a save/no-save checklist for the completed task.
+* `--after-task` should prefer `workflow` memory and the `workflow` facet when the task mentions reusable how-tos, procedures, checklists, runbooks, setup, release, migration, debugging, maintenance, recovery, verification, command sequences, routines, or workflows.
 * `--after-task` should recommend `unresolved-conflict` when related active memory is connected by `conflicts_with` or the task mentions conflict, correction, stale assumptions, or ambiguity.
 * Suggestion packets should recommend source-backed syntheses and plain-language organization facets such as `domain`, `bounded-context`, `capability`, and `business-rule` when useful.
 * `--patch` is valid only with `--bootstrap`; it emits a conservative proposed patch suitable for inspection and `aictx save --file`.
@@ -1161,6 +1164,7 @@ Behavior:
 * Default patch source to `{ "kind": "agent", "task": task }`.
 * Support `memories`, `updates`, `stale`, `supersede`, and `relations`.
 * Must not infer semantic memory from code diffs; the agent supplies title, body, and reasons.
+* Durable project-specific how-tos use `kind: "workflow"` and, when explicitly categorized, `category: "workflow"`. Do not add a separate `how-to` object type or facet.
 * Apply the generated patch through the same core path as `save_memory_patch`.
 
 ### 6.5 `save_memory_patch`

@@ -40,6 +40,7 @@ Use these when a project is new to Aictx or memory feels too thin:
 aictx init
 aictx setup
 aictx setup --apply
+aictx setup --apply --view
 aictx suggest --bootstrap --patch > bootstrap-memory.json
 aictx patch review bootstrap-memory.json
 ```
@@ -47,7 +48,12 @@ aictx patch review bootstrap-memory.json
 `init` creates local storage and optional repo-level agent guidance. `setup`
 orchestrates the first-run bootstrap path so Aictx can seed source-backed
 project intent, feature map, roadmap, architecture, conventions, and agent
-guidance when current repo evidence supports it.
+guidance when current repo evidence supports it. Reusable project how-tos fit
+the existing `workflow` object type and `workflow` facet.
+
+After setup, `aictx load "onboard to this repository"` is a good first
+retrieval check. Use [Agent recipes](/agent-recipes/) for copyable setup
+prompts tailored to common coding agents.
 
 ## Memory quality and maintenance
 

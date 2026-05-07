@@ -39,8 +39,8 @@ Rules:
 * Unknown top-level fields are invalid unless a schema explicitly allows them.
 * Schema `$id` values use `https://aictx.dev/schemas/v3/<name>.schema.json`.
 * Object type enums are closed to the storage v3 taxonomy from `storage-format-spec.md`: `project`, `architecture`, `decision`, `constraint`, `question`, `fact`, `gotcha`, `workflow`, `note`, `concept`, `source`, and `synthesis`.
-* `history`, `task-note`, and `feature` are intentionally invalid object types; use Git/events/statuses for history, branch/task scope for temporary task context, and `concept` or `synthesis` facets for product capabilities.
-* Facet categories include memory organization hints such as `domain`, `bounded-context`, `capability`, `business-rule`, and `unresolved-conflict`; these are facets on existing object types, not new object types.
+* `history`, `task-note`, `feature`, and `how-to` are intentionally invalid object types; use Git/events/statuses for history, branch/task scope for temporary task context, `concept` or `synthesis` facets for product capabilities, and `workflow` for reusable project procedures.
+* Facet categories include memory organization hints such as `workflow`, `domain`, `bounded-context`, `capability`, `business-rule`, and `unresolved-conflict`; these are facets on existing object types, not new object types.
 
 ## 3. Shared Definitions
 

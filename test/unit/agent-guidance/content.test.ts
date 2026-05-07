@@ -10,6 +10,8 @@ const guideTargets = [
   "integrations/codex/aictx/SKILL.md",
   "integrations/claude/aictx/SKILL.md",
   "integrations/claude/aictx.md",
+  "integrations/cursor/aictx.mdc",
+  "integrations/cline/aictx.md",
   "integrations/generic/aictx-agent-instructions.md"
 ] as const;
 
@@ -21,6 +23,7 @@ const publicMcpContractTargets = [
   "docs/src/content/docs/cli.md",
   "docs/src/content/docs/mcp.md",
   "docs/src/content/docs/agent-integration.md",
+  "docs/src/content/docs/agent-recipes.md",
   "docs/src/content/docs/specializing-aictx.md",
   "docs/src/content/docs/reference.md",
   "docs/src/content/docs/troubleshooting.md",
@@ -50,6 +53,8 @@ const generatedGuidanceTargets = [
   "integrations/codex/aictx/SKILL.md",
   "integrations/claude/aictx/SKILL.md",
   "integrations/claude/aictx.md",
+  "integrations/cursor/aictx.mdc",
+  "integrations/cline/aictx.md",
   "integrations/generic/aictx-agent-instructions.md"
 ] as const;
 
@@ -365,6 +370,8 @@ describe("agent guidance content", () => {
         expect(content).toContain(kind);
       }
 
+      expect(content).toContain("durable project-specific how-tos");
+      expect(content).toContain("Do not save generic tutorials");
       expect(content).toContain("semantic title/body/reason");
     }
   });

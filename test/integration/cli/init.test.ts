@@ -141,7 +141,7 @@ describe("aictx init CLI", () => {
     expect(output.stdout()).toContain("Agent guidance installed:");
     expect(output.stdout()).toContain("AGENTS.md: created");
     expect(output.stdout()).toContain("CLAUDE.md: created");
-    expect(output.stdout()).toContain("Optional bundled skills:");
+    expect(output.stdout()).toContain("Optional bundled guidance:");
     expect(output.stdout()).toContain("Next steps:");
     expect(output.stdout()).toContain("aictx load");
     expect(output.stdout()).toContain("aictx suggest --bootstrap --patch");
@@ -182,7 +182,9 @@ describe("aictx init CLI", () => {
       ],
       optional_skills: [
         "integrations/codex/aictx/SKILL.md",
-        "integrations/claude/aictx/SKILL.md"
+        "integrations/claude/aictx/SKILL.md",
+        "integrations/cursor/aictx.mdc",
+        "integrations/cline/aictx.md"
       ]
     });
     await expect(access(join(projectRoot, "AGENTS.md"))).rejects.toMatchObject({

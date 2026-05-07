@@ -99,7 +99,8 @@ Save durable project knowledge future agents would otherwise rediscover:
 
 - Product intent, feature maps, roadmap, and user-stated repository context.
 - Architecture decisions, behavioral changes, and operational constraints.
-- Repeated workflows, commands, conventions, and verification procedures.
+- Repeated workflows/how-tos, runbooks, commands, conventions, and
+  verification procedures.
 - Gotchas, known failure modes, abandoned approaches, and debugging facts.
 - Open questions or unresolved conflicts that affect future work.
 - Source records when provenance matters.
@@ -110,6 +111,11 @@ Right-size memory:
 - `synthesis` maintains compact area-level summaries.
 - `decision`, `constraint`, `fact`, `gotcha`, `workflow`, `question`,
   `concept`, and `note` capture precise reusable claims.
+
+Use `workflow` for durable project-specific how-tos: procedures, runbooks,
+command sequences, release/debugging/migration paths, verification routines,
+and maintenance steps. Do not save generic tutorials, one-off task notes, or
+task diaries as workflow memory.
 
 Prefer updating, marking stale, superseding, or deleting existing memory over
 creating duplicates. After failure, confusion, stale loaded memory, active

@@ -1,0 +1,51 @@
+{
+  "body_path": "memory/syntheses/alpha-growth-direction.md",
+  "content_hash": "sha256:09e353d70f0dce9043bc145c3d19ed3ff63d9fb6995b082c25a72ec1923a90f1",
+  "created_at": "2026-05-07T19:21:07+02:00",
+  "evidence": [
+    {
+      "id": "source.oss-ai-devtool-research-2026-05-07",
+      "kind": "source"
+    },
+    {
+      "id": "source.readme",
+      "kind": "source"
+    },
+    {
+      "id": "source.package-json",
+      "kind": "source"
+    }
+  ],
+  "facets": {
+    "applies_to": [
+      "README.md",
+      "docs/src/content/docs/getting-started.md",
+      "docs/src/content/docs/agent-integration.md",
+      "package.json",
+      "AGENTS.md"
+    ],
+    "category": "roadmap"
+  },
+  "id": "synthesis.alpha-growth-direction",
+  "scope": {
+    "branch": null,
+    "kind": "project",
+    "project": "project.aictx",
+    "task": null
+  },
+  "source": {
+    "kind": "agent",
+    "task": "researched successful open-source AI agent/devtool projects and identified alpha direction for Aictx"
+  },
+  "status": "active",
+  "tags": [
+    "synthesis",
+    "roadmap",
+    "alpha",
+    "growth",
+    "positioning"
+  ],
+  "title": "Alpha growth direction",
+  "type": "synthesis",
+  "updated_at": "2026-05-07T19:21:07+02:00"
+}

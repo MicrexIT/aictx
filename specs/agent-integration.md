@@ -99,7 +99,7 @@ tools use the server launch directory for backward compatibility.
 
 When `aictx-mcp` is not on `PATH`, configure the MCP client to launch it through the project package manager or local binary path, such as `pnpm exec aictx-mcp`, `npm exec aictx-mcp`, or `./node_modules/.bin/aictx-mcp`. For one-off `npx` usage, name the scoped package explicitly: `npx --package @aictx/memory -- aictx-mcp`.
 
-Use `aictx setup` for guided first-run onboarding, or `aictx setup --apply` when the conservative bootstrap patch should be applied immediately. Use `aictx suggest --from-diff --json` when the agent needs a deterministic suggestion packet for current code changes before deciding what durable memory to save. Use `aictx suggest --bootstrap --json` for a first-run repo memory pass. If loaded memory only contains the init-created project and architecture placeholders, treat setup, onboarding, and "why is memory empty?" requests as enough context to run the bootstrap workflow proactively. Run `aictx suggest --bootstrap --patch > bootstrap-memory.json`, inspect it with `aictx patch review bootstrap-memory.json`, apply it with `aictx save --file bootstrap-memory.json`, then run `aictx check`. The bootstrap patch command does not write memory; it only creates an inspectable patch so users do not have to hand-write JSON. Use `aictx audit --json` to find grouped, actionable memory hygiene issues.
+Use `aictx setup` for guided first-run onboarding, or `aictx setup --apply` when the conservative bootstrap patch should be applied immediately. Use `aictx setup --apply --view` for the agent-led first-run path when the human wants an immediate viewer URL, then run `aictx load "onboard to this repository"` to verify the first task-focused memory pack. Use `aictx suggest --from-diff --json` when the agent needs a deterministic suggestion packet for current code changes before deciding what durable memory to save. Use `aictx suggest --bootstrap --json` for a first-run repo memory pass. If loaded memory only contains the init-created project and architecture placeholders, treat setup, onboarding, and "why is memory empty?" requests as enough context to run the bootstrap workflow proactively. Run `aictx suggest --bootstrap --patch > bootstrap-memory.json`, inspect it with `aictx patch review bootstrap-memory.json`, apply it with `aictx save --file bootstrap-memory.json`, then run `aictx check`. The bootstrap patch command does not write memory; it only creates an inspectable patch so users do not have to hand-write JSON. Use `aictx audit --json` to find grouped, actionable memory hygiene issues.
 
 ## Capability Map
 
@@ -183,7 +183,9 @@ Save only durable information future agents should know:
 * Behavioral changes
 * Operational constraints
 * Gotchas and known failure modes
-* Repeated project workflows
+* Repeated project workflows and how-tos, including runbooks, command
+  sequences, release/debugging/migration paths, verification routines, and
+  maintenance steps
 * Source-backed product intent, feature map, roadmap, architecture, convention, and agent-guidance syntheses
 * User-stated product or repository context that future agents need
 * Important facts found during debugging
@@ -217,7 +219,7 @@ Good memory examples:
 * Good durable fact: a `fact` titled "Webhook retries run in the worker" with one sentence naming the current retry location.
 * Good linked decision: `decision.billing-retries` plus a `requires` relation to `constraint.webhook-idempotency` when the decision depends on that constraint.
 * Good gotcha: `gotcha.viewer-export-overwrites-manifest-files` when a repeated failure mode affects future work.
-* Good workflow: `workflow.release-smoke-test` for a repeated project procedure.
+* Good workflow/how-to: `workflow.release-smoke-test` for a repeated release verification procedure.
 * Good source-backed synthesis: `synthesis.product-intent` summarizes what the product is for and has `derived_from` relations to `source.readme` and `source.user-context-hybrid-memory`.
 * Good user-stated context: `source.user-context-hybrid-memory` records durable product direction stated by the user in the task, without saving private or unrelated preferences.
 * Good roadmap memory: `synthesis.roadmap` lists current milestones and has `documents` links to issue or docs sources.
@@ -315,7 +317,7 @@ Create a relation with `create_relation` when the connection is durable and usef
 }
 ```
 
-The object types remain broad: `project`, `architecture`, `decision`, `constraint`, `question`, `fact`, `gotcha`, `workflow`, `note`, `concept`, `source`, and `synthesis`. Use facets for more specific durable categories such as `stack`, `convention`, `testing`, `file-layout`, `product-feature`, `feature-map`, `product-intent`, `roadmap`, `agent-guidance`, `source`, `decision-rationale`, `abandoned-attempt`, `workflow`, `gotcha`, `debugging-fact`, `domain`, `bounded-context`, `capability`, `business-rule`, and `unresolved-conflict`. Do not create `history`, `task-note`, or `feature` object types; use Git/events/statuses for history, branch/task scope for temporary task context, and `concept` or `synthesis` facets for product capabilities.
+The object types remain broad: `project`, `architecture`, `decision`, `constraint`, `question`, `fact`, `gotcha`, `workflow`, `note`, `concept`, `source`, and `synthesis`. Use facets for more specific durable categories such as `stack`, `convention`, `testing`, `file-layout`, `product-feature`, `feature-map`, `product-intent`, `roadmap`, `agent-guidance`, `source`, `decision-rationale`, `abandoned-attempt`, `workflow`, `gotcha`, `debugging-fact`, `domain`, `bounded-context`, `capability`, `business-rule`, and `unresolved-conflict`. Do not create `history`, `task-note`, `feature`, or `how-to` object types; use Git/events/statuses for history, branch/task scope for temporary task context, `concept` or `synthesis` facets for product capabilities, and `workflow` for reusable project procedures.
 
 After meaningful work, prefer `aictx suggest --after-task "<task>" --json` before saving memory when the right durable update is not obvious. The helper is read-only and packages changed files, related memory, stale or duplicate candidates, recommended facets, and a save/no-save checklist.
 
@@ -334,9 +336,11 @@ Use whichever target fits the agent client:
 * `integrations/codex/aictx/SKILL.md`
 * `integrations/claude/aictx/SKILL.md`
 * `integrations/claude/aictx.md`
+* `integrations/cursor/aictx.mdc`
+* `integrations/cline/aictx.md`
 * `integrations/generic/aictx-agent-instructions.md`
 
-Codex users can enable a skill folder through `skills.config[].path` in Codex configuration. Claude Code supports project skills under `.claude/skills/<skill-name>/SKILL.md`; for Aictx, use the shared skill name `aictx-memory`.
+Codex users can enable a skill folder through `skills.config[].path` in Codex configuration. Claude Code supports project skills under `.claude/skills/<skill-name>/SKILL.md`; for Aictx, use the shared skill name `aictx-memory`. Cursor users can copy `integrations/cursor/aictx.mdc` to `.cursor/rules/aictx.mdc`. Cline users can copy `integrations/cline/aictx.md` to `.clinerules/aictx.md`.
 
 If `aictx` is not on `PATH`, use the package manager binary path for the project, such as `pnpm exec aictx`, `npm exec aictx`, or `./node_modules/.bin/aictx`. For one-off `npx` usage, name the scoped package explicitly: `npx --package @aictx/memory -- aictx`. Package-manager and local-binary fallbacks are version-sensitive: if a local install is stale, update it or use a current global/source binary before trusting schema errors. MCP clients can start `aictx-mcp` globally once and pass `project_root` on routine tool calls; with project-local installs, use the equivalent package-manager command when needed. `aictx init` does not start MCP.
 

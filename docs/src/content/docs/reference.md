@@ -55,6 +55,7 @@ aictx docs
 aictx docs getting-started
 aictx docs capabilities
 aictx docs specializing-aictx
+aictx docs agent-recipes
 aictx docs agent-integration --open
 aictx docs --json
 ```
@@ -69,6 +70,11 @@ Object types are `project`, `architecture`, `source`, `synthesis`, `decision`,
 `constraint`, `question`, `fact`, `gotcha`, `workflow`, `note`, and `concept`.
 
 `history`, `task-note`, and `feature` are not object types.
+
+Use `workflow` for durable project-specific how-tos: procedures, runbooks,
+command sequences, release/debugging/migration paths, verification routines,
+and maintenance steps. Generic tutorials, one-off task notes, and task diaries
+should not become workflow memory.
 
 Facet categories include `project-description`, `architecture`, `stack`,
 `convention`, `file-layout`, `product-feature`, `testing`,
@@ -99,6 +105,23 @@ and generates a structured patch internally.
 
 Supported top-level action arrays are `memories`, `updates`, `stale`,
 `supersede`, and `relations`.
+
+Workflow/how-to memory uses the same intent-first input:
+
+```json
+{
+  "task": "Document release smoke test",
+  "memories": [
+    {
+      "kind": "workflow",
+      "title": "Release smoke test",
+      "body": "Before tagging a release, run package verification and inspect the Aictx memory diff.",
+      "category": "workflow",
+      "applies_to": ["package.json"]
+    }
+  ]
+}
+```
 
 ## Structured patch
 

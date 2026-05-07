@@ -82,10 +82,12 @@ For guided onboarding:
 ```bash
 aictx setup
 aictx setup --apply
+aictx setup --apply --view
 ```
 
 `aictx setup` previews a conservative bootstrap memory patch. `aictx setup
---apply` applies it immediately.
+--apply` applies it immediately. Add `--view` when you want setup to start the
+local read-only viewer for inspection after validation.
 
 If you want to inspect the patch file manually:
 
@@ -124,6 +126,12 @@ aictx view
 aictx diff
 ```
 
+After setup, a useful first retrieval check is:
+
+```bash
+aictx load "onboard to this repository"
+```
+
 :::tip
 Use `aictx diff` for memory review in Git projects. Plain `git diff -- .aictx/`
 can miss untracked memory files before they are staged.
@@ -144,3 +152,6 @@ Local MCP is the near-term integration path for local agent harnesses. Remote
 MCP, hosted sync, cloud auth, cloud hosting, and ChatGPT App SDK UI are future
 work. Future ChatGPT-compatible `search`/`fetch` names are adapter aliases over
 search and inspect behavior, not local MCP tool names.
+
+For copyable agent-specific setup prompts and instruction-file locations, see
+[Agent recipes](/agent-recipes/).

@@ -87,4 +87,10 @@ describe("MCP registration cleanup guardrail", () => {
 
     expect(toolNames.sort()).toEqual([...exactMcpToolNames]);
   });
+
+  it("documents workflow and how-to memory in remember_memory description", async () => {
+    const source = await readProjectFile("src/mcp/tools/remember-memory.ts");
+
+    expect(source).toContain("workflows/how-tos");
+  });
 });

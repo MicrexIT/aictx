@@ -236,6 +236,31 @@ describe("suggest discipline packets", () => {
     );
   });
 
+  it("prefers workflow memory and facets for reusable how-to procedure tasks", () => {
+    const storage = storageSnapshot({
+      objects: [],
+      relations: []
+    });
+
+    const packet = buildSuggestAfterTaskPacket({
+      task: "Document how to run the release smoke test checklist",
+      changedFiles: ["docs/release-runbook.md", "package.json"],
+      storage
+    });
+
+    expect(packet.recommended_memory[0]).toBe("workflow");
+    expect(packet.recommended_facets?.[0]).toBe("workflow");
+    expect(packet.remember_template?.memories?.[0]).toMatchObject({
+      kind: "workflow",
+      category: "workflow",
+      applies_to: ["docs/release-runbook.md", "package.json"],
+      evidence: [
+        { kind: "file", id: "docs/release-runbook.md" },
+        { kind: "file", id: "package.json" }
+      ]
+    });
+  });
+
   it("recommends unresolved-conflict facets for conflict and correction task signals", () => {
     const storage = storageSnapshot({
       objects: [],

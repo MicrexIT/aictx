@@ -16,6 +16,7 @@ describe("aictx docs", () => {
     expect(output.stdout()).toContain("- specializing-aictx:");
     expect(output.stdout()).toContain("- demand-driven-memory:");
     expect(output.stdout()).toContain("- agent-integration:");
+    expect(output.stdout()).toContain("- agent-recipes:");
   });
 
   it("prints a bundled topic without Starlight frontmatter", async () => {
@@ -77,6 +78,19 @@ describe("aictx docs", () => {
     expect(output.stderr()).toBe("");
     expect(output.stdout()).toContain("# Capabilities");
     expect(output.stdout()).toContain("Routine memory work");
+  });
+
+  it("prints the bundled agent recipes topic", async () => {
+    const output = createCapturedOutput();
+
+    const exitCode = await main(["node", "aictx", "docs", "agent-recipes"], output.writers);
+
+    expect(exitCode).toBe(0);
+    expect(output.stderr()).toBe("");
+    expect(output.stdout()).toContain("# Agent recipes");
+    expect(output.stdout()).toContain("Codex");
+    expect(output.stdout()).toContain("Cursor");
+    expect(output.stdout()).toContain("aictx setup --apply --view");
   });
 
   it("opens the hosted docs URL through the injected opener", async () => {

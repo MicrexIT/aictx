@@ -73,8 +73,12 @@ describe("repo maintenance scripts", () => {
       "Then initialize local Aictx storage and agent guidance:",
       "aictx init",
       "",
-      "Run first-run onboarding and apply the conservative bootstrap memory patch:",
-      "aictx setup --apply",
+      "Run first-run onboarding, apply the conservative bootstrap memory patch, and",
+      "start the local viewer for inspection:",
+      "aictx setup --apply --view",
+      "",
+      "Load the first task-focused memory pack:",
+      "aictx load \"onboard to this repository\"",
       "```",
       ""
     ]);
@@ -94,7 +98,8 @@ describe("repo maintenance scripts", () => {
     expect(docsIndex).toContain("npm install -g @aictx/memory@9.8.7");
     expect(docsIndex).toContain("npm install -g @aictx/memory\n");
     expect(docsIndex).toContain("aictx init");
-    expect(docsIndex).toContain("aictx setup --apply");
+    expect(docsIndex).toContain("aictx setup --apply --view");
+    expect(docsIndex).toContain("aictx load \"onboard to this repository\"");
   });
 
   it("updates already pinned setup prompts on later version bumps", async () => {

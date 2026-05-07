@@ -249,6 +249,8 @@ const guidanceTargets = [
   "integrations/codex/aictx/SKILL.md",
   "integrations/claude/aictx/SKILL.md",
   "integrations/claude/aictx.md",
+  "integrations/cursor/aictx.mdc",
+  "integrations/cline/aictx.md",
   "integrations/generic/aictx-agent-instructions.md"
 ] as const;
 
@@ -408,6 +410,7 @@ describe("agent capability map guardrail", () => {
 
       expect(content).toMatch(/gotcha/i);
       expect(content).toMatch(/workflow/i);
+      expect(content).toMatch(/how-to/i);
       expect(content).toMatch(/history/i);
       expect(content).toMatch(/task-note/i);
       expect(content).toMatch(/not|invalid|Do not/i);
@@ -550,11 +553,15 @@ describe("agent capability map guardrail", () => {
     const codex = await readProjectFile("integrations/codex/aictx/SKILL.md");
     const claudeSkill = await readProjectFile("integrations/claude/aictx/SKILL.md");
     const claude = await readProjectFile("integrations/claude/aictx.md");
+    const cursor = await readProjectFile("integrations/cursor/aictx.mdc");
+    const cline = await readProjectFile("integrations/cline/aictx.md");
     const generic = await readProjectFile("integrations/generic/aictx-agent-instructions.md");
 
     expect(codex).toBe(`---\nname: aictx-memory\ndescription: Use this skill when working in a project that uses Aictx project memory. It guides the agent to load relevant memory before non-trivial coding work, save durable memory after meaningful changes, and keep memory inspectable through Aictx and Git when available.\n---\n\n${generatedNotice}\n\n${template}\n`);
     expect(claudeSkill).toBe(`---\nname: aictx-memory\ndescription: Use this skill when working in a project that uses Aictx project memory. It guides the agent to load relevant memory before non-trivial coding work, save durable memory after meaningful changes, and keep memory inspectable through Aictx and Git when available.\n---\n\n${generatedNotice}\n\n${template}\n`);
     expect(claude).toBe(`${generatedNotice}\n\n${template}\n`);
+    expect(cursor).toBe(`---\ndescription: Use Aictx project memory when working in this repository.\nalwaysApply: true\n---\n\n${generatedNotice}\n\n${template}\n`);
+    expect(cline).toBe(`${generatedNotice}\n\n${template}\n`);
     expect(generic).toBe(`${generatedNotice}\n\n${template}\n`);
   });
 

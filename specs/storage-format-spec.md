@@ -226,7 +226,7 @@ source         -> .aictx/memory/sources/
 synthesis      -> .aictx/memory/syntheses/
 ```
 
-`source` captures concise provenance for repo docs, AGENTS/CLAUDE/rules, package manifests, issues, external references recorded by an agent, or user-stated context. `synthesis` captures maintained summaries for product intent, feature maps, roadmap, architecture, conventions, agent guidance, and repeated workflows. `gotcha` captures known failure modes, traps, recurring bugs, and behavior future agents should avoid. `workflow` captures repeated project procedures such as release steps, debugging paths, migrations, local setup, or recurring maintenance. Do not add `history` or `task-note` object types; use Git/events/statuses for history and branch/task scope for temporary context.
+`source` captures concise provenance for repo docs, AGENTS/CLAUDE/rules, package manifests, issues, external references recorded by an agent, or user-stated context. `synthesis` captures maintained summaries for product intent, feature maps, roadmap, architecture, conventions, agent guidance, and repeated workflows or how-to collections. `gotcha` captures known failure modes, traps, recurring bugs, and behavior future agents should avoid. `workflow` captures durable project-specific how-tos such as procedures, runbooks, command sequences, release steps, debugging paths, migrations, local setup, verification routines, and recurring maintenance. Do not add `history`, `task-note`, or `how-to` object types; use Git/events/statuses for history, branch/task scope for temporary context, and `workflow` for reusable project procedures.
 
 Storage v3 keeps broad object types, adds `source` and `synthesis` layers, and uses object-level facets for more specific agent-memory categories.
 

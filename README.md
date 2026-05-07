@@ -26,6 +26,24 @@ you.
 This repository publishes the npm package `@aictx/memory`. It is unrelated to
 similarly named packages in other ecosystems.
 
+## Why Aictx?
+
+Aictx is for durable project context that should survive between agents,
+sessions, branches, and reviews.
+
+- Why not `AGENTS.md` only? Agent instruction files are good operating manuals,
+  but they become too broad and static when they also try to hold product
+  intent, decisions, gotchas, workflows, and source-backed summaries.
+- Why not a vector DB or RAG stack? Those are useful for large retrieval
+  systems. Aictx keeps v1 project memory local, inspectable, Git-aware, and
+  usable without embeddings, hosted infrastructure, or a model API.
+- Why not long context? Long context helps inside one session. It does not make
+  memory reviewable, current, reusable across future sessions, or easy to clean
+  up when facts go stale.
+- Why local files? Plain files are reviewable and portable. Aictx builds on that
+  foundation with validation, typed memory, a local index, task-focused loading,
+  relation-aware inspection, and a save/no-save discipline.
+
 ## Documentation
 
 Public docs live at [docs.aictx.dev](https://docs.aictx.dev).
@@ -36,6 +54,7 @@ Good starting points:
 - [Capabilities](https://docs.aictx.dev/capabilities/)
 - [Specializing Aictx](https://docs.aictx.dev/specializing-aictx/)
 - [Agent integration](https://docs.aictx.dev/agent-integration/)
+- [Agent recipes](https://docs.aictx.dev/agent-recipes/)
 
 Bundled docs are also available from the CLI:
 
@@ -44,6 +63,7 @@ aictx docs
 aictx docs getting-started
 aictx docs capabilities
 aictx docs agent-integration --open
+aictx docs agent-recipes
 ```
 
 ## Install
@@ -143,7 +163,7 @@ Aictx storage uses a hybrid memory model:
   `question`, `fact`, `gotcha`, `workflow`, `note`, or `concept` objects.
 - `synthesis` records maintain compact summaries for product intent, feature
   maps, roadmap, architecture, conventions, agent guidance, and repeated
-  workflows.
+  workflows or how-to collections.
 
 Object types are `project`, `architecture`, `source`, `synthesis`, `decision`,
 `constraint`, `question`, `fact`, `gotcha`, `workflow`, `note`, and `concept`.
@@ -219,8 +239,11 @@ connection matters, using predicates such as `derived_from`, `summarizes`,
 
 Use `update_object`, `mark_stale`, `supersede_object`, `delete_object`, and
 `create_relation` when they fit better than creating another object. Use
-`gotcha` for known failure modes and traps. Use `workflow` for repeated project
-procedures.
+`gotcha` for known failure modes and traps. Use `workflow` for repeated
+project-specific how-tos: procedures, runbooks, command sequences,
+release/debugging/migration paths, verification routines, and maintenance
+steps. Generic tutorials, one-off task notes, and task diaries should not become
+workflow memory.
 
 Dirty or untracked `.aictx/` files are not by themselves a reason to skip saving
 durable memory. Dirty state is not a preflight blocker. Aictx backs up dirty

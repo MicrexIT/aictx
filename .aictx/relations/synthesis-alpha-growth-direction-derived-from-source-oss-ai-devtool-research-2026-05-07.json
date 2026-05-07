@@ -1,0 +1,11 @@
+{
+  "confidence": "high",
+  "content_hash": "sha256:85a6f53f8b21507addec0a305b1bc2ccf5c44a6f06071859f080af771d45eb31",
+  "created_at": "2026-05-07T19:21:07+02:00",
+  "from": "synthesis.alpha-growth-direction",
+  "id": "rel.synthesis-alpha-growth-direction-derived-from-source-oss-ai-devtool-research-2026-05-07",
+  "predicate": "derived_from",
+  "status": "active",
+  "to": "source.oss-ai-devtool-research-2026-05-07",
+  "updated_at": "2026-05-07T19:21:07+02:00"
+}

@@ -37,7 +37,7 @@ export function registerRememberCommand(
 ): void {
   program
     .command("remember")
-    .description("Create Aictx memory from intent-first agent input.")
+    .description("Create Aictx memory, including durable workflows/how-tos, from intent-first agent input.")
     .option("--stdin", "Read the remember input from stdin.")
     .option("--dry-run", "Validate and plan the generated patch without writing memory.")
     .action(async (commandOptions: RememberCommandFlags, command: Command) => {

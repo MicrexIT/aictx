@@ -6,6 +6,7 @@ const repoRootUrl = new URL("../", import.meta.url);
 const templateUrl = new URL("integrations/templates/agent-guidance.md", repoRootUrl);
 const generatedNotice = "<!-- Generated from integrations/templates/agent-guidance.md. Do not edit directly. -->";
 const skillPrefix = `---\nname: aictx-memory\ndescription: Use this skill when working in a project that uses Aictx project memory. It guides the agent to load relevant memory before non-trivial coding work, save durable memory after meaningful changes, and keep memory inspectable through Aictx and Git when available.\n---\n\n${generatedNotice}\n\n`;
+const cursorPrefix = `---\ndescription: Use Aictx project memory when working in this repository.\nalwaysApply: true\n---\n\n${generatedNotice}\n\n`;
 
 const targets = [
   {
@@ -18,6 +19,14 @@ const targets = [
   },
   {
     path: "integrations/claude/aictx.md",
+    prefix: `${generatedNotice}\n\n`
+  },
+  {
+    path: "integrations/cursor/aictx.mdc",
+    prefix: cursorPrefix
+  },
+  {
+    path: "integrations/cline/aictx.md",
     prefix: `${generatedNotice}\n\n`
   },
   {

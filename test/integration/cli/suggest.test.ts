@@ -344,6 +344,7 @@ describe("aictx suggest CLI", () => {
       ])
     );
     expect(envelope.data.check.valid).toBe(true);
+    expect(envelope.data.next_step).toContain('aictx load "onboard to this repository"');
   });
 
   it("applies explicit README product features as a source-backed feature-map synthesis during setup", async () => {

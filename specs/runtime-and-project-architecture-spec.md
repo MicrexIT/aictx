@@ -218,7 +218,7 @@ Packaging rules:
 * `integrations/templates/agent-guidance.md` is the canonical source for agent guidance text.
 * `scripts/generate-agent-guidance.mjs` generates target-specific guidance files from the canonical template.
 * Generated guidance files must not be edited directly.
-* `integrations/codex/aictx/SKILL.md`, `integrations/claude/aictx/SKILL.md`, `integrations/claude/aictx.md`, and `integrations/generic/aictx-agent-instructions.md` are packaged as optional agent guidance.
+* `integrations/codex/aictx/SKILL.md`, `integrations/claude/aictx/SKILL.md`, `integrations/claude/aictx.md`, `integrations/cursor/aictx.mdc`, `integrations/cline/aictx.md`, and `integrations/generic/aictx-agent-instructions.md` are packaged as optional agent guidance.
 * Internal specs live under `specs/`; public, package-shipped docs live under `docs/`.
 
 ## 4. Public Entry Points
@@ -946,6 +946,8 @@ Outputs:
   integrations/codex/aictx/SKILL.md
   integrations/claude/aictx/SKILL.md
   integrations/claude/aictx.md
+  integrations/cursor/aictx.mdc
+  integrations/cline/aictx.md
   integrations/generic/aictx-agent-instructions.md
 ```
 
@@ -1051,7 +1053,7 @@ Rules:
 
 * Package must include `dist/` and schema files.
 * Package must include built local viewer assets under `dist/viewer/` once `aictx view` is implemented.
-* Package should include public docs under `docs/src/content/docs/`, `integrations/templates/agent-guidance.md`, and generated files under `integrations/codex/`, `integrations/claude/`, and `integrations/generic/`.
+* Package should include public docs under `docs/src/content/docs/`, `integrations/templates/agent-guidance.md`, and generated files under `integrations/codex/`, `integrations/claude/`, `integrations/cursor/`, `integrations/cline/`, and `integrations/generic/`.
 * Package must not include test fixtures unless needed.
 * Package must declare Node engine `>=22`.
 * Package should support macOS and Linux first.

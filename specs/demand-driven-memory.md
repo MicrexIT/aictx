@@ -28,7 +28,8 @@ Use existing primitives:
 * `question` for missing knowledge or unresolved ambiguity
 * `gotcha` for repeated failure modes
 * `synthesis` for compact maintained context
-* `decision`, `constraint`, `fact`, `workflow`, and `concept` for precise reusable claims
+* `workflow` for project-specific how-tos, runbooks, command sequences, and repeated procedures
+* `decision`, `constraint`, `fact`, and `concept` for precise reusable claims
 * relations when links matter
 
 Use facets such as `domain`, `bounded-context`, `capability`, `business-rule`,

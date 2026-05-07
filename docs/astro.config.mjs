@@ -32,7 +32,14 @@ export default defineConfig({
         },
         {
           label: "Use Aictx",
-          items: ["cli", "mcp", "agent-integration", "viewer", "troubleshooting"]
+          items: [
+            "cli",
+            "mcp",
+            "agent-integration",
+            "agent-recipes",
+            "viewer",
+            "troubleshooting"
+          ]
         },
         {
           label: "Reference",

@@ -111,7 +111,7 @@ export const rememberMemoryTool = {
   name: "remember_memory",
   title: "Remember Aictx Memory",
   description:
-    "Create or repair Aictx memory from intent-first agent input. Converts to a structured patch internally.",
+    "Create or repair Aictx memory, including durable workflows/how-tos, from intent-first agent input. Converts to a structured patch internally.",
   inputSchema: REMEMBER_MEMORY_INPUT_SCHEMA,
   annotations: WRITE_TOOL_ANNOTATIONS,
   call: callRememberMemoryTool

@@ -34,9 +34,9 @@ It helps a coding agent answer two questions:
 - After work: what should future agents not have to rediscover?
 
 Memory can hold source records, decisions, constraints, facts, gotchas,
-workflows, open questions, product concepts, and compact syntheses for areas
-such as product intent, feature maps, roadmap, architecture, conventions, and
-agent guidance.
+workflows/how-tos, open questions, product concepts, and compact syntheses for
+areas such as product intent, feature maps, roadmap, architecture, conventions,
+and agent guidance.
 
 :::tip
 A good first memory is not a diary of what changed. It is something future
@@ -74,14 +74,21 @@ npm install -g @aictx/memory@0.1.28
 Then initialize local Aictx storage and agent guidance:
 aictx init
 
-Run first-run onboarding and apply the conservative bootstrap memory patch:
-aictx setup --apply
+Run first-run onboarding, apply the conservative bootstrap memory patch, and
+start the local viewer for inspection:
+aictx setup --apply --view
 
-Finally validate memory:
+Validate memory:
 aictx check
+
+Load the first task-focused memory pack:
+aictx load "onboard to this repository"
 
 When this is done, tell the human to inspect the accepted memory with:
 aictx view
+
+Also tell them to review memory changes with:
+aictx diff
 ```
 
 ## Start here
@@ -91,11 +98,15 @@ aictx view
 - [Capabilities](/capabilities/) maps the v1 features to the jobs users and
   agents actually need to do.
 - [Mental model](/mental-model/) explains canonical memory, generated state,
-  object types, and retrieval.
+  object types, retrieval, and why Aictx is different from `AGENTS.md` alone,
+  vector DB/RAG systems, long context, or plain local files.
 - [Specializing Aictx](/specializing-aictx/) shows how to tailor memory to your
   repo's product intent, workflows, and agent guidance.
 - [Agent integration](/agent-integration/) gives agents the concrete workflow
   and guardrails.
+- [Agent recipes](/agent-recipes/) gives copyable setup and routine-loop
+  guidance for Codex, Claude Code, Cursor, Cline, OpenCode, and generic
+  MCP-capable agents.
 
 ## CLI and MCP
 

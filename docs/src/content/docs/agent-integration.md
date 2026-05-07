@@ -202,8 +202,10 @@ statuses cover history. Branch or task scope covers temporary task context.
 Product capabilities fit `concept` objects or `synthesis` objects with feature
 facets.
 
-`gotcha` fits known failure modes and traps. `workflow` fits repeated project
-procedures. Organization facets such as `domain`, `bounded-context`,
+`gotcha` fits known failure modes and traps. `workflow` fits repeated
+project-specific how-tos: procedures, runbooks, command sequences,
+release/debugging/migration paths, verification routines, and maintenance
+steps. Organization facets such as `domain`, `bounded-context`,
 `capability`, `business-rule`, and `unresolved-conflict` are optional
 plain-language retrieval hints, not mandatory DDD terminology.
 
@@ -221,8 +223,8 @@ Good memory examples:
   constraint.
 - Good gotcha: `gotcha.viewer-export-overwrites-manifest-files` when a repeated
   failure mode affects future work.
-- Good workflow: `workflow.release-smoke-test` for a repeated project
-  procedure.
+- Good workflow/how-to: `workflow.release-smoke-test` for a repeated release
+  verification procedure.
 - Good source-backed synthesis: `synthesis.product-intent` summarizes what the
   product is for and has `derived_from` relations to source records.
 
@@ -247,6 +249,11 @@ requests, or safety rules.
 contains starter placeholders, setup and onboarding requests are enough context
 for the bootstrap workflow.
 
+For the agent-led first-run path, use `aictx setup --apply --view`, then run
+`aictx load "onboard to this repository"` to verify the first task-focused
+memory pack. For client-specific instruction files and copyable setup prompts,
+see [Agent recipes](/agent-recipes/).
+
 ```bash
 aictx suggest --bootstrap --json
 aictx suggest --bootstrap --patch > bootstrap-memory.json
@@ -259,8 +266,10 @@ aictx check
 current code changes. `aictx audit --json` reports grouped, actionable memory
 hygiene issues.
 
-During setup, product features can use the `product-feature` facet.
+During setup, product features can use the `product-feature` facet. Durable
+project how-tos use the existing `workflow` object type and `workflow` facet.
 Source-backed syntheses are a good fit for product intent, feature maps,
-roadmap, architecture, conventions, agent guidance, and repeated workflows.
+roadmap, architecture, conventions, agent guidance, and repeated workflows or
+how-to collections.
 
 For the full memory-quality loop, see [Demand-driven memory](/demand-driven-memory/).

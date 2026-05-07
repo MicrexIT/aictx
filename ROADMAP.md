@@ -9,7 +9,7 @@ services.
 - Stable CLI memory loop: `init`, `setup`, `load`, `remember`, `diff`, `check`,
   recovery, and viewer workflows.
 - Local MCP quality for MCP-capable coding clients.
-- Clear public docs for users and agent integrators.
+- Clear public docs and agent recipes for users and agent integrators.
 - Package hygiene, CI, security policy, and release provenance.
 
 ## Near-term themes

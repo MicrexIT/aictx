@@ -35,12 +35,14 @@ aictx view --open
 aictx init
 aictx setup
 aictx setup --apply
+aictx setup --apply --view
 aictx patch review bootstrap-memory.json
 ```
 
 - `init` creates `.aictx/` and optional repo-level agent guidance.
 - `setup` guides first-run onboarding and bootstrap memory preview.
 - `setup --apply` applies the conservative bootstrap memory patch immediately.
+- `setup --apply --view` also starts the local read-only viewer for inspection.
 - `patch review` reviews a structured memory patch without writing it.
 
 :::tip
@@ -116,6 +118,7 @@ aictx view --open
 aictx docs
 aictx docs getting-started
 aictx docs demand-driven-memory
+aictx docs agent-recipes
 aictx docs agent-integration --open
 ```
 

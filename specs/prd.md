@@ -73,7 +73,7 @@ Required in v1:
 * Local generated SQLite index with FTS
 * CLI commands for init, load, search, inspect, save, diff, check, rebuild, history, restore, and rewind
 * MCP server with a small normalized tool set
-* Default repo-level agent guidance plus optional generated skill artifacts from one shared template
+* Default repo-level agent guidance plus optional generated guidance artifacts from one shared template
 * Memory discipline guidance for short linked memories, lifecycle updates, and save/no-save decisions
 * Patch-first memory writes
 * Git-backed review, diff, history, and restore behavior when Git is available
@@ -319,7 +319,7 @@ The memory lifecycle rules are:
 
 * Load narrowly before architecture, debugging, review, onboarding, dependency, configuration, or non-trivial code work.
 * Use the task description and load mode to retrieve the smallest useful context pack.
-* Save only durable knowledge: decisions, constraints, architecture changes, gotchas, workflows, debugging outcomes, verified facts, concepts, product features, and open questions.
+* Save only durable knowledge: decisions, constraints, architecture changes, gotchas, workflows/how-tos, debugging outcomes, verified facts, concepts, product features, and open questions.
 * Prefer updating, marking stale, or superseding existing memory over creating duplicates.
 * Mark memory stale or superseded when current code, tests, manifests, or user instruction contradict it.
 * Prefer current code, tests, manifests, and the user's request over loaded memory when they conflict.
@@ -340,6 +340,7 @@ Commands:
 aictx init
 aictx setup
 aictx setup --apply
+aictx setup --apply --view
 ```
 
 Expected behavior:
@@ -354,6 +355,7 @@ Expected behavior:
 * Prints concise next steps for CLI and MCP usage.
 * `aictx setup` orchestrates init, bootstrap suggestion, check, diff summary, and optional bootstrap save.
 * `aictx setup --apply` applies the conservative bootstrap patch without requiring users to shuttle a temporary JSON file by hand.
+* `aictx setup --apply --view` also starts the local read-only viewer for immediate inspection.
 
 Expected generated structure:
 
@@ -503,7 +505,7 @@ Purpose:
 
 `aictx suggest --from-diff` is Git-required. It should summarize changed files, changed `.aictx/` files, related existing memory, possible stale candidates, and a concise agent checklist. It must not write memory.
 
-`aictx suggest --bootstrap` should work without Git. It should list likely source files to inspect, such as README files, package manifests, framework configs, docs, agent guidance files, and obvious entrypoints, and recommend seed memory classes for sources, syntheses, project intent, architecture, constraints, workflows, gotchas, concepts, product features, roadmap, agent guidance, and open questions. `aictx suggest --bootstrap --patch` may emit a conservative structured patch for review and `aictx save`, but it must not write memory. Bootstrap patches should prefer source records plus compact product intent, feature map, and agent guidance syntheses over noisy one-node-per-command memory.
+`aictx suggest --bootstrap` should work without Git. It should list likely source files to inspect, such as README files, package manifests, framework configs, docs, agent guidance files, and obvious entrypoints, and recommend seed memory classes for sources, syntheses, project intent, architecture, constraints, workflows/how-tos, gotchas, concepts, product features, roadmap, agent guidance, and open questions. `aictx suggest --bootstrap --patch` may emit a conservative structured patch for review and `aictx save`, but it must not write memory. Bootstrap patches should prefer source records plus compact product intent, feature map, and agent guidance syntheses over noisy one-node-per-command memory.
 
 5.3.2 Memory audit packets
 
@@ -1005,7 +1007,9 @@ A known failure mode, trap, recurring bug, or behavior that future agents should
 
 workflow
 
-A repeated project procedure, command sequence, release path, debugging path, or maintenance routine.
+A durable project-specific how-to: a repeated project procedure, runbook,
+command sequence, release path, debugging path, migration path, verification
+routine, setup path, or maintenance routine.
 
 note
 
@@ -1025,11 +1029,12 @@ synthesis
 
 Maintained compact summary for an area future agents need to recall quickly,
 such as product intent, feature map, roadmap, architecture, conventions, agent
-guidance, or repeated workflows.
+guidance, or repeated workflows and how-to collections.
 
-Only these twelve values are object types in storage v3. Do not add `history` or `task-note`
-as object types: use Git/events/statuses for history and use branch/task scope
-for temporary task context.
+Only these twelve values are object types in storage v3. Do not add `history`,
+`task-note`, or `how-to` as object types: use Git/events/statuses for history,
+branch/task scope for temporary task context, and `workflow` for reusable
+project procedures.
 
 9.2 Object status values
 
@@ -1868,7 +1873,7 @@ Reasoning:
 
 `aictx init` should create or update marked Aictx sections in `AGENTS.md` and `CLAUDE.md` by default. Users can opt out with `aictx init --no-agent-guidance`.
 
-V1 should also ship optional, copyable agent guidance and skill artifacts that users can adopt or edit.
+V1 should also ship optional, copyable agent guidance artifacts that users can adopt or edit.
 
 Required v1 guidance source and generated artifacts:
 
@@ -1877,9 +1882,11 @@ Required v1 guidance source and generated artifacts:
 * `integrations/codex/aictx/SKILL.md`
 * `integrations/claude/aictx/SKILL.md`
 * `integrations/claude/aictx.md`
+* `integrations/cursor/aictx.mdc`
+* `integrations/cline/aictx.md`
 * `integrations/generic/aictx-agent-instructions.md`
 
-The template is the canonical guidance source. Agent-specific guidance files should be generated from the template during the npm build, so Codex, Claude, and generic instructions do not drift.
+The template is the canonical guidance source. Agent-specific guidance files should be generated from the template during the npm build, so Codex, Claude, Cursor, Cline, and generic instructions do not drift.
 
 Generated guidance is a guidance layer. It must not be treated as canonical memory, and Aictx must work without it.
 

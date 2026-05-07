@@ -1,0 +1,17 @@
+{
+  "confidence": "high",
+  "content_hash": "sha256:e8251f17eb16d4ea57a080cfa69e6cc1ca656f9579210491c4f9458b0beb1f32",
+  "created_at": "2026-05-07T20:14:45+02:00",
+  "evidence": [
+    {
+      "id": "source.docs-src-content-docs-agent-recipes",
+      "kind": "source"
+    }
+  ],
+  "from": "synthesis.feature-map",
+  "id": "rel.synthesis-feature-map-derived-from-source-docs-src-content-docs-agent-recipes",
+  "predicate": "derived_from",
+  "status": "active",
+  "to": "source.docs-src-content-docs-agent-recipes",
+  "updated_at": "2026-05-07T20:14:45+02:00"
+}
