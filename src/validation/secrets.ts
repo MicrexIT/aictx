@@ -288,7 +288,7 @@ function shouldWarnForHighEntropyCandidate(candidate: string, line: string): boo
     looksLikeProse(line) ||
     looksLikeFilePath(candidate, line) ||
     looksLikeUrl(candidate, line) ||
-    looksLikeObjectId(candidate) ||
+    looksLikeObjectId(candidate, line) ||
     looksLikeRelationId(candidate, line) ||
     looksLikeSha256Hash(candidate, line)
   );
@@ -335,8 +335,16 @@ function looksLikeUrl(candidate: string, line: string): boolean {
   return new RegExp(`https?://\\S*${escapeRegExp(candidate)}\\S*`).test(line);
 }
 
-function looksLikeObjectId(candidate: string): boolean {
-  return /^[a-z][a-z0-9_]*\.[a-z0-9][a-z0-9-]*$/.test(candidate);
+function looksLikeObjectId(candidate: string, line: string): boolean {
+  if (/^[a-z][a-z0-9_]*\.[a-z0-9][a-z0-9-]*$/.test(candidate)) {
+    return true;
+  }
+
+  if (!/^[a-z0-9][a-z0-9-]*$/.test(candidate)) {
+    return false;
+  }
+
+  return new RegExp(`\\b[a-z][a-z0-9_]*\\.${escapeRegExp(candidate)}\\b`).test(line);
 }
 
 function looksLikeRelationId(candidate: string, line: string): boolean {

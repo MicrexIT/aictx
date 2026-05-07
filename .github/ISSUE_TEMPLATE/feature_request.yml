@@ -1,0 +1,40 @@
+name: Feature request
+description: Propose a user-facing capability or workflow improvement.
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What user or agent problem should this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: Describe the desired behavior and command/API surface.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Include current workarounds or rejected approaches.
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Area
+      options:
+        - CLI
+        - MCP
+        - Storage format
+        - Retrieval/context ranking
+        - Agent guidance
+        - Local viewer
+        - Documentation
+        - Packaging/release
+        - Other
+    validations:
+      required: true

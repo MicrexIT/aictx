@@ -26,14 +26,24 @@ interface PnpmPackOutput {
 interface PackageJson {
   bin?: Record<string, string>;
   dependencies?: Record<string, string>;
+  description?: string;
   devDependencies?: Record<string, string>;
   engines?: {
     node?: string;
   };
+  bugs?: {
+    url?: string;
+  };
+  homepage?: string;
+  keywords?: string[];
   license?: string;
   name?: string;
   publishConfig?: {
     access?: string;
+  };
+  repository?: {
+    type?: string;
+    url?: string;
   };
   scripts?: Record<string, string>;
   version?: string;
@@ -96,20 +106,10 @@ describe("release package", () => {
 
     expect(packedPaths).toEqual(expect.arrayContaining(requiredPackedPaths));
     expect(packedPaths.some((path) => path.startsWith("dist/viewer/assets/"))).toBe(true);
-    expect(packedPaths).not.toEqual(
-      expect.arrayContaining([
-        "src/cli/main.ts",
-        "scripts/copy-schemas.mjs",
-        "scripts/generate-agent-guidance.mjs",
-        "viewer/index.html",
-        "viewer/src/App.svelte",
-        "viewer/src/main.ts",
-        "viewer/vite.config.ts",
-        "test/fixtures/.gitkeep",
-        "test/fixtures/time.ts",
-        "test/integration/release/packaging.test.ts"
-      ])
-    );
+    expect(packedPaths).not.toEqual(expect.arrayContaining([...forbiddenPackedPaths]));
+    for (const prefix of forbiddenPackedPathPrefixes) {
+      expect(packedPaths.every((path) => !path.startsWith(prefix))).toBe(true);
+    }
     expect(packedPaths.every((path) => !path.startsWith("src/"))).toBe(true);
     expect(packedPaths.every((path) => !path.startsWith("scripts/"))).toBe(true);
     expect(packedPaths.every((path) => !path.startsWith("test/"))).toBe(true);
@@ -119,6 +119,18 @@ describe("release package", () => {
     expect(packageJson.publishConfig).toEqual({
       access: "public"
     });
+    expect(packageJson.description).toBe("Local-first project memory for AI coding agents.");
+    expect(packageJson.repository).toEqual({
+      type: "git",
+      url: "git+https://github.com/MicrexIT/aictx.git"
+    });
+    expect(packageJson.homepage).toBe("https://docs.aictx.dev");
+    expect(packageJson.bugs).toEqual({
+      url: "https://github.com/MicrexIT/aictx/issues"
+    });
+    expect(packageJson.keywords).toEqual(
+      expect.arrayContaining(["coding-agents", "project-memory", "local-first", "mcp"])
+    );
     expect(packageJson.license).toBe("MIT");
     expect(packageJson.engines?.node).toBe(">=22");
     expect(packageJson.bin).toEqual({
@@ -254,11 +266,10 @@ const requiredPackedPaths = [
   "dist/schemas/patch.schema.json",
   "dist/schemas/relation.schema.json",
   "dist/viewer/index.html",
-  "docs/astro.config.mjs",
-  "docs/public/CNAME",
   "docs/src/content/docs/agent-integration.md",
   "docs/src/content/docs/capabilities.md",
   "docs/src/content/docs/cli.md",
+  "docs/src/content/docs/demand-driven-memory.md",
   "docs/src/content/docs/getting-started.md",
   "docs/src/content/docs/index.md",
   "docs/src/content/docs/mcp.md",
@@ -272,6 +283,35 @@ const requiredPackedPaths = [
   "integrations/claude/aictx.md",
   "integrations/generic/aictx-agent-instructions.md"
 ];
+
+const forbiddenPackedPaths = [
+  "docs/.astro/data-store.json",
+  "docs/astro.config.mjs",
+  "docs/dist/index.html",
+  "docs/node_modules/.vite/deps/_metadata.json",
+  "docs/public/CNAME",
+  "scripts/copy-schemas.mjs",
+  "scripts/generate-agent-guidance.mjs",
+  "src/cli/main.ts",
+  "test/fixtures/.gitkeep",
+  "test/fixtures/time.ts",
+  "test/integration/release/packaging.test.ts",
+  "viewer/index.html",
+  "viewer/src/App.svelte",
+  "viewer/src/main.ts",
+  "viewer/vite.config.ts"
+] as const;
+
+const forbiddenPackedPathPrefixes = [
+  "docs/.astro/",
+  "docs/dist/",
+  "docs/node_modules/",
+  "site/",
+  "src/",
+  "test/",
+  "scripts/",
+  "viewer/"
+] as const;
 
 const publicMcpContractPaths = [
   "README.md",
@@ -630,7 +670,7 @@ function waitForViewerStartup(
     let settled = false;
     const timeout = setTimeout(() => {
       settle(new Error(`Timed out waiting for viewer startup. stderr: ${readStderr()}`));
-    }, 5_000);
+    }, 20_000);
 
     const settle = (value: ViewerStartupEnvelope | Error): void => {
       if (settled) {

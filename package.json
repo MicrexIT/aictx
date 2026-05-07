@@ -1,9 +1,31 @@
 {
   "name": "@aictx/memory",
   "version": "0.1.26",
+  "description": "Local-first project memory for AI coding agents.",
   "license": "MIT",
   "type": "module",
   "packageManager": "pnpm@10.11.0",
+  "homepage": "https://docs.aictx.dev",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MicrexIT/aictx.git"
+  },
+  "bugs": {
+    "url": "https://github.com/MicrexIT/aictx/issues"
+  },
+  "keywords": [
+    "ai",
+    "agents",
+    "coding-agents",
+    "project-memory",
+    "local-first",
+    "mcp",
+    "cli",
+    "developer-tools",
+    "agent-memory",
+    "context"
+  ],
+  "author": "MicrexIT",
   "publishConfig": {
     "access": "public"
   },
@@ -16,7 +38,7 @@
   },
   "files": [
     "dist",
-    "docs",
+    "docs/src/content/docs",
     "integrations",
     "README.md",
     "LICENSE"

@@ -105,3 +105,6 @@
 {"actor":"agent","event":"memory.updated","id":"fact.data-access-contract-foundation","timestamp":"2026-05-07T17:14:18+02:00"}
 {"actor":"agent","event":"memory.updated","id":"synthesis.agent-memory-guidance","timestamp":"2026-05-07T17:14:18+02:00"}
 {"actor":"agent","event":"memory.updated","id":"workflow.package-scripts","timestamp":"2026-05-07T17:50:16+02:00"}
+{"actor":"agent","event":"memory.created","id":"fact.open-source-readiness-foundation-is-configured","timestamp":"2026-05-07T18:07:45+02:00"}
+{"actor":"agent","event":"memory.created","id":"constraint.published-package-must-exclude-workspace-caches-and-source-only-trees","timestamp":"2026-05-07T18:07:45+02:00"}
+{"actor":"agent","event":"memory.created","id":"gotcha.full-vitest-suite-needs-bounded-worker-concurrency","timestamp":"2026-05-07T18:07:45+02:00"}

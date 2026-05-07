@@ -20,6 +20,9 @@ load relevant memory -> do the work -> save what future agents should remember
 Core memory commands do not require a cloud account, embeddings, hosted sync, an
 external model API, or network access.
 
+This project is distributed as the npm package `@aictx/memory`. It is unrelated
+to similarly named packages in other ecosystems.
+
 ## What Aictx is for
 
 Aictx is local-first project memory for AI coding agents. It is not a chat UI,
@@ -120,3 +123,10 @@ This site is also published with agent-readable documentation files:
 
 These files provide compact public documentation for coding agents without
 crawling the full website navigation.
+
+## Project health
+
+The public repository includes contributor guidelines, a code of conduct,
+security reporting instructions, support paths, a public roadmap, a release
+policy, CI, CodeQL, OpenSSF Scorecard, and Dependabot configuration. See the
+repository root for the maintained community and release files.

@@ -1,0 +1,50 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    name: Publish npm package
+    runs-on: ubuntu-latest
+    environment: npm
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.11.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify tag matches package version
+        run: |
+          node -e 'const pkg = require("./package.json"); const tag = process.env.GITHUB_REF_NAME; const expected = `v${pkg.version}`; if (tag !== expected) { throw new Error(`Tag ${tag} does not match ${expected}`); }'
+
+      - name: Verify package
+        run: pnpm test:local
+
+      - name: Build docs and site
+        run: |
+          pnpm build:docs
+          pnpm build:site
+
+      - name: Publish with provenance
+        run: pnpm publish --access public --provenance --no-git-checks

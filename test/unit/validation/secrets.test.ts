@@ -112,6 +112,10 @@ describe("secret text detection", () => {
       "generated relation ID",
       `"id": "rel.project-aictx-cli-init-human-s9ugyz-related-to-architecture-current"`
     ],
+    [
+      "generated object ID slug",
+      `"id": "constraint.published-package-must-exclude-workspace-caches-and-source-only-trees"`
+    ],
     ["Markdown heading", `# ${"bD82Mfs9GQ+FTuPZ7HGtrjUPRpZ5FmEZG32XLmpNKW=="}`],
     ["prose sentence", `This generated identifier ${"bD82Mfs9GQ+FTuPZ7HGtrjUPRpZ5FmEZG32XLmpNKW=="} is documented here.`]
   ])("ignores high-entropy candidates that look like %s", (_label, contents) => {

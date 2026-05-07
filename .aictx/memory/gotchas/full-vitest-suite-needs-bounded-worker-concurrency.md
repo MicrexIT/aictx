@@ -1,0 +1,1 @@
+Running the whole integration-heavy Vitest suite with unrestricted file parallelism can create resource-pressure flakes and startup timeouts. vitest.config.ts caps maxWorkers at 4, uses a 120s default timeout, and the MCP/package viewer smoke tests have longer explicit startup timeouts.

@@ -1,0 +1,1 @@
+The repository now includes community health files, issue and pull request templates, Dependabot, CI, CodeQL, OpenSSF Scorecard, and an npm provenance release workflow. Public release policy and roadmap live in RELEASE.md and ROADMAP.md.

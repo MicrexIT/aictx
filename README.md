@@ -1,5 +1,10 @@
 # Aictx
 
+[![CI](https://github.com/MicrexIT/aictx/actions/workflows/ci.yml/badge.svg)](https://github.com/MicrexIT/aictx/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/MicrexIT/aictx/actions/workflows/codeql.yml/badge.svg)](https://github.com/MicrexIT/aictx/actions/workflows/codeql.yml)
+[![npm](https://img.shields.io/npm/v/@aictx/memory)](https://www.npmjs.com/package/@aictx/memory)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 Aictx gives AI coding agents a project memory they can come back to.
 
 Use it when you are tired of re-explaining the same product intent,
@@ -17,6 +22,9 @@ Aictx does not require a cloud account, embeddings, hosted sync, an external
 model API, or network access for core memory commands. Saved memory is active
 immediately after Aictx validates and writes it, and Aictx never commits for
 you.
+
+This repository publishes the npm package `@aictx/memory`. It is unrelated to
+similarly named packages in other ecosystems.
 
 ## Documentation
 
@@ -235,6 +243,20 @@ The package provides two binaries:
 - `aictx`: the command-line interface
 - `aictx-mcp`: the MCP stdio server for AI coding clients
 
+## Project health
+
+- Contributing guide: [CONTRIBUTING.md](CONTRIBUTING.md)
+- Code of conduct: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
+- Security policy: [SECURITY.md](SECURITY.md)
+- Support paths: [SUPPORT.md](SUPPORT.md)
+- Public roadmap: [ROADMAP.md](ROADMAP.md)
+- Release policy: [RELEASE.md](RELEASE.md)
+- Changelog: [CHANGELOG.md](CHANGELOG.md)
+
+Public releases should have matching `vX.Y.Z` Git tags and npm provenance.
+Branch protection for `main` should require the CI workflow before broad public
+contribution.
+
 ## AI-agent setup prompt
 
 Copy and paste this prompt into an AI coding agent to set up a repository:
@@ -246,7 +268,7 @@ First reinstall the current Aictx package globally:
 npm install -g @aictx/memory@0.1.26
 
 Then reset the local `.aictx/` state with the Aictx CLI:
-aictx reset 
+aictx reset
 
 Run the initial onboarding and apply the conservative bootstrap memory patch:
 aictx setup --apply
