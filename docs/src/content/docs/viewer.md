@@ -9,8 +9,12 @@ description: Read-only local browser viewer for project memory inspection.
 aictx view
 aictx view --open
 aictx view --port 4888
-aictx view --json
+aictx view [--port <number>] [--open] [--detach] [--json]
 ```
+
+Use it when you want to browse memory objects, source-backed syntheses,
+relations, project registry entries, and generated Obsidian export state without
+editing canonical `.aictx/` files.
 
 The command binds only to `127.0.0.1`, chooses an available random port by
 default, and prints a local URL that includes a per-run API token. It can start
@@ -34,6 +38,11 @@ aictx projects remove <registry-id|project-id|path>
 aictx projects prune
 ```
 
+:::tip
+The project registry is for discovery in the viewer. It is not shared memory
+and does not make project IDs globally unique.
+:::
+
 ## Read-only boundary
 
 The viewer does not edit canonical memory. It is not a hosted app, remote API,
@@ -48,15 +57,20 @@ aictx export obsidian
 
 That export writes generated projection files only.
 
-`aictx view` is CLI-only in v1. These CLI-only commands are part of the v1
-integration model rather than MCP parity gaps. The viewer has no MCP
-equivalent.
+`aictx view` is CLI-only in v1 and has no MCP equivalent.
 
-Local MCP exposes exactly `load_memory`, `search_memory`, `inspect_memory`,
+## CLI and MCP
+
+The CLI is the default interface for routine memory work. MCP is available when
+the agent client has launched and connected to `aictx-mcp`.
+
+MCP exposes exactly `load_memory`, `search_memory`, `inspect_memory`,
 `save_memory_patch`, and `diff_memory`. Setup, maintenance, recovery, export,
-registry, viewer, docs, suggest, audit, stale, and graph workflows remain
-CLI-only.
+registry, viewer, docs, suggest, audit, stale, and graph workflows are CLI-only
+in v1. These CLI-only commands are part of the v1 integration model rather than
+MCP parity gaps.
 
-Local MCP is the near-term integration path. Remote/cloud and ChatGPT App SDK
-surfaces are future work, and future `search`/`fetch` adapter names are not
-local MCP tool names.
+Local MCP is the near-term integration path for local agent harnesses. Remote
+MCP, hosted sync, cloud auth, cloud hosting, and ChatGPT App SDK UI are future
+work. Future ChatGPT-compatible `search`/`fetch` names are adapter aliases over
+search and inspect behavior, not local MCP tool names.

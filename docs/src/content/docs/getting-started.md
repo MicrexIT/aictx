@@ -3,16 +3,25 @@ title: Getting started
 description: Install Aictx, initialize memory, and run the first load/save loop.
 ---
 
-Aictx works inside an existing project. It writes local, reviewable memory files
-under `.aictx/` and keeps generated indexes separate from canonical memory.
+Aictx works inside an existing project. By the end of this page you will have a
+local `.aictx/` directory, repo-level agent guidance, and the commands for the
+first memory loop.
 
-## Requirements
+## What you need
 
-Aictx requires Node.js `>=22`.
+- Node.js `>=22`
+- A project directory where you want AI coding agents to remember durable
+  project context
+
+Check Node with:
+
+```bash
+node --version
+```
 
 ## Install
 
-A global install gives the simplest CLI and MCP setup:
+Install globally for the simplest CLI and MCP setup:
 
 ```bash
 npm install -g @aictx/memory
@@ -29,8 +38,8 @@ pnpm add -D @aictx/memory
 npm install -D @aictx/memory
 ```
 
-When `aictx` is not on `PATH`, the same commands can run through the package
-manager or local binary:
+When `aictx` is not on `PATH`, run commands through the package manager or local
+binary:
 
 ```bash
 pnpm exec aictx init
@@ -45,32 +54,55 @@ pnpm --package @aictx/memory dlx aictx init
 npx --package @aictx/memory -- aictx init
 ```
 
-The CLI is the default interface for routine memory work. MCP is available when
-the agent client has launched and connected to `aictx-mcp`. Local MCP exposes
-exactly `load_memory`, `search_memory`, `inspect_memory`, `save_memory_patch`,
-and `diff_memory`.
-
-Local MCP is the near-term integration path; remote/cloud and ChatGPT App SDK
-integrations are future work. Future `search`/`fetch` adapter names are not
-local MCP tool names.
-
 ## Initialize a project
 
-At the project root:
+From the project root:
 
 ```bash
 aictx init
 ```
 
-By default, init creates `.aictx/` and updates marked Aictx sections in
-`AGENTS.md` and `CLAUDE.md` so coding agents are told to load memory before
-non-trivial work and save durable memory after meaningful work.
+`init` creates `.aictx/` and, by default, updates marked Aictx sections in
+`AGENTS.md` and `CLAUDE.md`. Those sections tell coding agents to load memory
+before non-trivial work and make a save/no-save decision after meaningful work.
 
-The `--no-agent-guidance` flag leaves those repo instruction files unchanged.
+Use `--no-agent-guidance` when you want to leave those instruction files
+unchanged.
 
-## First memory loop
+:::tip
+`aictx init` creates starter storage. It does not try to understand your whole
+project from scratch. Use the setup flow next when you want Aictx to seed useful
+first-run memory from existing repo evidence.
+:::
 
-Task-focused project memory:
+## Seed first-run memory
+
+For guided onboarding:
+
+```bash
+aictx setup
+aictx setup --apply
+```
+
+`aictx setup` previews a conservative bootstrap memory patch. `aictx setup
+--apply` applies it immediately.
+
+If you want to inspect the patch file manually:
+
+```bash
+aictx suggest --bootstrap --patch > bootstrap-memory.json
+aictx patch review bootstrap-memory.json
+aictx save --file bootstrap-memory.json
+aictx check
+```
+
+This is the right path when memory feels empty after `init`, or when you want
+source-backed product intent, feature map, roadmap, architecture, conventions,
+and agent guidance syntheses without hand-writing JSON.
+
+## Run the first memory loop
+
+Load memory before non-trivial work:
 
 ```bash
 aictx load "change auth routes"
@@ -82,28 +114,33 @@ After work creates durable knowledge for future agents, save a structured patch:
 aictx save --stdin
 ```
 
-Saved memory is active immediately after Aictx validates and writes the patch.
-The local viewer and diff command are available for asynchronous inspection:
+Saved memory is active immediately after Aictx validates and writes it. A task
+that produced no reusable project knowledge does not need a save.
+
+Inspect memory later:
 
 ```bash
 aictx view
 aictx diff
 ```
 
-Aictx writes local files and never commits automatically.
+:::tip
+Use `aictx diff` for memory review in Git projects. Plain `git diff -- .aictx/`
+can miss untracked memory files before they are staged.
+:::
 
-Setup, maintenance, recovery, export, registry, viewer, docs, suggest, audit,
-stale, and graph workflows are CLI-only in v1. These commands are part of the
-CLI surface rather than MCP parity gaps.
+## CLI and MCP
 
-## Guided setup
+The CLI is the default interface for routine memory work. MCP is available when
+the agent client has launched and connected to `aictx-mcp`.
 
-For first-run onboarding:
+MCP exposes exactly `load_memory`, `search_memory`, `inspect_memory`,
+`save_memory_patch`, and `diff_memory`. Setup, maintenance, recovery, export,
+registry, viewer, docs, suggest, audit, stale, and graph workflows are CLI-only
+in v1. These CLI-only commands are part of the v1 integration model rather than
+MCP parity gaps.
 
-```bash
-aictx setup
-aictx setup --apply
-```
-
-`aictx setup` shows a guided bootstrap preview. `aictx setup --apply` applies
-the conservative bootstrap memory patch immediately.
+Local MCP is the near-term integration path for local agent harnesses. Remote
+MCP, hosted sync, cloud auth, cloud hosting, and ChatGPT App SDK UI are future
+work. Future ChatGPT-compatible `search`/`fetch` names are adapter aliases over
+search and inspect behavior, not local MCP tool names.

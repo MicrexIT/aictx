@@ -9,16 +9,19 @@ Aictx gives coding agents a local project-memory loop:
 load memory -> work -> save durable memory
 ```
 
-The CLI is the default interface for that loop. MCP is available when the agent
-client has launched and connected to `aictx-mcp`.
+The v1 agent model is CLI-first and MCP-compatible. Use the CLI by default. Use
+MCP only when the agent client has already launched and connected to
+`aictx-mcp`.
 
-Aictx does not infer durable project meaning from diffs. Memory updates come
-from current evidence: the task, loaded context, repository changes, tests, and
-conversation context.
+Aictx does not infer durable project meaning from diffs. The agent is
+responsible for semantic judgment: reading the task, loaded context, repository
+changes, tests, and conversation context, then deciding what future agents
+should remember.
 
 ## Routine workflow
 
-A typical CLI load looks like this:
+Before non-trivial coding, architecture, debugging, dependency, or
+configuration work:
 
 ```bash
 aictx load "<task summary>"
@@ -26,8 +29,8 @@ aictx load "<task summary>" --mode debugging
 aictx load "<task summary>" --file src/context/rank.ts --changed-file src/index/search.ts --history-window 30d
 ```
 
-The MCP equivalents are available only when the client already exposes Aictx
-MCP tools:
+MCP equivalents are available only when the client already exposes Aictx MCP
+tools:
 
 ```text
 load_memory({ task: "<task summary>", mode: "coding" })
@@ -43,7 +46,11 @@ load_memory({
 })
 ```
 
-After meaningful work, durable findings are saved as structured patches:
+Load modes are `coding`, `debugging`, `review`, `architecture`, and
+`onboarding`. Modes tune deterministic ranking and rendering only.
+
+After meaningful work, save a structured patch only for durable knowledge that
+future agents should know:
 
 ```bash
 aictx save --stdin
@@ -55,10 +62,10 @@ MCP equivalent when available:
 save_memory_patch({ patch: { source, changes } })
 ```
 
-Saved memory is active immediately after Aictx validates and writes the patch.
-Dirty or untracked `.aictx/` files are inspectable state, not a preflight
-blocker. When a save overwrites or deletes a dirty touched file, Aictx first
-backs it up under `.aictx/recovery/`.
+Saved memory is active immediately after Aictx validates and writes it. Dirty
+or untracked `.aictx/` files are not by themselves a reason to skip saving
+durable memory. When a save overwrites or deletes a dirty touched file, Aictx
+first backs it up under `.aictx/recovery/`.
 
 Accepted memory can be inspected later:
 
@@ -83,6 +90,11 @@ npm exec aictx-mcp
 ./node_modules/.bin/aictx-mcp
 npx --package @aictx/memory -- aictx-mcp
 ```
+
+:::tip
+Save nothing when the task produced no durable future value. Aictx is meant to
+reduce repeated context work, not record every step an agent took.
+:::
 
 ## Capability reference
 
@@ -124,41 +136,42 @@ aliases over search/inspect behavior, not local MCP tool names.
 
 For setup, maintenance, recovery, export, registry, viewer, docs, suggest,
 audit, stale, and graph workflows, the CLI is the supported interface. Supported
-CLI or MCP save paths should handle `.aictx/` changes; direct file edits are
-only for exceptional manual recovery or explicit user requests.
-This keeps editing `.aictx/` files directly reserved for those exceptional
-cases.
+CLI or MCP save paths should handle `.aictx/` changes; editing `.aictx/` files directly
+is reserved for exceptional manual recovery or explicit user requests.
 
 ## Memory lifecycle
 
 Good memory stays narrow, durable, and current:
 
-- Loads stay narrow before non-trivial work.
-- Only durable knowledge is saved directly as active memory.
-- Existing memory is updated before duplicates are created.
-- Wrong old memory is marked stale or superseded when current evidence
-  invalidates it.
-- Memory that should not persist is deleted.
-- Current code and user requests take precedence over loaded memory when they
-  conflict.
-- The final response reports whether memory changed; async inspection is
-  available through `aictx view`, `aictx diff`, or Git tools.
-- Save-nothing is valid when the task produced no durable future value.
+- Load narrowly before non-trivial work.
+- Save only durable knowledge directly as active memory.
+- Update existing memory before creating duplicates.
+- Stale or supersede wrong old memory when current evidence invalidates it.
+- Delete memory that should not persist.
+- Prefer current code and user requests over loaded memory when they conflict.
+- Report whether memory changed; async inspection is available through
+  `aictx view`, `aictx diff`, or Git tools.
+- Save nothing when the task produced no durable future value.
 
-Failure and correction are useful memory-quality signals. Missing context,
-stale loaded memory, user corrections, and unresolved conflicts can all point to
-memory that should be updated, marked stale, superseded, deleted, or saved as a
-new `question`, `gotcha`, `source`, or `synthesis`.
+After failure or correction, treat the event as a memory-quality signal:
+
+- Did the agent need missing project context?
+- Did loaded memory conflict with current evidence?
+- Did the user correct a stale assumption?
+- Should existing memory be updated, marked stale, superseded, or deleted?
+- Should an open `question`, `gotcha`, `source`, or `synthesis` be saved?
 
 ## Memory shape
 
-Atomic memories normally carry one durable claim. `synthesis` memories summarize
-an area clearly enough to replace rereading scattered docs. `source` memories
-preserve provenance without dumping full source text.
+Right-size memory. Atomic memories should normally carry one durable claim.
+Use `synthesis` memories for compact area-level understanding that future agents
+should load quickly. Use `source` memories to preserve where context came from,
+especially repo docs, AGENTS/CLAUDE/rules, package manifests, issues, external
+references recorded by the agent, and user-stated context.
 
-Relations are useful when the link matters for retrieval or inspection. Common
-predicates include `derived_from`, `summarizes`, `documents`, `requires`,
-`depends_on`, `affects`, and `supersedes`.
+Use relations only when the link matters. Common predicates include
+`derived_from`, `summarizes`, `documents`, `requires`, `depends_on`, `affects`,
+and `supersedes`.
 
 Update-before-create behavior keeps memory from drifting into duplicates:
 
@@ -167,6 +180,12 @@ Update-before-create behavior keeps memory from drifting into duplicates:
 - `supersede_object` connects old memory to its replacement.
 - `delete_object` removes memory that should not persist.
 - `create_relation` records a durable, useful link between objects.
+
+Create a new object only when no existing memory should be updated, marked
+stale, or superseded.
+
+Save-nothing-is-valid policy: if the work produced no durable future value, do
+not invent a patch. Tell the user that no Aictx memory was saved.
 
 ## Object taxonomy
 
@@ -187,29 +206,21 @@ plain-language retrieval hints, not mandatory DDD terminology.
 Durable syntheses should usually have source evidence or active source
 provenance relations.
 
-Load modes are `coding`, `debugging`, `review`, `architecture`, and
-`onboarding`. Modes tune deterministic ranking and rendering only.
-
 ## Examples
 
 Good memory examples:
 
-- Durable fact: a `fact` titled "Webhook retries run in the worker" with one
-  sentence naming the current retry location.
-- Linked decision: `decision.billing-retries` plus a `requires` relation to
-  `constraint.webhook-idempotency` when the decision depends on that constraint.
-- Gotcha: `gotcha.viewer-export-overwrites-manifest-files` when a repeated
+- Good durable fact: a `fact` titled "Webhook retries run in the worker" with
+  one sentence naming the current retry location.
+- Good linked decision: `decision.billing-retries` plus a `requires` relation
+  to `constraint.webhook-idempotency` when the decision depends on that
+  constraint.
+- Good gotcha: `gotcha.viewer-export-overwrites-manifest-files` when a repeated
   failure mode affects future work.
-- Workflow: `workflow.release-smoke-test` for a repeated project procedure.
-- Source-backed synthesis: `synthesis.product-intent` summarizes what the
+- Good workflow: `workflow.release-smoke-test` for a repeated project
+  procedure.
+- Good source-backed synthesis: `synthesis.product-intent` summarizes what the
   product is for and has `derived_from` relations to source records.
-- User-stated context: `source.user-context-hybrid-memory` records durable
-  product direction stated by the user in the task, without saving private or
-  unrelated preferences.
-- Roadmap memory: `synthesis.roadmap` lists current milestones and has
-  `documents` links to issue or docs sources.
-- Feature removal: mark `concept.old-feature` stale or supersede it with the
-  replacement feature, and update `synthesis.feature-map`.
 
 Bad memory examples:
 
@@ -244,8 +255,8 @@ aictx check
 current code changes. `aictx audit --json` reports grouped, actionable memory
 hygiene issues.
 
-During setup, product features can use the `product-feature` facet. Source-backed
-syntheses are a good fit for product intent, feature maps, roadmap,
-architecture, conventions, agent guidance, and repeated workflows.
+During setup, product features can use the `product-feature` facet.
+Source-backed syntheses are a good fit for product intent, feature maps,
+roadmap, architecture, conventions, agent guidance, and repeated workflows.
 
 For the full memory-quality loop, see [Demand-driven memory](/demand-driven-memory/).

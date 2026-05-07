@@ -12,6 +12,8 @@ describe("aictx docs", () => {
     expect(output.stderr()).toBe("");
     expect(output.stdout()).toContain("Aictx docs: https://docs.aictx.dev/");
     expect(output.stdout()).toContain("- getting-started:");
+    expect(output.stdout()).toContain("- capabilities:");
+    expect(output.stdout()).toContain("- specializing-aictx:");
     expect(output.stdout()).toContain("- demand-driven-memory:");
     expect(output.stdout()).toContain("- agent-integration:");
   });
@@ -64,6 +66,17 @@ describe("aictx docs", () => {
     expect(output.stderr()).toBe("");
     expect(output.stdout()).toContain("# Demand-driven memory");
     expect(output.stdout()).toContain("load -> work/fail/correction");
+  });
+
+  it("prints the bundled capabilities topic", async () => {
+    const output = createCapturedOutput();
+
+    const exitCode = await main(["node", "aictx", "docs", "features"], output.writers);
+
+    expect(exitCode).toBe(0);
+    expect(output.stderr()).toBe("");
+    expect(output.stdout()).toContain("# Capabilities");
+    expect(output.stdout()).toContain("Routine memory work");
   });
 
   it("opens the hosted docs URL through the injected opener", async () => {

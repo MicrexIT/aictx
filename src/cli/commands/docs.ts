@@ -79,6 +79,22 @@ const DOC_TOPICS = [
     aliases: ["model", "memory-model"]
   },
   {
+    topic: "capabilities",
+    title: "Capabilities",
+    description: "See what Aictx can do in v1, grouped by user and agent jobs.",
+    file: "capabilities.md",
+    path: "/capabilities/",
+    aliases: ["features", "capability-map", "what-can-it-do"]
+  },
+  {
+    topic: "specializing-aictx",
+    title: "Specializing Aictx",
+    description: "Tailor Aictx memory to a project, team, repo, and agent workflow.",
+    file: "specializing-aictx.md",
+    path: "/specializing-aictx/",
+    aliases: ["specialize", "customize", "tailor", "project-memory"]
+  },
+  {
     topic: "demand-driven-memory",
     title: "Demand-driven memory",
     description: "Use agent failure, confusion, and correction to improve durable project memory.",

@@ -3,6 +3,17 @@ title: Troubleshooting
 description: Fix common install, PATH, MCP, schema, index, and recovery issues.
 ---
 
+Start with the smallest check that answers the question:
+
+```bash
+aictx check
+aictx diff
+aictx view --open
+```
+
+`check` validates storage and index health. `diff` shows memory changes. `view`
+opens the local read-only inspection UI.
+
 ## `aictx` is not on PATH
 
 Package-manager and local-binary forms work without a global `PATH` entry:
@@ -36,9 +47,14 @@ Local MCP exposes exactly `load_memory`, `search_memory`, `inspect_memory`,
 tools. Setup, maintenance, recovery, export, registry, viewer, docs, suggest,
 audit, stale, and graph workflows remain CLI-only.
 
-Local MCP is the near-term integration path. Remote/cloud and ChatGPT App SDK
-surfaces are future work, and future `search`/`fetch` adapter names are not
-local MCP tool names.
+Local MCP is the near-term integration path. Remote MCP, hosted sync, cloud
+auth, cloud hosting, and ChatGPT App SDK surfaces are future work, and future
+`search`/`fetch` adapter names are not local MCP tool names.
+
+:::tip
+If you need to keep working right now, use `aictx load` and `aictx save --stdin`
+from the CLI. Configure MCP later in the client settings.
+:::
 
 ## Memory is empty after init
 
@@ -52,7 +68,6 @@ aictx setup
 ```
 
 or ask for a bootstrap patch:
-Bootstrap patch commands:
 
 ```bash
 aictx suggest --bootstrap --patch > bootstrap-memory.json
@@ -60,6 +75,9 @@ aictx patch review bootstrap-memory.json
 aictx save --file bootstrap-memory.json
 aictx check
 ```
+
+The bootstrap path is best for first-run product intent, feature map, roadmap,
+architecture, conventions, and agent guidance memory.
 
 ## Schema or index errors
 

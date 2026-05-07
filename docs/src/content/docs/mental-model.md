@@ -3,24 +3,38 @@ title: Mental model
 description: How Aictx stores, indexes, retrieves, and inspects project memory.
 ---
 
-Aictx is a memory discipline system, not just a storage folder.
+Aictx is a memory discipline system, not just a folder of notes.
 
-The goal is simple: future agents should not restart from zero when working in a
-project. They can load the durable context that matters, do the task, and save
-only reusable knowledge that future agents can safely rely on.
+The goal is simple: future agents should not restart from zero. They should load
+the durable context that matters, do the task, and save only the reusable
+knowledge future agents can safely rely on.
+
+## The short version
+
+```text
+canonical memory -> generated index -> task-focused context pack
+```
+
+Canonical memory is the durable source of truth. Generated state is rebuildable.
+The context pack is what an agent gets for a specific task.
 
 ## Canonical memory
 
 `.aictx/` contains canonical memory and generated support files.
 
-Canonical memory is the durable source of truth. It includes human-readable
-Markdown bodies, JSON sidecars with structured metadata, relation JSON files,
-and `events.jsonl` for semantic memory history. Saved memory is accepted as
-active memory immediately after Aictx validates and writes it.
+Canonical memory includes human-readable Markdown bodies, JSON sidecars with
+structured metadata, relation JSON files, and `events.jsonl` for semantic memory
+history. Saved memory is accepted as active memory immediately after Aictx
+validates and writes it.
 
 Generated state is rebuildable. The SQLite search index, context packs, and
 exports can be regenerated from canonical memory. Supported Aictx commands are
-the normal way to recreate generated state.
+the normal way to recreate generated state:
+
+```bash
+aictx check
+aictx rebuild
+```
 
 ## Hybrid memory model
 
@@ -42,6 +56,12 @@ object statuses cover history. Branch or task scope covers temporary task
 context. Product capabilities fit `concept` objects or `synthesis` objects with
 feature facets.
 
+:::tip
+Keep memories shaped like things future agents can use. A `synthesis` should
+replace rereading scattered docs. An atomic memory should normally carry one
+durable claim.
+:::
+
 ## Demand-driven memory quality
 
 Real work improves memory quality. Agent failure, confusion, stale loaded
@@ -62,6 +82,9 @@ such as `coding`, `debugging`, `review`, `architecture`, and `onboarding` tune
 deterministic ranking and rendering. They do not broaden the project scope, call
 a model, use external retrieval, or load the whole project.
 
+Use `aictx search "<query>"` when you need targeted lookup. Use `aictx inspect
+<id>` when you already know which memory object matters.
+
 ## Async inspection
 
 Aictx writes inspectable files. The local viewer and, in Git projects, the
@@ -74,3 +97,19 @@ aictx diff
 
 Plain `git diff -- .aictx/` can omit untracked memory files before staging.
 `aictx diff` includes tracked and untracked Aictx memory changes.
+
+## CLI and MCP
+
+The CLI is the default interface for routine memory work. MCP is available when
+the agent client has launched and connected to `aictx-mcp`.
+
+MCP exposes exactly `load_memory`, `search_memory`, `inspect_memory`,
+`save_memory_patch`, and `diff_memory`. Setup, maintenance, recovery, export,
+registry, viewer, docs, suggest, audit, stale, and graph workflows are CLI-only
+in v1. These CLI-only commands are part of the v1 integration model rather than
+MCP parity gaps.
+
+Local MCP is the near-term integration path for local agent harnesses. Remote
+MCP, hosted sync, cloud auth, cloud hosting, and ChatGPT App SDK UI are future
+work. Future ChatGPT-compatible `search`/`fetch` names are adapter aliases over
+search and inspect behavior, not local MCP tool names.

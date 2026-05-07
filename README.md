@@ -1,28 +1,40 @@
 # Aictx
 
-Aictx is local-first project memory for AI coding agents.
+Aictx gives AI coding agents a project memory they can come back to.
 
-It gives agents a durable place to store project facts, decisions, warnings,
-workflows, source records, and syntheses that should survive beyond a single
-chat. Memory is stored under `.aictx/` as reviewable local files, indexed
-locally for fast retrieval, and kept compatible with Git workflows.
+Use it when you are tired of re-explaining the same product intent,
+architecture decisions, repo conventions, setup steps, and known traps every
+time a new chat or agent session starts. Aictx stores durable project facts,
+decisions, warnings, workflows, source records, and syntheses under `.aictx/`
+as reviewable local files, indexes them locally for fast retrieval, and keeps
+them compatible with Git workflows.
 
 ```text
 load relevant memory -> do work -> save durable memory
 ```
 
 Aictx does not require a cloud account, embeddings, hosted sync, an external
-model API, or network access for core memory commands.
+model API, or network access for core memory commands. Saved memory is active
+immediately after Aictx validates and writes it, and Aictx never commits for
+you.
 
 ## Documentation
 
 Public docs live at [docs.aictx.dev](https://docs.aictx.dev).
+
+Good starting points:
+
+- [Getting started](https://docs.aictx.dev/getting-started/)
+- [Capabilities](https://docs.aictx.dev/capabilities/)
+- [Specializing Aictx](https://docs.aictx.dev/specializing-aictx/)
+- [Agent integration](https://docs.aictx.dev/agent-integration/)
 
 Bundled docs are also available from the CLI:
 
 ```bash
 aictx docs
 aictx docs getting-started
+aictx docs capabilities
 aictx docs agent-integration --open
 ```
 
@@ -97,7 +109,6 @@ Save durable memory after meaningful work:
 aictx save --stdin
 ```
 
-Saved memory is active immediately after Aictx validates and writes the patch.
 Inspect memory asynchronously when needed:
 
 ```bash

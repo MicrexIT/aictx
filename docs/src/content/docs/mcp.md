@@ -3,12 +3,18 @@ title: MCP guide
 description: Configure Aictx MCP and understand the CLI/MCP capability boundary.
 ---
 
-`aictx-mcp` is an MCP stdio server. The MCP client must launch it and connect to
-its stdin/stdout.
+`aictx-mcp` is an MCP stdio server. Configure your MCP client to launch the
+global binary, or a project-local binary when the project pins Aictx.
 
-An agent generally cannot start `aictx-mcp` in a shell and then use it as MCP
-tools in an already-running session. MCP tools become available through the
-client's MCP configuration.
+MCP is useful when the agent client already supports MCP tools. The CLI remains
+the default path for routine memory work and all setup, maintenance, recovery,
+viewer, docs, suggestion, audit, stale, and graph workflows.
+
+:::tip
+`aictx init` does not start MCP. Starting `aictx-mcp` in a shell usually cannot
+add MCP tools to an already-running agent session. Configure the client first,
+then start a new session.
+:::
 
 ## Install
 
@@ -57,11 +63,6 @@ Local MCP exposes exactly these tools in v1:
 - `save_memory_patch`
 - `diff_memory`
 
-Local MCP is the near-term integration path for MCP-capable local agent
-harnesses. Remote MCP endpoints, hosted sync, cloud APIs, OAuth or cloud-auth
-surfaces, tenancy layers, billing surfaces, and ChatGPT App SDK UI remain
-future work.
-
 MCP equivalents are available when the client already exposes Aictx MCP tools:
 
 ```text
@@ -87,16 +88,10 @@ load_memory({
 is not arbitrary filesystem access; reads and writes remain scoped to the
 resolved project's `.aictx/` directory.
 
-Future ChatGPT-compatible or other host adapters may expose generic `search`
-and `fetch` names as aliases over Aictx search and inspect behavior. Those names
-are future adapter mappings only. The local MCP server exposes the five
-Aictx-specific tools above; generic `search` and `fetch` are not local MCP tool
-names.
-
 ## CLI-only boundaries
 
-The CLI remains the supported path for setup, maintenance, recovery, export,
-registry, viewer, docs, suggest, audit, stale, and graph workflows:
+Setup, maintenance, recovery, export, registry, viewer, docs, suggest, audit,
+stale, and graph workflows are CLI-only in v1:
 
 - Setup: `aictx init`, `aictx setup`
 - Maintenance: `aictx check`, `aictx rebuild`, `aictx reset`, `aictx upgrade`
@@ -111,3 +106,14 @@ registry, viewer, docs, suggest, audit, stale, and graph workflows:
 These CLI-only commands are part of the v1 integration model rather than MCP
 parity gaps. Local viewing remains a browser inspection surface, not a routine
 MCP memory operation, so `aictx view` has no MCP equivalent.
+
+Future ChatGPT-compatible or other host adapters may expose generic `search`
+and `fetch` names as aliases over Aictx search and inspect behavior. Those names
+are future adapter mappings only. The local MCP server exposes the five
+Aictx-specific tools above; generic `search` and `fetch` are not local MCP tool
+names.
+
+Local MCP is the near-term integration path for MCP-capable local agent
+harnesses. Remote MCP endpoints, hosted sync, cloud APIs, OAuth or cloud-auth
+surfaces, tenancy layers, billing surfaces, and ChatGPT App SDK UI remain
+future work.
