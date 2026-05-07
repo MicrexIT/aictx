@@ -38,6 +38,8 @@ pnpm dev:site
 ## Pull request expectations
 
 - Keep changes scoped to one behavior or documentation improvement.
+- Write the pull request description as a prompt another coding agent could use
+  to reproduce, review, or continue the work.
 - Add or update tests for CLI, MCP, storage, packaging, and viewer behavior.
 - Update README or public docs when user-visible behavior changes.
 - Run the verification commands that match the changed area.

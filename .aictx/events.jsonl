@@ -108,3 +108,4 @@
 {"actor":"agent","event":"memory.created","id":"fact.open-source-readiness-foundation-is-configured","timestamp":"2026-05-07T18:07:45+02:00"}
 {"actor":"agent","event":"memory.created","id":"constraint.published-package-must-exclude-workspace-caches-and-source-only-trees","timestamp":"2026-05-07T18:07:45+02:00"}
 {"actor":"agent","event":"memory.created","id":"gotcha.full-vitest-suite-needs-bounded-worker-concurrency","timestamp":"2026-05-07T18:07:45+02:00"}
+{"actor":"agent","event":"memory.created","id":"constraint.pull-request-descriptions-are-coding-agent-prompts","timestamp":"2026-05-07T18:26:40+02:00"}
