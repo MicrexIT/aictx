@@ -267,6 +267,11 @@ The package provides two binaries:
 - `aictx`: the command-line interface
 - `aictx-mcp`: the MCP stdio server for AI coding clients
 
+For contribution workflow, branch protection, and AI-agent git instructions,
+see [CONTRIBUTING.md](CONTRIBUTING.md). The short version is: work on a feature
+branch, open a pull request to `main`, wait for required checks, then merge the
+pull request instead of pushing directly to `main`.
+
 ## Project health
 
 - Contributing guide: [CONTRIBUTING.md](CONTRIBUTING.md)
@@ -278,8 +283,8 @@ The package provides two binaries:
 - Changelog: [CHANGELOG.md](CHANGELOG.md)
 
 Public releases should have matching `vX.Y.Z` Git tags and npm provenance.
-Branch protection for `main` should require the CI workflow before broad public
-contribution.
+The default branch is protected and requires pull requests plus CI/security
+checks before merge.
 
 ## AI-agent setup prompt
 
