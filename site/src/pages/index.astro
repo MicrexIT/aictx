@@ -55,6 +55,165 @@ import BaseLayout from "../layouts/BaseLayout.astro";
       </div>
     </section>
 
+    <section class="impact-section" id="before-after" aria-labelledby="before-after-title">
+      <div class="section-heading">
+        <h2 id="before-after-title">Get useful agent work faster, with less context waste.</h2>
+        <p>
+          Aictx gives agents the project knowledge they need before work begins, so teams spend
+          fewer tokens re-explaining the repo and more time reviewing useful changes.
+        </p>
+      </div>
+
+      <div class="impact-module" style="--reveal: 54%">
+        <div class="impact-copy">
+          <div class="impact-tabs" role="tablist" aria-label="Before and after use cases">
+            <button type="button" role="tab" aria-selected="true" aria-controls="impact-token" data-impact-tab="impact-token">
+              <span>01</span>
+              Token efficiency
+            </button>
+            <button type="button" role="tab" aria-selected="false" aria-controls="impact-explain" data-impact-tab="impact-explain">
+              <span>02</span>
+              Re-explaining
+            </button>
+            <button type="button" role="tab" aria-selected="false" aria-controls="impact-handoffs" data-impact-tab="impact-handoffs">
+              <span>03</span>
+              Handoffs
+            </button>
+          </div>
+
+          <div class="impact-panel-copy is-active" data-impact-copy="impact-token">
+            <span class="section-kicker">Token efficiency</span>
+            <h3>Spend the context window on the task.</h3>
+            <p>
+              Aictx loads compact, relevant project memory so agents have more room for files,
+              diffs, tests, and reasoning instead of repeated setup.
+            </p>
+          </div>
+
+          <div class="impact-panel-copy" data-impact-copy="impact-explain" hidden>
+            <span class="section-kicker">Re-explaining</span>
+            <h3>Stop onboarding every new AI session.</h3>
+            <p>
+              Architecture notes, team conventions, and sharp edges live with the repo, ready for
+              the next agent to load when they matter.
+            </p>
+          </div>
+
+          <div class="impact-panel-copy" data-impact-copy="impact-handoffs" hidden>
+            <span class="section-kicker">Handoffs</span>
+            <h3>Keep hard-won project knowledge in circulation.</h3>
+            <p>
+              Debugging facts, decisions, and workflows become durable context instead of fading
+              into old chats after the task ends.
+            </p>
+          </div>
+        </div>
+
+        <div class="impact-visual">
+          <div class="impact-visual-panel is-active" id="impact-token" role="tabpanel" data-impact-panel="impact-token">
+            <div class="comparison-labels" aria-hidden="true">
+              <span>Before</span>
+              <span>After</span>
+            </div>
+            <div class="comparison-state" aria-hidden="true">Compare</div>
+            <div class="scene-layer before">
+              <div class="token-meter wasteful">
+                <div class="token-block repeated"><span>Repeated repo summary</span></div>
+                <div class="token-block paste"><span>Pasted README</span></div>
+                <div class="token-block chats"><span>Old chat excerpts</span></div>
+                <div class="token-block warnings"><span>Warnings and caveats</span></div>
+                <div class="token-block sliver"><span>Code room</span></div>
+              </div>
+            </div>
+            <div class="scene-layer after">
+              <div class="token-meter efficient">
+                <div class="token-block memory"><span>Relevant Aictx memory</span></div>
+                <div class="token-block code"><span>Code</span></div>
+                <div class="token-block tests"><span>Test output</span></div>
+                <div class="token-block reason"><span>Reasoning room</span></div>
+              </div>
+            </div>
+            <span class="reveal-divider" aria-hidden="true"></span>
+            <input
+              class="reveal-scrubber"
+              type="range"
+              min="0"
+              max="100"
+              value="54"
+              aria-label="Slide between before and after for token efficiency"
+            />
+          </div>
+
+          <div class="impact-visual-panel" id="impact-explain" role="tabpanel" data-impact-panel="impact-explain" hidden>
+            <div class="comparison-labels" aria-hidden="true">
+              <span>Before</span>
+              <span>After</span>
+            </div>
+            <div class="comparison-state" aria-hidden="true">Compare</div>
+            <div class="scene-layer before">
+              <div class="chat-window noisy">
+                <div class="chat-line wide">Auth uses session claims, not route params...</div>
+                <div class="chat-line">Do not touch legacy billing API.</div>
+                <div class="chat-line wide">Tests need DATABASE_URL and seeded fixtures.</div>
+                <div class="chat-line">We already decided against runtime RAG.</div>
+                <div class="chat-composer">18 min explaining</div>
+              </div>
+            </div>
+            <div class="scene-layer after">
+              <div class="memory-brief">
+                <code>aictx load "change auth routes"</code>
+                <div class="memory-card">Architecture</div>
+                <div class="memory-card">Conventions</div>
+                <div class="memory-card">Gotchas</div>
+                <div class="edit-strip">agent edits code with context loaded</div>
+              </div>
+            </div>
+            <span class="reveal-divider" aria-hidden="true"></span>
+            <input
+              class="reveal-scrubber"
+              type="range"
+              min="0"
+              max="100"
+              value="48"
+              aria-label="Slide between before and after for re-explaining"
+            />
+          </div>
+
+          <div class="impact-visual-panel" id="impact-handoffs" role="tabpanel" data-impact-panel="impact-handoffs" hidden>
+            <div class="comparison-labels" aria-hidden="true">
+              <span>Before</span>
+              <span>After</span>
+            </div>
+            <div class="comparison-state" aria-hidden="true">Compare</div>
+            <div class="scene-layer before">
+              <div class="fade-chats">
+                <div>CI fails without DATABASE_URL</div>
+                <div>CI fails without DATABASE_URL</div>
+                <div>CI fails without DATABASE_URL</div>
+              </div>
+            </div>
+            <div class="scene-layer after">
+              <div class="repo-memory">
+                <div class="repo-core">Project Memory</div>
+                <span>CI workflow</span>
+                <span>Migration rules</span>
+                <span>Deprecated paths</span>
+              </div>
+            </div>
+            <span class="reveal-divider" aria-hidden="true"></span>
+            <input
+              class="reveal-scrubber"
+              type="range"
+              min="0"
+              max="100"
+              value="50"
+              aria-label="Slide between before and after for handoffs"
+            />
+          </div>
+        </div>
+      </div>
+    </section>
+
     <section class="workflow" id="workflow" aria-labelledby="workflow-title">
       <div class="section-heading">
         <h2 id="workflow-title">Load context. Save memory. Review the diff.</h2>
@@ -114,4 +273,68 @@ import BaseLayout from "../layouts/BaseLayout.astro";
       </div>
     </section>
   </main>
+
+  <script>
+    const impactModule = document.querySelector(".impact-module");
+    const revealControls = document.querySelectorAll(".reveal-scrubber");
+    const impactTabs = document.querySelectorAll("[data-impact-tab]");
+    const impactPanels = document.querySelectorAll("[data-impact-panel]");
+    const impactCopy = document.querySelectorAll("[data-impact-copy]");
+
+    for (const control of revealControls) {
+      const module = control.closest(".impact-module");
+      const setReveal = () => {
+        module?.style.setProperty("--reveal", `${control.value}%`);
+        module?.style.setProperty("--handle", `clamp(18px, ${control.value}%, calc(100% - 18px))`);
+        const state = control.closest("[data-impact-panel]")?.querySelector(".comparison-state");
+        if (state) {
+          state.textContent =
+            control.value === "0" ? "Showing after" : control.value === "100" ? "Showing before" : "Compare";
+        }
+      };
+
+      control.addEventListener("input", setReveal);
+      setReveal();
+    }
+
+    for (const tab of impactTabs) {
+      tab.addEventListener("click", () => {
+        const target = tab.getAttribute("data-impact-tab");
+
+        for (const item of impactTabs) {
+          item.setAttribute("aria-selected", String(item === tab));
+        }
+
+        for (const panel of impactPanels) {
+          const isActive = panel.getAttribute("data-impact-panel") === target;
+          panel.hidden = !isActive;
+          panel.classList.toggle("is-active", isActive);
+
+          if (isActive) {
+            const scrubber = panel.querySelector(".reveal-scrubber");
+            impactModule?.style.setProperty("--reveal", `${scrubber?.value ?? 50}%`);
+            impactModule?.style.setProperty(
+              "--handle",
+              `clamp(18px, ${scrubber?.value ?? 50}%, calc(100% - 18px))`
+            );
+            const state = panel.querySelector(".comparison-state");
+            if (state) {
+              state.textContent =
+                scrubber?.value === "0"
+                  ? "Showing after"
+                  : scrubber?.value === "100"
+                    ? "Showing before"
+                    : "Compare";
+            }
+          }
+        }
+
+        for (const copy of impactCopy) {
+          const isActive = copy.getAttribute("data-impact-copy") === target;
+          copy.hidden = !isActive;
+          copy.classList.toggle("is-active", isActive);
+        }
+      });
+    }
+  </script>
 </BaseLayout>
