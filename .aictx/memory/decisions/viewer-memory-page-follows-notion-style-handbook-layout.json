@@ -1,0 +1,30 @@
+{
+  "body_path": "memory/decisions/viewer-memory-page-follows-notion-style-handbook-layout.md",
+  "content_hash": "sha256:140df4faba0f7e0f30d56f09e3323cd64aa3aee05d170c6d12908be5aa3f93ee",
+  "created_at": "2026-05-10T10:15:24+01:00",
+  "evidence": [],
+  "facets": {
+    "category": "decision-rationale"
+  },
+  "id": "decision.viewer-memory-page-follows-notion-style-handbook-layout",
+  "scope": {
+    "branch": null,
+    "kind": "project",
+    "project": "project.aictx",
+    "task": null
+  },
+  "source": {
+    "kind": "agent",
+    "task": "Refresh local viewer toward Notion-style handbook UI"
+  },
+  "status": "active",
+  "tags": [
+    "viewer",
+    "ui",
+    "document",
+    "memory-viewer"
+  ],
+  "title": "Viewer memory page follows a document-style handbook layout",
+  "type": "decision",
+  "updated_at": "2026-05-10T10:30:39+01:00"
+}

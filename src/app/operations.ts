@@ -153,6 +153,8 @@ export interface UpgradeStorageOptions extends GitWrapperOptions {
 export interface LoadMemoryOptions extends GitWrapperOptions, LoadMemoryInput {
   cwd: string;
   clock?: Clock;
+  saveContextPack?: boolean;
+  autoRebuildIndex?: boolean;
 }
 
 export interface SearchMemoryOptions extends GitWrapperOptions, SearchMemoryInput {
@@ -245,6 +247,10 @@ export interface GetViewerProjectBootstrapOptions extends ProjectRegistryOperati
 export interface ExportViewerProjectObsidianOptions extends ProjectRegistryOperationOptions {
   registryId: string;
   outDir?: string;
+}
+
+export interface PreviewViewerProjectLoadOptions extends ProjectRegistryOperationOptions, LoadMemoryInput {
+  registryId: string;
 }
 
 export interface SaveMemoryPatchOptions extends GitWrapperOptions {
@@ -809,7 +815,8 @@ export async function loadMemory(
     ...(options.mode === undefined ? {} : { mode: options.mode }),
     ...(options.hints === undefined ? {} : { hints: options.hints }),
     gitFileChanges: gitFileChanges.data,
-    clock
+    clock,
+    ...(options.saveContextPack === undefined ? {} : { saveContextPack: options.saveContextPack })
   });
 
   if (compiled.ok) {
@@ -821,7 +828,7 @@ export async function loadMemory(
     };
   }
 
-  if (compiled.error.code !== "AICtxIndexUnavailable") {
+  if (compiled.error.code !== "AICtxIndexUnavailable" || options.autoRebuildIndex === false) {
     return {
       ok: false,
       error: compiled.error,
@@ -879,7 +886,8 @@ export async function loadMemory(
     ...(options.mode === undefined ? {} : { mode: options.mode }),
     ...(options.hints === undefined ? {} : { hints: options.hints }),
     gitFileChanges: gitFileChanges.data,
-    clock
+    clock,
+    ...(options.saveContextPack === undefined ? {} : { saveContextPack: options.saveContextPack })
   });
 
   if (!retried.ok) {
@@ -1407,6 +1415,33 @@ export async function exportViewerProjectObsidian(
   return exportObsidianProjection({
     cwd: resolved.data.project_root,
     ...(options.outDir === undefined ? {} : { outDir: options.outDir }),
+    ...(options.runner === undefined ? {} : { runner: options.runner }),
+    ...(options.clock === undefined ? {} : { clock: options.clock })
+  });
+}
+
+export async function previewViewerProjectLoad(
+  options: PreviewViewerProjectLoadOptions
+): Promise<AppResult<LoadMemoryData>> {
+  const resolved = await resolveViewerProjectCwd(options);
+
+  if (!resolved.ok) {
+    return {
+      ok: false,
+      error: resolved.error,
+      warnings: resolved.warnings,
+      meta: await buildBestEffortMeta(options)
+    };
+  }
+
+  return loadMemory({
+    cwd: resolved.data.project_root,
+    task: options.task,
+    saveContextPack: false,
+    autoRebuildIndex: false,
+    ...(options.token_budget === undefined ? {} : { token_budget: options.token_budget }),
+    ...(options.mode === undefined ? {} : { mode: options.mode }),
+    ...(options.hints === undefined ? {} : { hints: options.hints }),
     ...(options.runner === undefined ? {} : { runner: options.runner }),
     ...(options.clock === undefined ? {} : { clock: options.clock })
   });

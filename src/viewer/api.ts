@@ -6,11 +6,13 @@ import {
   getViewerProjectBootstrap,
   getViewerBootstrap,
   getViewerProjects,
+  previewViewerProjectLoad,
   type AppResult,
   type ExportObsidianProjectionData,
   type ViewerBootstrapData,
   type ViewerProjectsData
 } from "../app/operations.js";
+import type { LoadMemoryData } from "../context/compile.js";
 import { aictxError, type AictxError, type JsonValue } from "../core/errors.js";
 import { err, ok, type Result } from "../core/result.js";
 
@@ -25,7 +27,8 @@ export interface ViewerApiContext {
 type ViewerApiResult =
   | AppResult<ViewerBootstrapData>
   | AppResult<ViewerProjectsData>
-  | AppResult<ExportObsidianProjectionData>;
+  | AppResult<ExportObsidianProjectionData>
+  | AppResult<LoadMemoryData>;
 
 export async function handleViewerApiRequest(
   request: IncomingMessage,
@@ -61,6 +64,13 @@ export async function handleViewerApiRequest(
 
   if (projectExport !== null) {
     await handleProjectExportObsidianRequest(request, response, context, projectExport);
+    return;
+  }
+
+  const projectLoadPreview = matchProjectRoute(url.pathname, "load-preview");
+
+  if (projectLoadPreview !== null) {
+    await handleProjectLoadPreviewRequest(request, response, context, projectLoadPreview);
     return;
   }
 
@@ -225,6 +235,43 @@ async function handleProjectExportObsidianRequest(
   writeAppResult(response, result);
 }
 
+async function handleProjectLoadPreviewRequest(
+  request: IncomingMessage,
+  response: ServerResponse,
+  context: ViewerApiContext,
+  registryId: string
+): Promise<void> {
+  if (request.method !== "POST") {
+    writeMethodNotAllowed(response, "POST");
+    return;
+  }
+
+  const body = await readJsonBody(request);
+
+  if (!body.ok) {
+    writeViewerJsonResponse(response, 400, viewerErrorBody(body.error));
+    return;
+  }
+
+  const input = parseLoadPreviewInput(body.data);
+
+  if (!input.ok) {
+    writeViewerJsonResponse(response, 400, viewerErrorBody(input.error));
+    return;
+  }
+
+  const result = await previewViewerProjectLoad({
+    cwd: context.cwd,
+    registryId,
+    task: input.data.task,
+    ...(input.data.mode === undefined ? {} : { mode: input.data.mode }),
+    ...(input.data.token_budget === undefined ? {} : { token_budget: input.data.token_budget }),
+    ...(context.aictxHome === undefined ? {} : { aictxHome: context.aictxHome })
+  });
+
+  writeAppResult(response, result);
+}
+
 function writeMethodNotAllowed(response: ServerResponse, allow: string): void {
   response.setHeader("Allow", allow);
   writeViewerJsonResponse(response, 405, viewerErrorBody(
@@ -359,6 +406,50 @@ function parseExportOutDir(value: unknown): Result<string | undefined> {
   }
 
   return ok(value.outDir);
+}
+
+function parseLoadPreviewInput(value: unknown): Result<{
+  task: string;
+  mode?: string;
+  token_budget?: number;
+}> {
+  if (!isRecord(value)) {
+    return err(
+      aictxError("AICtxValidationFailed", "Viewer load preview request body must be a JSON object.")
+    );
+  }
+
+  if (typeof value.task !== "string") {
+    return err(
+      aictxError("AICtxValidationFailed", "Viewer load preview task must be a string.")
+    );
+  }
+
+  const task = value.task.trim();
+
+  if (task === "") {
+    return err(
+      aictxError("AICtxValidationFailed", "Viewer load preview task must be non-empty.")
+    );
+  }
+
+  if (value.mode !== undefined && typeof value.mode !== "string") {
+    return err(
+      aictxError("AICtxValidationFailed", "Viewer load preview mode must be a string.")
+    );
+  }
+
+  if (value.token_budget !== undefined && typeof value.token_budget !== "number") {
+    return err(
+      aictxError("AICtxValidationFailed", "Viewer load preview token_budget must be a number.")
+    );
+  }
+
+  return ok({
+    task,
+    ...(value.mode === undefined ? {} : { mode: value.mode }),
+    ...(value.token_budget === undefined ? {} : { token_budget: value.token_budget })
+  });
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

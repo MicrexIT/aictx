@@ -50,6 +50,7 @@ export interface CompileContextPackOptions extends LoadMemoryInput {
   git: GitState;
   clock: Clock;
   gitFileChanges?: readonly ProjectFileChange[];
+  saveContextPack?: boolean;
 }
 
 export interface LoadMemorySource {
@@ -235,7 +236,7 @@ export async function compileContextPack(
   const rankExcludedIds = collectRankExcludedIds(ranked);
   const warnings = [...storage.warnings, ...searched.warnings, ...fresh.warnings];
 
-  if (storage.data.config.memory.saveContextPacks) {
+  if (storage.data.config.memory.saveContextPacks && options.saveContextPack !== false) {
     const saved = await saveGeneratedContextPack({
       projectRoot: options.paths.projectRoot,
       task: task.data,

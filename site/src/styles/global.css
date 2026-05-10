@@ -135,7 +135,11 @@ main,
 
 .hero {
   position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   overflow: hidden;
+  min-height: calc(100vh - 64px);
   padding: 18px 14px 28px;
   background:
     linear-gradient(180deg, rgba(255, 253, 249, 0.1), rgba(244, 243, 237, 0.38)),
@@ -160,14 +164,9 @@ main,
   z-index: 1;
   display: grid;
   justify-items: center;
-  overflow: hidden;
+  width: min(100%, 720px);
   padding: 50px 18px 40px;
   text-align: center;
-  background: rgba(252, 252, 250, 0.8);
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  backdrop-filter: blur(18px);
-  box-shadow: 0 18px 64px rgba(37, 39, 36, 0.08);
 }
 
 .eyebrow-link {
@@ -257,21 +256,22 @@ h1 {
 
 .hero-command {
   width: 100%;
-  max-width: 320px;
+  max-width: 390px;
 }
 
 .hero-command code {
   display: block;
   min-height: 42px;
   padding: 13px 14px;
-  color: #4f5359;
-  background: var(--white);
-  border: 1px solid var(--line);
+  color: #222426;
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid rgba(17, 18, 20, 0.12);
   border-radius: 10px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   text-align: center;
   overflow-wrap: anywhere;
+  box-shadow: 0 12px 34px rgba(37, 39, 36, 0.08);
 }
 
 .workflow,
@@ -1146,12 +1146,14 @@ h3 {
   }
 
   .hero {
+    min-height: calc(100vh - 72px);
     padding: clamp(36px, 5vw, 58px) clamp(28px, 5vw, 58px);
   }
 
   .hero-panel {
     min-height: 500px;
-    padding: clamp(64px, 7vw, 92px) 40px;
+    align-content: center;
+    padding: clamp(64px, 7vw, 92px) 0;
   }
 
   h1 {
@@ -1169,7 +1171,7 @@ h3 {
   }
 
   .hero-command {
-    max-width: 320px;
+    max-width: 390px;
   }
 
   .workflow,
