@@ -3,12 +3,15 @@ import { CommanderError, type Command } from "commander";
 import {
   checkProject,
   diffMemory,
+  getRoleCoverage,
   initProject,
+  previewSetupBootstrap,
   saveMemoryPatch,
   suggestMemory,
   type AppResult,
   type CheckProjectData,
   type DiffMemoryData,
+  type RoleCoverageResultData,
   type SaveMemoryData
 } from "../../app/operations.js";
 import type { AictxError } from "../../core/errors.js";
@@ -34,6 +37,7 @@ export interface RegisterSetupCommandOptions {
 interface SetupCommandFlags {
   force?: boolean;
   apply?: boolean;
+  dryRun?: boolean;
   view?: boolean;
   open?: boolean;
 }
@@ -46,13 +50,19 @@ interface SetupPatchSummary {
 
 interface SetupData {
   initialized: boolean;
+  would_initialize: boolean;
+  force_preview: boolean;
+  dry_run: boolean;
   bootstrap_patch_proposed: boolean;
   bootstrap_patch_applied: boolean;
   bootstrap_reason: string | null;
   bootstrap_summary: SetupPatchSummary;
   save: SaveMemoryData | null;
-  check: CheckProjectData;
+  check: CheckProjectData | null;
+  check_skipped_reason: string | null;
+  role_coverage: RoleCoverageResultData["role_coverage"];
   diff: DiffMemoryData | null;
+  diff_skipped_reason: string | null;
   viewer_url: string | null;
   viewer_log_path: string | null;
   next_step: string | null;
@@ -66,7 +76,8 @@ export function registerSetupCommand(
     .command("setup")
     .description("Run the guided first-run Aictx setup workflow.")
     .option("--force", "Discard existing Aictx state before setup.")
-    .option("--apply", "Apply the conservative bootstrap memory patch.")
+    .option("--apply", "Apply the conservative bootstrap memory patch (accepted for compatibility; setup applies by default).")
+    .option("--dry-run", "Preview setup role coverage and bootstrap patch without initializing storage or writing repo files.")
     .option("--view", "Print the viewer command to run after setup.")
     .option("--open", "Use with --view to open the viewer after setup.")
     .action(async (flags: SetupCommandFlags, command: Command) => {
@@ -94,6 +105,10 @@ async function runSetup(
   flags: SetupCommandFlags,
   viewerDetacher: ViewerDetacher | undefined
 ): Promise<AppResult<SetupData>> {
+  if (flags.dryRun === true) {
+    return runSetupDryRun(cwd, flags);
+  }
+
   const initialized = await initProject({
     cwd,
     force: flags.force === true
@@ -117,7 +132,7 @@ async function runSetup(
   const summary = patchSummary(proposal);
   let save: SaveMemoryData | null = null;
 
-  if (flags.apply === true && proposal.proposed && proposal.patch !== null) {
+  if (proposal.proposed && proposal.patch !== null) {
     const saved = await saveMemoryPatch({
       cwd,
       patch: proposal.patch
@@ -128,6 +143,12 @@ async function runSetup(
     }
 
     save = saved.data;
+  }
+
+  const covered = await getRoleCoverage({ cwd });
+
+  if (!covered.ok) {
+    return covered;
   }
 
   const checked = await checkProject({ cwd });
@@ -142,6 +163,7 @@ async function runSetup(
   const warnings = [
     ...initialized.warnings,
     ...suggested.warnings,
+    ...covered.warnings,
     ...checked.warnings,
     ...(diffed.ok ? diffed.warnings : []),
     ...(viewer.ok ? viewer.warnings : [])
@@ -160,24 +182,81 @@ async function runSetup(
     ok: true,
     data: {
       initialized: initialized.data.created,
+      would_initialize: initialized.data.created,
+      force_preview: false,
+      dry_run: false,
       bootstrap_patch_proposed: proposal.proposed,
       bootstrap_patch_applied: save !== null,
       bootstrap_reason: proposal.reason,
       bootstrap_summary: summary,
       save,
       check: checked.data,
+      check_skipped_reason: null,
+      role_coverage: covered.data.role_coverage,
       diff,
+      diff_skipped_reason: diffed.ok ? null : diffed.error.message,
       viewer_url: viewer.data?.url ?? null,
       viewer_log_path: viewer.data?.log_path ?? null,
       next_step:
-        save === null && proposal.proposed
-          ? "Run `aictx setup --apply` to apply the proposed bootstrap memory patch."
-          : save !== null
-            ? 'Run `aictx load "onboard to this repository"` to see the first task-focused memory pack.'
-            : "No bootstrap memory patch to apply."
+        save !== null
+          ? "Run `aictx lens project-map` for a readable project view, or `aictx load \"onboard to this repository\"` for task-focused context."
+          : "No bootstrap memory patch to apply."
     },
     warnings,
     meta: checked.meta
+  };
+}
+
+async function runSetupDryRun(
+  cwd: string,
+  flags: SetupCommandFlags
+): Promise<AppResult<SetupData>> {
+  const preview = await previewSetupBootstrap({
+    cwd,
+    force: flags.force === true
+  });
+
+  if (!preview.ok) {
+    return preview;
+  }
+
+  const proposal = preview.data.proposal;
+  const summary = patchSummary(proposal);
+  const checkSkippedReason =
+    "Dry run did not write storage; run `aictx setup` before checking the result.";
+  const diffSkippedReason =
+    "Dry run did not write storage; no Aictx diff was produced.";
+  const viewerWarning = flags.view === true
+    ? [
+        "Viewer startup skipped because setup --dry-run does not write storage. Run `aictx setup --view` to start the viewer after applying setup."
+      ]
+    : [];
+
+  return {
+    ok: true,
+    data: {
+      initialized: preview.data.initialized,
+      would_initialize: preview.data.would_initialize,
+      force_preview: preview.data.force_preview,
+      dry_run: true,
+      bootstrap_patch_proposed: proposal.proposed,
+      bootstrap_patch_applied: false,
+      bootstrap_reason: proposal.reason,
+      bootstrap_summary: summary,
+      save: null,
+      check: null,
+      check_skipped_reason: checkSkippedReason,
+      role_coverage: preview.data.role_coverage,
+      diff: null,
+      diff_skipped_reason: diffSkippedReason,
+      viewer_url: null,
+      viewer_log_path: null,
+      next_step: proposal.proposed
+        ? "Run `aictx setup` to apply the proposed bootstrap memory patch."
+        : "No bootstrap memory patch to apply."
+    },
+    warnings: [...preview.warnings, ...viewerWarning],
+    meta: preview.meta
   };
 }
 
@@ -233,19 +312,46 @@ function patchSummary(proposal: SuggestBootstrapPatchProposal): SetupPatchSummar
 function renderSetupData(data: SetupData): string {
   return [
     "Aictx setup complete.",
-    `Initialized: ${data.initialized ? "yes" : "already initialized"}`,
+    `Initialized: ${renderInitialized(data)}`,
+    `Dry run: ${data.dry_run ? "yes" : "no"}`,
+    `Would initialize storage: ${data.would_initialize ? "yes" : "no"}`,
+    ...(data.force_preview ? ["Force preview: yes"] : []),
     data.bootstrap_patch_proposed
       ? "Bootstrap patch: proposed"
       : `Bootstrap patch: not proposed${data.bootstrap_reason === null ? "" : ` (${data.bootstrap_reason})`}`,
     `Bootstrap patch applied: ${data.bootstrap_patch_applied ? "yes" : "no"}`,
     ...renderList("Patch operations", data.bootstrap_summary.operations),
     ...renderList("Patch memory IDs", data.bootstrap_summary.memory_ids),
-    `Check: ${data.check.valid ? "passed" : "failed"}`,
-    ...(data.diff === null ? [] : [`Aictx diff files changed: ${data.diff.changed_files.length}`]),
+    ...renderRoleCoverage(data.role_coverage),
+    data.check === null
+      ? `Check: skipped${data.check_skipped_reason === null ? "" : ` (${data.check_skipped_reason})`}`
+      : `Check: ${data.check.valid ? "passed" : "failed"}`,
+    ...(data.diff === null
+      ? data.diff_skipped_reason === null
+        ? []
+        : [`Aictx diff: skipped (${data.diff_skipped_reason})`]
+      : [`Aictx diff files changed: ${data.diff.changed_files.length}`]),
     ...(data.viewer_url === null ? [] : [`Aictx viewer: ${data.viewer_url}`]),
     ...(data.viewer_log_path === null ? [] : [`Aictx viewer log: ${data.viewer_log_path}`]),
     ...(data.next_step === null ? [] : [`Next: ${data.next_step}`])
   ].join("\n");
+}
+
+function renderInitialized(data: SetupData): string {
+  if (data.initialized) {
+    return "yes";
+  }
+
+  return data.dry_run ? "no" : "already initialized";
+}
+
+function renderRoleCoverage(data: SetupData["role_coverage"]): string[] {
+  return [
+    "Role coverage:",
+    ...data.roles.map(
+      (role) => `- ${role.label}: ${role.status}${role.optional ? " (optional)" : ""}`
+    )
+  ];
 }
 
 function renderList(label: string, values: readonly string[]): string[] {

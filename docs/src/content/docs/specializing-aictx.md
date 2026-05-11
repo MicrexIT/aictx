@@ -41,11 +41,14 @@ For a new project, run:
 aictx setup
 ```
 
-or apply the conservative bootstrap directly:
+or preview the conservative bootstrap without writing or initializing storage:
 
 ```bash
-aictx setup --apply
+aictx setup --dry-run
 ```
+
+`aictx setup --force --dry-run` previews reset/setup behavior without deleting
+or rewriting anything.
 
 For manual review:
 
@@ -135,10 +138,10 @@ The CLI is the default interface for routine memory work. MCP is available when
 the agent client has launched and connected to `aictx-mcp`.
 
 MCP exposes exactly `load_memory`, `search_memory`, `inspect_memory`,
-`remember_memory`, `save_memory_patch`, and `diff_memory`. Setup, maintenance, recovery, export,
-registry, viewer, docs, suggest, audit, stale, and graph workflows are CLI-only
-in v1. These CLI-only commands are part of the v1 integration model rather than
-MCP parity gaps.
+`remember_memory`, `save_memory_patch`, and `diff_memory`. Setup, lenses,
+handoff, maintenance, recovery, export, registry, viewer, docs, suggest, audit,
+stale, and graph workflows are CLI-only in v1. These CLI-only commands are part
+of the v1 integration model rather than MCP parity gaps.
 
 Local MCP is the near-term integration path for local agent harnesses. Remote
 MCP, hosted sync, cloud auth, cloud hosting, and ChatGPT App SDK UI are future

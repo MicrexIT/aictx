@@ -37,23 +37,34 @@ memory you are looking for.
 Use these when a project is new to Aictx or memory feels too thin:
 
 ```bash
-aictx init
 aictx setup
-aictx setup --apply
-aictx setup --apply --view
+aictx setup --dry-run
+aictx setup --view
 aictx suggest --bootstrap --patch > bootstrap-memory.json
 aictx patch review bootstrap-memory.json
 ```
 
-`init` creates local storage and optional repo-level agent guidance. `setup`
-orchestrates the first-run bootstrap path so Aictx can seed source-backed
-project intent, feature map, roadmap, architecture, conventions, and agent
-guidance when current repo evidence supports it. Reusable project how-tos fit
-the existing `workflow` object type and `workflow` facet.
+`setup` is the normal first-run command. It creates local storage if needed,
+updates optional repo-level agent guidance, writes conservative source-backed
+role memory by default, runs checks, and prints role coverage. `init` remains
+available as the lower-level empty-storage initializer.
 
-After setup, `aictx load "onboard to this repository"` is a good first
-retrieval check. Use [Agent recipes](/agent-recipes/) for copyable setup
-prompts tailored to common coding agents.
+`setup --dry-run` is read-only: it does not initialize storage, update guidance
+files, write memory, run checks, or start the viewer. `setup --force --dry-run`
+previews reset/setup behavior without deleting or rewriting anything.
+
+Setup reports soft roles for product intent, capability map, repository map,
+architecture/patterns, stack/tooling, conventions/quality, workflows/how-tos,
+verification, gotchas/risks, open questions, sources/provenance, agent
+guidance, and optional branch handoff. Missing or thin roles are generated gaps,
+not placeholder memory files. Missing optional branch handoff is counted without
+a generated gap. Reusable project how-tos fit the existing `workflow` object
+type and `workflow` facet.
+
+After setup, `aictx lens project-map` is a good readable overview and
+`aictx load "onboard to this repository"` is a good first retrieval check. Use
+[Agent recipes](/agent-recipes/) for copyable setup prompts tailored to common
+coding agents.
 
 ## Memory quality and maintenance
 
@@ -65,16 +76,24 @@ aictx suggest --from-diff --json
 aictx audit --json
 aictx stale
 aictx graph <id>
+aictx lens review-risk
+aictx handoff show
 ```
 
 - `suggest --after-task` gives an agent a read-only decision packet at the end
   of work. Its `recommended_actions` field is the primary advisory save/no-save
   guide; agents still fill in semantic memory content themselves.
+- `audit` includes role coverage gaps, but missing roles are not `check`
+  failures.
+- `handoff show` returns only an active handoff for the current branch. Closed
+  handoffs remain historical memory for inspect, view, and Git history.
 - `suggest --from-diff` looks at current Git changes and proposes memory
   maintenance ideas.
 - `audit` reports deterministic hygiene issues.
 - `stale` lists stale and superseded memory.
 - `graph` shows a one-hop relation neighborhood for debugging.
+- `lens` renders readable views with role coverage, relation context, and gaps.
+- `handoff` preserves unfinished current-branch state until it is closed or promoted.
 
 :::tip
 When a user correction reveals that old memory was wrong, prefer updating,
@@ -124,10 +143,10 @@ The CLI is the default interface for routine memory work. MCP is available when
 the agent client has launched and connected to `aictx-mcp`.
 
 MCP exposes exactly `load_memory`, `search_memory`, `inspect_memory`,
-`remember_memory`, `save_memory_patch`, and `diff_memory`. Setup, maintenance, recovery, export,
-registry, viewer, docs, suggest, audit, stale, and graph workflows are CLI-only
-in v1. These CLI-only commands are part of the v1 integration model rather than
-MCP parity gaps.
+`remember_memory`, `save_memory_patch`, and `diff_memory`. Setup, lenses,
+handoff, maintenance, recovery, export, registry, viewer, docs, suggest, audit,
+stale, and graph workflows are CLI-only in v1. These CLI-only commands are part
+of the v1 integration model rather than MCP parity gaps.
 
 Local MCP is the near-term integration path for local agent harnesses. Remote
 MCP, hosted sync, cloud auth, cloud hosting, and ChatGPT App SDK UI are future

@@ -157,6 +157,18 @@ const cliOnlyCapabilities = [
     notes: "Debug graph neighborhood remains CLI-only in v1."
   },
   {
+    capability: "Show memory lens",
+    mcp: "none",
+    cli: "`aictx lens`",
+    notes: "Readable project views remain CLI-only in v1."
+  },
+  {
+    capability: "Manage branch handoff",
+    mcp: "none",
+    cli: "`aictx handoff`",
+    notes: "Branch-scoped continuity remains CLI-only in v1."
+  },
+  {
     capability: "Export Obsidian projection",
     mcp: "none",
     cli: "`aictx export obsidian`",
@@ -215,6 +227,8 @@ const exactCliOnlyCommands = [
   "`aictx rewind`",
   "`aictx stale`",
   "`aictx graph`",
+  "`aictx lens`",
+  "`aictx handoff`",
   "`aictx export obsidian`",
   "`aictx projects`",
   "`aictx view`",
@@ -236,6 +250,8 @@ const exactCliOnlyGuidanceCommands = [
   "`aictx rewind`",
   "`aictx stale`",
   "`aictx graph`",
+  "`aictx lens`",
+  "`aictx handoff`",
   "`aictx export obsidian`",
   "`aictx projects`",
   "`aictx view`",
@@ -517,7 +533,7 @@ describe("agent capability map guardrail", () => {
         "* MCP + CLI capabilities: load, search, inspect object, remember memory, save patch, diff."
       );
       expect(content).toContain(
-        "* CLI-only capabilities in v1: init, setup, patch review, check, rebuild, reset, upgrade, history, restore, rewind, stale, graph, export obsidian, projects, view, docs, suggest, audit."
+        "* CLI-only capabilities in v1: init, setup, lens, handoff, patch review, check, rebuild, reset, upgrade, history, restore, rewind, stale, graph, export obsidian, projects, view, docs, suggest, audit."
       );
     }
   });
@@ -571,7 +587,7 @@ describe("agent capability map guardrail", () => {
 
       const cliFirstIndex = guidance.indexOf("Use the CLI by default");
       const cliOnlyIndex = guidance.search(
-        /Setup,\s+maintenance,\s+recovery,\s+export,\s+registry,\s+viewer,\s+docs,\s+suggest,\s+audit/i
+        /Setup,\s+lenses,\s+(?:branch\s+)?handoff,\s+maintenance,\s+recovery,\s+export,\s+registry,\s+viewer,\s+docs,\s+suggest,\s+audit/i
       );
 
       expect(cliFirstIndex).toBeGreaterThanOrEqual(0);
@@ -586,7 +602,7 @@ describe("agent capability map guardrail", () => {
       );
       expect(guidance).toContain("Use `aictx save --stdin` only when you need");
       expect(guidance).toContain("Use MCP only when the client already exposes Aictx tools.");
-      expect(guidance).toMatch(/CLI-only capabilities are not\s+MCP parity gaps\./);
+      expect(guidance).toMatch(/CLI-only\s+capabilities are not\s+MCP parity gaps\./);
       expect(guidance).toContain(
         "do not work around it by editing"
       );
@@ -613,9 +629,9 @@ describe("agent capability map guardrail", () => {
     for (const path of docsAndGuidance) {
       const content = await readProjectFile(path);
 
-      expect(content).toMatch(/CLI-only capabilities[\s\S]{0,80}not\s+MCP parity gaps/);
+      expect(content).toMatch(/CLI-only\s+capabilities[\s\S]{0,120}not\s+MCP parity gaps/);
       expect(content).toMatch(
-        /do not add[\s\S]{0,200}to MCP|do not add MCP tools|not (?:be )?added to MCP|do not add or ask for MCP tools solely to mirror these CLI\s+commands|has no MCP equivalent|have no MCP equivalents?|part of the v1 integration model rather than MCP parity gaps|CLI-only capabilities are not\s+MCP parity gaps|CLI is the supported interface/i
+        /do not add[\s\S]{0,200}to MCP|do not add MCP tools|not (?:be )?added to MCP|do not add or ask for MCP tools solely to mirror these CLI\s+commands|has no MCP equivalent|have no MCP equivalents?|part of the v1 integration model rather than MCP parity gaps|CLI-only\s+capabilities are not\s+MCP parity gaps|CLI is the supported interface/i
       );
       expect(content).toMatch(/edit(?:ing)?\s+`\.aictx\/` (?:files directly|manually)/);
     }
@@ -642,9 +658,9 @@ describe("agent capability map guardrail", () => {
     }
 
     expect(prd).toContain(
-      "Setup, maintenance, recovery, export, registry management, local viewing, suggestion, and audit capabilities remain CLI-only in v1"
+      "CLI-only capabilities in v1: init, setup, lens, handoff, patch review, check, rebuild, reset, upgrade, history, restore, rewind, stale, graph, export obsidian, projects, view, docs, suggest, audit."
     );
     expect(apiSpec).toContain("Do not expose an MCP tool for local viewing.");
-    expect(localViewerSpec).toContain("Do not add `aictx view` to MCP.");
+    expect(localViewerSpec).toContain("Do not add `aictx view`, `aictx lens`, or `aictx handoff` to MCP.");
   });
 });

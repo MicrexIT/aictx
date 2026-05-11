@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
+import { lstat, mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
@@ -103,12 +103,34 @@ interface CheckSuccessEnvelope {
 interface SetupSuccessEnvelope {
   ok: true;
   data: {
+    initialized: boolean;
+    would_initialize: boolean;
+    force_preview: boolean;
+    dry_run: boolean;
     bootstrap_patch_proposed: boolean;
     bootstrap_patch_applied: boolean;
+    bootstrap_summary: {
+      operations: string[];
+      memory_ids: string[];
+      relation_ids: string[];
+    };
     save: SaveSuccessEnvelope["data"] | null;
     check: {
       valid: boolean;
+    } | null;
+    check_skipped_reason: string | null;
+    role_coverage: {
+      roles: Array<{
+        key: string;
+        label: string;
+        status: string;
+        memory_ids: string[];
+        gap: string | null;
+      }>;
+      counts: Record<string, number>;
     };
+    diff: unknown | null;
+    diff_skipped_reason: string | null;
     viewer_url: string | null;
     viewer_log_path: string | null;
     next_step: string | null;
@@ -403,12 +425,13 @@ describe("aictx suggest CLI", () => {
   it("runs setup with bootstrap apply, check, and diff summary", async () => {
     const repo = await createBootstrapPatchGitProject("aictx-cli-setup-apply-");
 
-    const output = await runCli(["node", "aictx", "setup", "--apply", "--json"], repo);
+    const output = await runCli(["node", "aictx", "setup", "--json"], repo);
 
     expect(output.exitCode).toBe(0);
     expect(output.stderr).toBe("");
     const envelope = JSON.parse(output.stdout) as SetupSuccessEnvelope;
     expect(envelope.ok).toBe(true);
+    expect(envelope.data.dry_run).toBe(false);
     expect(envelope.data.bootstrap_patch_proposed).toBe(true);
     expect(envelope.data.bootstrap_patch_applied).toBe(true);
     expect(envelope.data.save?.memory_created).toEqual(
@@ -416,12 +439,23 @@ describe("aictx suggest CLI", () => {
         "source.readme",
         "source.package-json",
         "synthesis.product-intent",
+        "synthesis.repository-map",
+        "synthesis.stack-and-tooling",
         "workflow.package-scripts",
         "constraint.node-engine"
       ])
     );
-    expect(envelope.data.check.valid).toBe(true);
-    expect(envelope.data.next_step).toContain('aictx load "onboard to this repository"');
+    expect(envelope.data.role_coverage.roles).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          key: "repository-map",
+          status: "populated",
+          memory_ids: expect.arrayContaining(["synthesis.repository-map"])
+        })
+      ])
+    );
+    expect(envelope.data.check?.valid).toBe(true);
+    expect(envelope.data.next_step).toContain("aictx lens project-map");
   });
 
   it("applies explicit README product features as a source-backed feature-map synthesis during setup", async () => {
@@ -476,7 +510,7 @@ describe("aictx suggest CLI", () => {
     const featureRelationId = featureRelation?.relation.id;
     expect(featureRelationId).toBeDefined();
     expect(envelope.data.save?.relations_created).toContain(featureRelationId);
-    expect(envelope.data.check.valid).toBe(true);
+    expect(envelope.data.check?.valid).toBe(true);
   });
 
   it("applies agent guidance, verification commands, and code-derived features during setup", async () => {
@@ -553,18 +587,100 @@ describe("aictx suggest CLI", () => {
     expect(envelope.data.save?.relations_created).toEqual(
       expect.arrayContaining(relationIds)
     );
-    expect(envelope.data.check.valid).toBe(true);
+    expect(envelope.data.check?.valid).toBe(true);
   });
 
-  it("prints a setup proposal without applying the bootstrap patch", async () => {
+  it("previews setup without applying the bootstrap patch", async () => {
     const repo = await createBootstrapPatchGitProject("aictx-cli-setup-preview-");
 
-    const output = await runCli(["node", "aictx", "setup"], repo);
+    const output = await runCli(["node", "aictx", "setup", "--dry-run"], repo);
 
     expect(output.exitCode).toBe(0);
-    expect(output.stderr).toContain("Aictx is already initialized");
+    expect(output.stderr).toBe("");
+    expect(output.stdout).toContain("Dry run: yes");
+    expect(output.stdout).toContain("Would initialize storage: no");
     expect(output.stdout).toContain("Bootstrap patch: proposed");
-    expect(output.stdout).toContain("Next: Run `aictx setup --apply`");
+    expect(output.stdout).toContain("Bootstrap patch applied: no");
+    expect(output.stdout).toContain("Role coverage:");
+    expect(output.stdout).toContain("Check: skipped");
+    expect(output.stdout).toContain("Aictx diff: skipped");
+    expect(output.stdout).toContain("Next: Run `aictx setup`");
+    const storage = await readCanonicalStorage(repo);
+    expect(storage.ok).toBe(true);
+    if (storage.ok) {
+      expect(storage.data.objects.some((object) => object.sidecar.id === "source.readme")).toBe(false);
+    }
+  });
+
+  it("previews setup on a fresh repo without initializing storage or writing files", async () => {
+    const repo = await createBootstrapPatchGitRepo("aictx-cli-setup-fresh-preview-");
+    const beforeStatus = await git(repo, ["status", "--short"]);
+
+    const output = await runCli(["node", "aictx", "setup", "--dry-run", "--json"], repo);
+
+    expect(output.exitCode).toBe(0);
+    expect(output.stderr).toBe("");
+    const envelope = JSON.parse(output.stdout) as SetupSuccessEnvelope;
+    expect(envelope.ok).toBe(true);
+    expect(envelope.data.dry_run).toBe(true);
+    expect(envelope.data.initialized).toBe(false);
+    expect(envelope.data.would_initialize).toBe(true);
+    expect(envelope.data.force_preview).toBe(false);
+    expect(envelope.data.bootstrap_patch_proposed).toBe(true);
+    expect(envelope.data.bootstrap_patch_applied).toBe(false);
+    expect(envelope.data.bootstrap_summary.memory_ids).toEqual(
+      expect.arrayContaining(["source.readme", "source.package-json"])
+    );
+    expect(envelope.data.save).toBeNull();
+    expect(envelope.data.check).toBeNull();
+    expect(envelope.data.check_skipped_reason).toContain("Dry run did not write storage");
+    expect(envelope.data.diff).toBeNull();
+    expect(envelope.data.diff_skipped_reason).toContain("Dry run did not write storage");
+    expect(envelope.data.role_coverage.roles.length).toBeGreaterThan(0);
+    await expect(pathExists(join(repo, ".aictx"))).resolves.toBe(false);
+    await expect(pathExists(join(repo, ".gitignore"))).resolves.toBe(false);
+    await expect(pathExists(join(repo, "AGENTS.md"))).resolves.toBe(false);
+    await expect(pathExists(join(repo, "CLAUDE.md"))).resolves.toBe(false);
+    await expect(git(repo, ["status", "--short"])).resolves.toBe(beforeStatus);
+  });
+
+  it("previews forced setup without deleting or rewriting existing storage", async () => {
+    const repo = await createBootstrapPatchGitProject("aictx-cli-setup-force-preview-");
+    const before = await readCanonicalSnapshot(repo);
+
+    const output = await runCli(["node", "aictx", "setup", "--force", "--dry-run", "--json"], repo);
+
+    expect(output.exitCode).toBe(0);
+    expect(output.stderr).toBe("");
+    const envelope = JSON.parse(output.stdout) as SetupSuccessEnvelope;
+    expect(envelope.ok).toBe(true);
+    expect(envelope.data.dry_run).toBe(true);
+    expect(envelope.data.initialized).toBe(true);
+    expect(envelope.data.would_initialize).toBe(true);
+    expect(envelope.data.force_preview).toBe(true);
+    expect(envelope.data.save).toBeNull();
+    expect(envelope.data.check).toBeNull();
+    await expect(readCanonicalSnapshot(repo)).resolves.toEqual(before);
+  });
+
+  it("skips viewer startup during setup dry-run", async () => {
+    const repo = await createBootstrapPatchGitProject("aictx-cli-setup-dry-run-view-");
+
+    const output = await runCli(["node", "aictx", "setup", "--dry-run", "--view", "--json"], repo, {
+      viewer: {
+        detacher: async () => {
+          throw new Error("detacher should not run during setup dry-run");
+        }
+      }
+    });
+
+    expect(output.exitCode).toBe(0);
+    const envelope = JSON.parse(output.stdout) as SetupSuccessEnvelope;
+    expect(envelope.ok).toBe(true);
+    expect(envelope.data.viewer_url).toBeNull();
+    expect(envelope.warnings).toContain(
+      "Viewer startup skipped because setup --dry-run does not write storage. Run `aictx setup --view` to start the viewer after applying setup."
+    );
   });
 
   it("starts a detached viewer from setup when requested", async () => {
@@ -726,6 +842,16 @@ async function createInitializedLocalProject(prefix: string): Promise<string> {
 }
 
 async function createBootstrapPatchGitProject(prefix: string): Promise<string> {
+  const repo = await createBootstrapPatchGitRepo(prefix);
+  const output = await runCli(["node", "aictx", "init", "--json"], repo);
+
+  expect(output.exitCode).toBe(0);
+  expect(output.stderr).toBe("");
+
+  return repo;
+}
+
+async function createBootstrapPatchGitRepo(prefix: string): Promise<string> {
   const repo = await createTempRoot(prefix);
   await git(repo, ["init", "--initial-branch=main"]);
   await git(repo, ["config", "user.email", "test@example.com"]);
@@ -756,11 +882,6 @@ async function createBootstrapPatchGitProject(prefix: string): Promise<string> {
   await writeProjectFile(repo, "test/index.test.ts", "import { it } from 'vitest';\n");
   await git(repo, ["add", "."]);
   await git(repo, ["commit", "-m", "Initial project files"]);
-
-  const output = await runCli(["node", "aictx", "init", "--json"], repo);
-
-  expect(output.exitCode).toBe(0);
-  expect(output.stderr).toBe("");
 
   return repo;
 }
@@ -1089,6 +1210,15 @@ async function readCanonicalSnapshot(projectRoot: string): Promise<Record<string
   );
 
   return Object.fromEntries(entries);
+}
+
+async function pathExists(path: string): Promise<boolean> {
+  try {
+    await lstat(path);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 async function git(cwd: string, args: readonly string[]): Promise<string> {

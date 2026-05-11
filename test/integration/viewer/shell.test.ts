@@ -192,6 +192,14 @@ describe("read-only viewer shell", () => {
       await expectText(page, '[data-testid="relation-graph-empty"]', "No direct relations for this object.");
       await expectCount(page, '[data-testid="relation-graph-svg"] [data-testid^="relation-graph-edge-"]', 0);
 
+      await page.locator('[data-testid="nav-lenses"]').click();
+      await page.locator('[data-testid="lens-view"]').waitFor();
+      await expectText(page, '[data-testid="role-coverage"]', "Agent Guidance");
+      await expectText(page, '[data-testid="lens-markdown"]', "Project Map");
+      await page.locator('[data-testid="lens-tab-provenance"]').click();
+      await expectText(page, '[data-testid="lens-markdown"]', "Provenance");
+      await expectText(page, '[aria-label="Lens context"]', "Agent Guidance Synthesis");
+
       await page.locator('[data-testid="nav-projects"]').click();
       await expectText(page, '[data-testid="projects-view"]', "Projects");
       await expectCount(page, '[data-testid="selected-object"]', 0);
@@ -237,8 +245,8 @@ describe("read-only viewer shell", () => {
       await page.locator('[data-testid="viewer-search"]').waitFor();
 
       await expectText(page, '[data-testid="starter-memory-notice"]', "Starter memory only.");
-      await expectText(page, '[data-testid="starter-memory-notice"]', "aictx suggest --bootstrap --patch > bootstrap-memory.json");
-      await expectText(page, '[data-testid="starter-memory-notice"]', "aictx save --file bootstrap-memory.json");
+      await expectText(page, '[data-testid="starter-memory-notice"]', "aictx setup");
+      await expectText(page, '[data-testid="starter-memory-notice"]', "aictx lens project-map");
       await expectCount(page, '[data-testid="selected-object"]', 0);
       await expectText(page, '[aria-label="Project memory counts"]', "Memories");
       await expectText(page, '[aria-label="Project memory counts"]', "2");

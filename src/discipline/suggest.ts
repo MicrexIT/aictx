@@ -93,6 +93,8 @@ export type BootstrapPatchChange =
       id: ObjectId;
       body?: string;
       tags?: string[];
+      facets?: ObjectFacets;
+      evidence?: Evidence[];
       source?: Source;
     }
   | {
@@ -1171,6 +1173,152 @@ function architectureSignals(analysis: BootstrapAnalysis): string[] {
   return signals;
 }
 
+interface RepositoryMapEntry {
+  label: string;
+  description: string;
+  paths: string[];
+}
+
+function repositoryMapEntries(analysis: BootstrapAnalysis): RepositoryMapEntry[] {
+  const files = analysis.files;
+  const entries: RepositoryMapEntry[] = [];
+
+  pushRepositoryEntry(entries, files, "Source", "Primary implementation code.", ["src/"]);
+  pushRepositoryEntry(entries, files, "Application routes", "Application routes or framework entrypoints.", [
+    "app/",
+    "pages/",
+    "routes/"
+  ]);
+  pushRepositoryEntry(entries, files, "Reusable library", "Reusable library code and shared modules.", [
+    "lib/"
+  ]);
+  pushRepositoryEntry(entries, files, "Tests", "Automated tests and test fixtures.", [
+    "test/",
+    "tests/",
+    "__tests__/"
+  ]);
+  pushRepositoryEntry(entries, files, "Documentation", "Human and agent-facing project documentation.", [
+    "docs/",
+    "specs/"
+  ]);
+  pushRepositoryEntry(entries, files, "Viewer", "Local viewer or user interface code.", ["viewer/"]);
+  pushRepositoryEntry(entries, files, "Integrations", "Agent, editor, or external integration templates.", [
+    "integrations/"
+  ]);
+  pushRepositoryEntry(entries, files, "Scripts", "Project automation and maintenance scripts.", [
+    "scripts/"
+  ]);
+
+  const manifestPaths = [...files].filter(isManifestOrConfig).sort();
+
+  if (manifestPaths.length > 0) {
+    entries.push({
+      label: "Manifests and config",
+      description: manifestPaths.slice(0, 8).map((path) => `\`${path}\``).join(", "),
+      paths: manifestPaths
+    });
+  }
+
+  return entries;
+}
+
+function pushRepositoryEntry(
+  entries: RepositoryMapEntry[],
+  files: Set<string>,
+  label: string,
+  description: string,
+  prefixes: readonly string[]
+): void {
+  const paths = [...files].filter((file) => prefixes.some((prefix) => file.startsWith(prefix))).sort();
+
+  if (paths.length === 0) {
+    return;
+  }
+
+  entries.push({
+    label,
+    description,
+    paths: paths.slice(0, 8)
+  });
+}
+
+function stackToolingSignals(analysis: BootstrapAnalysis): string[] {
+  const signals: string[] = [];
+  const files = analysis.files;
+  const packageJson = analysis.packageJson;
+
+  if (packageJson?.name !== null && packageJson?.name !== undefined) {
+    signals.push(`Package name: \`${packageJson.name}\`.`);
+  }
+
+  if (packageJson?.type === "module") {
+    signals.push("The package is configured as an ESM package with `type: module`.");
+  }
+
+  if (analysis.packageManager !== null) {
+    signals.push(
+      analysis.packageManager.spec === null
+        ? `Package manager is inferred as ${analysis.packageManager.manager} from \`${analysis.packageManager.source}\`.`
+        : `Package manager is declared as \`${analysis.packageManager.spec}\`.`
+    );
+  }
+
+  if (packageJson?.nodeEngine !== null && packageJson?.nodeEngine !== undefined) {
+    signals.push(`Node.js engine constraint: \`${packageJson.nodeEngine}\`.`);
+  }
+
+  if (hasTypeScriptSignal(files)) {
+    signals.push("TypeScript configuration is present.");
+  }
+
+  for (const framework of detectedFrameworkSignals(files, packageJson)) {
+    signals.push(framework);
+  }
+
+  if (hasVitestSignal(files, packageJson)) {
+    signals.push("Vitest is available for tests.");
+  }
+
+  const scripts = Object.keys(packageJson?.scripts ?? {})
+    .sort(comparePostTaskScriptNames)
+    .slice(0, 8);
+
+  if (scripts.length > 0) {
+    signals.push(`Useful package scripts include ${scripts.map((script) => `\`${script}\``).join(", ")}.`);
+  }
+
+  return uniqueSorted(signals);
+}
+
+function detectedFrameworkSignals(
+  files: Set<string>,
+  packageJson: PackageJsonInfo | null
+): string[] {
+  const dependencies = new Set([
+    ...(packageJson?.dependencies ?? []),
+    ...(packageJson?.devDependencies ?? [])
+  ]);
+  const signals: string[] = [];
+
+  if (hasConfig(files, "next") || dependencies.has("next")) {
+    signals.push("Next.js is present.");
+  }
+
+  if (hasConfig(files, "svelte") || dependencies.has("svelte")) {
+    signals.push("Svelte tooling is present.");
+  }
+
+  if (hasConfig(files, "vite") || dependencies.has("vite")) {
+    signals.push("Vite tooling is present.");
+  }
+
+  if (dependencies.has("commander")) {
+    signals.push("Commander is used for CLI command handling.");
+  }
+
+  return signals;
+}
+
 function projectArchitectureRelationChange(
   storage: CanonicalStorageSnapshot
 ): BootstrapPatchChange | null {
@@ -1288,6 +1436,15 @@ function synthesisRecordChanges(
         facets: synthesis.facets,
         evidence: synthesis.evidence
       });
+    } else if (shouldRepairBootstrapSynthesis(existing, synthesis)) {
+      changes.push({
+        op: "update_object",
+        id: existing.sidecar.id,
+        body: synthesis.body,
+        tags: mergeTags(existing.sidecar.tags, synthesis.tags),
+        facets: synthesis.facets,
+        evidence: synthesis.evidence
+      });
     }
 
     for (const sourceId of synthesis.sourceIds) {
@@ -1318,6 +1475,35 @@ function synthesisRecordChanges(
   return changes;
 }
 
+function shouldRepairBootstrapSynthesis(
+  existing: StoredMemoryObject,
+  synthesis: BootstrapSynthesis
+): boolean {
+  if (existing.body === synthesis.body) {
+    return false;
+  }
+
+  const prose = existing.body
+    .replace(/\r\n?/g, "\n")
+    .split("\n")
+    .filter((line) => !line.trim().startsWith("#"))
+    .join(" ")
+    .trim();
+
+  if (prose === "") {
+    return true;
+  }
+
+  const normalized = prose.toLowerCase();
+
+  return [
+    "memory starts here",
+    "project-level memory",
+    "not enough information",
+    "waiting for the right information"
+  ].some((placeholder) => normalized.includes(placeholder));
+}
+
 interface BootstrapSynthesis {
   id: ObjectId;
   title: string;
@@ -1335,6 +1521,9 @@ function bootstrapSyntheses(
   return [
     productIntentSynthesis(analysis, sourcesByPath),
     featureMapSynthesis(analysis, sourcesByPath),
+    repositoryMapSynthesis(analysis, sourcesByPath),
+    stackToolingSynthesis(analysis, sourcesByPath),
+    conventionsQualitySynthesis(analysis, sourcesByPath),
     agentGuidanceSynthesis(analysis, sourcesByPath)
   ].filter((synthesis): synthesis is BootstrapSynthesis => synthesis !== null);
 }
@@ -1403,6 +1592,130 @@ function featureMapSynthesis(
       load_modes: ["coding", "onboarding"]
     },
     evidence: sourceEvidence(sourceIds),
+    sourceIds
+  };
+}
+
+function repositoryMapSynthesis(
+  analysis: BootstrapAnalysis,
+  sourcesByPath: ReadonlyMap<string, ObjectId>
+): BootstrapSynthesis | null {
+  const entries = repositoryMapEntries(analysis);
+
+  if (entries.length === 0) {
+    return null;
+  }
+
+  const appliesTo = uniqueSorted(entries.flatMap((entry) => entry.paths));
+  const sourceIds = sourceIdsForPaths(sourcesByPath, ["README.md", "package.json"]);
+
+  return {
+    id: "synthesis.repository-map",
+    title: "Repository map",
+    body: [
+      "# Repository map",
+      "",
+      "Important repository areas inferred from durable files:",
+      ...entries.map((entry) => `- ${entry.label}: ${entry.description}`),
+      "",
+      "Update this synthesis when major directories, packages, generated assets, or entrypoints move.",
+      ""
+    ].join("\n"),
+    tags: ["synthesis", "repository-map"],
+    facets: {
+      category: "file-layout",
+      applies_to: appliesTo,
+      load_modes: ["coding", "architecture", "onboarding"]
+    },
+    evidence: [...sourceEvidence(sourceIds), ...appliesTo.slice(0, 12).map((path) => ({ kind: "file" as const, id: path }))],
+    sourceIds
+  };
+}
+
+function stackToolingSynthesis(
+  analysis: BootstrapAnalysis,
+  sourcesByPath: ReadonlyMap<string, ObjectId>
+): BootstrapSynthesis | null {
+  const signals = stackToolingSignals(analysis);
+
+  if (signals.length === 0) {
+    return null;
+  }
+
+  const sourcePaths = uniqueSorted([
+    "package.json",
+    ...(analysis.packageManager === null ? [] : [analysis.packageManager.source])
+  ]).filter((path) => analysis.files.has(path));
+  const sourceIds = sourceIdsForPaths(sourcesByPath, sourcePaths);
+  const appliesTo = uniqueSorted([
+    ...sourcePaths,
+    ...[...analysis.files].filter(isManifestOrConfig)
+  ]);
+
+  return {
+    id: "synthesis.stack-and-tooling",
+    title: "Stack and tooling",
+    body: [
+      "# Stack and tooling",
+      "",
+      "Tooling and runtime signals inferred from manifests and config:",
+      ...signals.map((signal) => `- ${signal}`),
+      "",
+      "Update this synthesis when the language stack, runtime constraints, package manager, or verification tooling changes.",
+      ""
+    ].join("\n"),
+    tags: ["synthesis", "stack", "tooling"],
+    facets: {
+      category: "stack",
+      applies_to: appliesTo,
+      load_modes: ["coding", "debugging", "review", "architecture", "onboarding"]
+    },
+    evidence: [...sourceEvidence(sourceIds), ...appliesTo.slice(0, 12).map((path) => ({ kind: "file" as const, id: path }))],
+    sourceIds
+  };
+}
+
+function conventionsQualitySynthesis(
+  analysis: BootstrapAnalysis,
+  sourcesByPath: ReadonlyMap<string, ObjectId>
+): BootstrapSynthesis | null {
+  const statements = uniqueSorted(
+    analysis.agentGuidance.flatMap((guidance) => guidance.conventionStatements)
+  ).slice(0, 8);
+  const commands = postTaskVerificationCommands(analysis).slice(0, 6);
+
+  if (statements.length === 0 && commands.length === 0) {
+    return null;
+  }
+
+  const paths = uniqueSorted([
+    ...analysis.agentGuidance.map((guidance) => guidance.path),
+    ...(analysis.packageJson === null ? [] : ["package.json"])
+  ]);
+  const sourceIds = sourceIdsForPaths(sourcesByPath, paths);
+
+  return {
+    id: "synthesis.conventions-quality",
+    title: "Conventions and quality bar",
+    body: [
+      "# Conventions and quality bar",
+      "",
+      ...(statements.length === 0
+        ? []
+        : ["Project-specific conventions:", ...statements.map((statement) => `- ${statement}`), ""]),
+      ...(commands.length === 0
+        ? []
+        : ["Verification expectations:", ...commands.map((command) => `- ${command.command}: ${command.description}`), ""]),
+      "Update this synthesis when explicit repo conventions, review expectations, or completion checks change.",
+      ""
+    ].join("\n"),
+    tags: ["synthesis", "convention", "quality"],
+    facets: {
+      category: "convention",
+      applies_to: paths,
+      load_modes: ["coding", "review", "onboarding"]
+    },
+    evidence: [...sourceEvidence(sourceIds), ...paths.map((path) => ({ kind: "file" as const, id: path }))],
     sourceIds
   };
 }

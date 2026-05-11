@@ -99,11 +99,11 @@ tools use the server launch directory for backward compatibility.
 
 When `aictx-mcp` is not on `PATH`, configure the MCP client to launch it through the project package manager or local binary path, such as `pnpm exec aictx-mcp`, `npm exec aictx-mcp`, or `./node_modules/.bin/aictx-mcp`. For one-off `npx` usage, name the scoped package explicitly: `npx --package @aictx/memory -- aictx-mcp`.
 
-Use `aictx setup` for guided first-run onboarding, or `aictx setup --apply` when the conservative bootstrap patch should be applied immediately. Use `aictx setup --apply --view` for the agent-led first-run path when the human wants an immediate viewer URL, then run `aictx load "onboard to this repository"` to verify the first task-focused memory pack. Use `aictx suggest --from-diff --json` when the agent needs a deterministic suggestion packet for current code changes before deciding what durable memory to save. Use `aictx suggest --bootstrap --json` for a first-run repo memory pass. If loaded memory only contains the init-created project and architecture placeholders, treat setup, onboarding, and "why is memory empty?" requests as enough context to run the bootstrap workflow proactively. Run `aictx suggest --bootstrap --patch > bootstrap-memory.json`, inspect it with `aictx patch review bootstrap-memory.json`, apply it with `aictx save --file bootstrap-memory.json`, then run `aictx check`. The bootstrap patch command does not write memory; it only creates an inspectable patch so users do not have to hand-write JSON. Use `aictx audit --json` to find grouped, actionable memory hygiene issues.
+Use `aictx setup` for guided first-run onboarding and conservative bootstrap memory creation. Use `aictx setup --view` for the agent-led first-run path when the human wants an immediate viewer URL, then run `aictx lens project-map` or `aictx load "onboard to this repository"` to verify the first task-focused memory pack. Use `aictx setup --dry-run` to preview role coverage and the bootstrap patch without initializing storage or writing repo files; `aictx setup --force --dry-run` previews reset/setup behavior without deleting anything. Use `aictx suggest --from-diff --json` when the agent needs a deterministic suggestion packet for current code changes before deciding what durable memory to save. Use `aictx audit --json` to find grouped, actionable memory hygiene issues, including role coverage gaps that do not make `aictx check` fail.
 
 ## Capability Map
 
-The v1 agent model is CLI-first and MCP-compatible. CLI handles routine memory work by default; MCP remains a supported integration path when the agent client has already launched and connected to `aictx-mcp`. The CLI remains the supported path for setup, maintenance, recovery, export, registry management, local viewing, suggestion, and audit operations; stale lists and graph neighborhoods also remain CLI-only.
+The v1 agent model is CLI-first and MCP-compatible. CLI handles routine memory work by default; MCP remains a supported integration path when the agent client has already launched and connected to `aictx-mcp`. The CLI remains the supported path for setup, lenses, branch handoff, maintenance, recovery, export, registry management, local viewing, suggestion, and audit operations; stale lists and graph neighborhoods also remain CLI-only.
 
 | Capability | MCP | CLI |
 | --- | --- | --- |
@@ -123,15 +123,17 @@ The v1 agent model is CLI-first and MCP-compatible. CLI handles routine memory w
 | Rewind memory | none | `aictx rewind` |
 | List stale memory | none | `aictx stale` |
 | Show graph neighborhood | none | `aictx graph` |
+| Show memory lens | none | `aictx lens` |
+| Manage branch handoff | none | `aictx handoff` |
 | Export Obsidian projection | none | `aictx export obsidian` |
 | Manage project registry | none | `aictx projects` |
 | View local memory | none | `aictx view` |
 | Suggest memory decision packet | none | `aictx suggest` |
 | Audit memory hygiene | none | `aictx audit` |
 
-CLI-only capabilities are not MCP parity gaps. Do not expose setup, maintenance, recovery, export, registry management, local viewing, suggestion, audit, stale-list, or graph-neighborhood commands as MCP tools solely to mirror the CLI command list.
+CLI-only capabilities are not MCP parity gaps. Do not expose setup, lenses, branch handoff, maintenance, recovery, export, registry management, local viewing, suggestion, audit, stale-list, or graph-neighborhood commands as MCP tools solely to mirror the CLI command list.
 
-Agents may use the CLI for supported setup, maintenance, recovery, export, registry management, local viewing, suggestion, audit, stale-list, and graph-neighborhood operations. They should use supported MCP or CLI entrypoints instead of editing `.aictx/` files directly when a supported command exists.
+Agents may use the CLI for supported setup, lenses, branch handoff, maintenance, recovery, export, registry management, local viewing, suggestion, audit, stale-list, and graph-neighborhood operations. They should use supported MCP or CLI entrypoints instead of editing `.aictx/` files directly when a supported command exists.
 
 MCP exposes exactly `load_memory`, `search_memory`, `inspect_memory`, `remember_memory`, `save_memory_patch`, and `diff_memory` in v1.
 

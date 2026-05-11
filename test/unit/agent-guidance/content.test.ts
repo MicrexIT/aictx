@@ -102,7 +102,7 @@ const forbiddenMcpToolNames = [
 ] as const;
 
 const cliOnlyCategoryBoundary =
-  /setup,\s+maintenance,\s+recovery,\s+export,\s+registry,\s+viewer,\s+docs,\s+suggest,\s+audit,\s+stale,\s+and graph/i;
+  /setup,\s+lenses,\s+(?:branch\s+)?handoff,\s+maintenance,\s+recovery,\s+export,\s+registry,\s+viewer,\s+docs,\s+suggest,\s+audit,\s+stale,\s+and graph/i;
 
 const objectTypes = [
   "`project`",
@@ -218,7 +218,7 @@ describe("agent guidance content", () => {
 
       expect(content).not.toMatch(/\bembeddings?\b/i);
       expect(content).toMatch(/Aictx does not infer durable project meaning from diffs/i);
-      expect(content).toMatch(/CLI-only capabilities are not\s+MCP parity gaps/i);
+      expect(content).toMatch(/CLI-only\s+capabilities are not\s+MCP parity gaps/i);
       expect(content).toMatch(/`aictx init` does not start MCP/i);
       expect(content).toMatch(/edit(?:ing)?\s+`\.aictx\/` (?:files directly|manually)/i);
       expect(content).toContain(nonBlockingDirtySaveGuidance);
@@ -258,7 +258,7 @@ describe("agent guidance content", () => {
       const content = await readProjectFile(path);
 
       expect(content).toContain(
-        "Setup, maintenance, recovery, export, registry, viewer, docs, suggest, audit,"
+        "Setup, lenses, branch handoff, maintenance, recovery, export, registry, viewer,"
       );
       expect(content).toMatch(cliOnlyCategoryBoundary);
       expect(content).toContain("`aictx init` does not start MCP");

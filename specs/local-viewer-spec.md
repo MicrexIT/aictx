@@ -40,8 +40,8 @@ Rules:
 * The only allowed write from the viewer is an explicit Obsidian export action that calls the same generated projection service as `aictx export obsidian`.
 * The viewer must run locally, bind only to loopback, and require no cloud account, hosted service, telemetry, embeddings, external model API, or network dependency.
 * The viewer may read the user-level project registry at `$AICTX_HOME/projects.json`, defaulting to `~/.aictx/projects.json`, to list initialized projects. The registry stores project roots and metadata only; canonical memory remains isolated per project.
-* `aictx view` is CLI-only in v1. CLI-only capabilities are intentionally not MCP parity gaps.
-* Do not add `aictx view` to MCP.
+* `aictx view`, `aictx lens`, and `aictx handoff` are CLI-only in v1. CLI-only capabilities are intentionally not MCP parity gaps.
+* Do not add `aictx view`, `aictx lens`, or `aictx handoff` to MCP.
 * Agents and integrations must use supported MCP or CLI entrypoints instead of editing `.aictx/` files directly when a supported entrypoint exists.
 * No Obsidian plugin is part of v1. Users who want Obsidian can use the existing generated export through the CLI or viewer export action.
 
@@ -143,6 +143,8 @@ Required features:
 * Show incoming and outgoing related memories before raw relation details.
 * Show provenance links in detail view, including source evidence and `derived_from`, `summarizes`, or `documents` relations.
 * Provide a direct-neighborhood map only: selected object plus direct incoming/outgoing neighbor objects and relations.
+* Provide lens tabs/cards using the shared lens service: Project Map, Current Work, Review/Risk, Provenance, and Maintenance.
+* Show role coverage and generated gaps as read-only context; missing project-truth roles are not validation failures and do not create placeholder files. Missing optional branch handoff does not display a source-backed gap.
 * Let users trigger the Obsidian projection export and see success/failure output.
 * Let users return from a selected project to the Projects dashboard.
 
@@ -191,6 +193,7 @@ Required test coverage:
 * API requests without the per-run token fail.
 * `GET /api/bootstrap` reads canonical storage and does not mutate canonical files.
 * Init-created starter project and architecture placeholders render with a first-run bootstrap notice.
+* Lens tabs render role coverage, generated gaps, included memory, and relation context. Closed or stale handoffs appear only as historical memory, not current active handoff context.
 * Client-side search/filter returns expected visible objects.
 * Markdown rendering does not execute raw HTML.
 * Selected-node graph contains only the selected object, direct neighbors, and direct relations.

@@ -3,6 +3,7 @@ import { CommanderError, type Command } from "commander";
 import {
   auditMemory,
   type AuditFinding,
+  type RoleCoverageGapData,
   type AuditMemoryData,
   type AuditMemoryOptions
 } from "../../app/operations.js";
@@ -54,11 +55,22 @@ function isJsonMode(command: Command): boolean {
 }
 
 function renderAuditData(data: AuditMemoryData): string {
-  if (data.findings.length === 0) {
+  if (data.findings.length === 0 && data.role_gaps.length === 0) {
     return "No Aictx audit findings.";
   }
 
-  return ["Aictx audit findings:", ...data.findings.map(renderFinding)].join("\n");
+  return [
+    ...(data.findings.length === 0
+      ? []
+      : ["Aictx audit findings:", ...data.findings.map(renderFinding)]),
+    ...(data.role_gaps.length === 0
+      ? []
+      : [
+          ...(data.findings.length === 0 ? [] : [""]),
+          "Role coverage gaps:",
+          ...data.role_gaps.map(renderRoleGap)
+        ])
+  ].join("\n");
 }
 
 function renderFinding(finding: AuditFinding): string {
@@ -76,6 +88,10 @@ function renderEvidence(finding: AuditFinding): string {
   return finding.evidence
     .map((evidence) => `${evidence.kind}:${evidence.id}`)
     .join(", ");
+}
+
+function renderRoleGap(gap: RoleCoverageGapData): string {
+  return `- [${gap.status}] ${gap.label}: ${gap.gap}`;
 }
 
 function throwCommandFailed(exitCode: CliExitCode): never {

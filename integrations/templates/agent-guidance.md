@@ -88,10 +88,25 @@ patch-shaped writes.
 When one global MCP server serves multiple projects, include `project_root` on
 routine tool calls so reads and writes target the intended `.aictx/` directory.
 
-Setup, maintenance, recovery, export, registry, viewer, docs, suggest, audit,
-stale, and graph workflows are CLI-only in v1. CLI-only capabilities are not
-MCP parity gaps. `aictx init` does not start MCP; MCP clients must launch
-`aictx-mcp`.
+Setup, lenses, branch handoff, maintenance, recovery, export, registry, viewer,
+docs, suggest, audit, stale, and graph workflows are CLI-only in v1. CLI-only
+capabilities are not MCP parity gaps. `aictx init` does not start MCP; MCP
+clients must launch `aictx-mcp`.
+
+Use `aictx setup` as the normal onboarding command. `aictx init` is the
+lower-level empty-storage initializer for automation, tests, or manual
+workflows. `aictx setup --dry-run` previews the conservative bootstrap patch
+without initializing storage or writing repo files. `aictx setup --force
+--dry-run` previews reset/setup behavior without deleting anything. `aictx
+audit` includes role coverage gaps, but missing roles are not `aictx check`
+failures.
+
+Use `aictx lens project-map` for a readable project overview and
+`aictx lens current-work` to inspect current branch continuity. Use
+`aictx handoff update --stdin` when unfinished branch work needs a scoped
+handoff; close it with `aictx handoff close --stdin` when durable memory has
+been promoted or the work is complete. `aictx handoff show` returns only an
+active current-branch handoff; closed handoffs remain historical memory.
 
 ## What To Save
 

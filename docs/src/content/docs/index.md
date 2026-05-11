@@ -47,11 +47,12 @@ export".
 
 ## How it works
 
-1. Initialize Aictx inside an existing project with `aictx init`.
-2. Load task-focused context with `aictx load "<task summary>"`.
-3. Save durable knowledge with `aictx remember --stdin` or `remember_memory`
+1. Set up Aictx inside an existing project with `aictx setup`.
+2. Use `aictx lens project-map` for a readable overview.
+3. Load task-focused context with `aictx load "<task summary>"`.
+4. Save durable knowledge with `aictx remember --stdin` or `remember_memory`
    when MCP is already configured.
-4. Inspect the result later in the local viewer with `aictx view`.
+5. Inspect the result later in the local viewer with `aictx view`.
 
 Saved memory is active immediately after Aictx validates and writes it. Aictx
 never commits for you. As a human, mainly look directly at the viewer.
@@ -71,18 +72,18 @@ Set up fresh Aictx memory for this repository.
 First install the current Aictx package globally:
 npm install -g @aictx/memory@0.1.30
 
-Then initialize local Aictx storage and agent guidance:
-aictx init
-
-Run first-run onboarding, apply the conservative bootstrap memory patch, and
-start the local viewer for inspection:
-aictx setup --apply --view
+Then run first-run onboarding, apply the conservative bootstrap memory patch,
+and start the local viewer for inspection:
+aictx setup --view
 
 Validate memory:
 aictx check
 
 Load the first task-focused memory pack:
 aictx load "onboard to this repository"
+
+Inspect the readable project map:
+aictx lens project-map
 
 When this is done, tell the human to inspect the accepted memory with:
 aictx view
@@ -114,10 +115,10 @@ The CLI is the default interface for routine memory work. MCP is available when
 the agent client has launched and connected to `aictx-mcp`.
 
 MCP exposes exactly `load_memory`, `search_memory`, `inspect_memory`,
-`remember_memory`, `save_memory_patch`, and `diff_memory`. Setup, maintenance, recovery, export,
-registry, viewer, docs, suggest, audit, stale, and graph workflows are CLI-only
-in v1. These CLI-only commands are part of the v1 integration model rather than
-MCP parity gaps.
+`remember_memory`, `save_memory_patch`, and `diff_memory`. Setup, lenses,
+handoff, maintenance, recovery, export, registry, viewer, docs, suggest, audit,
+stale, and graph workflows are CLI-only in v1. These CLI-only commands are part
+of the v1 integration model rather than MCP parity gaps.
 
 Local MCP is the near-term integration path for local agent harnesses. Remote
 MCP, hosted sync, cloud auth, cloud hosting, and ChatGPT App SDK UI are future

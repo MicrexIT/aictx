@@ -127,7 +127,7 @@ Acceptance:
 
 * README, public docs, agent recipes, and generated guidance list the local MCP tools.
 * Guidance says CLI is default and MCP is available when the client already exposes Aictx tools.
-* Docs keep setup, maintenance, recovery, export, registry, viewer, docs, suggest, audit, stale, and graph outside local MCP.
+* Docs keep setup, lenses, handoff, maintenance, recovery, export, registry, viewer, docs, suggest, audit, stale, and graph outside local MCP.
 * Release/package checks validate updated guidance.
 
 ### T007: Specify and Implement the Host-Neutral Data-Access Service Contract

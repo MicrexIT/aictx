@@ -14,8 +14,10 @@ import {
 } from "./commands/docs.js";
 import { registerExportCommand } from "./commands/export.js";
 import { registerGraphCommand } from "./commands/graph.js";
+import { registerHandoffCommand } from "./commands/handoff.js";
 import { registerHistoryCommand } from "./commands/history.js";
 import { registerInitCommand } from "./commands/init.js";
+import { registerLensCommand } from "./commands/lens.js";
 import { registerInspectCommand } from "./commands/inspect.js";
 import { registerLoadCommand } from "./commands/load.js";
 import { registerPatchCommand } from "./commands/patch.js";
@@ -115,6 +117,17 @@ export function createCliProgram(options: CliMainOptions = {}): Command {
   });
   registerInspectCommand(program, {
     cwd: options.cwd ?? process.cwd(),
+    stdout: writeOut,
+    stderr: writeErr
+  });
+  registerLensCommand(program, {
+    cwd: options.cwd ?? process.cwd(),
+    stdout: writeOut,
+    stderr: writeErr
+  });
+  registerHandoffCommand(program, {
+    cwd: options.cwd ?? process.cwd(),
+    stdin: options.stdin ?? process.stdin,
     stdout: writeOut,
     stderr: writeErr
   });
@@ -332,6 +345,10 @@ const AUTO_REGISTER_COMMANDS = new Set([
   "load",
   "search",
   "inspect",
+  "lens",
+  "handoff show",
+  "handoff update",
+  "handoff close",
   "stale",
   "suggest",
   "setup",

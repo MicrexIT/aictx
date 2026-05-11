@@ -80,6 +80,7 @@ Required in v1:
 * Basic secret detection before saving memory
 * Mode-aware context loading for coding, debugging, review, architecture, and onboarding work
 * CLI-only deterministic memory suggestion and audit packets for agent-assisted memory maintenance
+* Soft memory roles, readable lenses, and branch-scoped handoff for clearer human/agent comprehension
 * Demand-driven memory quality guidance that treats agent failure, confusion, conflicts, and user correction as signals to repair durable memory
 * One-way generated Obsidian projection export for viewing memory in Obsidian
 * Local read-only web viewer for human memory inspection
@@ -87,7 +88,7 @@ Required in v1:
 Agent capability split:
 
 * MCP + CLI capabilities: load, search, inspect object, remember memory, save patch, diff.
-* CLI-only capabilities in v1: init, setup, patch review, check, rebuild, reset, upgrade, history, restore, rewind, stale, graph, export obsidian, projects, view, docs, suggest, audit.
+* CLI-only capabilities in v1: init, setup, lens, handoff, patch review, check, rebuild, reset, upgrade, history, restore, rewind, stale, graph, export obsidian, projects, view, docs, suggest, audit.
 * CLI-only capabilities are intentionally not MCP parity gaps and should not be added to MCP solely for command-list parity.
 * Agents should use supported MCP or CLI entrypoints instead of editing `.aictx/` files directly when a supported command exists.
 
@@ -339,8 +340,10 @@ Commands:
 ```bash
 aictx init
 aictx setup
-aictx setup --apply
-aictx setup --apply --view
+aictx setup --dry-run
+aictx setup --view
+aictx lens project-map
+aictx handoff show
 ```
 
 Expected behavior:
@@ -353,9 +356,12 @@ Expected behavior:
 * Creates config file.
 * Builds initial SQLite index.
 * Prints concise next steps for CLI and MCP usage.
-* `aictx setup` orchestrates init, bootstrap suggestion, check, diff summary, and optional bootstrap save.
-* `aictx setup --apply` applies the conservative bootstrap patch without requiring users to shuttle a temporary JSON file by hand.
-* `aictx setup --apply --view` also starts the local read-only viewer for immediate inspection.
+* `aictx setup` orchestrates init, conservative evidence-backed bootstrap memory, role coverage, check, and diff summary.
+* `aictx setup` applies the conservative bootstrap patch by default; `--dry-run` previews without initializing storage or writing repo files and `--apply` remains accepted for compatibility.
+* `aictx setup --force --dry-run` previews reset/setup behavior without deleting or rewriting anything.
+* `aictx setup --view` also starts the local read-only viewer for immediate inspection.
+* `aictx lens` renders readable project views from role coverage and relation context.
+* `aictx handoff` stores unfinished branch continuity as branch-scoped memory that is excluded from project-truth lenses. `handoff show` returns only an active current-branch handoff; stale or closed handoffs remain historical memory for inspect, view, and Git history.
 
 Expected generated structure:
 
@@ -518,7 +524,7 @@ Purpose:
 * Report deterministic memory hygiene findings.
 * Help agents and users clean memory without requiring a hosted service or model call.
 
-Audit findings should include `severity`, `rule`, `memory_id`, `message`, and `evidence`. V1 audit should focus on local deterministic checks such as vague memory, duplicate-like titles or tags, stale/superseded cleanup, missing referenced files, missing tags, missing evidence where evidence is expected, and obvious manifest/version contradictions.
+Audit findings should include `severity`, `rule`, `memory_id`, `message`, and `evidence`. V1 audit should focus on local deterministic checks such as vague memory, duplicate-like titles or tags, stale/superseded cleanup, missing referenced files, missing tags, missing evidence where evidence is expected, and obvious manifest/version contradictions. Audit should also include role coverage and non-null generated role gaps; missing roles are warnings/gaps only and must not make `aictx check` fail.
 
 Audit must not mutate canonical memory. The agent may turn audit findings into a structured patch through `save_memory_patch` or `aictx save`.
 
@@ -651,7 +657,7 @@ Design principle:
 * All memory writes should go through structured patch submission.
 * MCP should make Aictx easy to insert into existing coding-agent flows without becoming a spaghetti API.
 * MCP exposes load, search, inspect, save, and diff; the CLI also exposes those routine capabilities.
-* Setup, maintenance, recovery, export, registry management, local viewing, suggestion, and audit capabilities remain CLI-only in v1: init, check, rebuild, reset, history, restore, rewind, stale, graph, export obsidian, projects, view, suggest, and audit.
+* Setup, lenses, handoff, maintenance, recovery, export, registry management, local viewing, suggestion, and audit capabilities remain CLI-only in v1: init, setup, lens, handoff, check, rebuild, reset, history, restore, rewind, stale, graph, export obsidian, projects, view, suggest, and audit.
 * CLI-first must not mean MCP-unavailable: AI agents may use MCP equivalents when the client has already launched and connected to `aictx-mcp`.
 * Every supported Aictx capability should remain reachable to an AI agent through MCP or CLI without requiring direct `.aictx/` file edits.
 * CLI-only capabilities should not be added to MCP just to create command-list parity.

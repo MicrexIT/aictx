@@ -37,12 +37,9 @@ Set up fresh Aictx memory for this repository.
 First install the current Aictx package globally:
 npm install -g @aictx/memory
 
-Initialize local Aictx storage and repo-level agent guidance:
-aictx init
-
 Run first-run onboarding, apply the conservative bootstrap memory patch, and
 start the local viewer for inspection:
-aictx setup --apply --view
+aictx setup --view
 
 Validate memory:
 aictx check
@@ -177,8 +174,8 @@ remember_memory({ task, memories, updates, stale, supersede, relations })
 diff_memory({})
 ```
 
-Setup, maintenance, recovery, export, registry, viewer, docs, suggest, audit,
-stale, and graph workflows remain CLI-only in v1.
+Setup, lenses, handoff, maintenance, recovery, export, registry, viewer, docs,
+suggest, audit, stale, and graph workflows remain CLI-only in v1.
 
 ## CLI and MCP boundary
 
@@ -186,9 +183,9 @@ MCP exposes exactly `load_memory`, `search_memory`, `inspect_memory`,
 `remember_memory`, `save_memory_patch`, and `diff_memory` when the client
 already exposes Aictx MCP tools.
 
-Setup, maintenance, recovery, export, registry, viewer, docs, suggest, audit,
-stale, and graph workflows are CLI-only in v1. These CLI-only commands are part
-of the v1 integration model rather than MCP parity gaps.
+Setup, lenses, handoff, maintenance, recovery, export, registry, viewer, docs,
+suggest, audit, stale, and graph workflows are CLI-only in v1. These CLI-only
+commands are part of the v1 integration model rather than MCP parity gaps.
 
 Local MCP is the near-term integration path for local agent harnesses. Remote
 MCP, hosted sync, cloud auth, cloud hosting, and ChatGPT App SDK UI are future

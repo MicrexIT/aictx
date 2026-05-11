@@ -19,6 +19,13 @@
     | "concept";
   type RelationStatus = "active" | "stale" | "rejected";
   type RelationConfidence = "low" | "medium" | "high";
+  type RoleCoverageStatus = "populated" | "thin" | "missing" | "stale" | "conflicted";
+  type MemoryLensName =
+    | "project-map"
+    | "current-work"
+    | "review-risk"
+    | "provenance"
+    | "maintenance";
   type Predicate =
     | "affects"
     | "requires"
@@ -88,6 +95,33 @@
     json_path: string;
   }
 
+  interface RoleCoverageItem {
+    key: string;
+    label: string;
+    description: string;
+    status: RoleCoverageStatus;
+    optional: boolean;
+    memory_ids: string[];
+    relation_ids: string[];
+    gap: string | null;
+  }
+
+  interface RoleCoverageData {
+    roles: RoleCoverageItem[];
+    counts: Record<RoleCoverageStatus, number>;
+  }
+
+  interface MemoryLensData {
+    name: MemoryLensName;
+    title: string;
+    markdown: string;
+    role_coverage: RoleCoverageData;
+    included_memory_ids: string[];
+    relation_ids: string[];
+    relations: MemoryRelationSummary[];
+    generated_gaps: string[];
+  }
+
   interface ViewerBootstrapData {
     project: {
       id: string;
@@ -104,6 +138,8 @@
       synthesis_objects: number;
       active_relations: number;
     };
+    role_coverage: RoleCoverageData;
+    lenses: MemoryLensData[];
     storage_warnings: string[];
   }
 
@@ -179,7 +215,7 @@
   type ViewerProjectsEnvelope = ViewerSuccessEnvelope<ViewerProjectsData> | ViewerErrorEnvelope;
   type ExportEnvelope = ViewerSuccessEnvelope<ExportObsidianProjectionData> | ViewerErrorEnvelope;
   type ViewerState = "loading" | "ready" | "error";
-  type ViewerScreen = "projects" | "memories" | "detail" | "export";
+  type ViewerScreen = "projects" | "memories" | "detail" | "lenses" | "export";
   type ExportState = "idle" | "running" | "success" | "error";
   type LayerFilter = "all" | "memories" | "syntheses" | "sources" | "inactive";
 
@@ -223,6 +259,7 @@
   let statusFilter = $state("all");
   let tagFilter = $state("all");
   let selectedObjectId = $state<string | null>(null);
+  let selectedLensName = $state<MemoryLensName>("project-map");
   let exportOutDir = $state("");
   let exportState = $state<ExportState>("idle");
   let exportMessage = $state("");
@@ -249,6 +286,13 @@
   );
   const objects = $derived(bootstrap?.objects ?? []);
   const relations = $derived(bootstrap?.relations ?? []);
+  const lenses = $derived(bootstrap?.lenses ?? []);
+  const selectedLens = $derived.by(() =>
+    lenses.find((lens) => lens.name === selectedLensName) ?? lenses[0] ?? null
+  );
+  const selectedLensBlocks = $derived(
+    selectedLens === null ? [] : parseMarkdownBlocks(selectedLens.markdown)
+  );
   const objectById = $derived(new Map(objects.map((object) => [object.id, object])));
   const typeOptions = $derived(uniqueSorted(objects.map((object) => object.type)));
   const statusOptions = $derived(uniqueSorted(objects.map((object) => object.status)));
@@ -541,6 +585,7 @@
     typeFilter = allOption;
     statusFilter = allOption;
     tagFilter = allOption;
+    selectedLensName = "project-map";
     exportState = "idle";
     exportMessage = "";
     currentScreen = "memories";
@@ -563,6 +608,15 @@
     }
 
     currentScreen = "memories";
+  }
+
+  function showLenses(): void {
+    if (selectedProjectId === null) {
+      currentScreen = "projects";
+      return;
+    }
+
+    currentScreen = "lenses";
   }
 
   function showExport(): void {
@@ -985,6 +1039,16 @@
         </button>
         <button
           type="button"
+          class:active={currentScreen === "lenses"}
+          aria-current={currentScreen === "lenses" ? "page" : undefined}
+          disabled={selectedProjectId === null}
+          onclick={showLenses}
+          data-testid="nav-lenses"
+        >
+          Lenses
+        </button>
+        <button
+          type="button"
           class:active={currentScreen === "export"}
           aria-current={currentScreen === "export" ? "page" : undefined}
           disabled={selectedProjectId === null}
@@ -1107,6 +1171,142 @@
           <p class="eyebrow">Aictx local viewer</p>
           <h2>Loading Project</h2>
           <p>{selectedProject?.project.name ?? "Selected project"}</p>
+        </section>
+      {:else if currentScreen === "lenses"}
+        <section class="lens-page" aria-labelledby="lens-title" data-testid="lens-view">
+          <header class="page-header">
+            <div>
+              <p class="eyebrow">Readable project views</p>
+              <h2 id="lens-title">Lenses</h2>
+            </div>
+            <p>{bootstrap.role_coverage.counts.populated} populated / {bootstrap.role_coverage.roles.length} roles</p>
+          </header>
+
+          <div class="layer-tabs lens-tabs" role="group" aria-label="Memory lenses">
+            {#each lenses as lens (lens.name)}
+              <button
+                type="button"
+                class:active={selectedLens?.name === lens.name}
+                onclick={() => {
+                  selectedLensName = lens.name;
+                }}
+                data-testid={`lens-tab-${lens.name}`}
+              >
+                {lens.title}
+              </button>
+            {/each}
+          </div>
+
+          <section class="role-coverage-grid" aria-label="Role coverage" data-testid="role-coverage">
+            {#each bootstrap.role_coverage.roles as role (role.key)}
+              <article class:coverage-gap={role.status !== "populated"} class="coverage-card">
+                <div>
+                  <h3>{role.label}</h3>
+                  <p>{role.description}</p>
+                </div>
+                <span class={`coverage-status status-${role.status}`}>{role.status}</span>
+              </article>
+            {/each}
+          </section>
+
+          {#if selectedLens !== null}
+            <section class="lens-layout">
+              <article class="lens-markdown markdown-view" aria-label={`${selectedLens.title} lens`} data-testid="lens-markdown">
+                {#each selectedLensBlocks as block, index (`lens-${block.kind}-${index}`)}
+                  {#if block.kind === "heading"}
+                    {#if block.level === 1}
+                      <h3>{block.text}</h3>
+                    {:else if block.level === 2}
+                      <h4>{block.text}</h4>
+                    {:else}
+                      <h5>{block.text}</h5>
+                    {/if}
+                  {:else if block.kind === "list"}
+                    <ul>
+                      {#each block.items ?? [] as item, itemIndex (itemIndex)}
+                        <li>{item}</li>
+                      {/each}
+                    </ul>
+                  {:else if block.kind === "quote"}
+                    <blockquote>{block.text}</blockquote>
+                  {:else if block.kind === "code"}
+                    <pre><code>{block.text}</code></pre>
+                  {:else}
+                    <p>{block.text}</p>
+                  {/if}
+                {/each}
+              </article>
+
+              <aside class="lens-side-panel" aria-label="Lens context">
+                <section>
+                  <h3>Included Memory</h3>
+                  {#if selectedLens.included_memory_ids.length === 0}
+                    <p class="empty-copy">No memories included in this lens yet.</p>
+                  {:else}
+                    <ul class="evidence-list">
+                      {#each selectedLens.included_memory_ids as id (id)}
+                        {@const object = objectById.get(id)}
+                        <li>
+                          <span class="pill">{object?.type ?? "missing"}</span>
+                          <button
+                            type="button"
+                            disabled={object === undefined}
+                            onclick={() => openRelatedObject(id)}
+                          >
+                            {object?.title ?? id}
+                          </button>
+                        </li>
+                      {/each}
+                    </ul>
+                  {/if}
+                </section>
+
+                <section>
+                  <h3>Gaps</h3>
+                  {#if selectedLens.generated_gaps.length === 0}
+                    <p class="empty-copy">No generated gaps for this lens.</p>
+                  {:else}
+                    <ul class="lens-gap-list">
+                      {#each selectedLens.generated_gaps as gap (gap)}
+                        <li>{gap}</li>
+                      {/each}
+                    </ul>
+                  {/if}
+                </section>
+
+                <section>
+                  <h3>Relations</h3>
+                  {#if selectedLens.relations.length === 0}
+                    <p class="empty-copy">No relation context for this lens yet.</p>
+                  {:else}
+                    <ul class="lens-relation-list">
+                      {#each selectedLens.relations as relation (relation.id)}
+                        {@const fromObject = objectById.get(relation.from)}
+                        {@const toObject = objectById.get(relation.to)}
+                        <li>
+                          <span>{relation.predicate}</span>
+                          <button
+                            type="button"
+                            disabled={fromObject === undefined}
+                            onclick={() => openRelatedObject(relation.from)}
+                          >
+                            {fromObject?.title ?? relation.from}
+                          </button>
+                          <button
+                            type="button"
+                            disabled={toObject === undefined}
+                            onclick={() => openRelatedObject(relation.to)}
+                          >
+                            {toObject?.title ?? relation.to}
+                          </button>
+                        </li>
+                      {/each}
+                    </ul>
+                  {/if}
+                </section>
+              </aside>
+            </section>
+          {/if}
         </section>
       {:else if currentScreen === "export"}
         <section class="export-page" aria-labelledby="export-title" data-testid="export-view">
@@ -1559,10 +1759,10 @@
             >
               <p>
                 <strong>Starter memory only.</strong>
-                Seed useful repo memory with a bootstrap patch, then reopen or refresh the viewer.
+                Seed useful repo memory with setup, then reopen or refresh the viewer.
               </p>
-              <code>aictx suggest --bootstrap --patch &gt; bootstrap-memory.json</code>
-              <code>aictx save --file bootstrap-memory.json</code>
+              <code>aictx setup</code>
+              <code>aictx lens project-map</code>
             </section>
           {/if}
 
@@ -1802,6 +2002,7 @@
   .memory-list-page,
   .detail-page,
   .export-page,
+  .lens-page,
   .projects-page {
     width: min(100%, 1080px);
     margin: 0 auto;
@@ -1982,6 +2183,145 @@
     border-color: #8fb5ad;
     color: #123532;
     background: #eef7f4;
+  }
+
+  .lens-tabs {
+    margin-bottom: 16px;
+  }
+
+  .role-coverage-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .coverage-card {
+    display: grid;
+    gap: 10px;
+    min-width: 0;
+    border: 1px solid #d9ded7;
+    border-radius: 8px;
+    padding: 12px;
+    background: #ffffff;
+  }
+
+  .coverage-card.coverage-gap {
+    border-color: #e2d2a6;
+    background: #fffaf0;
+  }
+
+  .coverage-card h3 {
+    margin: 0 0 4px;
+    font-size: 0.95rem;
+  }
+
+  .coverage-card p {
+    margin: 0;
+    color: #667085;
+    font-size: 0.8rem;
+    line-height: 1.4;
+  }
+
+  .coverage-status {
+    width: fit-content;
+    border: 1px solid #cfd4d3;
+    border-radius: 999px;
+    padding: 3px 8px;
+    color: #344054;
+    background: #f8fbfa;
+    font-size: 0.72rem;
+    font-weight: 900;
+  }
+
+  .status-populated {
+    border-color: #a7c9bd;
+    color: #1f5136;
+    background: #eff8f2;
+  }
+
+  .status-thin,
+  .status-missing,
+  .status-stale,
+  .status-conflicted {
+    border-color: #d8be78;
+    color: #6f4c00;
+    background: #fff7df;
+  }
+
+  .lens-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(260px, 340px);
+    gap: 16px;
+    align-items: start;
+  }
+
+  .lens-markdown,
+  .lens-side-panel {
+    border: 1px solid #d9ded7;
+    border-radius: 8px;
+    background: #ffffff;
+  }
+
+  .lens-markdown {
+    width: 100%;
+    padding: 16px;
+  }
+
+  .lens-side-panel {
+    display: grid;
+    gap: 16px;
+    padding: 16px;
+  }
+
+  .lens-side-panel section {
+    display: grid;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  .lens-side-panel h3 {
+    margin: 0;
+    font-size: 1rem;
+  }
+
+  .lens-gap-list,
+  .lens-relation-list {
+    display: grid;
+    gap: 10px;
+    margin: 0;
+    padding-left: 18px;
+    color: #263141;
+    font-size: 0.86rem;
+    line-height: 1.45;
+  }
+
+  .lens-relation-list li {
+    display: grid;
+    gap: 4px;
+  }
+
+  .lens-relation-list span {
+    color: #28514b;
+    font-weight: 900;
+  }
+
+  .lens-relation-list button {
+    width: fit-content;
+    max-width: 100%;
+    border: 0;
+    padding: 0;
+    background: transparent;
+    overflow-wrap: anywhere;
+    color: #52615d;
+    font: inherit;
+    font-weight: 800;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .lens-relation-list button:disabled {
+    cursor: default;
   }
 
   .field {
@@ -2561,7 +2901,7 @@
     }
 
     .nav-list {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-columns: repeat(4, minmax(0, 1fr));
     }
 
     .project-stats {
@@ -2601,6 +2941,7 @@
     }
 
     .filter-grid,
+    .lens-layout,
     .provenance-grid,
     .relation-columns,
     .project-card-stats,

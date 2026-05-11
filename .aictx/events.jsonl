@@ -33,3 +33,14 @@
 {"actor":"agent","event":"memory.created","id":"gotcha.lockless-packed-package-installs-should-not-require-pnpm-offline-mode","timestamp":"2026-05-08T00:13:13+02:00"}
 {"actor":"agent","event":"memory.created","id":"fact.main-branch-ruleset-configuration","timestamp":"2026-05-08T09:58:10+02:00"}
 {"actor":"agent","event":"memory.created","id":"workflow.contributor-branch-and-pr-workflow","timestamp":"2026-05-08T10:00:14+02:00"}
+{"actor":"agent","event":"memory.created","id":"source.cline-memory-bank-docs-2026-05-11","timestamp":"2026-05-11T10:33:20+02:00"}
+{"actor":"agent","event":"memory.created","id":"synthesis.cline-memory-bank-comparison","timestamp":"2026-05-11T10:33:20+02:00"}
+{"actor":"agent","event":"relation.created","relation_id":"rel.synthesis-cline-memory-bank-comparison-derived-from-source-cline-memory-bank-docs-2026-05-11","timestamp":"2026-05-11T10:33:20+02:00"}
+{"actor":"agent","event":"relation.created","relation_id":"rel.synthesis-cline-memory-bank-comparison-related-to-synthesis-alpha-growth-direction","timestamp":"2026-05-11T10:33:20+02:00"}
+{"actor":"agent","event":"memory.created","id":"synthesis.memory-lenses-and-branch-handoff-strategy","timestamp":"2026-05-11T10:42:14+02:00"}
+{"actor":"agent","event":"relation.created","relation_id":"rel.synthesis-memory-lenses-and-branch-handoff-strategy-related-to-synthesis-cline-memory-bank-comparison","timestamp":"2026-05-11T10:42:14+02:00"}
+{"actor":"agent","event":"relation.created","relation_id":"rel.synthesis-memory-lenses-and-branch-handoff-strategy-related-to-synthesis-alpha-growth-direction","timestamp":"2026-05-11T10:42:14+02:00"}
+{"actor":"agent","event":"memory.updated","id":"synthesis.cline-memory-bank-comparison","timestamp":"2026-05-11T10:42:14+02:00"}
+{"actor":"agent","event":"memory.updated","id":"synthesis.memory-lenses-and-branch-handoff-strategy","timestamp":"2026-05-11T12:10:48+02:00"}
+{"actor":"agent","event":"memory.updated","id":"synthesis.memory-lenses-and-branch-handoff-strategy","timestamp":"2026-05-11T12:19:15+02:00"}
+{"actor":"agent","event":"memory.updated","id":"synthesis.memory-lenses-and-branch-handoff-strategy","timestamp":"2026-05-11T13:14:30+02:00"}

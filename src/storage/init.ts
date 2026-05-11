@@ -28,6 +28,7 @@ import {
 import { SCHEMA_FILES } from "../validation/schemas.js";
 import { computeObjectContentHash, computeRelationContentHash } from "./hashes.js";
 import type { AictxConfig, MemoryObjectSidecar } from "./objects.js";
+import type { CanonicalStorageSnapshot } from "./read.js";
 import type { MemoryRelation } from "./relations.js";
 
 const GENERATED_GITIGNORE_ENTRIES = [
@@ -123,6 +124,34 @@ interface InitialMemoryObject {
 interface InitialMemoryRelation {
   path: string;
   relation: MemoryRelation;
+}
+
+export function buildInitialStoragePreview(options: {
+  paths: ProjectPaths;
+  clock?: Clock;
+}): CanonicalStorageSnapshot {
+  const clock = options.clock ?? systemClock;
+  const projectSlug = slugify(basename(options.paths.projectRoot), { fallback: "project" });
+  const projectName = humanizeSlug(projectSlug);
+  const projectId = `project.${projectSlug}`;
+  const timestamp = clock.nowIso();
+
+  return {
+    projectRoot: options.paths.projectRoot,
+    aictxRoot: options.paths.aictxRoot,
+    config: buildInitialConfig(projectId, projectName),
+    objects: buildInitialObjects({ projectId, projectName, timestamp }).map((object) => ({
+      path: `.aictx/${object.sidecarPath}`,
+      bodyPath: `.aictx/${object.bodyPath}`,
+      sidecar: object.sidecar,
+      body: object.body
+    })),
+    relations: buildInitialRelations({ projectId, timestamp }).map((relation) => ({
+      path: `.aictx/${relation.path}`,
+      relation: relation.relation
+    })),
+    events: []
+  };
 }
 
 export async function initializeStorage(
@@ -494,7 +523,15 @@ async function writeConfig(
   projectId: string,
   projectName: string
 ): Promise<Result<void>> {
-  const config: AictxConfig = {
+  return writeJsonAtomic(
+    projectRoot,
+    ".aictx/config.json",
+    configToJson(buildInitialConfig(projectId, projectName))
+  );
+}
+
+function buildInitialConfig(projectId: string, projectName: string): AictxConfig {
+  return {
     version: 3,
     project: {
       id: projectId,
@@ -509,8 +546,6 @@ async function writeConfig(
       trackContextPacks: false
     }
   };
-
-  return writeJsonAtomic(projectRoot, ".aictx/config.json", configToJson(config));
 }
 
 async function writeSchemas(projectRoot: string): Promise<Result<string[]>> {
@@ -987,7 +1022,7 @@ function countOccurrences(value: string, search: string): number {
 function nextSteps(agentGuidance: AgentGuidanceData): string[] {
   return [
     agentGuidanceNextStep(agentGuidance),
-    "`aictx init` creates linked starter placeholders only. To seed useful first-run memory, run `aictx setup` for a bootstrap preview, `aictx setup --apply` to apply the conservative bootstrap patch, or `aictx setup --apply --view` for the agent-led first-run path with a viewer URL. For manual patch inspection, run `aictx suggest --bootstrap --patch > bootstrap-memory.json`, `aictx patch review bootstrap-memory.json`, `aictx save --file bootstrap-memory.json`, and `aictx check`.",
+    "`aictx init` creates empty storage and linked starter placeholders only. To seed useful first-run memory, run `aictx setup`; use `aictx setup --dry-run` to preview the conservative bootstrap patch without writing, or `aictx setup --view` for the setup flow with a viewer URL. For manual patch inspection, run `aictx suggest --bootstrap --patch > bootstrap-memory.json`, `aictx patch review bootstrap-memory.json`, `aictx save --file bootstrap-memory.json`, and `aictx check`.",
     "`aictx init` does not start MCP; agents should use `aictx load` and `aictx remember --stdin` by default. Configure agent clients that support MCP to launch `aictx-mcp` only when you want MCP equivalents such as `load_memory`, `inspect_memory`, `remember_memory`, and `save_memory_patch`. A globally launched MCP server can serve this project when tool calls include this project root as `project_root`. If `aictx` is not on `PATH`, use the project package-manager form such as `pnpm exec aictx`, `npm exec aictx`, or `./node_modules/.bin/aictx`, but treat package-manager and local-binary fallbacks as version-sensitive and update stale local installs before trusting schema errors.",
     "Saved memory is active immediately after Aictx validates and writes it. Inspect memory asynchronously with `inspect_memory`, `aictx view`, `aictx diff`, Git tools, or MCP `diff_memory` when available.",
     "Optional bundled guidance is available under `integrations/` for Codex, Claude Code, Cursor, Cline, and generic Markdown instructions."

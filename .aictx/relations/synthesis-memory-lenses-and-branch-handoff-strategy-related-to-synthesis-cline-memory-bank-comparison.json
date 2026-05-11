@@ -1,0 +1,11 @@
+{
+  "confidence": "high",
+  "content_hash": "sha256:549ae3fd37d2d56d8ec1db41d92037a9afa89b40f779dc0737011d5ab18b5286",
+  "created_at": "2026-05-11T10:42:14+02:00",
+  "from": "synthesis.memory-lenses-and-branch-handoff-strategy",
+  "id": "rel.synthesis-memory-lenses-and-branch-handoff-strategy-related-to-synthesis-cline-memory-bank-comparison",
+  "predicate": "related_to",
+  "status": "active",
+  "to": "synthesis.cline-memory-bank-comparison",
+  "updated_at": "2026-05-11T10:42:14+02:00"
+}

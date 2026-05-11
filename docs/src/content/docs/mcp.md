@@ -7,8 +7,8 @@ description: Configure Aictx MCP and understand the CLI/MCP capability boundary.
 global binary, or a project-local binary when the project pins Aictx.
 
 MCP is useful when the agent client already supports MCP tools. The CLI remains
-the default path for routine memory work and all setup, maintenance, recovery,
-viewer, docs, suggestion, audit, stale, and graph workflows.
+the default path for routine memory work and all setup, lenses, handoff,
+maintenance, recovery, viewer, docs, suggestion, audit, stale, and graph workflows.
 
 :::tip
 `aictx init` does not start MCP. Starting `aictx-mcp` in a shell usually cannot
@@ -95,10 +95,12 @@ resolved project's `.aictx/` directory.
 
 ## CLI-only boundaries
 
-Setup, maintenance, recovery, export, registry, viewer, docs, suggest, audit,
-stale, and graph workflows are CLI-only in v1:
+Setup, lenses, handoff, maintenance, recovery, export, registry, viewer, docs,
+suggest, audit, stale, and graph workflows are CLI-only in v1:
 
 - Setup: `aictx init`, `aictx setup`
+- Lenses: `aictx lens`
+- Branch handoff: `aictx handoff`
 - Maintenance: `aictx check`, `aictx rebuild`, `aictx reset`, `aictx upgrade`
 - Recovery: `aictx history`, `aictx restore`, `aictx rewind`
 - Export: `aictx export obsidian`

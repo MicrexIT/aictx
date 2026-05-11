@@ -44,6 +44,24 @@ interface AuditSuccessEnvelope {
       message: string;
       evidence: Evidence[];
     }>;
+    role_coverage: {
+      roles: Array<{
+        key: string;
+        status: string;
+        optional: boolean;
+        gap: string | null;
+      }>;
+      counts: Record<string, number>;
+    };
+    role_gaps: Array<{
+      key: string;
+      label: string;
+      status: string;
+      optional: boolean;
+      memory_ids: string[];
+      relation_ids: string[];
+      gap: string;
+    }>;
   };
   warnings: string[];
   meta: {
@@ -97,6 +115,7 @@ describe("aictx audit CLI", () => {
     const output = await runCli(["node", "aictx", "audit", "--json"], repo);
     const repeatOutput = await runCli(["node", "aictx", "audit", "--json"], repo);
     const humanOutput = await runCli(["node", "aictx", "audit"], repo);
+    const checkOutput = await runCli(["node", "aictx", "check", "--json"], repo);
 
     expect(output.exitCode).toBe(0);
     expect(output.stderr).toBe("");
@@ -105,6 +124,10 @@ describe("aictx audit CLI", () => {
     expect(humanOutput.stderr).toBe("");
     expect(humanOutput.stdout).toContain("Aictx audit findings:");
     expect(humanOutput.stdout).toContain("[warning] duplicate_like_title_or_tags");
+    expect(humanOutput.stdout).toContain("Role coverage gaps:");
+    expect(checkOutput.exitCode).toBe(0);
+    expect(checkOutput.stderr).toBe("");
+    expect(JSON.parse(checkOutput.stdout).data.valid).toBe(true);
 
     const envelope = JSON.parse(output.stdout) as AuditSuccessEnvelope;
     expect(envelope.ok).toBe(true);
@@ -136,6 +159,24 @@ describe("aictx audit CLI", () => {
         ]
       })
     );
+    expect(envelope.data.role_coverage.roles).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          key: "branch-handoff",
+          optional: true,
+          gap: null
+        })
+      ])
+    );
+    expect(envelope.data.role_gaps).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          key: "product-intent",
+          status: "missing"
+        })
+      ])
+    );
+    expect(envelope.data.role_gaps.some((gap) => gap.key === "branch-handoff")).toBe(false);
     await expect(readAictxTreeSnapshot(repo)).resolves.toEqual(beforeTree);
     await expect(git(repo, ["status", "--short"])).resolves.toBe(beforeGitStatus);
   });

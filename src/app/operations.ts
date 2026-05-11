@@ -80,6 +80,29 @@ import {
   type RememberMemoryPatch
 } from "../remember/plan.js";
 import {
+  buildAllMemoryLenses,
+  buildMemoryLens,
+  isMemoryLensName,
+  type BuiltMemoryLens,
+  type MemoryLensName
+} from "../lenses/render.js";
+import {
+  buildRoleCoverage,
+  type RoleCoverageItem,
+  type RoleCoverageData
+} from "../roles/coverage.js";
+import {
+  branchHandoffId,
+  buildBranchHandoffClosePatch,
+  buildBranchHandoffUpdatePatch,
+  hasBranchHandoffPromotions,
+  parseBranchHandoffCloseInput,
+  parseBranchHandoffInput,
+  promotionRememberInput,
+  type BranchHandoffCloseInput,
+  type BranchHandoffInput
+} from "../handoff/service.js";
+import {
   hintedFiles,
   normalizeRetrievalHints
 } from "../retrieval/hints.js";
@@ -100,6 +123,7 @@ import {
 import { openSqliteDatabase } from "../index/sqlite-driver.js";
 import { resolveIndexDatabasePath } from "../index/sqlite.js";
 import {
+  buildInitialStoragePreview,
   initializeStorage,
   type InitStorageData
 } from "../storage/init.js";
@@ -134,6 +158,12 @@ export interface InitProjectOptions extends GitWrapperOptions {
   clock?: Clock;
   agentGuidance?: boolean;
   force?: boolean;
+}
+
+export interface PreviewSetupBootstrapOptions extends GitWrapperOptions {
+  cwd: string;
+  force?: boolean;
+  clock?: Clock;
 }
 
 export interface RebuildIndexOptions extends GitWrapperOptions {
@@ -222,6 +252,31 @@ export interface GetViewerBootstrapOptions extends GitWrapperOptions {
   cwd: string;
 }
 
+export interface GetRoleCoverageOptions extends GitWrapperOptions {
+  cwd: string;
+}
+
+export interface GetMemoryLensOptions extends GitWrapperOptions {
+  cwd: string;
+  lens: string;
+}
+
+export interface ShowBranchHandoffOptions extends GitWrapperOptions {
+  cwd: string;
+}
+
+export interface UpdateBranchHandoffOptions extends GitWrapperOptions {
+  cwd: string;
+  input?: unknown;
+  clock?: Clock;
+}
+
+export interface CloseBranchHandoffOptions extends GitWrapperOptions {
+  cwd: string;
+  input?: unknown;
+  clock?: Clock;
+}
+
 export interface ProjectRegistryOperationOptions extends GitWrapperOptions {
   cwd: string;
   aictxHome?: string;
@@ -295,8 +350,20 @@ export type SuggestMemoryData = SuggestReviewPacket | SuggestBootstrapPatchPropo
 
 export type { AuditFinding, AuditRule, AuditSeverity };
 
+export interface RoleCoverageGapData {
+  key: RoleCoverageItem["key"];
+  label: string;
+  status: RoleCoverageItem["status"];
+  optional: boolean;
+  memory_ids: ObjectId[];
+  relation_ids: RelationId[];
+  gap: string;
+}
+
 export interface AuditMemoryData {
   findings: AuditFinding[];
+  role_coverage: RoleCoverageData;
+  role_gaps: RoleCoverageGapData[];
 }
 
 export interface MemoryHistoryCommit {
@@ -381,6 +448,50 @@ export interface GraphMemoryData {
   relations: MemoryRelationSummary[];
 }
 
+export interface MemoryLensData {
+  name: MemoryLensName;
+  title: string;
+  markdown: string;
+  role_coverage: RoleCoverageData;
+  included_memory_ids: ObjectId[];
+  relation_ids: RelationId[];
+  relations: MemoryRelationSummary[];
+  generated_gaps: string[];
+}
+
+export interface RoleCoverageResultData {
+  role_coverage: RoleCoverageData;
+}
+
+export interface SetupBootstrapPreviewData {
+  initialized: boolean;
+  would_initialize: boolean;
+  force_preview: boolean;
+  proposal: SuggestBootstrapPatchProposal;
+  role_coverage: RoleCoverageData;
+}
+
+export interface BranchHandoffShowData {
+  branch: string;
+  id: ObjectId;
+  handoff: MemoryObjectSummary | null;
+}
+
+export interface BranchHandoffUpdateData {
+  branch: string;
+  id: ObjectId;
+  input: BranchHandoffInput;
+  save: SaveMemoryData;
+  handoff: MemoryObjectSummary | null;
+}
+
+export interface BranchHandoffCloseData {
+  branch: string;
+  id: ObjectId;
+  input: BranchHandoffCloseInput;
+  save: SaveMemoryData;
+}
+
 export interface ViewerBootstrapData {
   project: {
     id: string;
@@ -397,6 +508,8 @@ export interface ViewerBootstrapData {
     synthesis_objects: number;
     active_relations: number;
   };
+  role_coverage: RoleCoverageData;
+  lenses: MemoryLensData[];
   storage_warnings: string[];
 }
 
@@ -561,6 +674,76 @@ export async function initProject(
     error: initialized.error,
     warnings: initialized.warnings,
     meta
+  };
+}
+
+export async function previewSetupBootstrap(
+  options: PreviewSetupBootstrapOptions
+): Promise<AppResult<SetupBootstrapPreviewData>> {
+  const clock = options.clock ?? systemClock;
+  const paths = await resolveProjectPaths({
+    cwd: options.cwd,
+    mode: "init",
+    runner: options.runner
+  });
+
+  if (!paths.ok) {
+    return {
+      ok: false,
+      error: paths.error,
+      warnings: paths.warnings,
+      meta: await buildBestEffortMeta(options)
+    };
+  }
+
+  const meta = await buildMeta(paths.data, options);
+
+  if (!meta.ok) {
+    return meta;
+  }
+
+  const currentStorage = await aictxRootExists(paths.data.aictxRoot);
+
+  if (!currentStorage.ok) {
+    return {
+      ok: false,
+      error: currentStorage.error,
+      warnings: currentStorage.warnings,
+      meta: meta.meta
+    };
+  }
+
+  const forcePreview = options.force === true;
+  const useSyntheticStorage = forcePreview || !currentStorage.data;
+  const storage = useSyntheticStorage
+    ? ok(buildInitialStoragePreview({ paths: paths.data, clock }))
+    : await readCanonicalStorage(paths.data.projectRoot);
+
+  if (!storage.ok) {
+    return {
+      ok: false,
+      error: storage.error,
+      warnings: storage.warnings,
+      meta: meta.meta
+    };
+  }
+
+  const proposal = await buildSuggestBootstrapPatchProposal({
+    projectRoot: paths.data.projectRoot,
+    storage: storage.data
+  });
+
+  return {
+    ok: true,
+    data: {
+      initialized: currentStorage.data,
+      would_initialize: useSyntheticStorage,
+      force_preview: forcePreview,
+      proposal,
+      role_coverage: buildRoleCoverage(storage.data, meta.meta.git)
+    },
+    warnings: storage.warnings,
+    meta: meta.meta
   };
 }
 
@@ -1114,6 +1297,53 @@ export async function graphMemory(
   };
 }
 
+export async function getRoleCoverage(
+  options: GetRoleCoverageOptions
+): Promise<AppResult<RoleCoverageResultData>> {
+  const prepared = await readOnlyCanonicalStorage(options);
+
+  if (!prepared.ok) {
+    return prepared;
+  }
+
+  return {
+    ok: true,
+    data: {
+      role_coverage: buildRoleCoverage(prepared.storage, prepared.meta.git)
+    },
+    warnings: prepared.storageWarnings,
+    meta: prepared.meta
+  };
+}
+
+export async function getMemoryLens(
+  options: GetMemoryLensOptions
+): Promise<AppResult<MemoryLensData>> {
+  if (!isMemoryLensName(options.lens)) {
+    return {
+      ok: false,
+      error: aictxError("AICtxValidationFailed", "Unknown memory lens.", {
+        lens: options.lens
+      }),
+      warnings: [],
+      meta: await buildBestEffortMeta(options)
+    };
+  }
+
+  const prepared = await readOnlyCanonicalStorage(options);
+
+  if (!prepared.ok) {
+    return prepared;
+  }
+
+  return {
+    ok: true,
+    data: summarizeMemoryLens(buildMemoryLens(prepared.storage, prepared.meta.git, options.lens)),
+    warnings: prepared.storageWarnings,
+    meta: prepared.meta
+  };
+}
+
 export async function getViewerBootstrap(
   options: GetViewerBootstrapOptions
 ): Promise<AppResult<ViewerBootstrapData>> {
@@ -1125,6 +1355,7 @@ export async function getViewerBootstrap(
 
   const objects = [...prepared.storage.objects].sort(compareStoredObjectsById);
   const relations = [...prepared.storage.relations].sort(compareStoredRelationsById);
+  const lenses = buildAllMemoryLenses(prepared.storage, prepared.meta.git);
 
   return {
     ok: true,
@@ -1146,6 +1377,8 @@ export async function getViewerBootstrap(
           (relation) => relation.relation.status === "active"
         ).length
       },
+      role_coverage: buildRoleCoverage(prepared.storage, prepared.meta.git),
+      lenses: lenses.map(summarizeMemoryLens),
       storage_warnings: prepared.storageWarnings
     },
     warnings: prepared.storageWarnings,
@@ -1701,6 +1934,7 @@ export async function auditMemory(
     prepared.meta,
     options
   );
+  const roleCoverage = buildRoleCoverage(prepared.storage, prepared.meta.git);
 
   return {
     ok: true,
@@ -1709,7 +1943,9 @@ export async function auditMemory(
         projectRoot: prepared.storage.projectRoot,
         storage: prepared.storage,
         gitFileChanges: gitFileChanges.ok ? gitFileChanges.data : []
-      })
+      }),
+      role_coverage: roleCoverage,
+      role_gaps: roleCoverageGaps(roleCoverage)
     },
     warnings: [
       ...prepared.storageWarnings,
@@ -1717,6 +1953,20 @@ export async function auditMemory(
     ],
     meta: prepared.meta
   };
+}
+
+function roleCoverageGaps(coverage: RoleCoverageData): RoleCoverageGapData[] {
+  return coverage.roles
+    .filter((role): role is RoleCoverageItem & { gap: string } => role.gap !== null)
+    .map((role) => ({
+      key: role.key,
+      label: role.label,
+      status: role.status,
+      optional: role.optional,
+      memory_ids: role.memory_ids,
+      relation_ids: role.relation_ids,
+      gap: role.gap
+    }));
 }
 
 export async function listMemoryHistory(
@@ -2308,6 +2558,226 @@ export async function rememberMemory(
   };
 }
 
+export async function showBranchHandoff(
+  options: ShowBranchHandoffOptions
+): Promise<AppResult<BranchHandoffShowData>> {
+  const prepared = await prepareBranchHandoffOperation(options);
+
+  if (!prepared.ok) {
+    return prepared;
+  }
+
+  const storage = await readCanonicalStorage(prepared.paths.projectRoot);
+
+  if (!storage.ok) {
+    return {
+      ok: false,
+      error: storage.error,
+      warnings: storage.warnings,
+      meta: prepared.meta
+    };
+  }
+
+  const id = branchHandoffId(prepared.branch);
+  const handoff = findStoredObject(storage.data.objects, id);
+  const activeHandoff = handoff?.sidecar.status === "active" ? handoff : undefined;
+
+  return {
+    ok: true,
+    data: {
+      branch: prepared.branch,
+      id,
+      handoff: activeHandoff === undefined ? null : summarizeObject(activeHandoff)
+    },
+    warnings: storage.warnings,
+    meta: prepared.meta
+  };
+}
+
+export async function updateBranchHandoff(
+  options: UpdateBranchHandoffOptions
+): Promise<AppResult<BranchHandoffUpdateData>> {
+  const prepared = await prepareBranchHandoffOperation(options);
+
+  if (!prepared.ok) {
+    return prepared;
+  }
+
+  if (options.input === undefined) {
+    return {
+      ok: false,
+      error: aictxError("AICtxPatchRequired", "Handoff update input is required."),
+      warnings: [],
+      meta: prepared.meta
+    };
+  }
+
+  const parsed = parseBranchHandoffInput(options.input);
+
+  if (!parsed.ok) {
+    return {
+      ok: false,
+      error: parsed.error,
+      warnings: parsed.warnings,
+      meta: prepared.meta
+    };
+  }
+
+  const storage = await readCanonicalStorage(prepared.paths.projectRoot);
+
+  if (!storage.ok) {
+    return {
+      ok: false,
+      error: storage.error,
+      warnings: storage.warnings,
+      meta: prepared.meta
+    };
+  }
+
+  const patch = buildBranchHandoffUpdatePatch({
+    input: parsed.data,
+    storage: storage.data,
+    branch: prepared.branch
+  });
+  const saved = await saveMemoryPatch({
+    cwd: prepared.paths.projectRoot,
+    patch,
+    ...(options.clock === undefined ? {} : { clock: options.clock }),
+    ...(options.runner === undefined ? {} : { runner: options.runner })
+  });
+
+  if (!saved.ok) {
+    return {
+      ok: false,
+      error: saved.error,
+      warnings: [...storage.warnings, ...saved.warnings],
+      meta: saved.meta
+    };
+  }
+
+  const refreshed = await readCanonicalStorage(prepared.paths.projectRoot);
+  const handoff = refreshed.ok
+    ? findStoredObject(refreshed.data.objects, branchHandoffId(prepared.branch))
+    : undefined;
+
+  return {
+    ok: true,
+    data: {
+      branch: prepared.branch,
+      id: branchHandoffId(prepared.branch),
+      input: parsed.data,
+      save: saved.data,
+      handoff: handoff === undefined ? null : summarizeObject(handoff)
+    },
+    warnings: [
+      ...storage.warnings,
+      ...saved.warnings,
+      ...(refreshed.ok ? refreshed.warnings : [`Handoff refresh warning: ${refreshed.error.message}`])
+    ],
+    meta: saved.meta
+  };
+}
+
+export async function closeBranchHandoff(
+  options: CloseBranchHandoffOptions
+): Promise<AppResult<BranchHandoffCloseData>> {
+  const prepared = await prepareBranchHandoffOperation(options);
+
+  if (!prepared.ok) {
+    return prepared;
+  }
+
+  if (options.input === undefined) {
+    return {
+      ok: false,
+      error: aictxError("AICtxPatchRequired", "Handoff close input is required."),
+      warnings: [],
+      meta: prepared.meta
+    };
+  }
+
+  const parsed = parseBranchHandoffCloseInput(options.input);
+
+  if (!parsed.ok) {
+    return {
+      ok: false,
+      error: parsed.error,
+      warnings: parsed.warnings,
+      meta: prepared.meta
+    };
+  }
+
+  const storage = await readCanonicalStorage(prepared.paths.projectRoot);
+
+  if (!storage.ok) {
+    return {
+      ok: false,
+      error: storage.error,
+      warnings: storage.warnings,
+      meta: prepared.meta
+    };
+  }
+
+  const id = branchHandoffId(prepared.branch);
+
+  if (findStoredObject(storage.data.objects, id) === undefined) {
+    return {
+      ok: false,
+      error: objectNotFound(id),
+      warnings: storage.warnings,
+      meta: prepared.meta
+    };
+  }
+
+  const promotePatch = hasBranchHandoffPromotions(parsed.data)
+    ? buildRememberMemoryPatch({
+        input: promotionRememberInput(parsed.data),
+        storage: storage.data
+      })
+    : ok(null);
+
+  if (!promotePatch.ok) {
+    return {
+      ok: false,
+      error: promotePatch.error,
+      warnings: [...storage.warnings, ...promotePatch.warnings],
+      meta: prepared.meta
+    };
+  }
+
+  const saved = await saveMemoryPatch({
+    cwd: prepared.paths.projectRoot,
+    patch: buildBranchHandoffClosePatch({
+      close: parsed.data,
+      branch: prepared.branch,
+      promotePatch: promotePatch.data
+    }),
+    ...(options.clock === undefined ? {} : { clock: options.clock }),
+    ...(options.runner === undefined ? {} : { runner: options.runner })
+  });
+
+  if (!saved.ok) {
+    return {
+      ok: false,
+      error: saved.error,
+      warnings: [...storage.warnings, ...promotePatch.warnings, ...saved.warnings],
+      meta: saved.meta
+    };
+  }
+
+  return {
+    ok: true,
+    data: {
+      branch: prepared.branch,
+      id,
+      input: parsed.data,
+      save: saved.data
+    },
+    warnings: [...storage.warnings, ...promotePatch.warnings, ...saved.warnings],
+    meta: saved.meta
+  };
+}
+
 function summarizeRegisteredProject(entry: ProjectRegistryEntry): RegisteredProjectSummary {
   return {
     registry_id: entry.registry_id,
@@ -2443,9 +2913,12 @@ export const applicationOperations = {
   addRegisteredProject,
   auditMemory,
   checkProject,
+  closeBranchHandoff,
   diffMemory,
   exportObsidianProjection,
   exportViewerProjectObsidian,
+  getMemoryLens,
+  getRoleCoverage,
   getViewerProjectBootstrap,
   getViewerBootstrap,
   getViewerProjects,
@@ -2466,8 +2939,10 @@ export const applicationOperations = {
   rewindMemory,
   saveMemoryPatch,
   searchMemory,
+  showBranchHandoff,
   suggestMemory,
   unregisterProjectRoot,
+  updateBranchHandoff,
   upgradeStorage
 };
 
@@ -2516,6 +2991,20 @@ type ReadOnlyCanonicalStorageResult =
       meta: AictxMeta;
     };
 
+type ResolvedBranchHandoffOperation =
+  | {
+      ok: true;
+      paths: ProjectPaths;
+      meta: AictxMeta;
+      branch: string;
+    }
+  | {
+      ok: false;
+      error: AictxError;
+      warnings: string[];
+      meta: AictxMeta;
+    };
+
 async function prepareGitOnlyMemoryOperation(
   options: GitWrapperOptions & { cwd: string }
 ): Promise<ResolvedGitOnlyMemoryOperation> {
@@ -2553,6 +3042,35 @@ async function prepareGitOnlyMemoryOperation(
     ok: true,
     paths: paths.data,
     meta: meta.meta
+  };
+}
+
+async function prepareBranchHandoffOperation(
+  options: GitWrapperOptions & { cwd: string }
+): Promise<ResolvedBranchHandoffOperation> {
+  const prepared = await prepareGitOnlyMemoryOperation(options);
+
+  if (!prepared.ok) {
+    return prepared;
+  }
+
+  if (prepared.meta.git.branch === null) {
+    return {
+      ok: false,
+      error: aictxError(
+        "AICtxGitRequired",
+        "A current Git branch is required for branch handoff."
+      ),
+      warnings: [],
+      meta: prepared.meta
+    };
+  }
+
+  return {
+    ok: true,
+    paths: prepared.paths,
+    meta: prepared.meta,
+    branch: prepared.meta.git.branch
   };
 }
 
@@ -2760,6 +3278,19 @@ function summarizeObject(object: StoredMemoryObject): MemoryObjectSummary {
     created_at: sidecar.created_at,
     updated_at: sidecar.updated_at,
     body: object.body
+  };
+}
+
+function summarizeMemoryLens(lens: BuiltMemoryLens): MemoryLensData {
+  return {
+    name: lens.name,
+    title: lens.title,
+    markdown: lens.markdown,
+    role_coverage: lens.role_coverage,
+    included_memory_ids: lens.included_memory_ids,
+    relation_ids: lens.relation_ids,
+    relations: summarizeRelations(lens.relations),
+    generated_gaps: lens.generated_gaps
   };
 }
 
@@ -3373,6 +3904,24 @@ async function isAictxRootMissing(aictxRoot: string): Promise<Result<boolean>> {
   } catch (error) {
     if (errorCode(error) === "ENOENT") {
       return ok(true);
+    }
+
+    return err(
+      aictxError("AICtxValidationFailed", "Aictx root could not be read.", {
+        aictxRoot,
+        message: messageFromUnknown(error)
+      })
+    );
+  }
+}
+
+async function aictxRootExists(aictxRoot: string): Promise<Result<boolean>> {
+  try {
+    await lstat(aictxRoot);
+    return ok(true);
+  } catch (error) {
+    if (errorCode(error) === "ENOENT") {
+      return ok(false);
     }
 
     return err(

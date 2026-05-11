@@ -768,11 +768,24 @@ function isMustKnowItem(item: RankedMemoryItem): boolean {
 }
 
 function isStaleOrSupersededMatch(item: RankedMemoryItem): boolean {
-  return (item.status === "stale" || item.status === "superseded") && item.matched;
+  return (
+    (item.status === "stale" || item.status === "superseded") &&
+    item.matched &&
+    !isBranchHandoffItem(item)
+  );
 }
 
 function shouldApplyRecentBoost(status: ObjectStatus): boolean {
   return status !== "stale" && status !== "superseded";
+}
+
+function isBranchHandoffItem(item: RankedMemoryItem): boolean {
+  return (
+    item.scope.kind === "branch" &&
+    item.type === "synthesis" &&
+    (item.id.startsWith("synthesis.branch-handoff-") ||
+      item.tags.includes("branch-handoff"))
+  );
 }
 
 function compareRankedItems(

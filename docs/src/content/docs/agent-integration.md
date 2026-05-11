@@ -104,9 +104,10 @@ reduce repeated context work, not record every step an agent took.
 The v1 agent model is CLI-first and MCP-compatible.
 
 Local MCP exposes exactly `load_memory`, `search_memory`, `inspect_memory`,
-`remember_memory`, `save_memory_patch`, and `diff_memory`. Setup, maintenance, recovery, export,
-registry, viewer, docs, suggest, audit, stale, and graph workflows are CLI-only
-in v1. CLI-only capabilities are v1 surfaces, not MCP parity gaps.
+`remember_memory`, `save_memory_patch`, and `diff_memory`. Setup, lenses,
+handoff, maintenance, recovery, export, registry, viewer, docs, suggest, audit,
+stale, and graph workflows are CLI-only in v1. CLI-only capabilities are v1
+surfaces, not MCP parity gaps.
 
 Local MCP is the near-term integration path for local agent harnesses. Remote
 MCP, hosted sync, cloud auth, cloud hosting, and ChatGPT App SDK UI remain
@@ -131,6 +132,8 @@ aliases over search/inspect behavior, not local MCP tool names.
 | Rewind memory | none | `aictx rewind` |
 | List stale memory | none | `aictx stale` |
 | Show graph neighborhood | none | `aictx graph` |
+| Show memory lens | none | `aictx lens` |
+| Manage branch handoff | none | `aictx handoff` |
 | Export Obsidian projection | none | `aictx export obsidian` |
 | Manage project registry | none | `aictx projects` |
 | View local memory | none | `aictx view` |
@@ -138,8 +141,8 @@ aliases over search/inspect behavior, not local MCP tool names.
 | Audit memory hygiene | none | `aictx audit` |
 | Read public docs | none | `aictx docs` |
 
-For setup, maintenance, recovery, export, registry, viewer, docs, suggest,
-audit, stale, and graph workflows, the CLI is the supported interface. Supported
+For setup, lenses, handoff, maintenance, recovery, export, registry, viewer,
+docs, suggest, audit, stale, and graph workflows, the CLI is the supported interface. Supported
 CLI or MCP save paths should handle `.aictx/` changes; editing `.aictx/` files directly
 is reserved for exceptional manual recovery or explicit user requests.
 
@@ -245,14 +248,19 @@ requests, or safety rules.
 
 ## Bootstrap and suggestion packets
 
-`aictx setup` provides guided first-run onboarding. When loaded memory only
-contains starter placeholders, setup and onboarding requests are enough context
-for the bootstrap workflow.
+`aictx setup` provides guided first-run onboarding. It initializes storage if
+needed, writes conservative evidence-backed bootstrap memory by default, runs
+checks, and prints soft role coverage. Use `aictx setup --dry-run` to preview
+without initializing storage, writing repo files, running checks, or starting
+the viewer. `aictx setup --force --dry-run` previews reset/setup behavior
+without deleting anything.
 
-For the agent-led first-run path, use `aictx setup --apply --view`, then run
+For the agent-led first-run path, use `aictx setup --view`, then run
+`aictx lens project-map` for a readable overview or
 `aictx load "onboard to this repository"` to verify the first task-focused
-memory pack. For client-specific instruction files and copyable setup prompts,
-see [Agent recipes](/agent-recipes/).
+memory pack. Use `aictx handoff update --stdin` only for unfinished branch
+continuity that should not become project truth yet. For client-specific
+instruction files and copyable setup prompts, see [Agent recipes](/agent-recipes/).
 
 ```bash
 aictx suggest --bootstrap --json
@@ -267,7 +275,8 @@ current code changes. `aictx suggest --after-task --json` includes ranked
 `recommended_actions`; treat them as advisory defaults, not authoritative
 semantic memory. Agents still fill in durable `title`, `body`, and `reason`
 fields from current evidence. `aictx audit --json` reports grouped, actionable
-memory hygiene issues.
+memory hygiene issues and role coverage gaps. Missing roles are not `aictx
+check` failures.
 
 During setup, product features can use the `product-feature` facet. Durable
 project how-tos use the existing `workflow` object type and `workflow` facet.

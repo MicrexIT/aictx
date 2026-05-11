@@ -1002,11 +1002,35 @@ describe("suggest discipline packets", () => {
           status: "active",
           title: "Agent guidance",
           body: "Existing agent guidance synthesis."
+        }),
+        memoryObject({
+          id: "synthesis.repository-map",
+          type: "synthesis",
+          status: "active",
+          title: "Repository map",
+          body: "Existing repository map synthesis."
+        }),
+        memoryObject({
+          id: "synthesis.stack-and-tooling",
+          type: "synthesis",
+          status: "active",
+          title: "Stack and tooling",
+          body: "Existing stack and tooling synthesis."
+        }),
+        memoryObject({
+          id: "synthesis.conventions-quality",
+          type: "synthesis",
+          status: "active",
+          title: "Conventions and quality bar",
+          body: "Existing conventions and quality synthesis."
         })
       ],
       relations: [
         projectArchitectureRelation("project.billing-api"),
-        provenanceRelation("synthesis.product-intent", "source.package-json")
+        provenanceRelation("synthesis.product-intent", "source.package-json"),
+        provenanceRelation("synthesis.repository-map", "source.package-json"),
+        provenanceRelation("synthesis.stack-and-tooling", "source.package-json"),
+        provenanceRelation("synthesis.conventions-quality", "source.package-json")
       ],
       projectId: "project.billing-api",
       projectName: "Billing API"

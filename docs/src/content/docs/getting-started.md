@@ -56,23 +56,25 @@ npx --package @aictx/memory -- aictx init
 
 ## Initialize a project
 
-From the project root:
+From the project root, run setup for normal onboarding:
 
 ```bash
-aictx init
+aictx setup
 ```
 
-`init` creates `.aictx/` and, by default, updates marked Aictx sections in
-`AGENTS.md` and `CLAUDE.md`. Those sections tell coding agents to load memory
-before non-trivial work and make a save/no-save decision after meaningful work.
+`setup` creates `.aictx/` if needed, updates marked Aictx sections in
+`AGENTS.md` and `CLAUDE.md`, writes conservative evidence-backed bootstrap
+memory, runs checks, and prints soft role coverage.
 
-Use `--no-agent-guidance` when you want to leave those instruction files
-unchanged.
+Use `aictx setup --dry-run` to preview without initializing storage, writing
+canonical memory, updating agent guidance, running checks, or starting the
+viewer. `aictx setup --force --dry-run` previews reset/setup behavior without
+deleting or rewriting anything.
 
 :::tip
-`aictx init` creates starter storage. It does not try to understand your whole
-project from scratch. Use the setup flow next when you want Aictx to seed useful
-first-run memory from existing repo evidence.
+`aictx init` is the lower-level empty-storage initializer for automation, tests,
+or manual workflows. Use `aictx init --no-agent-guidance` only when you want to
+leave instruction files unchanged.
 :::
 
 ## Seed first-run memory
@@ -81,13 +83,18 @@ For guided onboarding:
 
 ```bash
 aictx setup
-aictx setup --apply
-aictx setup --apply --view
+aictx setup --dry-run
+aictx setup --view
 ```
 
-`aictx setup` previews a conservative bootstrap memory patch. `aictx setup
---apply` applies it immediately. Add `--view` when you want setup to start the
-local read-only viewer for inspection after validation.
+`aictx setup` applies a conservative bootstrap memory patch by default. Add
+`--view` when you want setup to start the local read-only viewer for inspection
+after validation.
+
+`aictx audit` reports role coverage gaps after normal hygiene findings, but
+missing roles are not `aictx check` failures. `aictx handoff show` returns only
+an active handoff for the current Git branch; closed handoffs remain historical
+memory available through inspect, view, and Git history.
 
 If you want to inspect the patch file manually:
 
@@ -143,10 +150,10 @@ The CLI is the default interface for routine memory work. MCP is available when
 the agent client has launched and connected to `aictx-mcp`.
 
 MCP exposes exactly `load_memory`, `search_memory`, `inspect_memory`,
-`remember_memory`, `save_memory_patch`, and `diff_memory`. Setup, maintenance, recovery, export,
-registry, viewer, docs, suggest, audit, stale, and graph workflows are CLI-only
-in v1. These CLI-only commands are part of the v1 integration model rather than
-MCP parity gaps.
+`remember_memory`, `save_memory_patch`, and `diff_memory`. Setup, lenses,
+handoff, maintenance, recovery, export, registry, viewer, docs, suggest, audit,
+stale, and graph workflows are CLI-only in v1. These CLI-only commands are part
+of the v1 integration model rather than MCP parity gaps.
 
 Local MCP is the near-term integration path for local agent harnesses. Remote
 MCP, hosted sync, cloud auth, cloud hosting, and ChatGPT App SDK UI are future

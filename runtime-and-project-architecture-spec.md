@@ -756,8 +756,8 @@ diff_memory
 Agent capability split:
 
 ```text
-MCP + CLI: load, search, inspect object, save, diff
-CLI-only in v1: init, check, rebuild, history, restore, rewind, stale, graph, export obsidian, view, suggest, audit
+MCP + CLI: load, search, inspect object, remember, save patch, diff
+CLI-only in v1: init, setup, lens, handoff, check, rebuild, history, restore, rewind, stale, graph, export obsidian, projects, view, docs, suggest, audit
 ```
 
 Rules:

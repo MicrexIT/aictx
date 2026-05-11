@@ -1,0 +1,11 @@
+{
+  "confidence": "medium",
+  "content_hash": "sha256:8072fbd996c06cb6476f195a1aa2cbb7d449590ad771b7a26b8c03e12474b6b2",
+  "created_at": "2026-05-11T10:33:20+02:00",
+  "from": "synthesis.cline-memory-bank-comparison",
+  "id": "rel.synthesis-cline-memory-bank-comparison-related-to-synthesis-alpha-growth-direction",
+  "predicate": "related_to",
+  "status": "active",
+  "to": "synthesis.alpha-growth-direction",
+  "updated_at": "2026-05-11T10:33:20+02:00"
+}

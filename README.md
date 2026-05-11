@@ -113,18 +113,24 @@ trusting schema errors.
 
 ## Quickstart
 
-Initialize memory storage inside an existing project:
-
-```bash
-aictx init
-```
-
-For first-run onboarding:
+Set up useful first-run memory inside an existing project:
 
 ```bash
 aictx setup
-aictx setup --apply
 ```
+
+Preview the conservative bootstrap patch without writing or initializing
+storage:
+
+```bash
+aictx setup --dry-run
+```
+
+`aictx setup --force --dry-run` previews reset/setup behavior without deleting
+or rewriting anything.
+
+`aictx init` is the lower-level empty-storage initializer for automation,
+tests, or manual workflows. Its next step is normally `aictx setup`.
 
 Load relevant memory before non-trivial work:
 
@@ -166,6 +172,28 @@ Aictx storage uses a hybrid memory model:
   maps, roadmap, architecture, conventions, agent guidance, and repeated
   workflows or how-to collections.
 
+Setup, lenses, viewer, and audit use a built-in soft role catalog for readable
+coverage: product intent, capability map, repository map, architecture and
+patterns, stack/tooling, conventions/quality, workflows/how-tos, verification,
+gotchas/risks, open questions, sources/provenance, agent guidance, and optional
+branch handoff. Missing or thin project-truth roles are reported as generated
+gaps, not as required placeholder files. Missing optional branch handoff is
+counted in coverage without producing a gap.
+
+```text
+setup creates/repairs memory roles
+load gives task-focused context
+lens shows readable project views
+remember saves durable discoveries
+handoff preserves unfinished branch state
+```
+
+`aictx audit` includes role coverage gaps after normal audit findings, but
+missing roles are warnings/gaps only; `aictx check` does not fail because a role
+is empty. `aictx handoff show` shows only an active current-branch handoff;
+closed handoffs remain historical memory for `aictx inspect`, `aictx view`, and
+Git history.
+
 Object types are `project`, `architecture`, `source`, `synthesis`, `decision`,
 `constraint`, `question`, `fact`, `gotcha`, `workflow`, `note`, and `concept`.
 Do not create `history`, `task-note`, or `feature` object types.
@@ -190,11 +218,11 @@ tenancy, billing, and ChatGPT App SDK UI remain future work. Future
 ChatGPT-compatible `search`/`fetch` names are adapter aliases over Aictx
 search/inspect behavior, not local MCP tool names.
 
-Setup, maintenance, recovery, export, registry, viewer, docs, suggest, audit,
-stale, and graph workflows remain outside local MCP. CLI-only capabilities are
-not MCP parity gaps. Do not add or ask for MCP tools solely to mirror these CLI
-commands, and do not edit `.aictx/` files directly when a supported MCP tool or
-CLI command exists.
+Setup, lenses, handoff, maintenance, recovery, export, registry, viewer, docs,
+suggest, audit, stale, and graph workflows remain outside local MCP. CLI-only
+capabilities are not MCP parity gaps. Do not add or ask for MCP tools solely to
+mirror these CLI commands, and do not edit `.aictx/` files directly when a
+supported MCP tool or CLI command exists.
 
 | Capability | MCP | CLI |
 | --- | --- | --- |
@@ -209,6 +237,8 @@ CLI command exists.
 | Recover memory history | none | `aictx history`, `aictx restore`, `aictx rewind` |
 | Review patch files | none | `aictx patch review` |
 | Inspect stale memory and graph neighborhoods | none | `aictx stale`, `aictx graph` |
+| Show readable memory views | none | `aictx lens` |
+| Manage branch handoff | none | `aictx handoff` |
 | Export projections | none | `aictx export obsidian` |
 | Manage project registry | none | `aictx projects` |
 | View local memory | none | `aictx view` |
@@ -300,7 +330,7 @@ Then reset the local `.aictx/` state with the Aictx CLI:
 aictx reset
 
 Run the initial onboarding and apply the conservative bootstrap memory patch:
-aictx setup --apply --force
+aictx setup --force
 
 Finally, run:
 aictx check

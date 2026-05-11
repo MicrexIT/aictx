@@ -14,7 +14,8 @@ The CLI is the default interface for routine memory work.
 | Setup | `aictx init`, `aictx setup` |
 | Maintenance | `aictx check`, `aictx rebuild`, `aictx reset`, `aictx upgrade` |
 | Routine memory | `aictx load`, `aictx search`, `aictx suggest`, `aictx audit`, `aictx remember`, `aictx save` |
-| Inspection | `aictx inspect`, `aictx stale`, `aictx graph` |
+| Inspection | `aictx inspect`, `aictx stale`, `aictx graph`, `aictx lens` |
+| Branch continuity | `aictx handoff show`, `aictx handoff update --stdin`, `aictx handoff close --stdin` |
 | Inspection and recovery | `aictx diff`, `aictx history`, `aictx restore`, `aictx rewind` |
 | Export | `aictx export obsidian` |
 | Viewer | `aictx projects`, `aictx view` |
@@ -26,6 +27,11 @@ Commands that support structured output accept `--json`:
 aictx check --json
 aictx docs --json
 ```
+
+`aictx setup --dry-run` is read-only and does not initialize storage or write
+repo files. `aictx audit` includes role coverage gaps, but missing roles are not
+`aictx check` failures. `aictx handoff show` returns only an active handoff for
+the current Git branch; closed handoffs remain historical memory.
 
 ## MCP tools
 
@@ -39,9 +45,9 @@ MCP exposes exactly:
 - `save_memory_patch`
 - `diff_memory`
 
-Setup, maintenance, recovery, export, registry, viewer, docs, suggest, audit,
-stale, and graph workflows are CLI-only in v1. These CLI-only commands are part
-of the v1 integration model rather than MCP parity gaps.
+Setup, lenses, handoff, maintenance, recovery, export, registry, viewer, docs,
+suggest, audit, stale, and graph workflows are CLI-only in v1. These CLI-only
+commands are part of the v1 integration model rather than MCP parity gaps.
 
 Local MCP is the near-term integration path for local agent harnesses. Remote
 MCP, hosted sync, cloud auth, cloud hosting, and ChatGPT App SDK UI are future

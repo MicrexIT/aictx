@@ -40,13 +40,13 @@ V1 API behavior must follow these rules:
 * MCP is a supported integration path when the agent client has already launched and connected to `aictx-mcp`.
 * Local MCP is a generic local-agent interface for MCP-capable harnesses, not a ChatGPT-specific API.
 * Local MCP is the near-term integration path; remote MCP, hosted sync, cloud hosting, OAuth or cloud auth, tenancy, billing, and ChatGPT App SDK UI are future work.
-* CLI is the supported path for setup, maintenance, recovery, export, registry management, local viewing, public documentation, suggestion, and audit workflows.
+* CLI is the supported path for setup, lenses, branch handoff, maintenance, recovery, export, registry management, local viewing, public documentation, suggestion, and audit workflows.
 * The API must be usable without a cloud account, external API, embeddings, or hosted service.
 
 ### 2.1 Agent Capability Map
 
 V1 parity means agent reachability through MCP or CLI, not identical command lists.
-CLI-only capabilities are intentionally not MCP parity gaps; do not add setup, maintenance, recovery, export, registry management, local viewing, public documentation, suggestion, or audit tools to MCP just to mirror CLI commands.
+CLI-only capabilities are intentionally not MCP parity gaps; do not add setup, lenses, branch handoff, maintenance, recovery, export, registry management, local viewing, public documentation, suggestion, or audit tools to MCP just to mirror CLI commands.
 When a supported MCP or CLI entrypoint exists, agents must use that entrypoint instead of editing `.aictx/` files directly.
 
 | Capability | MCP | CLI | Notes |
@@ -68,6 +68,8 @@ When a supported MCP or CLI entrypoint exists, agents must use that entrypoint i
 | Rewind memory | none | `aictx rewind` | Recovery remains CLI-only in v1. |
 | List stale memory | none | `aictx stale` | Debug list remains CLI-only in v1. |
 | Show graph neighborhood | none | `aictx graph` | Debug graph neighborhood remains CLI-only in v1. |
+| Show memory lens | none | `aictx lens` | Readable project views remain CLI-only in v1. |
+| Manage branch handoff | none | `aictx handoff` | Branch-scoped continuity remains CLI-only in v1. |
 | Export Obsidian projection | none | `aictx export obsidian` | Generated projection remains CLI-only in v1. |
 | Manage project registry | none | `aictx projects` | Registry management remains CLI-only in v1. |
 | View local memory | none | `aictx view` | Local read-only viewer remains CLI-only in v1. |
@@ -232,7 +234,7 @@ Success data:
   },
   "next_steps": [
     "Agents are now instructed through `AGENTS.md` and `CLAUDE.md` to load and save Aictx memory.",
-    "`aictx init` creates linked starter placeholders only. To seed useful first-run memory, run `aictx setup` for a bootstrap preview or `aictx setup --apply` to apply the conservative bootstrap patch. For manual patch inspection, run `aictx suggest --bootstrap --patch > bootstrap-memory.json`, `aictx patch review bootstrap-memory.json`, `aictx save --file bootstrap-memory.json`, and `aictx check`.",
+    "`aictx init` creates empty storage and linked starter placeholders only. To seed useful first-run memory, run `aictx setup`; use `aictx setup --dry-run` to preview the conservative bootstrap patch without initializing storage or writing repo files. For manual patch inspection, run `aictx suggest --bootstrap --patch > bootstrap-memory.json`, `aictx patch review bootstrap-memory.json`, `aictx save --file bootstrap-memory.json`, and `aictx check`.",
     "`aictx init` does not start MCP; agents should use `aictx load` and `aictx remember --stdin` by default. Configure agent clients that support MCP to launch `aictx-mcp` only when you want MCP equivalents such as `load_memory`, `inspect_memory`, `remember_memory`, and `save_memory_patch`. A globally launched MCP server can serve this project when tool calls include this project root as `project_root`.",
     "Saved memory is active immediately after Aictx validates and writes it. Inspect memory asynchronously with `inspect_memory`, `aictx view`, `aictx diff`, Git tools, or MCP `diff_memory` when available.",
     "Optional bundled guidance is available under `integrations/` for Codex, Claude Code, Cursor, Cline, and generic Markdown instructions."
@@ -249,17 +251,81 @@ Run the guided first-run onboarding workflow.
 Syntax:
 
 ```bash
-aictx setup [--force] [--apply] [--view] [--open] [--json]
+aictx setup [--force] [--apply] [--dry-run] [--view] [--open] [--json]
 ```
 
 Behavior:
 
 * Run `aictx init`, using `--force` only when explicitly requested.
-* Build a conservative bootstrap patch proposal.
-* Without `--apply`, print a concise bootstrap preview and the next command.
-* With `--apply`, save the bootstrap patch directly, then run `aictx check`.
+* Build a conservative bootstrap patch proposal from repository evidence.
+* Save the bootstrap patch by default, then run `aictx check`.
+* Treat `--apply` as a backward-compatible alias/no-op because setup applies by default.
+* With `--dry-run`, print the bootstrap preview, role coverage, and patch summary without initializing storage, writing canonical memory, writing generated guidance, running `aictx check`, producing an Aictx diff, or starting the viewer.
+* With `--force --dry-run`, preview reset/setup behavior without deleting or rewriting anything.
+* JSON output includes `dry_run`, `would_initialize`, `force_preview`, `bootstrap_patch_proposed`, `bootstrap_patch_applied`, `bootstrap_summary`, `save`, `role_coverage`, `next_step`, nullable `check` and `diff`, and nullable `check_skipped_reason` and `diff_skipped_reason`.
 * If no bootstrap patch is proposed, print “No bootstrap memory patch to apply” and still run `aictx check`.
+* Print role coverage using soft mandatory roles: `populated`, `thin`, `missing`, `stale`, or `conflicted`.
 * Include a diff summary when Git is available.
+
+Role catalog:
+
+* `product-intent`
+* `capability-map` (`synthesis.feature-map` remains the compatibility anchor)
+* `repository-map`
+* `architecture-patterns`
+* `stack-tooling`
+* `conventions-quality`
+* `workflows-howtos`
+* `verification`
+* `gotchas-risks`
+* `open-questions`
+* `sources-provenance`
+* `agent-guidance`
+* optional `branch-handoff`
+
+Roles are soft mandatory. Setup and viewer report missing or thin roles as generated gaps, not validation failures. Aictx must not create canonical placeholder memories that merely say information is missing.
+
+### 5.1.2 `aictx lens`
+
+Purpose:
+
+Render readable project views from the same role coverage and relation context used by the viewer.
+
+Syntax:
+
+```bash
+aictx lens <project-map|current-work|review-risk|provenance|maintenance> [--json]
+```
+
+Behavior:
+
+* Require initialized `.aictx/`.
+* Render Markdown by default.
+* JSON includes lens name, Markdown, role coverage, included memory IDs, relation summaries, and generated gaps.
+* Do not mutate canonical storage.
+* Exclude branch handoff from project-truth lenses; include matching branch handoff in `current-work`.
+
+### 5.1.3 `aictx handoff`
+
+Purpose:
+
+Preserve unfinished current-branch state without promoting temporary work into project truth.
+
+Syntax:
+
+```bash
+aictx handoff show [--json]
+aictx handoff update --stdin [--json]
+aictx handoff close --stdin [--json]
+```
+
+Behavior:
+
+* Require Git and a current branch.
+* `show` reads only the active `synthesis.branch-handoff-<branch-slug>` for the current branch. If the matching handoff is stale, superseded, closed, or absent, return `handoff: null`; historical handoffs remain inspectable through `aictx inspect`, `aictx view`, and Git history.
+* `update --stdin` creates or updates one active branch-scoped synthesis.
+* `close --stdin` marks the handoff stale and may promote durable memory through the same intent-first fields as `aictx remember`.
+* Handoff memory is branch-scoped and should be treated as temporary continuity, not project truth.
 
 ### 5.2 `aictx load`
 
@@ -626,7 +692,9 @@ aictx docs [topic] [--open] [--json]
 aictx suggest (--from-diff | --bootstrap | --after-task "<task>") [--patch] [--json]
 aictx upgrade [--json]
 aictx patch review <file> [--json]
-aictx setup [--force] [--apply] [--view] [--open] [--json]
+aictx setup [--force] [--apply] [--dry-run] [--view] [--open] [--json]
+aictx lens <name> [--json]
+aictx handoff (show | update --stdin | close --stdin) [--json]
 aictx audit [--json]
 aictx reset [--all] [--destroy] [--json]
 ```
@@ -639,6 +707,8 @@ Minimum behavior:
 * `aictx stale` lists stale and superseded memory objects.
 * `aictx inspect <id>` shows one memory object plus direct relations.
 * `aictx graph <id>` shows relation neighborhoods for debugging only.
+* `aictx lens <name>` renders readable project views with role coverage, relation context, included memory IDs, and generated gaps.
+* `aictx handoff` manages one branch-scoped synthesis for unfinished current-branch continuity.
 * `aictx export obsidian` writes a one-way generated Obsidian projection from canonical memory.
 * `aictx projects` manages the user-level project registry used by the multi-project viewer.
 * `aictx view` starts a loopback-only read-only web viewer for human memory inspection.
@@ -648,8 +718,8 @@ Minimum behavior:
 * `aictx suggest --after-task "<task>"` returns an end-of-task save/no-save decision packet and does not write memory.
 * `aictx suggest --bootstrap --patch` returns a proposed structured memory patch and does not write canonical memory.
 * `aictx patch review <file>` validates and summarizes a patch file without writing canonical memory.
-* `aictx setup` orchestrates init, bootstrap proposal, optional save, check, and diff summary.
-* `aictx audit` returns deterministic memory hygiene findings and does not write memory.
+* `aictx setup` orchestrates init, evidence-backed bootstrap memory, role coverage, check, and diff summary. It writes the conservative bootstrap patch by default; `--dry-run` previews without initializing or writing and `--apply` remains accepted for compatibility.
+* `aictx audit` returns deterministic memory hygiene findings plus role coverage gaps and does not write memory.
 * `aictx upgrade` migrates legacy storage and bundled schemas to storage v3 without inventing evidence.
 * `aictx reset` defaults to archiving `.aictx/` under `.aictx/.backup/` before clearing the remaining `.aictx/` contents; `--destroy` deletes `.aictx/` without backup.
 * `aictx reset --all` applies reset behavior to every project in the user-level project registry. It does not scan the filesystem for unregistered projects.
@@ -755,6 +825,7 @@ Behavior:
 * Read canonical memory and generated index data where useful.
 * Must not mutate canonical memory, generated indexes, events, or exports.
 * Report local deterministic findings only; do not call a model or infer semantic truth from code.
+* Include role coverage gaps after normal audit findings. Missing roles are audit warnings/gaps only and must not make `aictx check` fail.
 * Do not expose an MCP tool for audit in v1.
 
 JSON success data:
@@ -768,6 +839,37 @@ JSON success data:
       "memory_id": "gotcha.webhook-duplicates",
       "message": "Memory references a file that does not exist.",
       "evidence": [{ "kind": "file", "id": "src/old-webhook.ts" }]
+    }
+  ],
+  "role_coverage": {
+    "roles": [
+      {
+        "key": "product-intent",
+        "label": "Product Intent",
+        "status": "missing",
+        "optional": false,
+        "memory_ids": [],
+        "relation_ids": [],
+        "gap": "Product Intent is missing. Add source-backed memory when the project provides enough evidence."
+      }
+    ],
+    "counts": {
+      "populated": 0,
+      "thin": 0,
+      "missing": 1,
+      "stale": 0,
+      "conflicted": 0
+    }
+  },
+  "role_gaps": [
+    {
+      "key": "product-intent",
+      "label": "Product Intent",
+      "status": "missing",
+      "optional": false,
+      "memory_ids": [],
+      "relation_ids": [],
+      "gap": "Product Intent is missing. Add source-backed memory when the project provides enough evidence."
     }
   ]
 }
@@ -955,7 +1057,7 @@ V1 MCP must expose only these required tools:
 * `diff_memory`
 
 The MCP server must not expose arbitrary shell access, arbitrary filesystem writes, or low-level graph mutation tools.
-Do not add MCP tools for load-mode management, suggestion packets, audits, setup, maintenance, recovery, export, registry management, local viewing, stale lists, graph neighborhoods, or public documentation. `aictx suggest`, `aictx audit`, and `aictx docs` remain CLI-only read-only support surfaces in v1.
+Do not add MCP tools for load-mode management, suggestion packets, audits, setup, lenses, branch handoff, maintenance, recovery, export, registry management, local viewing, stale lists, graph neighborhoods, or public documentation. `aictx suggest`, `aictx audit`, `aictx lens`, `aictx handoff`, and `aictx docs` remain CLI-only support surfaces in v1.
 
 ### 6.1 `load_memory`
 

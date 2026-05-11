@@ -1,0 +1,11 @@
+{
+  "confidence": "high",
+  "content_hash": "sha256:128cfdfe15cf5d57d907d4b91d97f8e3a1d41745f8372ca4cebbc1b7bbf78d6c",
+  "created_at": "2026-05-11T10:42:14+02:00",
+  "from": "synthesis.memory-lenses-and-branch-handoff-strategy",
+  "id": "rel.synthesis-memory-lenses-and-branch-handoff-strategy-related-to-synthesis-alpha-growth-direction",
+  "predicate": "related_to",
+  "status": "active",
+  "to": "synthesis.alpha-growth-direction",
+  "updated_at": "2026-05-11T10:42:14+02:00"
+}

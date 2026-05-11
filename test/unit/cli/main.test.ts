@@ -20,6 +20,27 @@ describe("CLI main", () => {
     expect(remember?.description()).toContain("workflows/how-tos");
   });
 
+  it("registers lens and handoff commands", () => {
+    const program = createCliProgram();
+
+    expect(program.commands.map((command) => command.name())).toEqual(
+      expect.arrayContaining(["lens", "handoff"])
+    );
+    expect(
+      program.commands.find((command) => command.name() === "handoff")?.commands.map((command) => command.name())
+    ).toEqual(expect.arrayContaining(["show", "update", "close"]));
+  });
+
+  it("documents setup dry-run as non-initializing and non-writing", () => {
+    const program = createCliProgram();
+    const setup = program.commands.find((command) => command.name() === "setup");
+    const setupHelp = (setup?.helpInformation() ?? "").replace(/\s+/g, " ");
+
+    expect(setupHelp).toContain("--dry-run");
+    expect(setupHelp).toContain("without initializing storage");
+    expect(setupHelp).toContain("writing repo files");
+  });
+
   it("returns exit 2 for unknown options", async () => {
     const output = createCapturedOutput();
 

@@ -59,7 +59,7 @@ describe("repo maintenance scripts", () => {
         "aictx reset",
         "",
         "Run the initial onboarding and apply the conservative bootstrap memory patch:",
-        "aictx setup --apply",
+        "aictx setup",
         "```",
         ""
       ].join("\n")
@@ -93,7 +93,7 @@ describe("repo maintenance scripts", () => {
       "",
       "Run first-run onboarding, apply the conservative bootstrap memory patch, and",
       "start the local viewer for inspection:",
-      "aictx setup --apply --view",
+      "aictx setup --view",
       "",
       "Load the first task-focused memory pack:",
       "aictx load \"onboard to this repository\"",
@@ -112,11 +112,13 @@ describe("repo maintenance scripts", () => {
     expect(readme).toContain("npm install -g @aictx/memory@9.8.7");
     expect(readme).toContain("npm install -g @aictx/memory\n");
     expect(readme).toContain("aictx reset");
-    expect(readme).toContain("aictx setup --apply");
+    expect(readme).toContain("aictx setup");
+    expect(readme).not.toContain("aictx setup --apply");
     expect(docsIndex).toContain("npm install -g @aictx/memory@9.8.7");
     expect(docsIndex).toContain("npm install -g @aictx/memory\n");
     expect(docsIndex).toContain("aictx init");
-    expect(docsIndex).toContain("aictx setup --apply --view");
+    expect(docsIndex).toContain("aictx setup --view");
+    expect(docsIndex).not.toContain("aictx setup --apply --view");
     expect(docsIndex).toContain("aictx load \"onboard to this repository\"");
   });
 

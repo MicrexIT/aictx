@@ -34,15 +34,19 @@ aictx view --open
 ```bash
 aictx init
 aictx setup
-aictx setup --apply
-aictx setup --apply --view
+aictx setup --dry-run
+aictx setup --view
 aictx patch review bootstrap-memory.json
 ```
 
-- `init` creates `.aictx/` and optional repo-level agent guidance.
-- `setup` guides first-run onboarding and bootstrap memory preview.
-- `setup --apply` applies the conservative bootstrap memory patch immediately.
-- `setup --apply --view` also starts the local read-only viewer for inspection.
+- `setup` is the normal onboarding command; it initializes storage if needed and applies conservative bootstrap memory by default.
+- `init` is the lower-level empty-storage initializer for automation, tests, and manual workflows.
+- `setup --dry-run` previews the bootstrap patch and role coverage without
+  initializing storage, writing repo files, running checks, or starting the
+  viewer.
+- `setup --force --dry-run` previews reset/setup behavior without deleting or
+  rewriting anything.
+- `setup --view` also starts the local read-only viewer for inspection.
 - `patch review` reviews a structured memory patch without writing it.
 
 :::tip
@@ -80,10 +84,17 @@ aictx check --json
 ```bash
 aictx stale
 aictx graph <id>
+aictx lens project-map
+aictx lens current-work
+aictx handoff show
 ```
 
-`stale` lists stale and superseded memory. `graph` shows a one-hop relation
-neighborhood for debugging retrieval and provenance.
+`audit` includes role coverage gaps, but missing roles are not `check`
+failures. `stale` lists stale and superseded memory. `graph` shows a one-hop
+relation neighborhood for debugging retrieval and provenance. `lens` renders
+readable project views with role coverage and generated gaps. `handoff`
+preserves unfinished current-branch state without making it project truth;
+`handoff show` only returns an active current-branch handoff.
 
 ## Maintenance
 
@@ -135,10 +146,10 @@ MCP is available when the agent client has launched and connected to
 `aictx-mcp`.
 
 MCP exposes exactly `load_memory`, `search_memory`, `inspect_memory`,
-`remember_memory`, `save_memory_patch`, and `diff_memory`. Setup, maintenance, recovery, export,
-registry, viewer, docs, suggest, audit, stale, and graph workflows are CLI-only
-in v1. These CLI-only commands are part of the v1 integration model rather than
-MCP parity gaps.
+`remember_memory`, `save_memory_patch`, and `diff_memory`. Setup, lenses,
+handoff, maintenance, recovery, export, registry, viewer, docs, suggest, audit,
+stale, and graph workflows are CLI-only in v1. These CLI-only commands are part
+of the v1 integration model rather than MCP parity gaps.
 
 Local MCP is the near-term integration path for local agent harnesses. Remote
 MCP, hosted sync, cloud auth, cloud hosting, and ChatGPT App SDK UI are future
