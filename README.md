@@ -326,11 +326,11 @@ Set up fresh Aictx memory for this Aictx source repository.
 First reinstall the current Aictx package globally:
 npm install -g @aictx/memory@0.1.31
 
-Then reset the local `.aictx/` state with the Aictx CLI:
+Then back up and clear the local `.aictx/` state with the Aictx CLI:
 aictx reset
 
 Run the initial onboarding and apply the conservative bootstrap memory patch:
-aictx setup --force
+aictx setup
 
 Finally, run:
 aictx check
