@@ -27,7 +27,7 @@ aictx view --open
 
 - `check` validates canonical memory and generated index health.
 - `diff` shows memory changes, including untracked files in Git projects.
-- `view --open` starts the local read-only browser viewer.
+- `view --open` starts the local browser viewer.
 
 ## Setup and bootstrap
 
@@ -42,7 +42,7 @@ aictx patch review bootstrap-memory.json
 
 - `setup` is the normal onboarding command; it initializes storage if needed,
   applies conservative bootstrap memory by default, and starts the local
-  read-only viewer for inspection.
+  viewer for inspection.
 - `init` is the lower-level empty-storage initializer for automation, tests, and manual workflows.
 - `setup --dry-run` previews the bootstrap patch and role coverage without
   initializing storage, writing repo files, running checks, or starting the
@@ -140,7 +140,7 @@ aictx docs agent-recipes
 aictx docs agent-integration --open
 ```
 
-`aictx view` starts a local, read-only memory viewer. `aictx docs` lists bundled
+`aictx view` starts a local memory viewer. `aictx docs` lists bundled
 public docs topics. `aictx docs <topic>` prints bundled Markdown for that topic.
 `--open` opens the hosted docs site.
 

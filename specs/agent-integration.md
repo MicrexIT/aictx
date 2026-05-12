@@ -139,17 +139,17 @@ MCP exposes exactly `load_memory`, `search_memory`, `inspect_memory`, `remember_
 
 ## Local Viewer
 
-`aictx view` starts a local, read-only browser viewer for human inspection. It is
+`aictx view` starts a local browser viewer for human inspection. It is
 CLI-only in v1 and should not be added to MCP just to mirror the CLI command
 list. Local viewing is not a routine MCP memory operation; use the viewer when a
 user or agent needs to inspect memory objects, sidecar JSON, direct relations,
 the selected-node graph, or the generated Obsidian export action in a browser.
 
 The viewer binds to loopback and prints a tokenized local URL. It must not be
-used as a shortcut for editing `.aictx/` files directly. The only write action
-available through the viewer is the explicit Obsidian projection export, which
-writes generated projection files through the same service as
-`aictx export obsidian`.
+used as a shortcut for editing `.aictx/` files directly. Its write actions are
+limited to explicit Obsidian projection export and explicit project deletion
+after confirmation. Project deletion removes the selected project `.aictx/`
+root and registry entry; it must not delete source files.
 
 ## Structured Patches
 

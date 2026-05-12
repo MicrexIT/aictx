@@ -1,6 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 
 import {
+  deleteViewerProject,
   exportObsidianProjection,
   exportViewerProjectObsidian,
   getViewerProjectBootstrap,
@@ -9,6 +10,7 @@ import {
   type AppResult,
   type ExportObsidianProjectionData,
   type ViewerBootstrapData,
+  type ViewerProjectDeleteData,
   type ViewerProjectsData
 } from "../app/operations.js";
 import { aictxError, type AictxError, type JsonValue } from "../core/errors.js";
@@ -25,6 +27,7 @@ export interface ViewerApiContext {
 type ViewerApiResult =
   | AppResult<ViewerBootstrapData>
   | AppResult<ViewerProjectsData>
+  | AppResult<ViewerProjectDeleteData>
   | AppResult<ExportObsidianProjectionData>;
 
 export async function handleViewerApiRequest(
@@ -47,6 +50,13 @@ export async function handleViewerApiRequest(
 
   if (url.pathname === "/api/projects") {
     await handleProjectsRequest(request, response, context);
+    return;
+  }
+
+  const projectDelete = matchProjectDeleteRoute(url.pathname);
+
+  if (projectDelete !== null) {
+    await handleProjectDeleteRequest(request, response, context, projectDelete);
     return;
   }
 
@@ -151,6 +161,25 @@ async function handleProjectBootstrapRequest(
   }
 
   const result = await getViewerProjectBootstrap({
+    cwd: context.cwd,
+    registryId,
+    ...(context.aictxHome === undefined ? {} : { aictxHome: context.aictxHome })
+  });
+  writeAppResult(response, result);
+}
+
+async function handleProjectDeleteRequest(
+  request: IncomingMessage,
+  response: ServerResponse,
+  context: ViewerApiContext,
+  registryId: string
+): Promise<void> {
+  if (request.method !== "DELETE") {
+    writeMethodNotAllowed(response, "DELETE");
+    return;
+  }
+
+  const result = await deleteViewerProject({
     cwd: context.cwd,
     registryId,
     ...(context.aictxHome === undefined ? {} : { aictxHome: context.aictxHome })
@@ -272,6 +301,23 @@ function matchProjectRoute(pathname: string, suffix: string): string | null {
   }
 
   const encoded = pathname.slice(prefix.length, pathname.length - suffix.length - 1);
+
+  try {
+    const registryId = decodeURIComponent(encoded);
+    return registryId === "" || registryId.includes("/") ? null : registryId;
+  } catch {
+    return null;
+  }
+}
+
+function matchProjectDeleteRoute(pathname: string): string | null {
+  const prefix = "/api/projects/";
+
+  if (!pathname.startsWith(prefix)) {
+    return null;
+  }
+
+  const encoded = pathname.slice(prefix.length);
 
   try {
     const registryId = decodeURIComponent(encoded);

@@ -73,7 +73,7 @@ export function registerViewCommand(
 ): void {
   program
     .command("view")
-    .description("Start the local read-only Aictx memory viewer.")
+    .description("Start the local Aictx memory viewer.")
     .option("--port <number>", "Port to bind on 127.0.0.1.")
     .option("--open", "Open the viewer URL in the default browser.")
     .option("--detach", "Start the viewer in a background process and print its URL.")

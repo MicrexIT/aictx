@@ -254,6 +254,152 @@ describe("viewer local server", () => {
     }
   });
 
+  it("deletes a viewer project by removing .aictx and unregistering it", async () => {
+    const projectRoot = await createInitializedProject("aictx-viewer-delete-project-");
+    const aictxHome = await createTempRoot("aictx-viewer-delete-home-");
+    const assetsDir = await createViewerAssets("aictx-viewer-delete-assets-");
+
+    await writeProjectFile(projectRoot, "src/app.ts", "export const kept = true;\n");
+    await registerProject(projectRoot, aictxHome);
+
+    const started = await startViewerServer({
+      cwd: projectRoot,
+      assetsDir,
+      aictxHome,
+      token: "delete-token"
+    });
+
+    expect(started.ok).toBe(true);
+    if (!started.ok) {
+      throw new Error(started.error.message);
+    }
+
+    try {
+      const base = `http://${started.data.host}:${started.data.port}`;
+      const projectsResponse = await fetch(`${base}/api/projects?token=${started.data.token}`);
+      const projectsEnvelope = await projectsResponse.json() as {
+        ok: true;
+        data: { projects: Array<{ registry_id: string; project_root: string }> };
+      };
+      const registryId = projectsEnvelope.data.projects[0]?.registry_id;
+
+      expect(registryId).toBeTruthy();
+
+      const deleteResponse = await fetch(
+        `${base}/api/projects/${encodeURIComponent(registryId ?? "")}`,
+        {
+          method: "DELETE",
+          headers: {
+            authorization: `Bearer ${started.data.token}`
+          }
+        }
+      );
+      const deleteEnvelope = await deleteResponse.json() as {
+        ok: true;
+        data: {
+          project: { registry_id: string; project_root: string };
+          removed: { registry_id: string } | null;
+          destroyed: true;
+          entries_removed: string[];
+        };
+      };
+
+      expect(deleteResponse.status).toBe(200);
+      expect(deleteEnvelope.ok).toBe(true);
+      expect(deleteEnvelope.data).toMatchObject({
+        project: {
+          registry_id: registryId,
+          project_root: projectRoot
+        },
+        removed: {
+          registry_id: registryId
+        },
+        destroyed: true,
+        entries_removed: [".aictx"]
+      });
+      await expect(pathExists(join(projectRoot, ".aictx"))).resolves.toBe(false);
+      await expect(readFile(join(projectRoot, "src/app.ts"), "utf8"))
+        .resolves.toBe("export const kept = true;\n");
+
+      const refreshed = await fetch(`${base}/api/projects?token=${started.data.token}`);
+      const refreshedEnvelope = await refreshed.json() as {
+        ok: true;
+        data: { projects: unknown[]; counts: { projects: number } };
+      };
+
+      expect(refreshed.status).toBe(200);
+      expect(refreshedEnvelope.ok).toBe(true);
+      expect(refreshedEnvelope.data.projects).toEqual([]);
+      expect(refreshedEnvelope.data.counts.projects).toBe(0);
+    } finally {
+      await started.data.close();
+    }
+  });
+
+  it("unregisters stale viewer projects whose .aictx directory is already missing", async () => {
+    const projectRoot = await createInitializedProject("aictx-viewer-delete-stale-project-");
+    const aictxHome = await createTempRoot("aictx-viewer-delete-stale-home-");
+    const assetsDir = await createViewerAssets("aictx-viewer-delete-stale-assets-");
+
+    await writeProjectFile(projectRoot, "src/kept.ts", "export const kept = true;\n");
+    await registerProject(projectRoot, aictxHome);
+    await rm(join(projectRoot, ".aictx"), { recursive: true, force: true });
+
+    const started = await startViewerServer({
+      cwd: projectRoot,
+      assetsDir,
+      aictxHome,
+      token: "delete-stale-token"
+    });
+
+    expect(started.ok).toBe(true);
+    if (!started.ok) {
+      throw new Error(started.error.message);
+    }
+
+    try {
+      const base = `http://${started.data.host}:${started.data.port}`;
+      const projectsResponse = await fetch(`${base}/api/projects?token=${started.data.token}`);
+      const projectsEnvelope = await projectsResponse.json() as {
+        ok: true;
+        data: { projects: Array<{ registry_id: string; available: boolean }> };
+      };
+      const project = projectsEnvelope.data.projects[0];
+
+      expect(project).toMatchObject({ available: false });
+
+      const deleteResponse = await fetch(
+        `${base}/api/projects/${encodeURIComponent(project?.registry_id ?? "")}?token=${started.data.token}`,
+        { method: "DELETE" }
+      );
+      const deleteEnvelope = await deleteResponse.json() as {
+        ok: true;
+        data: { removed: { registry_id: string } | null; entries_removed: string[] };
+      };
+
+      expect(deleteResponse.status).toBe(200);
+      expect(deleteEnvelope.ok).toBe(true);
+      expect(deleteEnvelope.data.removed).toMatchObject({
+        registry_id: project?.registry_id
+      });
+      expect(deleteEnvelope.data.entries_removed).toEqual([]);
+      await expect(readFile(join(projectRoot, "src/kept.ts"), "utf8"))
+        .resolves.toBe("export const kept = true;\n");
+
+      const refreshed = await fetch(`${base}/api/projects?token=${started.data.token}`);
+      const refreshedEnvelope = await refreshed.json() as {
+        ok: true;
+        data: { projects: unknown[]; counts: { projects: number } };
+      };
+
+      expect(refreshedEnvelope.ok).toBe(true);
+      expect(refreshedEnvelope.data.projects).toEqual([]);
+      expect(refreshedEnvelope.data.counts.projects).toBe(0);
+    } finally {
+      await started.data.close();
+    }
+  });
+
   it("returns bootstrap data without mutating canonical storage or indexes", async () => {
     const projectRoot = await createInitializedProject("aictx-viewer-bootstrap-project-");
     const assetsDir = await createViewerAssets("aictx-viewer-bootstrap-assets-");
@@ -374,6 +520,16 @@ describe("viewer local server", () => {
       })).resolves.toMatchObject({ status: 405 });
       await expect(fetch(`${base}/api/export/obsidian?token=${token}`))
         .resolves.toMatchObject({ status: 405 });
+      const projectsResponse = await fetch(`${base}/api/projects?token=${token}`);
+      const projectsEnvelope = await projectsResponse.json() as {
+        ok: true;
+        data: { projects: Array<{ registry_id: string }> };
+      };
+      const registryId = projectsEnvelope.data.projects[0]?.registry_id;
+
+      expect(registryId).toBeTruthy();
+      await expect(fetch(`${base}/api/projects/${encodeURIComponent(registryId ?? "")}?token=${token}`))
+        .resolves.toMatchObject({ status: 405 });
       await expect(fetch(`${base}/api/debug?token=${token}`))
         .resolves.toMatchObject({ status: 404 });
       await expect(fetch(`${base}/shell`, { method: "POST" }))
@@ -432,6 +588,29 @@ async function createInitializedProject(prefix: string): Promise<string> {
   expect(output.stderr()).toBe("");
 
   return projectRoot;
+}
+
+async function registerProject(projectRoot: string, aictxHome: string): Promise<void> {
+  const output = createCapturedOutput();
+  const exitCode = await main(["node", "aictx", "projects", "add", "--json"], {
+    ...output.writers,
+    cwd: projectRoot,
+    registry: {
+      aictxHome
+    }
+  });
+
+  expect(exitCode).toBe(0);
+  expect(output.stderr()).toBe("");
+}
+
+async function pathExists(path: string): Promise<boolean> {
+  try {
+    await stat(path);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 async function readCanonicalAndIndexFiles(projectRoot: string): Promise<Record<string, string>> {

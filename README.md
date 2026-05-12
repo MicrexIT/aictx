@@ -119,7 +119,7 @@ Set up useful first-run memory inside an existing project:
 aictx setup
 ```
 
-`setup` starts the local read-only viewer after writing memory so humans can
+`setup` starts the local viewer after writing memory so humans can
 inspect the result immediately. Use `aictx setup --no-view` to skip viewer
 startup in scripts or agent runs.
 
@@ -250,7 +250,7 @@ supported MCP tool or CLI command exists.
 | Read public docs | none | `aictx docs` |
 
 `aictx view [--port <number>] [--open] [--detach] [--json]` starts the local
-read-only memory viewer. `aictx view` is CLI-only in v1.
+memory viewer. `aictx view` is CLI-only in v1.
 
 ## Agent memory discipline
 

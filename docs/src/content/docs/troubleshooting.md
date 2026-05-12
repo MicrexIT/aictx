@@ -12,7 +12,7 @@ aictx view --open
 ```
 
 `check` validates storage and index health. `diff` shows memory changes. `view`
-opens the local read-only inspection UI.
+opens the local inspection UI.
 
 ## `aictx` is not on PATH
 

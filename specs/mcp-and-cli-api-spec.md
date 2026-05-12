@@ -72,7 +72,7 @@ When a supported MCP or CLI entrypoint exists, agents must use that entrypoint i
 | Manage branch handoff | none | `aictx handoff` | Branch-scoped continuity remains CLI-only in v1. |
 | Export Obsidian projection | none | `aictx export obsidian` | Generated projection remains CLI-only in v1. |
 | Manage project registry | none | `aictx projects` | Registry management remains CLI-only in v1. |
-| View local memory | none | `aictx view` | Local read-only viewer remains CLI-only in v1. |
+| View local memory | none | `aictx view` | Local viewer remains CLI-only in v1. |
 | Read public docs | none | `aictx docs` | Bundled public docs remain CLI-only in v1. |
 | Suggest memory decision packet | none | `aictx suggest` | Agent assistance remains CLI-only in v1. |
 | Audit memory hygiene | none | `aictx audit` | Deterministic hygiene audit remains CLI-only in v1. |
@@ -711,7 +711,7 @@ Minimum behavior:
 * `aictx handoff` manages one branch-scoped synthesis for unfinished current-branch continuity.
 * `aictx export obsidian` writes a one-way generated Obsidian projection from canonical memory.
 * `aictx projects` manages the user-level project registry used by the multi-project viewer.
-* `aictx view` starts a loopback-only read-only web viewer for human memory inspection.
+* `aictx view` starts a loopback-only web viewer for human memory inspection and explicit project memory deletion.
 * `aictx docs` lists bundled public documentation topics, prints bundled Markdown for a selected topic, and optionally opens the hosted docs page.
 * `aictx suggest --from-diff` returns a Git-backed deterministic memory suggestion packet for the current diff and does not write memory.
 * `aictx suggest --bootstrap` returns a deterministic first-run memory suggestion packet and does not write memory.
@@ -946,7 +946,7 @@ Behavior:
 
 Purpose:
 
-Start a local read-only web viewer for browsing canonical Aictx memory.
+Start a local web viewer for browsing canonical Aictx memory.
 
 Syntax:
 

@@ -50,7 +50,7 @@ Minimum Node version: 22
 Module format: ESM
 Package manager: pnpm
 Primary package type: CLI + MCP server
-Frontend: local read-only Svelte/Vite viewer served by the CLI in v1 extension
+Frontend: local Svelte/Vite viewer served by the CLI in v1 extension
 Hosted backend: none in v1
 ```
 
@@ -1097,7 +1097,7 @@ Runtime architecture is implementation-ready when:
 * SQLite is local generated state and is accessed only through the index module.
 * JSON Schema validation uses project-local `.aictx/schema/` files.
 * Obsidian projection exports are generated state and never canonical input.
-* `aictx view` serves only a loopback local read-only viewer and does not mutate canonical memory.
+* `aictx view` serves only a loopback local viewer. Serving and browsing do not mutate canonical memory; explicit viewer actions can export generated Obsidian files or delete a selected project `.aictx/` root after confirmation.
 * No command requires network access, embeddings, API keys, or a cloud account.
 * Writes are protected by a local project lock.
 * Tests can exercise the main flows in temporary Git and non-Git project directories.

@@ -1,0 +1,17 @@
+{
+  "confidence": "medium",
+  "content_hash": "sha256:bde9e4caf8b852c7c25ceabfa7ad532ddee261d8ccc117972a8e06f476a454c7",
+  "created_at": "2026-05-12T17:42:51+02:00",
+  "evidence": [
+    {
+      "id": "viewer/src/App.svelte",
+      "kind": "file"
+    }
+  ],
+  "from": "decision.viewer-project-delete",
+  "id": "rel.decision-viewer-project-delete-related-to-decision-viewer-treats-dirty-memory-as-local-changes",
+  "predicate": "related_to",
+  "status": "active",
+  "to": "decision.viewer-treats-dirty-memory-as-local-changes",
+  "updated_at": "2026-05-12T17:42:51+02:00"
+}

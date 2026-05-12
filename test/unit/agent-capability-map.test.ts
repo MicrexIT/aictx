@@ -184,7 +184,7 @@ const cliOnlyCapabilities = [
     capability: "View local memory",
     mcp: "none",
     cli: "`aictx view`",
-    notes: "Local read-only viewer remains CLI-only in v1."
+    notes: "Local viewer remains CLI-only in v1."
   },
   {
     capability: "Read public docs",

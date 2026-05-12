@@ -22,3 +22,5 @@
 {"actor":"cli","event":"memory.created","id":"constraint.package-manager","timestamp":"2026-05-12T16:20:21+02:00"}
 {"actor":"agent","event":"memory.created","id":"decision.setup-starts-viewer-by-default","timestamp":"2026-05-12T16:33:03+02:00"}
 {"actor":"agent","event":"memory.created","id":"decision.viewer-treats-dirty-memory-as-local-changes","timestamp":"2026-05-12T17:13:16+02:00"}
+{"actor":"agent","event":"memory.created","id":"decision.viewer-project-delete","timestamp":"2026-05-12T17:42:51+02:00"}
+{"actor":"agent","event":"relation.created","relation_id":"rel.decision-viewer-project-delete-related-to-decision-viewer-treats-dirty-memory-as-local-changes","timestamp":"2026-05-12T17:42:51+02:00"}

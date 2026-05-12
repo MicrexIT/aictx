@@ -2,15 +2,16 @@
 
 ## 1. Purpose
 
-This document defines the v1 local read-only viewer for Aictx.
+This document defines the v1 local viewer for Aictx.
 
 It owns:
 
 * `aictx view` CLI behavior
 * Local viewer server and browser API boundaries
 * Bundled Svelte/Vite app expectations
-* Read-only memory browsing behavior
+* Memory browsing behavior
 * Obsidian projection export action inside the viewer
+* Explicit project memory deletion inside the viewer
 * Viewer packaging and test expectations
 
 This spec depends on:
@@ -37,7 +38,7 @@ The local viewer is a human inspection surface for Aictx memory. It must make pr
 Rules:
 
 * The viewer must not edit canonical `.aictx/memory/`, `.aictx/relations/`, `.aictx/events.jsonl`, config, schemas, hashes, or generated SQLite indexes.
-* The only allowed write from the viewer is an explicit Obsidian export action that calls the same generated projection service as `aictx export obsidian`.
+* Allowed writes from the viewer are the explicit Obsidian export action and the explicit project deletion action. Project deletion permanently removes the target project's derived `.aictx/` directory and unregisters its project registry entry; it must not delete source files.
 * The viewer must run locally, bind only to loopback, and require no cloud account, hosted service, telemetry, embeddings, external model API, or network dependency.
 * The viewer may read the user-level project registry at `$AICTX_HOME/projects.json`, defaulting to `~/.aictx/projects.json`, to list initialized projects. The registry stores project roots and metadata only; canonical memory remains isolated per project.
 * `aictx view`, `aictx lens`, and `aictx handoff` are CLI-only in v1. CLI-only capabilities are intentionally not MCP parity gaps.
@@ -90,6 +91,7 @@ Required routes:
 
 ```text
 GET /api/projects
+DELETE /api/projects/:registryId
 GET /api/projects/:registryId/bootstrap
 POST /api/projects/:registryId/export/obsidian
 GET /api/bootstrap
@@ -104,6 +106,15 @@ POST /api/export/obsidian
 * Current project registry id when the launch cwd is initialized.
 
 Project-scoped bootstrap and export routes behave like their legacy routes but resolve the target project from the registry id.
+
+`DELETE /api/projects/:registryId`:
+
+* Resolves the target project from the current project or project registry.
+* Derives the `.aictx/` path from `project_root`.
+* Permanently deletes that `.aictx/` directory without backup.
+* Removes the matching entry from `$AICTX_HOME/projects.json`.
+* Treats an already-missing `.aictx/` directory as a successful stale registry cleanup.
+* Must not delete source files or any path outside the derived `.aictx/` directory.
 
 `GET /api/bootstrap` returns:
 
@@ -146,12 +157,13 @@ Required features:
 * Provide lens tabs/cards using the shared lens service: Project Map, Current Work, Review/Risk, Provenance, and Maintenance.
 * Show role coverage and generated gaps as read-only context; missing project-truth roles are not validation failures and do not create placeholder files. Missing optional branch handoff does not display a source-backed gap.
 * Let users trigger the Obsidian projection export and see success/failure output.
+* Let users explicitly delete a project's Aictx memory root after confirming the project name.
 * Let users return from a selected project to the Projects dashboard.
 
 Non-goals:
 
 * Editing memory.
-* Creating, deleting, superseding, or marking memory stale.
+* Creating, deleting, superseding, or marking individual memory objects stale.
 * Full-project graph visualization as the primary UX.
 * File watching or live reload of canonical memory.
 * Cross-project merged search or combined memory browsing.
@@ -198,7 +210,8 @@ Required test coverage:
 * Markdown rendering does not execute raw HTML.
 * Selected-node graph contains only the selected object, direct neighbors, and direct relations.
 * Obsidian export action writes generated projection files only and does not mutate canonical memory.
+* Project deletion requires confirmation, removes the target `.aictx/` directory, unregisters the project, preserves source files, and handles stale registry entries whose `.aictx/` directory is already missing.
 * Packed package includes viewer assets and can serve them.
 * Browser smoke test loads the page without console errors.
 
-The viewer foundation is complete when a user can run `aictx view`, open the printed local URL, search and inspect project memory, see direct relation context, and optionally regenerate the Obsidian projection without editing canonical Aictx memory.
+The viewer foundation is complete when a user can run `aictx view`, open the printed local URL, search and inspect project memory, see direct relation context, optionally regenerate the Obsidian projection, and explicitly remove a project memory root without editing individual canonical Aictx memory objects.

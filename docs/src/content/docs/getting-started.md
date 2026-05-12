@@ -64,7 +64,7 @@ aictx setup
 
 `setup` creates `.aictx/` if needed, updates marked Aictx sections in
 `AGENTS.md` and `CLAUDE.md`, writes conservative evidence-backed bootstrap
-memory, runs checks, prints soft role coverage, and starts the local read-only
+memory, runs checks, prints soft role coverage, and starts the local
 viewer for inspection.
 
 Use `aictx setup --dry-run` to preview without initializing storage, writing
@@ -90,7 +90,7 @@ aictx setup --open
 ```
 
 `aictx setup` applies a conservative bootstrap memory patch by default and
-starts the local read-only viewer after validation. Add `--no-view` for scripts
+starts the local viewer after validation. Add `--no-view` for scripts
 or agent runs that should not start the viewer, or `--open` to open the viewer
 in the default browser.
 

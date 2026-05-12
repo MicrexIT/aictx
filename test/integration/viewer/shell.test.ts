@@ -1,5 +1,5 @@
 import { execFile } from "node:child_process";
-import { mkdir, mkdtemp, realpath, rm, stat, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, realpath, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -64,7 +64,7 @@ afterEach(async () => {
   );
 });
 
-describe("read-only viewer shell", () => {
+describe("viewer shell", () => {
   it("loads bootstrap data, searches objects, renders safe Markdown, JSON, and relations", async () => {
     const assets = await stat(join(viewerAssetsDir, "index.html"));
 
@@ -325,6 +325,72 @@ describe("read-only viewer shell", () => {
 
       await info.focus();
       await expectTooltipVisibility(tooltip, "visible");
+
+      expect(consoleErrors()).toEqual([]);
+    } finally {
+      await browser?.close();
+      await started.data.close();
+    }
+  });
+
+  it("deletes a project memory root from the Projects dashboard", async () => {
+    const assets = await stat(join(viewerAssetsDir, "index.html"));
+
+    expect(assets.isFile()).toBe(true);
+
+    const projectRoot = await createInitializedProject("aictx-viewer-delete-ui-project-");
+    const aictxHome = await createTempRoot("aictx-viewer-delete-ui-home-");
+
+    await writeProjectFile(projectRoot, "src/app.ts", "export const sourceFilesStay = true;\n");
+    await registerProject(projectRoot, aictxHome);
+
+    const started = await startViewerServer({
+      cwd: projectRoot,
+      assetsDir: viewerAssetsDir,
+      aictxHome,
+      token: "viewer-delete-token"
+    });
+
+    expect(started.ok).toBe(true);
+    if (!started.ok) {
+      throw new Error(started.error.message);
+    }
+
+    let browser: Browser | null = null;
+
+    try {
+      browser = await chromium.launch();
+      const page = await browser.newPage();
+      const consoleErrors = collectPageErrors(page);
+
+      await page.setViewportSize({ width: 1040, height: 760 });
+      await page.goto(started.data.url, { waitUntil: "domcontentloaded" });
+      await page.locator('[data-testid="projects-view"]').waitFor();
+
+      const card = page.locator('[data-testid^="project-card-"]').first();
+      const projectName = (await card.locator("h3").textContent())?.trim() ?? "";
+
+      expect(projectName).not.toBe("");
+      await card.locator('[data-testid^="project-delete-"]').click();
+      await page.locator('[data-testid="project-delete-modal"]').waitFor();
+      await expectText(page, '[data-testid="project-delete-modal"]', "Source files are not deleted");
+      await expectText(page, '[data-testid="project-delete-modal"]', ".aictx/");
+      await expect(page.locator('[data-testid="project-delete-modal"]').textContent())
+        .resolves.not.toContain("Source files are deleted");
+
+      const confirm = page.locator('[data-testid="project-delete-confirm"]');
+
+      await expect(confirm.isDisabled()).resolves.toBe(true);
+      await page.fill('[data-testid="project-delete-confirmation"]', projectName);
+      await expect(confirm.isEnabled()).resolves.toBe(true);
+      await confirm.click();
+      await page.locator('[data-testid="project-delete-notice"]').waitFor();
+      await expectText(page, '[data-testid="project-delete-notice"]', "Source files were not deleted");
+      await expectText(page, '[data-testid="empty-projects"]', "No projects registered");
+      await expectCount(page, '[data-testid^="project-card-"]', 0);
+      await expect(pathExists(join(projectRoot, ".aictx"))).resolves.toBe(false);
+      await expect(readFile(join(projectRoot, "src/app.ts"), "utf8"))
+        .resolves.toBe("export const sourceFilesStay = true;\n");
 
       expect(consoleErrors()).toEqual([]);
     } finally {
@@ -669,6 +735,20 @@ async function createInitializedProject(prefix: string): Promise<string> {
   return projectRoot;
 }
 
+async function registerProject(projectRoot: string, aictxHome: string): Promise<void> {
+  const output = createCapturedOutput();
+  const exitCode = await main(["node", "aictx", "projects", "add", "--json"], {
+    ...output.writers,
+    cwd: projectRoot,
+    registry: {
+      aictxHome
+    }
+  });
+
+  expect(exitCode).toBe(0);
+  expect(output.stderr()).toBe("");
+}
+
 async function createInitializedGitProject(prefix: string): Promise<string> {
   const projectRoot = await createInitializedProject(prefix);
 
@@ -679,6 +759,15 @@ async function createInitializedGitProject(prefix: string): Promise<string> {
   await git(projectRoot, ["commit", "-m", "Initial Aictx memory"]);
 
   return projectRoot;
+}
+
+async function pathExists(path: string): Promise<boolean> {
+  try {
+    await stat(path);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 async function readStorageOrThrow(projectRoot: string) {

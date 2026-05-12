@@ -83,7 +83,7 @@ Required in v1:
 * Soft memory roles, readable lenses, and branch-scoped handoff for clearer human/agent comprehension
 * Demand-driven memory quality guidance that treats agent failure, confusion, conflicts, and user correction as signals to repair durable memory
 * One-way generated Obsidian projection export for viewing memory in Obsidian
-* Local read-only web viewer for human memory inspection
+* Local web viewer for human memory inspection and explicit project memory deletion
 
 Agent capability split:
 
@@ -359,7 +359,7 @@ Expected behavior:
 * `aictx setup` orchestrates init, conservative evidence-backed bootstrap memory, role coverage, check, and diff summary.
 * `aictx setup` applies the conservative bootstrap patch by default; `--dry-run` previews without initializing storage or writing repo files and `--apply` remains accepted for compatibility.
 * `aictx setup --force --dry-run` previews reset/setup behavior without deleting or rewriting anything.
-* `aictx setup --view` also starts the local read-only viewer for immediate inspection.
+* `aictx setup --view` also starts the local viewer for immediate inspection.
 * `aictx lens` renders readable project views from role coverage and relation context.
 * `aictx handoff` stores unfinished branch continuity as branch-scoped memory that is excluded from project-truth lenses. `handoff show` returns only an active current-branch handoff; stale or closed handoffs remain historical memory for inspect, view, and Git history.
 
@@ -638,7 +638,7 @@ Generate a disposable Obsidian-compatible Markdown projection from canonical Aic
 
 aictx view [--port <number>] [--open] [--detach] [--json]
 
-Start a local loopback-only read-only web viewer for browsing canonical Aictx memory, searching objects, inspecting Markdown/JSON, seeing direct relation neighborhoods, and triggering the generated Obsidian projection export.
+Start a local loopback-only web viewer for browsing canonical Aictx memory, searching objects, inspecting Markdown/JSON, seeing direct relation neighborhoods, triggering the generated Obsidian projection export, and explicitly deleting a selected project memory root.
 
 ⸻
 

@@ -48,7 +48,7 @@ aictx patch review bootstrap-memory.json
 `setup` is the normal first-run command. It creates local storage if needed,
 updates optional repo-level agent guidance, writes conservative source-backed
 role memory by default, runs checks, prints role coverage, and starts the local
-read-only viewer for inspection. `init` remains available as the lower-level
+viewer for inspection. `init` remains available as the lower-level
 empty-storage initializer.
 
 `setup --dry-run` is read-only: it does not initialize storage, update guidance
@@ -114,7 +114,7 @@ aictx export obsidian
 aictx docs
 ```
 
-`aictx view` starts a local, read-only browser viewer. `projects` manages the
+`aictx view` starts a local browser viewer. `projects` manages the
 user-level registry used by the viewer. `export obsidian` writes a generated
 Obsidian-compatible projection. `docs` prints bundled public docs or opens the
 hosted docs site.

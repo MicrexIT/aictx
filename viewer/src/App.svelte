@@ -185,6 +185,14 @@
     files_removed: string[];
   }
 
+  interface ViewerProjectDeleteData {
+    registry_path: string;
+    project: RegisteredProjectSummary;
+    removed: RegisteredProjectSummary | null;
+    destroyed: true;
+    entries_removed: string[];
+  }
+
   interface ViewerSuccessEnvelope<TData = ViewerBootstrapData> {
     ok: true;
     data: TData;
@@ -214,9 +222,11 @@
   type ViewerEnvelope = ViewerSuccessEnvelope<ViewerBootstrapData> | ViewerErrorEnvelope;
   type ViewerProjectsEnvelope = ViewerSuccessEnvelope<ViewerProjectsData> | ViewerErrorEnvelope;
   type ExportEnvelope = ViewerSuccessEnvelope<ExportObsidianProjectionData> | ViewerErrorEnvelope;
+  type DeleteProjectEnvelope = ViewerSuccessEnvelope<ViewerProjectDeleteData> | ViewerErrorEnvelope;
   type ViewerState = "loading" | "ready" | "error";
   type ViewerScreen = "projects" | "memories" | "detail" | "lenses" | "export";
   type ExportState = "idle" | "running" | "success" | "error";
+  type DeleteProjectState = "idle" | "confirming" | "running" | "error";
   type LayerFilter = "all" | "memories" | "syntheses" | "sources" | "inactive";
 
   interface MarkdownBlock {
@@ -267,6 +277,12 @@
   let exportFilesWritten = $state(0);
   let exportManifestPath = $state("");
   let activeStatusTooltipId = $state<string | null>(null);
+  let deleteProjectId = $state<string | null>(null);
+  let deleteConfirmation = $state("");
+  let deleteState = $state<DeleteProjectState>("idle");
+  let deleteMessage = $state("");
+  let deleteErrorCode = $state("");
+  let deleteNotice = $state("");
 
   const allOption = "all";
   const layerOptions: Array<{ value: LayerFilter; label: string }> = [
@@ -284,6 +300,15 @@
     selectedProjectId === null
       ? null
       : projects.find((project) => project.registry_id === selectedProjectId) ?? null
+  );
+  const projectPendingDelete = $derived.by(() =>
+    deleteProjectId === null
+      ? null
+      : projects.find((project) => project.registry_id === deleteProjectId) ?? null
+  );
+  const deleteConfirmationMatches = $derived(
+    projectPendingDelete !== null &&
+      deleteConfirmation.trim() === projectPendingDelete.project.name
   );
   const objects = $derived(bootstrap?.objects ?? []);
   const relations = $derived(bootstrap?.relations ?? []);
@@ -488,6 +513,99 @@
     }
   }
 
+  function openDeleteProjectDialog(project: ViewerProjectSummary): void {
+    deleteProjectId = project.registry_id;
+    deleteConfirmation = "";
+    deleteState = "confirming";
+    deleteMessage = "";
+    deleteErrorCode = "";
+    deleteNotice = "";
+  }
+
+  function closeDeleteProjectDialog(): void {
+    if (deleteState === "running") {
+      return;
+    }
+
+    deleteProjectId = null;
+    deleteConfirmation = "";
+    deleteState = "idle";
+    deleteMessage = "";
+    deleteErrorCode = "";
+  }
+
+  async function confirmDeleteProject(): Promise<void> {
+    if (token === "") {
+      deleteState = "error";
+      deleteErrorCode = "AICtxValidationFailed";
+      deleteMessage = "Viewer API token is missing from the local URL.";
+      return;
+    }
+
+    if (projectPendingDelete === null) {
+      deleteState = "error";
+      deleteErrorCode = "AICtxValidationFailed";
+      deleteMessage = "Select a project before deleting.";
+      return;
+    }
+
+    if (!deleteConfirmationMatches) {
+      deleteState = "error";
+      deleteErrorCode = "AICtxValidationFailed";
+      deleteMessage = "Type the project name exactly before deleting.";
+      return;
+    }
+
+    const registryId = projectPendingDelete.registry_id;
+
+    deleteState = "running";
+    deleteMessage = "Deleting Aictx memory.";
+    deleteErrorCode = "";
+
+    try {
+      const response = await fetch(`/api/projects/${encodeURIComponent(registryId)}?token=${encodeURIComponent(token)}`, {
+        method: "DELETE",
+        headers: {
+          accept: "application/json"
+        }
+      });
+      const envelope = (await response.json()) as DeleteProjectEnvelope;
+
+      warnings = uniqueSorted([...warnings, ...(envelope.warnings ?? [])]);
+
+      if (!response.ok || !envelope.ok) {
+        deleteState = "error";
+        deleteErrorCode = envelope.ok ? "" : envelope.error.code;
+        deleteMessage = envelope.ok
+          ? `Viewer delete request failed with HTTP ${response.status}.`
+          : `${envelope.error.code}: ${envelope.error.message}`;
+        return;
+      }
+
+      deleteNotice = `Deleted Aictx memory for ${envelope.data.project.project.name}. Source files were not deleted.`;
+
+      if (selectedProjectId === registryId) {
+        selectedProjectId = null;
+        bootstrap = null;
+        selectedObjectId = null;
+        currentScreen = "projects";
+        projectLoadState = "loading";
+        projectErrorMessage = "";
+      }
+
+      deleteProjectId = null;
+      deleteConfirmation = "";
+      deleteState = "idle";
+      deleteMessage = "";
+      deleteErrorCode = "";
+      await loadProjects();
+    } catch (error) {
+      deleteState = "error";
+      deleteErrorCode = "AICtxInternalError";
+      deleteMessage = error instanceof Error ? error.message : String(error);
+    }
+  }
+
   function objectMatchesFilters(object: MemoryObjectSummary): boolean {
     return (
       objectMatchesLayer(object, layerFilter) &&
@@ -655,7 +773,7 @@
     }
 
     if (project.git.dirty === true) {
-      return "`.aictx/` has local memory changes. You can keep saving memory; Aictx backs up dirty touched files before overwrite/delete. Review with `aictx diff` or commit `.aictx/` when you want this memory versioned.";
+      return "`.aictx/` has local memory changes. You can keep saving memory; supported memory writes protect dirty touched files. Review with `aictx diff` or commit `.aictx/` when you want this memory versioned. Project deletion is permanent after confirmation.";
     }
 
     if (project.git.dirty === false) {
@@ -1206,18 +1324,36 @@
                     <p class="project-warning">{project.warnings[0]}</p>
                   {/if}
 
-                  <button
-                    type="button"
-                    class="primary-action"
-                    disabled={!project.available}
-                    onclick={() => selectProject(project.registry_id)}
-                    data-testid={`project-open-${project.registry_id}`}
-                  >
-                    Open project
-                  </button>
+                  <div class="project-actions">
+                    <button
+                      type="button"
+                      class="primary-action"
+                      disabled={!project.available}
+                      onclick={() => selectProject(project.registry_id)}
+                      data-testid={`project-open-${project.registry_id}`}
+                    >
+                      Open project
+                    </button>
+                    <button
+                      type="button"
+                      class="danger-action"
+                      aria-label={`Delete Aictx memory for ${project.project.name}`}
+                      disabled={deleteState === "running"}
+                      onclick={() => openDeleteProjectDialog(project)}
+                      data-testid={`project-delete-${project.registry_id}`}
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </article>
               {/each}
             </div>
+          {/if}
+
+          {#if deleteNotice !== ""}
+            <section class="delete-notice" role="status" aria-live="polite" data-testid="project-delete-notice">
+              <p>{deleteNotice}</p>
+            </section>
           {/if}
         </section>
       {:else if projectLoadState === "error"}
@@ -1849,6 +1985,95 @@
         </section>
       {/if}
     </section>
+
+    {#if projectPendingDelete !== null}
+      <section
+        class="modal-backdrop"
+        role="presentation"
+        data-testid="project-delete-modal"
+      >
+        <div
+          class="delete-dialog"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="project-delete-title"
+          aria-describedby="project-delete-description"
+        >
+          <form
+            onsubmit={(event) => {
+              event.preventDefault();
+              void confirmDeleteProject();
+            }}
+          >
+            <div class="title-stack">
+              <p class="eyebrow">Permanent project memory delete</p>
+              <h2 id="project-delete-title">Delete {projectPendingDelete.project.name}</h2>
+            </div>
+
+            <p id="project-delete-description" class="delete-warning">
+              This permanently deletes this project's <code>.aictx/</code> memory directory and removes it from registered memory roots. Source files are not deleted.
+            </p>
+
+            <dl class="delete-paths">
+              <div>
+                <dt>Project root</dt>
+                <dd>{projectPendingDelete.project_root}</dd>
+              </div>
+              <div>
+                <dt>Aictx root</dt>
+                <dd>{projectPendingDelete.aictx_root}</dd>
+              </div>
+            </dl>
+
+            <label class="field">
+              <span>Type project name to confirm</span>
+              <input
+                type="text"
+                bind:value={deleteConfirmation}
+                autocomplete="off"
+                disabled={deleteState === "running"}
+                data-testid="project-delete-confirmation"
+              />
+            </label>
+
+            {#if deleteState === "error" || deleteState === "running"}
+              <section
+                class:delete-status-error={deleteState === "error"}
+                class="delete-status"
+                role={deleteState === "error" ? "alert" : "status"}
+                aria-live="polite"
+                data-testid="project-delete-status"
+              >
+                <p>{deleteMessage}</p>
+                {#if deleteState === "error" && deleteErrorCode !== ""}
+                  <p class="export-code">{deleteErrorCode}</p>
+                {/if}
+              </section>
+            {/if}
+
+            <div class="dialog-actions">
+              <button
+                type="button"
+                class="back-action"
+                disabled={deleteState === "running"}
+                onclick={closeDeleteProjectDialog}
+                data-testid="project-delete-cancel"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                class="danger-action"
+                disabled={!deleteConfirmationMatches || deleteState === "running"}
+                data-testid="project-delete-confirm"
+              >
+                {deleteState === "running" ? "Deleting" : "Delete memory"}
+              </button>
+            </div>
+          </form>
+        </div>
+      </section>
+    {/if}
   {/if}
 </main>
 
@@ -2004,6 +2229,7 @@
   .nav-list button,
   .back-action,
   .primary-action,
+  .danger-action,
   .relation-card button {
     min-height: 40px;
     border-radius: 6px;
@@ -2248,6 +2474,13 @@
     color: #8a3d22;
     font-size: 0.84rem;
     line-height: 1.45;
+  }
+
+  .project-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
   }
 
   .page-header,
@@ -2947,6 +3180,25 @@
     background: #eef2f1;
   }
 
+  .danger-action {
+    width: fit-content;
+    min-width: 96px;
+    border: 1px solid #b93815;
+    padding: 9px 13px;
+    color: #ffffff;
+    background: #c2411d;
+  }
+
+  .danger-action:hover:not(:disabled) {
+    background: #9f3318;
+  }
+
+  .danger-action:disabled {
+    border-color: #d7b9ad;
+    color: #8a3d22;
+    background: #f7e4dc;
+  }
+
   .export-status {
     display: grid;
     gap: 8px;
@@ -3002,6 +3254,113 @@
     margin: 0;
     overflow-wrap: anywhere;
     font-size: 0.82rem;
+  }
+
+  .delete-notice {
+    margin-top: 14px;
+    border: 1px solid #85aaa4;
+    border-radius: 7px;
+    padding: 12px;
+    color: #263141;
+    background: #eef7f4;
+  }
+
+  .delete-notice p {
+    margin: 0;
+    font-size: 0.86rem;
+    line-height: 1.4;
+  }
+
+  .modal-backdrop {
+    position: fixed;
+    z-index: 40;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    padding: 18px;
+    background: rgb(16 24 40 / 44%);
+  }
+
+  .delete-dialog {
+    width: min(100%, 560px);
+    max-height: calc(100vh - 36px);
+    overflow: auto;
+    border: 1px solid #d7b9ad;
+    border-radius: 8px;
+    padding: 18px;
+    background: #ffffff;
+    box-shadow: 0 24px 70px rgb(16 24 40 / 28%);
+  }
+
+  .delete-dialog form {
+    display: grid;
+    gap: 14px;
+  }
+
+  .delete-warning {
+    margin: 0;
+    color: #344054;
+    font-size: 0.92rem;
+    line-height: 1.5;
+  }
+
+  .delete-paths {
+    display: grid;
+    gap: 8px;
+    margin: 0;
+    border: 1px solid #e5d9d3;
+    border-radius: 7px;
+    padding: 12px;
+    background: #fff8f5;
+  }
+
+  .delete-paths div {
+    display: grid;
+    gap: 3px;
+  }
+
+  .delete-paths dt {
+    color: #8a3d22;
+    font-size: 0.7rem;
+    font-weight: 850;
+    text-transform: uppercase;
+  }
+
+  .delete-paths dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+    color: #172033;
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+    font-size: 0.8rem;
+    line-height: 1.4;
+  }
+
+  .delete-status {
+    display: grid;
+    gap: 6px;
+    border: 1px solid #cfd4d3;
+    border-radius: 7px;
+    padding: 10px;
+    background: #f8fbfa;
+  }
+
+  .delete-status p {
+    margin: 0;
+    overflow-wrap: anywhere;
+    font-size: 0.86rem;
+    line-height: 1.4;
+  }
+
+  .delete-status-error {
+    border-color: #dab0a3;
+    background: #fff4ef;
+  }
+
+  .dialog-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
   }
 
   .empty-copy {

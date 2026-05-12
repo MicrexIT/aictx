@@ -303,6 +303,10 @@ export interface ExportViewerProjectObsidianOptions extends ProjectRegistryOpera
   outDir?: string;
 }
 
+export interface DeleteViewerProjectOptions extends ProjectRegistryOperationOptions {
+  registryId: string;
+}
+
 export interface SaveMemoryPatchOptions extends GitWrapperOptions {
   cwd: string;
   patch?: unknown;
@@ -565,6 +569,14 @@ export interface ViewerProjectsData {
     unavailable: number;
   };
   current_project_registry_id: string | null;
+}
+
+export interface ViewerProjectDeleteData {
+  registry_path: string;
+  project: RegisteredProjectSummary;
+  removed: RegisteredProjectSummary | null;
+  destroyed: true;
+  entries_removed: string[];
 }
 
 export interface ResetAictxData {
@@ -1645,6 +1657,87 @@ export async function exportViewerProjectObsidian(
     ...(options.runner === undefined ? {} : { runner: options.runner }),
     ...(options.clock === undefined ? {} : { clock: options.clock })
   });
+}
+
+export async function deleteViewerProject(
+  options: DeleteViewerProjectOptions
+): Promise<AppResult<ViewerProjectDeleteData>> {
+  const resolved = await resolveViewerProjectCwd(options);
+  const registryPath = resolveProjectRegistryLocation(options).registryPath;
+
+  if (!resolved.ok) {
+    return {
+      ok: false,
+      error: resolved.error,
+      warnings: resolved.warnings,
+      meta: await buildBestEffortMeta(options)
+    };
+  }
+
+  const project = registeredProjectWithDerivedAictxRoot(resolved.data);
+  const summary = summarizeRegisteredProject(project);
+  const meta = await buildBestEffortMeta({
+    ...options,
+    cwd: project.project_root
+  });
+  const missing = await isAictxRootMissing(project.aictx_root);
+
+  if (!missing.ok) {
+    return {
+      ok: false,
+      error: missing.error,
+      warnings: [...resolved.warnings, ...missing.warnings],
+      meta
+    };
+  }
+
+  const warnings = [...resolved.warnings, ...missing.warnings];
+  const entriesRemoved: string[] = [];
+
+  if (!missing.data) {
+    const deleted = await removeAictxRoot(project.aictx_root);
+
+    if (!deleted.ok) {
+      return {
+        ok: false,
+        error: deleted.error,
+        warnings: [...warnings, ...deleted.warnings],
+        meta
+      };
+    }
+
+    warnings.push(...deleted.warnings);
+    entriesRemoved.push(".aictx");
+  }
+
+  const unregistered = await removeProjectRootFromRegistry({
+    ...options,
+    projectRoot: project.project_root
+  });
+
+  if (!unregistered.ok) {
+    return {
+      ok: false,
+      error: unregistered.error,
+      warnings: [...warnings, ...unregistered.warnings],
+      meta
+    };
+  }
+
+  warnings.push(...unregistered.warnings);
+
+  return {
+    ok: true,
+    data: {
+      registry_path: registryPath,
+      project: summary,
+      removed: unregistered.data === null ? null : summarizeRegisteredProject(unregistered.data),
+      destroyed: true,
+      entries_removed: entriesRemoved
+    },
+    warnings,
+    meta
+  };
 }
 
 export async function exportObsidianProjection(
@@ -2916,6 +3009,7 @@ export const applicationOperations = {
   auditMemory,
   checkProject,
   closeBranchHandoff,
+  deleteViewerProject,
   diffMemory,
   exportObsidianProjection,
   exportViewerProjectObsidian,

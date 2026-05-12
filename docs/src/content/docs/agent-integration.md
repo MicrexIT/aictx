@@ -250,7 +250,7 @@ requests, or safety rules.
 
 `aictx setup` provides guided first-run onboarding. It initializes storage if
 needed, writes conservative evidence-backed bootstrap memory by default, runs
-checks, prints soft role coverage, and starts the local read-only viewer for
+checks, prints soft role coverage, and starts the local viewer for
 inspection. Use `aictx setup --dry-run` to preview without initializing
 storage, writing repo files, running checks, or starting the viewer. Use
 `aictx setup --no-view` for scripts or agent runs that should skip viewer

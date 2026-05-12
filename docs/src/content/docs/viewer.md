@@ -1,9 +1,9 @@
 ---
 title: Local viewer
-description: Read-only local browser viewer for project memory inspection.
+description: Local browser viewer for project memory inspection and explicit project maintenance.
 ---
 
-`aictx view` starts a local, read-only browser viewer for human inspection.
+`aictx view` starts a local browser viewer for human inspection.
 
 ```bash
 aictx view
@@ -14,7 +14,7 @@ aictx view [--port <number>] [--open] [--detach] [--json]
 
 Use it when you want to browse memory objects, source-backed syntheses,
 relations, project registry entries, and generated Obsidian export state without
-editing canonical `.aictx/` files.
+editing individual canonical memory objects.
 
 The command binds only to `127.0.0.1`, chooses an available random port by
 default, and prints a local URL that includes a per-run API token. It can start
@@ -43,19 +43,23 @@ The project registry is for discovery in the viewer. It is not shared memory
 and does not make project IDs globally unique.
 :::
 
-## Read-only boundary
+## Maintenance boundary
 
-The viewer does not edit canonical memory. It is not a hosted app, remote API,
-MCP tool, Obsidian plugin, or knowledge-management system.
+The viewer does not edit canonical memory objects or relations. It is not a
+hosted app, remote API, MCP tool, Obsidian plugin, or knowledge-management
+system.
 
-The only write action in the viewer is the explicit Obsidian export screen,
-which calls the same generated projection service as:
+The viewer has two explicit write actions.
+
+Obsidian export calls the same generated projection service as:
 
 ```bash
 aictx export obsidian
 ```
 
-That export writes generated projection files only.
+Delete project permanently removes that project's derived `.aictx/` directory
+and removes its entry from `$AICTX_HOME/projects.json`. It does not delete
+source files.
 
 `aictx view` is CLI-only in v1 and has no MCP equivalent.
 

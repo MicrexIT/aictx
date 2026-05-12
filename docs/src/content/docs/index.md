@@ -41,8 +41,8 @@ and agent guidance.
 :::tip
 A good first memory is not a diary of what changed. It is something future
 agents can use: "release smoke tests run with `pnpm test:local`", "billing
-webhooks retry in the worker", or "the viewer is read-only except Obsidian
-export".
+webhooks retry in the worker", or "the viewer can inspect memory, export
+Obsidian projections, and explicitly delete project memory roots".
 :::
 
 ## How it works

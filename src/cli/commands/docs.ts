@@ -147,7 +147,7 @@ const DOC_TOPICS = [
   {
     topic: "viewer",
     title: "Local viewer",
-    description: "Inspect project memory through the local read-only browser viewer.",
+    description: "Inspect project memory through the local browser viewer.",
     file: "viewer.md",
     path: "/viewer/",
     aliases: ["view", "local-viewer"]
