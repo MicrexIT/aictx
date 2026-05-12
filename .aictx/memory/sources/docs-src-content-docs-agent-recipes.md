@@ -1,3 +1,0 @@
-# Source: docs/src/content/docs/agent-recipes.md
-
-This source records that durable Aictx memory can be derived from `docs/src/content/docs/agent-recipes.md`. Captured signals: agent-recipes documentation gives copyable setup and routine-loop guidance for Codex, Claude Code, Cursor, Cline, OpenCode, and generic MCP-capable agents; the page keeps CLI as the default path and MCP optional only when already configured.

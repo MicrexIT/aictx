@@ -158,6 +158,7 @@ export interface InitProjectOptions extends GitWrapperOptions {
   clock?: Clock;
   agentGuidance?: boolean;
   force?: boolean;
+  allowTrackedAictxDeletions?: boolean;
 }
 
 export interface PreviewSetupBootstrapOptions extends GitWrapperOptions {
@@ -620,6 +621,7 @@ export async function initProject(
     clock,
     agentGuidance: options.agentGuidance ?? true,
     force: options.force ?? false,
+    allowTrackedAictxDeletions: options.allowTrackedAictxDeletions ?? false,
     runner: options.runner
   });
 

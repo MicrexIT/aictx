@@ -1,6 +1,6 @@
 {
   "confidence": "high",
-  "content_hash": "sha256:a19bbb841fcf241fb4accad8aa14123b282371c0caf64fc363c5d479128b3ff7",
+  "content_hash": "sha256:aafdd4c03e527bf6611cd0f3787d01e620bada148d808ea870e04b91488fe09a",
   "created_at": "2026-05-12T15:43:05+02:00",
   "evidence": [
     {
@@ -8,8 +8,8 @@
       "kind": "source"
     }
   ],
-  "from": "synthesis.product-intent",
-  "id": "rel.synthesis-product-intent-derived-from-source-package-json",
+  "from": "synthesis.conventions-quality",
+  "id": "rel.synthesis-conventions-quality-derived-from-source-package-json",
   "predicate": "derived_from",
   "status": "active",
   "to": "source.package-json",

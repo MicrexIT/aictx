@@ -1,29 +1,8 @@
 {
   "body_path": "memory/workflows/package-scripts.md",
-  "content_hash": "sha256:7400da419ab67e13fc4b36802cb421e3b84bfbc532a0e462df216b64d9dc294e",
-  "created_at": "2026-05-07T19:14:19+02:00",
-  "evidence": [
-    {
-      "id": "package.json",
-      "kind": "file"
-    },
-    {
-      "id": "mcp-and-cli-api-spec.md",
-      "kind": "file"
-    },
-    {
-      "id": "specs/mcp-and-cli-api-spec.md",
-      "kind": "file"
-    }
-  ],
-  "facets": {
-    "applies_to": [
-      "package.json",
-      "docs/src/content/docs/index.md",
-      "README.md"
-    ],
-    "category": "workflow"
-  },
+  "content_hash": "sha256:4145a1828ade8031c8ce1363b3c31bed0280452c36bb7beb7c62158e06d0c51b",
+  "created_at": "2026-05-12T15:43:05+02:00",
+  "evidence": [],
   "id": "workflow.package-scripts",
   "scope": {
     "branch": null,
@@ -42,5 +21,5 @@
   ],
   "title": "Package scripts",
   "type": "workflow",
-  "updated_at": "2026-05-07T23:42:41+02:00"
+  "updated_at": "2026-05-12T15:43:05+02:00"
 }

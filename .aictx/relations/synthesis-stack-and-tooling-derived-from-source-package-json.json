@@ -1,6 +1,6 @@
 {
   "confidence": "high",
-  "content_hash": "sha256:a19bbb841fcf241fb4accad8aa14123b282371c0caf64fc363c5d479128b3ff7",
+  "content_hash": "sha256:b62aaf59af96b13dd4d7b0277d4e261cd2c0de9f4ec5193bb5fe068ba7d2fbc4",
   "created_at": "2026-05-12T15:43:05+02:00",
   "evidence": [
     {
@@ -8,8 +8,8 @@
       "kind": "source"
     }
   ],
-  "from": "synthesis.product-intent",
-  "id": "rel.synthesis-product-intent-derived-from-source-package-json",
+  "from": "synthesis.stack-and-tooling",
+  "id": "rel.synthesis-stack-and-tooling-derived-from-source-package-json",
   "predicate": "derived_from",
   "status": "active",
   "to": "source.package-json",

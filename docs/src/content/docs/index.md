@@ -70,7 +70,7 @@ agent from the project root:
 Set up fresh Aictx memory for this repository.
 
 First install the current Aictx package globally:
-npm install -g @aictx/memory@0.1.31
+npm install -g @aictx/memory@0.1.32
 
 Then run first-run onboarding, apply the conservative bootstrap memory patch,
 and start the local viewer for inspection:

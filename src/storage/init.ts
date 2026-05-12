@@ -84,6 +84,11 @@ export interface InitStorageOptions extends GitWrapperOptions {
   clock?: Clock;
   agentGuidance?: boolean;
   force?: boolean;
+  allowTrackedAictxDeletions?: boolean;
+}
+
+interface DirtyInitOptions extends GitWrapperOptions {
+  allowTrackedAictxDeletions?: boolean;
 }
 
 export type AgentGuidanceTargetStatus = "created" | "updated" | "unchanged" | "skipped";
@@ -386,7 +391,7 @@ async function existingStorageResult(
 
 async function rejectTrackedDirtyAictxInit(
   paths: ProjectPaths,
-  options: GitWrapperOptions
+  options: DirtyInitOptions
 ): Promise<Result<void>> {
   if (!paths.git.available) {
     return ok(undefined);
@@ -402,6 +407,18 @@ async function rejectTrackedDirtyAictxInit(
     return ok(undefined);
   }
 
+  if (options.allowTrackedAictxDeletions === true) {
+    const allDeleted = await areAllFilesMissing(paths.projectRoot, dirtyFiles.data.files);
+
+    if (!allDeleted.ok) {
+      return allDeleted;
+    }
+
+    if (allDeleted.data) {
+      return ok(undefined);
+    }
+  }
+
   return err(
     aictxError(
       "AICtxDirtyMemory",
@@ -412,6 +429,31 @@ async function rejectTrackedDirtyAictxInit(
       }
     )
   );
+}
+
+async function areAllFilesMissing(
+  projectRoot: string,
+  files: readonly string[]
+): Promise<Result<boolean>> {
+  for (const file of files) {
+    try {
+      await lstat(join(projectRoot, file));
+      return ok(false);
+    } catch (error) {
+      if (errorCode(error) === "ENOENT") {
+        continue;
+      }
+
+      return err(
+        aictxError("AICtxValidationFailed", "Aictx dirty file state could not be checked.", {
+          path: file,
+          message: messageFromUnknown(error)
+        })
+      );
+    }
+  }
+
+  return ok(true);
 }
 
 async function resetAictxRootContentsExceptLock(aictxRoot: string): Promise<Result<void>> {

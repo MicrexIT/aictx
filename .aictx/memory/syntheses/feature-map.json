@@ -1,43 +1,21 @@
 {
   "body_path": "memory/syntheses/feature-map.md",
-  "content_hash": "sha256:3bc54b1b64c8eb4b85f7d817868170a2874706c3575fc106d01839a00ca8124b",
-  "created_at": "2026-05-07T19:14:19+02:00",
+  "content_hash": "sha256:ad598d1e7eb28a03933834144b697a2608288c35f6cb5ec9f3d21fa1e468d356",
+  "created_at": "2026-05-12T15:43:05+02:00",
   "evidence": [
     {
       "id": "source.package-json",
       "kind": "source"
-    },
-    {
-      "id": "source.docs-src-content-docs-agent-recipes",
-      "kind": "source"
-    },
-    {
-      "id": "src/cli/commands/suggest.ts",
-      "kind": "file"
-    },
-    {
-      "id": "src/discipline/suggest.ts",
-      "kind": "file"
-    },
-    {
-      "id": "scripts/generate-agent-guidance.mjs",
-      "kind": "file"
     }
   ],
   "facets": {
     "applies_to": [
       "package.json",
-      "src/cli/commands/setup.ts",
-      "src/cli/commands/docs.ts",
       "src/cli/commands/audit.ts",
       "src/cli/commands/check.ts",
       "src/cli/commands/diff.ts",
-      "src/cli/commands/export.ts",
-      "src/cli/commands/suggest.ts",
-      "src/discipline/suggest.ts",
-      "docs/src/content/docs/agent-recipes.md",
-      "scripts/generate-agent-guidance.mjs",
-      "integrations/templates/agent-guidance.md"
+      "src/cli/commands/docs.ts",
+      "src/cli/commands/export.ts"
     ],
     "category": "feature-map",
     "load_modes": [
@@ -63,5 +41,5 @@
   ],
   "title": "Feature map",
   "type": "synthesis",
-  "updated_at": "2026-05-07T22:37:03+02:00"
+  "updated_at": "2026-05-12T15:43:05+02:00"
 }

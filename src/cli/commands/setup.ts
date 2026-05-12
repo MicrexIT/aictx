@@ -111,7 +111,8 @@ async function runSetup(
 
   const initialized = await initProject({
     cwd,
-    force: flags.force === true
+    force: flags.force === true,
+    allowTrackedAictxDeletions: true
   });
 
   if (!initialized.ok) {

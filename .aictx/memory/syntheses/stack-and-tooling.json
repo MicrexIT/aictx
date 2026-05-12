@@ -1,6 +1,6 @@
 {
-  "body_path": "memory/syntheses/product-intent.md",
-  "content_hash": "sha256:eaf0a8df7ee70c4a9a8bb0c319c4779aa8cbb76f33cbb360db2ddd8ff893a854",
+  "body_path": "memory/syntheses/stack-and-tooling.md",
+  "content_hash": "sha256:83b81a34b2990e88dd71633abac969f1b4a71a88e1d33f9711adeda9342dbc7a",
   "created_at": "2026-05-12T15:43:05+02:00",
   "evidence": [
     {
@@ -8,19 +8,34 @@
       "kind": "source"
     },
     {
-      "id": "source.readme",
-      "kind": "source"
+      "id": "package.json",
+      "kind": "file"
+    },
+    {
+      "id": "tsconfig.json",
+      "kind": "file"
+    },
+    {
+      "id": "vitest.config.ts",
+      "kind": "file"
     }
   ],
   "facets": {
-    "category": "product-intent",
+    "applies_to": [
+      "package.json",
+      "tsconfig.json",
+      "vitest.config.ts"
+    ],
+    "category": "stack",
     "load_modes": [
       "coding",
+      "debugging",
+      "review",
       "architecture",
       "onboarding"
     ]
   },
-  "id": "synthesis.product-intent",
+  "id": "synthesis.stack-and-tooling",
   "scope": {
     "branch": null,
     "kind": "project",
@@ -34,9 +49,10 @@
   "status": "active",
   "tags": [
     "synthesis",
-    "product-intent"
+    "stack",
+    "tooling"
   ],
-  "title": "Product intent",
+  "title": "Stack and tooling",
   "type": "synthesis",
   "updated_at": "2026-05-12T15:43:05+02:00"
 }

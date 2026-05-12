@@ -458,6 +458,38 @@ describe("aictx suggest CLI", () => {
     expect(envelope.data.next_step).toContain("aictx lens project-map");
   });
 
+  it("runs setup after reset when tracked Aictx files are dirty deletions", async () => {
+    const repo = await createBootstrapPatchGitProject("aictx-cli-setup-after-reset-");
+    await git(repo, ["add", ".gitignore", "AGENTS.md", "CLAUDE.md", ".aictx"]);
+    await git(repo, ["commit", "-m", "Track Aictx memory"]);
+
+    const reset = await runCli(["node", "aictx", "reset", "--json"], repo);
+
+    expect(reset.exitCode).toBe(0);
+    expect(reset.stderr).toBe("");
+    const resetEnvelope = JSON.parse(reset.stdout) as {
+      ok: true;
+      data: { backup_path: string | null };
+    };
+    expect(resetEnvelope.ok).toBe(true);
+    expect(resetEnvelope.data.backup_path).not.toBeNull();
+    await expect(pathExists(join(repo, resetEnvelope.data.backup_path ?? ""))).resolves.toBe(true);
+    await expect(git(repo, ["status", "--short", "--", ".aictx"])).resolves.toContain(
+      ".aictx/config.json"
+    );
+
+    const output = await runCli(["node", "aictx", "setup", "--json"], repo);
+
+    expect(output.exitCode).toBe(0);
+    expect(output.stderr).toBe("");
+    const envelope = JSON.parse(output.stdout) as SetupSuccessEnvelope;
+    expect(envelope.ok).toBe(true);
+    expect(envelope.data.initialized).toBe(true);
+    expect(envelope.data.bootstrap_patch_applied).toBe(true);
+    expect(envelope.data.check?.valid).toBe(true);
+    await expect(pathExists(join(repo, resetEnvelope.data.backup_path ?? ""))).resolves.toBe(true);
+  });
+
   it("applies explicit README product features as a source-backed feature-map synthesis during setup", async () => {
     const repo = await createProductFeatureBootstrapGitProject(
       "aictx-cli-setup-product-features-"

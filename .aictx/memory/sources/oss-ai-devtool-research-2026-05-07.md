@@ -1,5 +1,0 @@
-# Source: May 2026 OSS AI devtool research
-
-External research compared Aictx with AI/devtool open-source projects including OpenClaw, Cline, Aider, Continue, OpenCode, and MCP reference servers. Durable signals: successful projects make the first useful outcome cheap, expose an opinionated onboarding path, show public usage/community proof, document contribution paths, and occupy a memorable narrow category. OpenClaw specifically combines a vivid identity, local ownership story, one recommended onboarding flow, agent workspace/skills primitives, many integrations, security/config docs, active releases, and public contributor/community cues.
-
-This source was captured from live public pages and GitHub API checks on 2026-05-07. Treat metrics as time-sensitive and recheck before publishing claims.
