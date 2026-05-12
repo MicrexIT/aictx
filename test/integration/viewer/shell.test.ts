@@ -1,9 +1,11 @@
+import { execFile } from "node:child_process";
 import { mkdir, mkdtemp, realpath, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { promisify } from "node:util";
 
-import { chromium, type Browser, type ConsoleMessage, type Page } from "playwright";
+import { chromium, type Browser, type ConsoleMessage, type Locator, type Page } from "playwright";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { main, type CliOutputWriter } from "../../../src/cli/main.js";
@@ -32,6 +34,7 @@ const repoRoot = resolve(fileURLToPath(new URL("../../..", import.meta.url)));
 const viewerAssetsDir = join(repoRoot, "dist", "viewer");
 const GRAPH_WIDTH = 960;
 const GRAPH_HEIGHT = 420;
+const execFileAsync = promisify(execFile);
 const tempRoots: string[] = [];
 
 interface MemoryFixture {
@@ -263,6 +266,72 @@ describe("read-only viewer shell", () => {
       await started.data.close();
     }
   });
+
+  it("frames dirty Git-backed memory as local changes with an explanatory tooltip", async () => {
+    const assets = await stat(join(viewerAssetsDir, "index.html"));
+
+    expect(assets.isFile()).toBe(true);
+
+    const projectRoot = await createInitializedGitProject("aictx-viewer-dirty-project-");
+    await writeMemoryObject(projectRoot, {
+      id: "note.local-memory-change",
+      type: "note",
+      status: "active",
+      title: "Local Memory Change",
+      bodyPath: "memory/notes/local-memory-change.md",
+      body: "# Local Memory Change\n\nThis fixture makes canonical memory dirty.\n",
+      tags: ["viewer", "dirty"],
+      updatedAt: FIXED_TIMESTAMP_NEXT_MINUTE
+    });
+    const aictxHome = await createTempRoot("aictx-viewer-dirty-home-");
+    const started = await startViewerServer({
+      cwd: projectRoot,
+      assetsDir: viewerAssetsDir,
+      aictxHome,
+      token: "viewer-dirty-token"
+    });
+
+    expect(started.ok).toBe(true);
+    if (!started.ok) {
+      throw new Error(started.error.message);
+    }
+
+    let browser: Browser | null = null;
+
+    try {
+      browser = await chromium.launch();
+      const page = await browser.newPage();
+      const consoleErrors = collectPageErrors(page);
+
+      await page.setViewportSize({ width: 920, height: 720 });
+      await page.goto(started.data.url, { waitUntil: "domcontentloaded" });
+      await page.locator('[data-testid="projects-view"]').waitFor();
+      await expectText(page, '[data-testid="projects-view"]', "Local memory changes");
+
+      const info = page.locator('[data-testid^="project-memory-info-"]').first();
+      const tooltip = page.locator('[data-testid^="project-memory-tooltip-"]').first();
+
+      await info.waitFor();
+      await expect(tooltip.textContent()).resolves.toContain("You can keep saving memory");
+      await expect(tooltip.textContent()).resolves.toContain("aictx diff");
+      await expect(tooltip.textContent()).resolves.not.toContain("blocked");
+      await expectTooltipVisibility(tooltip, "hidden");
+
+      await info.hover();
+      await expectTooltipVisibility(tooltip, "visible");
+
+      await page.mouse.move(0, 0);
+      await expectTooltipVisibility(tooltip, "hidden");
+
+      await info.focus();
+      await expectTooltipVisibility(tooltip, "visible");
+
+      expect(consoleErrors()).toEqual([]);
+    } finally {
+      await browser?.close();
+      await started.data.close();
+    }
+  });
 });
 
 async function assertSelectedObject(page: Page, title: string, id: string): Promise<void> {
@@ -349,6 +418,15 @@ async function expectNoText(page: Page, selector: string, expected: string): Pro
 
 async function expectCount(page: Page, selector: string, expected: number): Promise<void> {
   await expect(page.locator(selector).count()).resolves.toBe(expected);
+}
+
+async function expectTooltipVisibility(
+  locator: Locator,
+  expected: "hidden" | "visible"
+): Promise<void> {
+  await expect.poll(async () =>
+    locator.evaluate((element) => getComputedStyle(element).visibility)
+  ).toBe(expected);
 }
 
 function collectPageErrors(page: Page): () => string[] {
@@ -591,6 +669,18 @@ async function createInitializedProject(prefix: string): Promise<string> {
   return projectRoot;
 }
 
+async function createInitializedGitProject(prefix: string): Promise<string> {
+  const projectRoot = await createInitializedProject(prefix);
+
+  await git(projectRoot, ["init"]);
+  await git(projectRoot, ["config", "user.email", "viewer@example.test"]);
+  await git(projectRoot, ["config", "user.name", "Viewer Test"]);
+  await git(projectRoot, ["add", ".aictx"]);
+  await git(projectRoot, ["commit", "-m", "Initial Aictx memory"]);
+
+  return projectRoot;
+}
+
 async function readStorageOrThrow(projectRoot: string) {
   const storage = await readCanonicalStorage(projectRoot);
 
@@ -627,6 +717,12 @@ async function createTempRoot(prefix: string): Promise<string> {
 
   tempRoots.push(resolvedRoot);
   return resolvedRoot;
+}
+
+async function git(cwd: string, args: readonly string[]): Promise<string> {
+  const result = await execFileAsync("git", [...args], { cwd });
+
+  return result.stdout;
 }
 
 function createCapturedOutput(): {

@@ -266,6 +266,7 @@
   let exportErrorCode = $state("");
   let exportFilesWritten = $state(0);
   let exportManifestPath = $state("");
+  let activeStatusTooltipId = $state<string | null>(null);
 
   const allOption = "all";
   const layerOptions: Array<{ value: LayerFilter; label: string }> = [
@@ -638,7 +639,7 @@
     }
 
     if (project.git.dirty === true) {
-      return "Memory dirty";
+      return "Local memory changes";
     }
 
     if (project.git.dirty === false) {
@@ -646,6 +647,36 @@
     }
 
     return "Git available";
+  }
+
+  function gitTooltip(project: ViewerProjectSummary): string | null {
+    if (!project.available || project.git === null || !project.git.available) {
+      return null;
+    }
+
+    if (project.git.dirty === true) {
+      return "`.aictx/` has local memory changes. You can keep saving memory; Aictx backs up dirty touched files before overwrite/delete. Review with `aictx diff` or commit `.aictx/` when you want this memory versioned.";
+    }
+
+    if (project.git.dirty === false) {
+      return "No local `.aictx/` memory changes are reported by Git.";
+    }
+
+    return "Git is available, but Aictx could not determine whether local memory changed.";
+  }
+
+  function statusTooltipId(registryId: string): string {
+    return `project-status-tooltip-${registryId.replace(/[^a-zA-Z0-9_-]/g, "-")}`;
+  }
+
+  function showStatusTooltip(tooltipId: string): void {
+    activeStatusTooltipId = tooltipId;
+  }
+
+  function hideStatusTooltip(tooltipId: string): void {
+    if (activeStatusTooltipId === tooltipId) {
+      activeStatusTooltipId = null;
+    }
   }
 
   function relationCounterpart(relation: MemoryRelationSummary, objectId: string): string {
@@ -1112,6 +1143,8 @@
           {:else}
             <div class="project-grid" data-testid="project-list">
               {#each projects as project (project.registry_id)}
+                {@const tooltip = gitTooltip(project)}
+                {@const tooltipId = statusTooltipId(project.registry_id)}
                 <article
                   class:unavailable-project={!project.available}
                   class:current-project={project.current}
@@ -1120,7 +1153,35 @@
                 >
                   <div class="project-card-topline">
                     <span>{project.source}</span>
-                    <strong>{gitLabel(project)}</strong>
+                    <span class="project-git-status">
+                      <strong>{gitLabel(project)}</strong>
+                      {#if tooltip !== null}
+                        <span class="project-status-info">
+                          <button
+                            type="button"
+                            class="status-info-button"
+                            aria-label={`About ${gitLabel(project).toLowerCase()}`}
+                            aria-describedby={tooltipId}
+                            onblur={() => hideStatusTooltip(tooltipId)}
+                            onfocus={() => showStatusTooltip(tooltipId)}
+                            onmouseenter={() => showStatusTooltip(tooltipId)}
+                            onmouseleave={() => hideStatusTooltip(tooltipId)}
+                            data-testid={`project-memory-info-${project.registry_id}`}
+                          >
+                            i
+                          </button>
+                          <span
+                            id={tooltipId}
+                            class:visible={activeStatusTooltipId === tooltipId}
+                            class="status-tooltip"
+                            role="tooltip"
+                            data-testid={`project-memory-tooltip-${project.registry_id}`}
+                          >
+                            {tooltip}
+                          </span>
+                        </span>
+                      {/if}
+                    </span>
                   </div>
                   <h3>{project.project.name}</h3>
                   <p class="project-id">{project.project.id}</p>
@@ -1135,10 +1196,10 @@
                       <dt>Connections</dt>
                       <dd>{project.counts?.relations ?? 0}</dd>
                     </div>
-	                    <div>
-	                      <dt>Syntheses</dt>
-	                      <dd>{project.counts?.synthesis_objects ?? 0}</dd>
-	                    </div>
+                    <div>
+                      <dt>Syntheses</dt>
+                      <dd>{project.counts?.synthesis_objects ?? 0}</dd>
+                    </div>
                   </dl>
 
                   {#if project.warnings.length > 0}
@@ -2063,6 +2124,86 @@
 
   .project-card-topline strong {
     color: #28514b;
+  }
+
+  .project-git-status {
+    display: inline-flex;
+    position: relative;
+    align-items: center;
+    justify-content: flex-end;
+    min-width: 0;
+    gap: 6px;
+    text-align: right;
+  }
+
+  .project-status-info {
+    display: inline-flex;
+    position: relative;
+    align-items: center;
+  }
+
+  .status-info-button {
+    display: inline-grid;
+    width: 18px;
+    height: 18px;
+    place-items: center;
+    border: 1px solid #b9c8c2;
+    border-radius: 999px;
+    padding: 0;
+    color: #28514b;
+    background: #f5faf8;
+    font-size: 0.68rem;
+    font-weight: 900;
+    line-height: 1;
+  }
+
+  .status-info-button:hover,
+  .status-info-button:focus-visible {
+    border-color: #1b7f75;
+    outline: none;
+    background: #e7f4f1;
+  }
+
+  .status-info-button:focus-visible {
+    box-shadow: 0 0 0 3px rgb(27 127 117 / 18%);
+  }
+
+  .status-tooltip {
+    position: absolute;
+    z-index: 10;
+    top: calc(100% + 8px);
+    right: 0;
+    width: min(280px, calc(100vw - 48px));
+    border: 1px solid #ccd8d4;
+    border-radius: 6px;
+    padding: 10px;
+    color: #172033;
+    background: #ffffff;
+    box-shadow: 0 14px 32px rgb(16 24 40 / 14%);
+    font-size: 0.78rem;
+    font-weight: 650;
+    line-height: 1.42;
+    opacity: 0;
+    pointer-events: none;
+    text-align: left;
+    text-transform: none;
+    transform: translateY(-3px);
+    transition:
+      opacity 120ms ease,
+      transform 120ms ease,
+      visibility 120ms ease;
+    visibility: hidden;
+  }
+
+  .project-status-info:hover .status-tooltip,
+  .project-status-info:focus-within .status-tooltip,
+  .status-tooltip.visible,
+  .status-info-button:hover + .status-tooltip,
+  .status-info-button:focus + .status-tooltip,
+  .status-info-button:focus-visible + .status-tooltip {
+    opacity: 1;
+    transform: translateY(0);
+    visibility: visible;
   }
 
   .project-root {
