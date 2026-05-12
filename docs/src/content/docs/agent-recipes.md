@@ -39,7 +39,7 @@ npm install -g @aictx/memory
 
 Run first-run onboarding, apply the conservative bootstrap memory patch, and
 start the local viewer for inspection:
-aictx setup --view
+aictx setup
 
 Validate memory:
 aictx check

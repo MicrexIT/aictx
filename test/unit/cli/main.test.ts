@@ -39,6 +39,8 @@ describe("CLI main", () => {
     expect(setupHelp).toContain("--dry-run");
     expect(setupHelp).toContain("without initializing storage");
     expect(setupHelp).toContain("writing repo files");
+    expect(setupHelp).toContain("--no-view");
+    expect(setupHelp).toContain("Skip local viewer startup");
   });
 
   it("returns exit 2 for unknown options", async () => {

@@ -119,6 +119,10 @@ Set up useful first-run memory inside an existing project:
 aictx setup
 ```
 
+`setup` starts the local read-only viewer after writing memory so humans can
+inspect the result immediately. Use `aictx setup --no-view` to skip viewer
+startup in scripts or agent runs.
+
 Preview the conservative bootstrap patch without writing or initializing
 storage:
 
@@ -329,7 +333,8 @@ npm install -g @aictx/memory@0.1.33
 Then back up and clear the local `.aictx/` state with the Aictx CLI:
 aictx reset
 
-Run the initial onboarding and apply the conservative bootstrap memory patch:
+Run the initial onboarding, apply the conservative bootstrap memory patch, and
+start the local viewer:
 aictx setup
 
 Finally, run:

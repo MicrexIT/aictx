@@ -64,7 +64,8 @@ aictx setup
 
 `setup` creates `.aictx/` if needed, updates marked Aictx sections in
 `AGENTS.md` and `CLAUDE.md`, writes conservative evidence-backed bootstrap
-memory, runs checks, and prints soft role coverage.
+memory, runs checks, prints soft role coverage, and starts the local read-only
+viewer for inspection.
 
 Use `aictx setup --dry-run` to preview without initializing storage, writing
 canonical memory, updating agent guidance, running checks, or starting the
@@ -84,12 +85,14 @@ For guided onboarding:
 ```bash
 aictx setup
 aictx setup --dry-run
-aictx setup --view
+aictx setup --no-view
+aictx setup --open
 ```
 
-`aictx setup` applies a conservative bootstrap memory patch by default. Add
-`--view` when you want setup to start the local read-only viewer for inspection
-after validation.
+`aictx setup` applies a conservative bootstrap memory patch by default and
+starts the local read-only viewer after validation. Add `--no-view` for scripts
+or agent runs that should not start the viewer, or `--open` to open the viewer
+in the default browser.
 
 `aictx audit` reports role coverage gaps after normal hygiene findings, but
 missing roles are not `aictx check` failures. `aictx handoff show` returns only

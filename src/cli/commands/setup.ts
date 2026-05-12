@@ -42,6 +42,10 @@ interface SetupCommandFlags {
   open?: boolean;
 }
 
+interface RunSetupOptions {
+  json: boolean;
+}
+
 interface SetupPatchSummary {
   operations: string[];
   memory_ids: ObjectId[];
@@ -78,12 +82,14 @@ export function registerSetupCommand(
     .option("--force", "Discard existing Aictx state before setup.")
     .option("--apply", "Apply the conservative bootstrap memory patch (accepted for compatibility; setup applies by default).")
     .option("--dry-run", "Preview setup role coverage and bootstrap patch without initializing storage or writing repo files.")
-    .option("--view", "Print the viewer command to run after setup.")
-    .option("--open", "Use with --view to open the viewer after setup.")
+    .option("--view", "Start the local viewer after setup (default for human output).")
+    .option("--no-view", "Skip local viewer startup after setup.")
+    .option("--open", "Open the viewer in the default browser after setup.")
     .action(async (flags: SetupCommandFlags, command: Command) => {
-      const result = await runSetup(options.cwd, flags, options.detacher);
+      const json = isJsonMode(command);
+      const result = await runSetup(options.cwd, flags, options.detacher, { json });
       const rendered = renderAppResult(result, {
-        json: isJsonMode(command),
+        json,
         renderData: renderSetupData
       });
 
@@ -103,7 +109,8 @@ export function registerSetupCommand(
 async function runSetup(
   cwd: string,
   flags: SetupCommandFlags,
-  viewerDetacher: ViewerDetacher | undefined
+  viewerDetacher: ViewerDetacher | undefined,
+  options: RunSetupOptions
 ): Promise<AppResult<SetupData>> {
   if (flags.dryRun === true) {
     return runSetupDryRun(cwd, flags);
@@ -160,7 +167,7 @@ async function runSetup(
 
   const diffed = await diffMemory({ cwd });
   const diff = diffed.ok ? diffed.data : null;
-  const viewer = await maybeStartViewer(flags, viewerDetacher);
+  const viewer = await maybeStartViewer(flags, viewerDetacher, options);
   const warnings = [
     ...initialized.warnings,
     ...suggested.warnings,
@@ -227,9 +234,9 @@ async function runSetupDryRun(
     "Dry run did not write storage; run `aictx setup` before checking the result.";
   const diffSkippedReason =
     "Dry run did not write storage; no Aictx diff was produced.";
-  const viewerWarning = flags.view === true
+  const viewerWarning = isViewerExplicitlyRequested(flags)
     ? [
-        "Viewer startup skipped because setup --dry-run does not write storage. Run `aictx setup --view` to start the viewer after applying setup."
+        "Viewer startup skipped because setup --dry-run does not write storage. Run `aictx setup` to start the viewer after applying setup."
       ]
     : [];
 
@@ -263,7 +270,8 @@ async function runSetupDryRun(
 
 async function maybeStartViewer(
   flags: SetupCommandFlags,
-  viewerDetacher: ViewerDetacher | undefined
+  viewerDetacher: ViewerDetacher | undefined,
+  options: RunSetupOptions
 ): Promise<
   | {
       ok: true;
@@ -276,7 +284,7 @@ async function maybeStartViewer(
       warnings: string[];
     }
 > {
-  if (flags.view !== true) {
+  if (!shouldStartViewer(flags, options)) {
     return {
       ok: true,
       data: null,
@@ -290,6 +298,18 @@ async function maybeStartViewer(
     },
     viewerDetacher
   );
+}
+
+function shouldStartViewer(flags: SetupCommandFlags, options: RunSetupOptions): boolean {
+  if (flags.view === false) {
+    return false;
+  }
+
+  return flags.view === true || flags.open === true || !options.json;
+}
+
+function isViewerExplicitlyRequested(flags: SetupCommandFlags): boolean {
+  return flags.view === true || flags.open === true;
 }
 
 function patchSummary(proposal: SuggestBootstrapPatchProposal): SetupPatchSummary {

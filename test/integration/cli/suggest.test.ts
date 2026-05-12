@@ -458,6 +458,64 @@ describe("aictx suggest CLI", () => {
     expect(envelope.data.next_step).toContain("aictx lens project-map");
   });
 
+  it("does not start the setup viewer by default in JSON mode", async () => {
+    const repo = await createBootstrapPatchGitProject("aictx-cli-setup-json-no-view-");
+
+    const output = await runCli(["node", "aictx", "setup", "--json"], repo, {
+      viewer: {
+        detacher: async () => {
+          throw new Error("detacher should not run for default JSON setup");
+        }
+      }
+    });
+
+    expect(output.exitCode).toBe(0);
+    const envelope = JSON.parse(output.stdout) as SetupSuccessEnvelope;
+    expect(envelope.ok).toBe(true);
+    expect(envelope.data.viewer_url).toBeNull();
+    expect(envelope.data.viewer_log_path).toBeNull();
+  });
+
+  it("starts a detached viewer by default for human setup output", async () => {
+    const repo = await createBootstrapPatchGitRepo("aictx-cli-setup-default-view-");
+
+    const output = await runCli(["node", "aictx", "setup"], repo, {
+      viewer: {
+        detacher: async (options) => ({
+          ok: true,
+          data: {
+            url: "http://127.0.0.1:7778/?token=default-token",
+            host: "127.0.0.1",
+            port: 7778,
+            log_path: "/tmp/aictx-viewer-default-test.log"
+          },
+          warnings: options.open ? ["opened viewer"] : []
+        })
+      }
+    });
+
+    expect(output.exitCode).toBe(0);
+    expect(output.stderr).toBe("");
+    expect(output.stdout).toContain("Aictx viewer: http://127.0.0.1:7778/?token=default-token");
+    expect(output.stdout).toContain("Aictx viewer log: /tmp/aictx-viewer-default-test.log");
+  });
+
+  it("skips the default setup viewer when --no-view is passed", async () => {
+    const repo = await createBootstrapPatchGitRepo("aictx-cli-setup-no-view-");
+
+    const output = await runCli(["node", "aictx", "setup", "--no-view"], repo, {
+      viewer: {
+        detacher: async () => {
+          throw new Error("detacher should not run when --no-view is passed");
+        }
+      }
+    });
+
+    expect(output.exitCode).toBe(0);
+    expect(output.stderr).toBe("");
+    expect(output.stdout).not.toContain("Aictx viewer:");
+  });
+
   it("runs setup after reset when tracked Aictx files are dirty deletions", async () => {
     const repo = await createBootstrapPatchGitProject("aictx-cli-setup-after-reset-");
     await git(repo, ["add", ".gitignore", "AGENTS.md", "CLAUDE.md", ".aictx"]);
@@ -711,7 +769,7 @@ describe("aictx suggest CLI", () => {
     expect(envelope.ok).toBe(true);
     expect(envelope.data.viewer_url).toBeNull();
     expect(envelope.warnings).toContain(
-      "Viewer startup skipped because setup --dry-run does not write storage. Run `aictx setup --view` to start the viewer after applying setup."
+      "Viewer startup skipped because setup --dry-run does not write storage. Run `aictx setup` to start the viewer after applying setup."
     );
   });
 

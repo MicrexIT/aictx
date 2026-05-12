@@ -39,15 +39,17 @@ Use these when a project is new to Aictx or memory feels too thin:
 ```bash
 aictx setup
 aictx setup --dry-run
-aictx setup --view
+aictx setup --no-view
+aictx setup --open
 aictx suggest --bootstrap --patch > bootstrap-memory.json
 aictx patch review bootstrap-memory.json
 ```
 
 `setup` is the normal first-run command. It creates local storage if needed,
 updates optional repo-level agent guidance, writes conservative source-backed
-role memory by default, runs checks, and prints role coverage. `init` remains
-available as the lower-level empty-storage initializer.
+role memory by default, runs checks, prints role coverage, and starts the local
+read-only viewer for inspection. `init` remains available as the lower-level
+empty-storage initializer.
 
 `setup --dry-run` is read-only: it does not initialize storage, update guidance
 files, write memory, run checks, or start the viewer. `setup --force --dry-run`

@@ -250,12 +250,14 @@ requests, or safety rules.
 
 `aictx setup` provides guided first-run onboarding. It initializes storage if
 needed, writes conservative evidence-backed bootstrap memory by default, runs
-checks, and prints soft role coverage. Use `aictx setup --dry-run` to preview
-without initializing storage, writing repo files, running checks, or starting
-the viewer. `aictx setup --force --dry-run` previews reset/setup behavior
-without deleting anything.
+checks, prints soft role coverage, and starts the local read-only viewer for
+inspection. Use `aictx setup --dry-run` to preview without initializing
+storage, writing repo files, running checks, or starting the viewer. Use
+`aictx setup --no-view` for scripts or agent runs that should skip viewer
+startup. `aictx setup --force --dry-run` previews reset/setup behavior without
+deleting anything.
 
-For the agent-led first-run path, use `aictx setup --view`, then run
+For the agent-led first-run path, use `aictx setup`, then run
 `aictx lens project-map` for a readable overview or
 `aictx load "onboard to this repository"` to verify the first task-focused
 memory pack. Use `aictx handoff update --stdin` only for unfinished branch

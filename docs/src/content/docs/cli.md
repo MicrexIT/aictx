@@ -35,18 +35,22 @@ aictx view --open
 aictx init
 aictx setup
 aictx setup --dry-run
-aictx setup --view
+aictx setup --no-view
+aictx setup --open
 aictx patch review bootstrap-memory.json
 ```
 
-- `setup` is the normal onboarding command; it initializes storage if needed and applies conservative bootstrap memory by default.
+- `setup` is the normal onboarding command; it initializes storage if needed,
+  applies conservative bootstrap memory by default, and starts the local
+  read-only viewer for inspection.
 - `init` is the lower-level empty-storage initializer for automation, tests, and manual workflows.
 - `setup --dry-run` previews the bootstrap patch and role coverage without
   initializing storage, writing repo files, running checks, or starting the
   viewer.
 - `setup --force --dry-run` previews reset/setup behavior without deleting or
   rewriting anything.
-- `setup --view` also starts the local read-only viewer for inspection.
+- `setup --no-view` skips viewer startup; `setup --open` also opens the viewer
+  in the default browser.
 - `patch review` reviews a structured memory patch without writing it.
 
 :::tip

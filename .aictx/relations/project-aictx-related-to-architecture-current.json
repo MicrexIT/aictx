@@ -1,7 +1,7 @@
 {
   "confidence": "high",
-  "content_hash": "sha256:af46a83251f33866333726bc3fd1a62bf552e53d4c322cc599e2ccb181ea6366",
-  "created_at": "2026-05-12T15:43:04+02:00",
+  "content_hash": "sha256:6a4486dc78775fe4004ea9ca830f4a8fb2ceaba3079ff38a35a394fdf751881a",
+  "created_at": "2026-05-12T16:20:20+02:00",
   "evidence": [
     {
       "id": "project.aictx",
@@ -17,5 +17,5 @@
   "predicate": "related_to",
   "status": "active",
   "to": "architecture.current",
-  "updated_at": "2026-05-12T15:43:04+02:00"
+  "updated_at": "2026-05-12T16:20:20+02:00"
 }

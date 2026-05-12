@@ -1,7 +1,7 @@
 {
   "body_path": "memory/syntheses/stack-and-tooling.md",
-  "content_hash": "sha256:83b81a34b2990e88dd71633abac969f1b4a71a88e1d33f9711adeda9342dbc7a",
-  "created_at": "2026-05-12T15:43:05+02:00",
+  "content_hash": "sha256:b2036bee98350eb5a072a4c16139e835305973edb77bf8d51741867386f906f7",
+  "created_at": "2026-05-12T16:20:21+02:00",
   "evidence": [
     {
       "id": "source.package-json",
@@ -54,5 +54,5 @@
   ],
   "title": "Stack and tooling",
   "type": "synthesis",
-  "updated_at": "2026-05-12T15:43:05+02:00"
+  "updated_at": "2026-05-12T16:20:21+02:00"
 }

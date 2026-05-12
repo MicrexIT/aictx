@@ -1,0 +1,1 @@
+`aictx setup` starts the local read-only viewer after successful non-dry-run human-output setup so users can inspect created memory immediately. JSON/automation mode skips viewer startup by default unless `--view` is passed, and `--no-view` disables default viewer startup.

@@ -90,7 +90,8 @@ describe("aictx docs", () => {
     expect(output.stdout()).toContain("# Agent recipes");
     expect(output.stdout()).toContain("Codex");
     expect(output.stdout()).toContain("Cursor");
-    expect(output.stdout()).toContain("aictx setup --view");
+    expect(output.stdout()).toContain("aictx setup");
+    expect(output.stdout()).toContain("start the local viewer for inspection");
   });
 
   it("opens the hosted docs URL through the injected opener", async () => {

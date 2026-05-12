@@ -52,7 +52,8 @@ export".
 3. Load task-focused context with `aictx load "<task summary>"`.
 4. Save durable knowledge with `aictx remember --stdin` or `remember_memory`
    when MCP is already configured.
-5. Inspect the result later in the local viewer with `aictx view`.
+5. Inspect the setup result in the local viewer URL printed by `setup`, or
+   reopen it later with `aictx view`.
 
 Saved memory is active immediately after Aictx validates and writes it. Aictx
 never commits for you. As a human, mainly look directly at the viewer.
@@ -74,7 +75,7 @@ npm install -g @aictx/memory@0.1.33
 
 Then run first-run onboarding, apply the conservative bootstrap memory patch,
 and start the local viewer for inspection:
-aictx setup --view
+aictx setup
 
 Validate memory:
 aictx check
