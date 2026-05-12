@@ -2,10 +2,12 @@ import { createServer } from "node:http";
 import { mkdtemp, mkdir, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import { pathToFileURL } from "node:url";
 
 import { afterEach, describe, expect, it } from "vitest";
 
 import { main, type CliOutputWriter } from "../../../src/cli/main.js";
+import { resolveDetachedCliPath } from "../../../src/cli/commands/view.js";
 
 const tempRoots: string[] = [];
 const LOOPBACK_HOST = "127.0.0.1";
@@ -17,6 +19,15 @@ afterEach(async () => {
 });
 
 describe("aictx view CLI", () => {
+  it("resolves the detached child entrypoint from bundled and unbundled CLI modules", () => {
+    expect(resolveDetachedCliPath(
+      pathToFileURL("/package/dist/cli/main.js").href
+    )).toBe("/package/dist/cli/main.js");
+    expect(resolveDetachedCliPath(
+      pathToFileURL("/package/dist/cli/commands/view.js").href
+    )).toBe("/package/dist/cli/main.js");
+  });
+
   it("prints a usable local URL and keeps running until shutdown", async () => {
     const projectRoot = await createInitializedProject("aictx-cli-view-project-");
     const assetsDir = await createViewerAssets("aictx-cli-view-assets-");
@@ -200,16 +211,24 @@ describe("aictx view CLI", () => {
       ...output.writers,
       cwd: projectRoot,
       viewer: {
-        detacher: async () => ({
-          ok: true,
-          data: {
-            url: "http://127.0.0.1:49152/?token=test",
-            host: LOOPBACK_HOST,
-            port: 49152,
-            log_path: "/tmp/aictx-viewer-test.log"
-          },
-          warnings: []
-        })
+        detacher: async (options) => {
+          expect(options).toMatchObject({
+            cwd: projectRoot,
+            open: true,
+            aictxHome
+          });
+
+          return {
+            ok: true,
+            data: {
+              url: "http://127.0.0.1:49152/?token=test",
+              host: LOOPBACK_HOST,
+              port: 49152,
+              log_path: "/tmp/aictx-viewer-test.log"
+            },
+            warnings: []
+          };
+        }
       },
       registry: {
         enabled: false,

@@ -167,7 +167,7 @@ async function runSetup(
 
   const diffed = await diffMemory({ cwd });
   const diff = diffed.ok ? diffed.data : null;
-  const viewer = await maybeStartViewer(flags, viewerDetacher, options);
+  const viewer = await maybeStartViewer(cwd, flags, viewerDetacher, options);
   const warnings = [
     ...initialized.warnings,
     ...suggested.warnings,
@@ -269,6 +269,7 @@ async function runSetupDryRun(
 }
 
 async function maybeStartViewer(
+  cwd: string,
   flags: SetupCommandFlags,
   viewerDetacher: ViewerDetacher | undefined,
   options: RunSetupOptions
@@ -294,6 +295,7 @@ async function maybeStartViewer(
 
   return detachViewer(
     {
+      cwd,
       open: flags.open === true
     },
     viewerDetacher

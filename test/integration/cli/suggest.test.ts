@@ -481,16 +481,23 @@ describe("aictx suggest CLI", () => {
 
     const output = await runCli(["node", "aictx", "setup"], repo, {
       viewer: {
-        detacher: async (options) => ({
-          ok: true,
-          data: {
-            url: "http://127.0.0.1:7778/?token=default-token",
-            host: "127.0.0.1",
-            port: 7778,
-            log_path: "/tmp/aictx-viewer-default-test.log"
-          },
-          warnings: options.open ? ["opened viewer"] : []
-        })
+        detacher: async (options) => {
+          expect(options).toMatchObject({
+            cwd: repo,
+            open: false
+          });
+
+          return {
+            ok: true,
+            data: {
+              url: "http://127.0.0.1:7778/?token=default-token",
+              host: "127.0.0.1",
+              port: 7778,
+              log_path: "/tmp/aictx-viewer-default-test.log"
+            },
+            warnings: options.open ? ["opened viewer"] : []
+          };
+        }
       }
     });
 
@@ -778,16 +785,23 @@ describe("aictx suggest CLI", () => {
 
     const output = await runCli(["node", "aictx", "setup", "--view", "--open", "--json"], repo, {
       viewer: {
-        detacher: async (options) => ({
-          ok: true,
-          data: {
-            url: "http://127.0.0.1:7777/?token=test-token",
-            host: "127.0.0.1",
-            port: 7777,
-            log_path: "/tmp/aictx-viewer-test.log"
-          },
-          warnings: options.open ? ["opened viewer"] : []
-        })
+        detacher: async (options) => {
+          expect(options).toMatchObject({
+            cwd: repo,
+            open: true
+          });
+
+          return {
+            ok: true,
+            data: {
+              url: "http://127.0.0.1:7777/?token=test-token",
+              host: "127.0.0.1",
+              port: 7777,
+              log_path: "/tmp/aictx-viewer-test.log"
+            },
+            warnings: options.open ? ["opened viewer"] : []
+          };
+        }
       }
     });
 

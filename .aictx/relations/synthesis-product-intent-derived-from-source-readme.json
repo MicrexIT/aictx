@@ -1,7 +1,7 @@
 {
   "confidence": "high",
-  "content_hash": "sha256:c43a748a16c38efdd71b7134064761d885e68832a9586d45d8109ee5811fe86f",
-  "created_at": "2026-05-12T16:20:21+02:00",
+  "content_hash": "sha256:079478a73513dd727c66dbfa8aae331d546d8b8092201527325c783f4f832b96",
+  "created_at": "2026-05-12T17:53:06+02:00",
   "evidence": [
     {
       "id": "source.readme",
@@ -13,5 +13,5 @@
   "predicate": "derived_from",
   "status": "active",
   "to": "source.readme",
-  "updated_at": "2026-05-12T16:20:21+02:00"
+  "updated_at": "2026-05-12T17:53:06+02:00"
 }

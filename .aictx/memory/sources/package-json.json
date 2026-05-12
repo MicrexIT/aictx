@@ -1,7 +1,7 @@
 {
   "body_path": "memory/sources/package-json.md",
-  "content_hash": "sha256:ad64071632d1126594a48da97becaf49625a2007db22c48724cd4198ee03d531",
-  "created_at": "2026-05-12T16:20:21+02:00",
+  "content_hash": "sha256:541550cdb0441c1a5cbaf2b7dd949d22a5f29bf54bc630ffc8290fb90f0d6fc9",
+  "created_at": "2026-05-12T17:53:06+02:00",
   "evidence": [
     {
       "id": "package.json",
@@ -35,5 +35,5 @@
   ],
   "title": "Source: package.json",
   "type": "source",
-  "updated_at": "2026-05-12T16:20:21+02:00"
+  "updated_at": "2026-05-12T17:53:06+02:00"
 }

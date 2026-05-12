@@ -1,1 +1,0 @@
-The registered projects viewer labels Git-dirty `.aictx/` state as `Local memory changes` and explains that users can keep saving memory. Dirty memory is informational for review/provenance and destructive-operation caution, not a normal save blocker.

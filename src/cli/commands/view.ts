@@ -1,7 +1,7 @@
 import { spawn } from "node:child_process";
 import { open as openFile, readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { CommanderError, type Command } from "commander";
 
@@ -25,6 +25,7 @@ export type ViewerUrlOpener = (url: string) => Promise<void> | void;
 export type ViewerDetacher = (options: DetachViewerOptions) => Promise<Result<DetachedViewer>>;
 
 export interface DetachViewerOptions {
+  cwd: string;
   port?: number;
   open: boolean;
   aictxHome?: string;
@@ -98,6 +99,7 @@ export function registerViewCommand(
       if (flags.detach === true) {
         const detached = await detachViewer(
           {
+            cwd: options.cwd,
             ...(port.data === undefined ? {} : { port: port.data }),
             open: flags.open === true,
             ...(options.aictxHome === undefined ? {} : { aictxHome: options.aictxHome })
@@ -283,7 +285,7 @@ export async function detachViewer(
 
   const logPath = join(tmpdir(), `aictx-viewer-${process.pid}-${Date.now()}.log`);
   const log = await openFile(logPath, "a");
-  const cliPath = fileURLToPath(new URL("../main.js", import.meta.url));
+  const cliPath = resolveDetachedCliPath(import.meta.url);
   const args = [
     cliPath,
     "view",
@@ -291,6 +293,7 @@ export async function detachViewer(
     ...(options.open ? ["--open"] : [])
   ];
   const child = spawn(process.execPath, args, {
+    cwd: options.cwd,
     detached: true,
     stdio: ["ignore", log.fd, log.fd],
     env: {
@@ -316,6 +319,16 @@ export async function detachViewer(
     port: Number(parsed.port),
     log_path: logPath
   });
+}
+
+export function resolveDetachedCliPath(moduleUrl: string): string {
+  const currentPath = fileURLToPath(moduleUrl);
+
+  if (basename(currentPath) === "main.js") {
+    return currentPath;
+  }
+
+  return join(dirname(dirname(currentPath)), "main.js");
 }
 
 async function waitForDetachedViewerUrl(logPath: string): Promise<Result<string>> {
