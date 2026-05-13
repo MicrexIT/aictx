@@ -19,13 +19,6 @@
     | "concept";
   type RelationStatus = "active" | "stale" | "rejected";
   type RelationConfidence = "low" | "medium" | "high";
-  type RoleCoverageStatus = "populated" | "thin" | "missing" | "stale" | "conflicted";
-  type MemoryLensName =
-    | "project-map"
-    | "current-work"
-    | "review-risk"
-    | "provenance"
-    | "maintenance";
   type Predicate =
     | "affects"
     | "requires"
@@ -95,33 +88,6 @@
     json_path: string;
   }
 
-  interface RoleCoverageItem {
-    key: string;
-    label: string;
-    description: string;
-    status: RoleCoverageStatus;
-    optional: boolean;
-    memory_ids: string[];
-    relation_ids: string[];
-    gap: string | null;
-  }
-
-  interface RoleCoverageData {
-    roles: RoleCoverageItem[];
-    counts: Record<RoleCoverageStatus, number>;
-  }
-
-  interface MemoryLensData {
-    name: MemoryLensName;
-    title: string;
-    markdown: string;
-    role_coverage: RoleCoverageData;
-    included_memory_ids: string[];
-    relation_ids: string[];
-    relations: MemoryRelationSummary[];
-    generated_gaps: string[];
-  }
-
   interface ViewerBootstrapData {
     project: {
       id: string;
@@ -138,8 +104,6 @@
       synthesis_objects: number;
       active_relations: number;
     };
-    role_coverage: RoleCoverageData;
-    lenses: MemoryLensData[];
     storage_warnings: string[];
   }
 
@@ -185,14 +149,6 @@
     files_removed: string[];
   }
 
-  interface ViewerProjectDeleteData {
-    registry_path: string;
-    project: RegisteredProjectSummary;
-    removed: RegisteredProjectSummary | null;
-    destroyed: true;
-    entries_removed: string[];
-  }
-
   interface ViewerSuccessEnvelope<TData = ViewerBootstrapData> {
     ok: true;
     data: TData;
@@ -222,12 +178,14 @@
   type ViewerEnvelope = ViewerSuccessEnvelope<ViewerBootstrapData> | ViewerErrorEnvelope;
   type ViewerProjectsEnvelope = ViewerSuccessEnvelope<ViewerProjectsData> | ViewerErrorEnvelope;
   type ExportEnvelope = ViewerSuccessEnvelope<ExportObsidianProjectionData> | ViewerErrorEnvelope;
-  type DeleteProjectEnvelope = ViewerSuccessEnvelope<ViewerProjectDeleteData> | ViewerErrorEnvelope;
+  type LoadPreviewEnvelope = ViewerSuccessEnvelope<LoadPreviewData> | ViewerErrorEnvelope;
   type ViewerState = "loading" | "ready" | "error";
-  type ViewerScreen = "projects" | "memories" | "detail" | "lenses" | "export";
+  type ViewerScreen = "projects" | "memories" | "detail" | "export";
   type ExportState = "idle" | "running" | "success" | "error";
-  type DeleteProjectState = "idle" | "confirming" | "running" | "error";
+  type PreviewState = "idle" | "running" | "success" | "error";
   type LayerFilter = "all" | "memories" | "syntheses" | "sources" | "inactive";
+  type PagePreset = "all" | "do-not-do" | "coding-workflows" | "architecture" | "security-notes" | "commands" | "source-memory";
+  type LoadMemoryMode = "coding" | "debugging" | "review" | "architecture" | "onboarding";
 
   interface MarkdownBlock {
     kind: "heading" | "paragraph" | "list" | "quote" | "code";
@@ -236,22 +194,46 @@
     items?: string[];
   }
 
-  type GraphNodeRole = "selected" | "incoming" | "outgoing" | "both";
-
-  interface GraphNode {
+  interface MemorySection {
     id: string;
     title: string;
-    subtitle: string;
-    missing: boolean;
-    role: GraphNodeRole;
-    x: number;
-    y: number;
+    icon: string;
+    objects: MemoryObjectSummary[];
   }
 
-  interface GraphEdge {
-    relation: MemoryRelationSummary;
-    fromId: string;
-    toId: string;
+  interface MemorySnapshotItem {
+    label: string;
+    value: string;
+    detail: string;
+  }
+
+  interface TokenTarget {
+    value: number;
+    source: "explicit" | "config_default" | "fallback_default";
+    enforced: boolean;
+    was_capped: boolean;
+  }
+
+  interface LoadMemorySource {
+    project: string;
+    git_available: boolean;
+    branch: string | null;
+    commit: string | null;
+  }
+
+  interface LoadPreviewData {
+    task: string;
+    token_budget: number;
+    mode: LoadMemoryMode;
+    context_pack: string;
+    source: LoadMemorySource;
+    token_target: TokenTarget;
+    estimated_tokens: number;
+    budget_status: "within_target" | "over_target";
+    truncated: boolean;
+    included_ids: string[];
+    excluded_ids: string[];
+    omitted_ids: string[];
   }
 
   let loadState = $state<ViewerState>("loading");
@@ -263,77 +245,60 @@
   let projectErrorMessage = $state("");
   let currentScreen = $state<ViewerScreen>("projects");
   let selectedProjectId = $state<string | null>(null);
+  let selectedObjectId = $state<string | null>(null);
   let searchQuery = $state("");
   let layerFilter = $state<LayerFilter>("all");
   let typeFilter = $state("all");
   let statusFilter = $state("all");
   let tagFilter = $state("all");
-  let selectedObjectId = $state<string | null>(null);
-  let selectedLensName = $state<MemoryLensName>("project-map");
+  let pagePreset = $state<PagePreset>("all");
+  let mobileMenuOpen = $state(false);
   let exportOutDir = $state("");
   let exportState = $state<ExportState>("idle");
   let exportMessage = $state("");
   let exportErrorCode = $state("");
   let exportFilesWritten = $state(0);
   let exportManifestPath = $state("");
-  let activeStatusTooltipId = $state<string | null>(null);
-  let deleteProjectId = $state<string | null>(null);
-  let deleteConfirmation = $state("");
-  let deleteState = $state<DeleteProjectState>("idle");
-  let deleteMessage = $state("");
-  let deleteErrorCode = $state("");
-  let deleteNotice = $state("");
+  let previewTask = $state("");
+  let previewMode = $state<LoadMemoryMode>("coding");
+  let previewTokenBudget = $state("");
+  let previewState = $state<PreviewState>("idle");
+  let previewMessage = $state("");
+  let previewErrorCode = $state("");
+  let previewData = $state<LoadPreviewData | null>(null);
+  let copiedPreviewTarget = $state<"command" | "context" | null>(null);
 
   const allOption = "all";
+  const token = new URLSearchParams(window.location.search).get("token") ?? "";
   const layerOptions: Array<{ value: LayerFilter; label: string }> = [
     { value: "all", label: "All" },
-    { value: "memories", label: "Memories" },
+    { value: "memories", label: "Core" },
     { value: "syntheses", label: "Syntheses" },
     { value: "sources", label: "Sources" },
-    { value: "inactive", label: "Stale / Superseded" }
+    { value: "inactive", label: "Inactive" }
   ];
-  const graphWidth = 960;
-  const graphHeight = 420;
-  const token = new URLSearchParams(window.location.search).get("token") ?? "";
+  const loadModeOptions: Array<{ value: LoadMemoryMode; label: string }> = [
+    { value: "coding", label: "Coding" },
+    { value: "debugging", label: "Debugging" },
+    { value: "review", label: "Review" },
+    { value: "architecture", label: "Architecture" },
+    { value: "onboarding", label: "Onboarding" }
+  ];
+
   const projects = $derived(projectsData?.projects ?? []);
   const selectedProject = $derived.by(() =>
     selectedProjectId === null
       ? null
       : projects.find((project) => project.registry_id === selectedProjectId) ?? null
   );
-  const projectPendingDelete = $derived.by(() =>
-    deleteProjectId === null
-      ? null
-      : projects.find((project) => project.registry_id === deleteProjectId) ?? null
-  );
-  const deleteConfirmationMatches = $derived(
-    projectPendingDelete !== null &&
-      deleteConfirmation.trim() === projectPendingDelete.project.name
-  );
   const objects = $derived(bootstrap?.objects ?? []);
   const relations = $derived(bootstrap?.relations ?? []);
-  const lenses = $derived(bootstrap?.lenses ?? []);
-  const selectedLens = $derived.by(() =>
-    lenses.find((lens) => lens.name === selectedLensName) ?? lenses[0] ?? null
-  );
-  const selectedLensBlocks = $derived(
-    selectedLens === null ? [] : parseMarkdownBlocks(selectedLens.markdown)
-  );
   const objectById = $derived(new Map(objects.map((object) => [object.id, object])));
-  const typeOptions = $derived(uniqueSorted(objects.map((object) => object.type)));
-  const statusOptions = $derived(uniqueSorted(objects.map((object) => object.status)));
-  const tagOptions = $derived(uniqueSorted(objects.flatMap((object) => object.tags)));
   const filteredObjects = $derived.by(() =>
     objects.filter((object) => objectMatchesFilters(object))
   );
   const selectedObject = $derived.by(() =>
     selectedObjectId === null ? null : objectById.get(selectedObjectId) ?? null
-  );
-  const selectedJson = $derived(
-    selectedObject === null ? "" : JSON.stringify(sidecarJsonForObject(selectedObject), null, 2)
-  );
-  const markdownBlocks = $derived(
-    selectedObject === null ? [] : parseMarkdownBlocks(selectedObject.body)
   );
   const directRelations = $derived.by(() =>
     selectedObject === null
@@ -352,35 +317,36 @@
       ? []
       : directRelations.filter((relation) => relation.from === selectedObject.id)
   );
-  const provenanceEvidence = $derived.by(() =>
-    selectedObject === null
-      ? []
-      : selectedObject.evidence.filter((evidence) =>
-          ["source", "file", "commit", "memory"].includes(evidence.kind)
-        )
+  const typeOptions = $derived(uniqueSorted(objects.map((object) => object.type)));
+  const statusOptions = $derived(uniqueSorted(objects.map((object) => object.status)));
+  const tagOptions = $derived(uniqueSorted(objects.flatMap((object) => object.tags)));
+  const markdownBlocks = $derived(
+    selectedObject === null ? [] : parseMarkdownBlocks(selectedObject.body)
   );
-  const provenanceRelations = $derived.by(() =>
-    directRelations.filter((relation) =>
-      ["derived_from", "summarizes", "documents"].includes(relation.predicate)
-    )
+  const previewMarkdownBlocks = $derived(
+    previewData === null ? [] : parseMarkdownBlocks(previewData.context_pack)
   );
-  const graphNodes = $derived.by(() =>
-    selectedObject === null ? [] : buildGraphNodes(selectedObject, directRelations, objectById)
+  const selectedJson = $derived(
+    selectedObject === null ? "" : JSON.stringify(sidecarJsonForObject(selectedObject), null, 2)
   );
-  const graphEdges = $derived.by(() =>
-    directRelations.map((relation) => ({
-      relation,
-      fromId: relation.from,
-      toId: relation.to
-    }))
-  );
-  const graphNodeById = $derived(new Map(graphNodes.map((node) => [node.id, node])));
   const visibleWarnings = $derived(uniqueSorted([
     ...(bootstrap?.storage_warnings ?? []),
     ...(selectedProject?.warnings ?? []),
     ...warnings
   ]));
   const hasStarterMemoryOnly = $derived.by(() => isStarterMemoryOnly(objects));
+  const memorySnapshot = $derived.by(() => buildMemorySnapshot(objects, relations));
+  const activeMemoryCount = $derived(objects.filter((object) => isCurrentStatus(object.status)).length);
+  const ruleCount = $derived(objects.filter((object) => object.type === "constraint" || object.type === "gotcha").length);
+  const staleMemoryCount = $derived(objects.filter((object) => object.status === "stale" || object.status === "superseded").length);
+  const trustLabel = $derived.by(() => selectedProject === null ? "No project" : gitLabel(selectedProject));
+  const trustDescription = $derived.by(() =>
+    selectedProject === null ? "No project is selected." : gitDescription(selectedProject)
+  );
+  const memorySections = $derived.by(() => buildMemorySections(filteredObjects));
+  const previewCommandTask = $derived.by(() => previewTask.trim() || (previewData?.task ?? ""));
+  const showPreviewCommand = $derived(previewCommandTask.trim() !== "");
+  const previewCommand = $derived.by(() => buildPreviewCommand(previewCommandTask, previewMode, previewTokenBudget));
 
   onMount(() => {
     void loadProjects();
@@ -395,9 +361,7 @@
 
     try {
       const response = await fetch(`/api/projects?token=${encodeURIComponent(token)}`, {
-        headers: {
-          accept: "application/json"
-        }
+        headers: { accept: "application/json" }
       });
       const envelope = (await response.json()) as ViewerProjectsEnvelope;
 
@@ -432,9 +396,7 @@
 
     try {
       const response = await fetch(`/api/projects/${encodeURIComponent(registryId)}/bootstrap?token=${encodeURIComponent(token)}`, {
-        headers: {
-          accept: "application/json"
-        }
+        headers: { accept: "application/json" }
       });
       const envelope = (await response.json()) as ViewerEnvelope;
 
@@ -450,6 +412,7 @@
 
       bootstrap = envelope.data;
       projectLoadState = "ready";
+      selectedObjectId = null;
     } catch (error) {
       projectLoadState = "error";
       projectErrorMessage = error instanceof Error ? error.message : String(error);
@@ -457,10 +420,10 @@
   }
 
   async function exportObsidian(): Promise<void> {
-    if (token === "") {
+    if (selectedProjectId === null) {
       exportState = "error";
       exportErrorCode = "AICtxValidationFailed";
-      exportMessage = "Viewer API token is missing from the local URL.";
+      exportMessage = "Select a project before exporting.";
       return;
     }
 
@@ -470,24 +433,15 @@
     exportFilesWritten = 0;
     exportManifestPath = "";
 
-    const trimmedOutDir = exportOutDir.trim();
-    const requestBody = trimmedOutDir === "" ? {} : { outDir: trimmedOutDir };
-
     try {
-      if (selectedProjectId === null) {
-        exportState = "error";
-        exportErrorCode = "AICtxValidationFailed";
-        exportMessage = "Select a project before exporting.";
-        return;
-      }
-
+      const trimmedOutDir = exportOutDir.trim();
       const response = await fetch(`/api/projects/${encodeURIComponent(selectedProjectId)}/export/obsidian?token=${encodeURIComponent(token)}`, {
         method: "POST",
         headers: {
           accept: "application/json",
           "content-type": "application/json"
         },
-        body: JSON.stringify(requestBody)
+        body: JSON.stringify(trimmedOutDir === "" ? {} : { outDir: trimmedOutDir })
       });
       const envelope = (await response.json()) as ExportEnvelope;
 
@@ -513,107 +467,190 @@
     }
   }
 
-  function openDeleteProjectDialog(project: ViewerProjectSummary): void {
-    deleteProjectId = project.registry_id;
-    deleteConfirmation = "";
-    deleteState = "confirming";
-    deleteMessage = "";
-    deleteErrorCode = "";
-    deleteNotice = "";
-  }
-
-  function closeDeleteProjectDialog(): void {
-    if (deleteState === "running") {
+  async function previewContext(): Promise<void> {
+    if (selectedProjectId === null) {
+      previewState = "error";
+      previewErrorCode = "AICtxValidationFailed";
+      previewMessage = "Select a project before previewing context.";
       return;
     }
 
-    deleteProjectId = null;
-    deleteConfirmation = "";
-    deleteState = "idle";
-    deleteMessage = "";
-    deleteErrorCode = "";
-  }
+    const task = previewTask.trim();
 
-  async function confirmDeleteProject(): Promise<void> {
-    if (token === "") {
-      deleteState = "error";
-      deleteErrorCode = "AICtxValidationFailed";
-      deleteMessage = "Viewer API token is missing from the local URL.";
+    if (task === "") {
+      previewState = "error";
+      previewErrorCode = "AICtxValidationFailed";
+      previewMessage = "Enter a task to preview the context an agent would load.";
       return;
     }
 
-    if (projectPendingDelete === null) {
-      deleteState = "error";
-      deleteErrorCode = "AICtxValidationFailed";
-      deleteMessage = "Select a project before deleting.";
+    const parsedBudget = parsePreviewTokenBudget(previewTokenBudget);
+
+    if (!parsedBudget.ok) {
+      previewState = "error";
+      previewErrorCode = "AICtxValidationFailed";
+      previewMessage = parsedBudget.message;
       return;
     }
 
-    if (!deleteConfirmationMatches) {
-      deleteState = "error";
-      deleteErrorCode = "AICtxValidationFailed";
-      deleteMessage = "Type the project name exactly before deleting.";
-      return;
-    }
-
-    const registryId = projectPendingDelete.registry_id;
-
-    deleteState = "running";
-    deleteMessage = "Deleting Aictx memory.";
-    deleteErrorCode = "";
+    previewState = "running";
+    previewMessage = "Compiling the same context pack an agent would load.";
+    previewErrorCode = "";
+    copiedPreviewTarget = null;
 
     try {
-      const response = await fetch(`/api/projects/${encodeURIComponent(registryId)}?token=${encodeURIComponent(token)}`, {
-        method: "DELETE",
+      const response = await fetch(`/api/projects/${encodeURIComponent(selectedProjectId)}/load-preview?token=${encodeURIComponent(token)}`, {
+        method: "POST",
         headers: {
-          accept: "application/json"
-        }
+          accept: "application/json",
+          "content-type": "application/json"
+        },
+        body: JSON.stringify({
+          task,
+          mode: previewMode,
+          ...(parsedBudget.value === null ? {} : { token_budget: parsedBudget.value })
+        })
       });
-      const envelope = (await response.json()) as DeleteProjectEnvelope;
+      const envelope = (await response.json()) as LoadPreviewEnvelope;
 
       warnings = uniqueSorted([...warnings, ...(envelope.warnings ?? [])]);
 
       if (!response.ok || !envelope.ok) {
-        deleteState = "error";
-        deleteErrorCode = envelope.ok ? "" : envelope.error.code;
-        deleteMessage = envelope.ok
-          ? `Viewer delete request failed with HTTP ${response.status}.`
-          : `${envelope.error.code}: ${envelope.error.message}`;
+        previewState = "error";
+        previewData = null;
+        previewErrorCode = envelope.ok ? "" : envelope.error.code;
+        previewMessage = envelope.ok
+          ? `Viewer load preview request failed with HTTP ${response.status}.`
+          : previewErrorMessage(envelope.error.code, envelope.error.message);
         return;
       }
 
-      deleteNotice = `Deleted Aictx memory for ${envelope.data.project.project.name}. Source files were not deleted.`;
+      previewState = "success";
+      previewMessage = "Context preview ready.";
+      previewData = envelope.data;
+    } catch (error) {
+      previewState = "error";
+      previewData = null;
+      previewErrorCode = "AICtxInternalError";
+      previewMessage = error instanceof Error ? error.message : String(error);
+    }
+  }
 
-      if (selectedProjectId === registryId) {
-        selectedProjectId = null;
-        bootstrap = null;
-        selectedObjectId = null;
-        currentScreen = "projects";
-        projectLoadState = "loading";
-        projectErrorMessage = "";
+  async function copyPreview(kind: "command" | "context"): Promise<void> {
+    const text = kind === "command" ? previewCommand : previewData?.context_pack ?? "";
+
+    if (text === "") {
+      return;
+    }
+
+    await navigator.clipboard.writeText(text);
+    copiedPreviewTarget = kind;
+  }
+
+  function selectProject(registryId: string): void {
+    selectedProjectId = registryId;
+    selectedObjectId = null;
+    searchQuery = "";
+    layerFilter = "all";
+    typeFilter = allOption;
+    statusFilter = allOption;
+    tagFilter = allOption;
+    pagePreset = "all";
+    exportState = "idle";
+    previewState = "idle";
+    previewData = null;
+    previewMessage = "";
+    previewErrorCode = "";
+    currentScreen = "memories";
+    void loadBootstrap(registryId);
+  }
+
+  function selectObject(id: string): void {
+    if (selectedObjectId === id) {
+      selectedObjectId = null;
+      return;
+    }
+
+    selectedObjectId = id;
+    currentScreen = "memories";
+  }
+
+  function showProjects(): void {
+    currentScreen = "projects";
+  }
+
+  function showMemories(): void {
+    currentScreen = selectedProjectId === null ? "projects" : "memories";
+  }
+
+  function showExport(): void {
+    currentScreen = selectedProjectId === null ? "projects" : "export";
+  }
+
+  function rankedObjects(memoryObjects: MemoryObjectSummary[]): MemoryObjectSummary[] {
+    const priority: ObjectType[] = [
+      "project",
+      "architecture",
+      "synthesis",
+      "decision",
+      "constraint",
+      "workflow",
+      "gotcha",
+      "fact",
+      "source",
+      "question",
+      "concept",
+      "note"
+    ];
+
+    return [...memoryObjects].sort((left, right) => {
+      const leftStatus = isCurrentStatus(left.status) ? 0 : 1;
+      const rightStatus = isCurrentStatus(right.status) ? 0 : 1;
+      if (leftStatus !== rightStatus) {
+        return leftStatus - rightStatus;
       }
 
-      deleteProjectId = null;
-      deleteConfirmation = "";
-      deleteState = "idle";
-      deleteMessage = "";
-      deleteErrorCode = "";
-      await loadProjects();
-    } catch (error) {
-      deleteState = "error";
-      deleteErrorCode = "AICtxInternalError";
-      deleteMessage = error instanceof Error ? error.message : String(error);
-    }
+      const leftType = priority.indexOf(left.type);
+      const rightType = priority.indexOf(right.type);
+      if (leftType !== rightType) {
+        return leftType - rightType;
+      }
+
+      return left.title.localeCompare(right.title);
+    });
   }
 
   function objectMatchesFilters(object: MemoryObjectSummary): boolean {
     return (
+      objectMatchesPagePreset(object, pagePreset) &&
       objectMatchesLayer(object, layerFilter) &&
       optionMatches(typeFilter, object.type) &&
       optionMatches(statusFilter, object.status) &&
       (tagFilter === allOption || object.tags.includes(tagFilter)) &&
       objectMatchesSearch(object, searchQuery)
     );
+  }
+
+  function objectMatchesPagePreset(object: MemoryObjectSummary, preset: PagePreset): boolean {
+    switch (preset) {
+      case "all":
+        return true;
+      case "do-not-do":
+        return object.type === "gotcha" ||
+          object.type === "constraint" ||
+          object.status === "stale" ||
+          object.status === "superseded";
+      case "coding-workflows":
+        return object.type === "workflow";
+      case "architecture":
+        return object.type === "architecture";
+      case "security-notes":
+        return object.tags.includes("security") || object.type === "decision" || object.type === "synthesis";
+      case "commands":
+        return object.body.includes("aictx ") || object.body.includes("pnpm ") || object.type === "project";
+      case "source-memory":
+        return object.type === "source";
+    }
   }
 
   function objectMatchesSearch(object: MemoryObjectSummary, rawQuery: string): boolean {
@@ -635,10 +672,6 @@
     ].join(" ")).includes(query);
   }
 
-  function optionMatches(filter: string, value: string): boolean {
-    return filter === allOption || filter === value;
-  }
-
   function objectMatchesLayer(object: MemoryObjectSummary, filter: LayerFilter): boolean {
     switch (filter) {
       case "all":
@@ -654,12 +687,326 @@
     }
   }
 
+  function optionMatches(filter: string, value: string): boolean {
+    return filter === allOption || filter === value;
+  }
+
   function isCurrentStatus(status: ObjectStatus): boolean {
     return status === "active" || status === "open";
   }
 
   function normalizeText(value: string): string {
     return value.trim().toLowerCase();
+  }
+
+  function selectRelated(id: string): void {
+    if (objectById.has(id)) {
+      searchQuery = "";
+      layerFilter = "all";
+      typeFilter = allOption;
+      statusFilter = allOption;
+      tagFilter = allOption;
+      selectedObjectId = id;
+      currentScreen = "memories";
+    }
+  }
+
+  function clearPagePreset(): void {
+    pagePreset = "all";
+  }
+
+  function relationsForObject(id: string): MemoryRelationSummary[] {
+    return relations
+      .filter((relation) => relation.from === id || relation.to === id)
+      .sort(compareRelations);
+  }
+
+  function pageFilter(section: string): void {
+    currentScreen = "memories";
+    mobileMenuOpen = false;
+    searchQuery = "";
+    typeFilter = allOption;
+    statusFilter = allOption;
+    tagFilter = allOption;
+    pagePreset = section as PagePreset;
+
+    switch (section) {
+      case "overview":
+        pagePreset = "all";
+        layerFilter = "all";
+        break;
+      case "do-not-do":
+        layerFilter = "all";
+        break;
+      case "coding-workflows":
+        layerFilter = "all";
+        typeFilter = "workflow";
+        break;
+      case "architecture":
+        layerFilter = "all";
+        typeFilter = "architecture";
+        break;
+      case "source-memory":
+        layerFilter = "sources";
+        break;
+      default:
+        pagePreset = "all";
+        layerFilter = "all";
+    }
+  }
+
+  function buildMemorySections(memoryObjects: MemoryObjectSummary[]): MemorySection[] {
+    const sections: MemorySection[] = [
+      {
+        id: "do-not-do",
+        title: "Do Not Do",
+        icon: "⛔",
+        objects: memoryObjects.filter((object) =>
+          object.type === "gotcha" || object.type === "constraint" || object.status !== "active"
+        )
+      },
+      {
+        id: "coding-workflows",
+        title: "Coding Workflows",
+        icon: "🛠",
+        objects: memoryObjects.filter((object) => object.type === "workflow")
+      },
+      {
+        id: "architecture",
+        title: "Architecture",
+        icon: "🏛",
+        objects: memoryObjects.filter((object) => object.type === "architecture")
+      },
+      {
+        id: "security-notes",
+        title: "Security Notes",
+        icon: "🔒",
+        objects: memoryObjects.filter((object) =>
+          object.tags.includes("security") || object.type === "decision" || object.type === "synthesis"
+        )
+      },
+      {
+        id: "commands",
+        title: "Commands",
+        icon: "⌘",
+        objects: memoryObjects.filter((object) =>
+          object.body.includes("aictx ") || object.body.includes("pnpm ") || object.type === "project"
+        )
+      },
+      {
+        id: "source-memory",
+        title: "Source Memory",
+        icon: "📄",
+        objects: memoryObjects.filter((object) => object.type === "source")
+      }
+    ];
+    const seen = new Set<string>();
+
+    for (const section of sections) {
+      section.objects = rankedObjects(section.objects).filter((object) => {
+        if (seen.has(object.id)) {
+          return false;
+        }
+        seen.add(object.id);
+        return true;
+      });
+    }
+
+    const ungrouped = rankedObjects(memoryObjects).filter((object) => !seen.has(object.id));
+    if (ungrouped.length > 0) {
+      sections.push({
+        id: "more-memory",
+        title: "More Memory",
+        icon: "◇",
+        objects: ungrouped
+      });
+    }
+
+    return sections.filter((section) => section.objects.length > 0);
+  }
+
+  function buildMemorySnapshot(
+    memoryObjects: MemoryObjectSummary[],
+    relationList: MemoryRelationSummary[]
+  ): MemorySnapshotItem[] {
+    const reusableCount = memoryObjects.filter((object) =>
+      object.type !== "source" && object.type !== "synthesis" && isCurrentStatus(object.status)
+    ).length;
+    const workflowCount = memoryObjects.filter((object) =>
+      object.type === "workflow" && isCurrentStatus(object.status)
+    ).length;
+    const sourceCount = memoryObjects.filter((object) => object.type === "source").length;
+    const activeRelationCount = relationList.filter((relation) => relation.status === "active").length;
+
+    return [
+      {
+        label: "Reusable memory",
+        value: String(reusableCount),
+        detail: "active records agents can load before work"
+      },
+      {
+        label: "Workflows",
+        value: String(workflowCount),
+        detail: "repo-specific procedures and command paths"
+      },
+      {
+        label: "Review trail",
+        value: `${sourceCount}/${activeRelationCount}`,
+        detail: "source records / active memory links"
+      }
+    ];
+  }
+
+  function bodyPreview(object: MemoryObjectSummary): string {
+    const text = object.body
+      .replace(/^#+\s+/gm, "")
+      .replace(/[`*_>#-]/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
+
+    return text.length > 190 ? `${text.slice(0, 187)}...` : text;
+  }
+
+  function objectIcon(object: MemoryObjectSummary): string {
+    switch (object.type) {
+      case "project":
+        return "•";
+      case "architecture":
+        return "⌂";
+      case "workflow":
+        return "↻";
+      case "gotcha":
+      case "constraint":
+        return "!";
+      case "source":
+        return "•";
+      default:
+        return "•";
+    }
+  }
+
+  function relationCounterpart(relation: MemoryRelationSummary, objectId: string): string {
+    return relation.from === objectId ? relation.to : relation.from;
+  }
+
+  function relationObject(relation: MemoryRelationSummary, objectId: string): MemoryObjectSummary | null {
+    return objectById.get(relationCounterpart(relation, objectId)) ?? null;
+  }
+
+  function relationTargetLabel(relation: MemoryRelationSummary, objectId: string): string {
+    const related = relationObject(relation, objectId);
+
+    return related === null ? relationCounterpart(relation, objectId) : related.title;
+  }
+
+  function relationStatusLabel(relation: MemoryRelationSummary): string {
+    return relation.confidence === null
+      ? relation.status
+      : `${relation.status} / ${relation.confidence} confidence`;
+  }
+
+  function parsePreviewTokenBudget(raw: string): { ok: true; value: number | null } | { ok: false; message: string } {
+    const trimmed = raw.trim();
+
+    if (trimmed === "") {
+      return { ok: true, value: null };
+    }
+
+    const value = Number(trimmed);
+
+    if (!Number.isSafeInteger(value) || value <= 500) {
+      return { ok: false, message: "Token budget must be an integer greater than 500." };
+    }
+
+    return { ok: true, value };
+  }
+
+  function previewErrorMessage(code: string, message: string): string {
+    if (code === "AICtxIndexUnavailable") {
+      return `${code}: ${message} Run aictx rebuild, then preview again.`;
+    }
+
+    return `${code}: ${message}`;
+  }
+
+  function buildPreviewCommand(task: string, mode: LoadMemoryMode, tokenBudget: string): string {
+    const parts = ["aictx", "load", shellQuote(task.trim())];
+
+    if (mode !== "coding") {
+      parts.push("--mode", mode);
+    }
+
+    const parsedBudget = parsePreviewTokenBudget(tokenBudget);
+
+    if (parsedBudget.ok && parsedBudget.value !== null) {
+      parts.push("--token-budget", String(parsedBudget.value));
+    }
+
+    return parts.join(" ");
+  }
+
+  function shellQuote(value: string): string {
+    return `"${value.replace(/["\\$`]/g, "\\$&")}"`;
+  }
+
+  function previewSourceLabel(source: LoadMemorySource): string {
+    if (!source.git_available) {
+      return `${source.project}, Git unavailable`;
+    }
+
+    return `${source.project}, ${source.branch ?? "detached HEAD"}@${source.commit ?? "unknown commit"}`;
+  }
+
+  function gitLabel(project: ViewerProjectSummary): string {
+    if (!project.available) {
+      return "Unavailable";
+    }
+
+    if (project.git === null || !project.git.available) {
+      return "No Git";
+    }
+
+    if (project.git.dirty === true) {
+      return "Uncommitted memory";
+    }
+
+    if (project.git.dirty === false) {
+      return "Committed memory";
+    }
+
+    return "Git available";
+  }
+
+  function gitDescription(project: ViewerProjectSummary): string {
+    if (!project.available) {
+      return "This registered memory root is unavailable.";
+    }
+
+    if (project.git === null || !project.git.available) {
+      return "Git status is unavailable for this memory root.";
+    }
+
+    if (project.git.dirty === true) {
+      return "There are uncommitted changes under this memory root. Use aictx diff or Git before treating it as committed team state.";
+    }
+
+    if (project.git.dirty === false) {
+      return "The memory root has no uncommitted Git changes.";
+    }
+
+    return "Git is available, but dirty state is unknown.";
+  }
+
+  function countLabel(count: number, singular: string, plural: string): string {
+    return `${count} ${count === 1 ? singular : plural}`;
+  }
+
+  function uniqueSorted(values: string[]): string[] {
+    return [...new Set(values)].sort((left, right) => left.localeCompare(right));
+  }
+
+  function compareRelations(left: MemoryRelationSummary, right: MemoryRelationSummary): number {
+    return left.id.localeCompare(right.id);
   }
 
   function isStarterMemoryOnly(memoryObjects: readonly MemoryObjectSummary[]): boolean {
@@ -677,328 +1024,14 @@
     return (
       projectObject !== undefined &&
       architectureObject !== undefined &&
-      isInitialProjectBody(projectObject.body) &&
+      /^# .+\n\nProject-level memory for .+\.$/.test(normalizeBody(projectObject.body)) &&
       normalizeBody(architectureObject.body) ===
         "# Current Architecture\n\nArchitecture memory starts here."
     );
   }
 
-  function isInitialProjectBody(body: string): boolean {
-    return /^# .+\n\nProject-level memory for .+\.$/.test(normalizeBody(body));
-  }
-
   function normalizeBody(body: string): string {
     return body.replace(/\r\n?/g, "\n").trim();
-  }
-
-  function selectObject(id: string): void {
-    selectedObjectId = id;
-    currentScreen = "detail";
-  }
-
-  function selectProject(registryId: string): void {
-    selectedProjectId = registryId;
-    selectedObjectId = null;
-    searchQuery = "";
-    layerFilter = "all";
-    typeFilter = allOption;
-    statusFilter = allOption;
-    tagFilter = allOption;
-    selectedLensName = "project-map";
-    exportState = "idle";
-    exportMessage = "";
-    currentScreen = "memories";
-    void loadBootstrap(registryId);
-  }
-
-  function openRelatedObject(id: string): void {
-    selectObject(id);
-  }
-
-  function showProjects(): void {
-    currentScreen = "projects";
-    selectedObjectId = null;
-  }
-
-  function showMemories(): void {
-    if (selectedProjectId === null) {
-      currentScreen = "projects";
-      return;
-    }
-
-    currentScreen = "memories";
-  }
-
-  function showLenses(): void {
-    if (selectedProjectId === null) {
-      currentScreen = "projects";
-      return;
-    }
-
-    currentScreen = "lenses";
-  }
-
-  function showExport(): void {
-    if (selectedProjectId === null) {
-      currentScreen = "projects";
-      return;
-    }
-
-    currentScreen = "export";
-  }
-
-  function gitLabel(project: ViewerProjectSummary): string {
-    if (!project.available) {
-      return "Unavailable";
-    }
-
-    if (project.git === null || !project.git.available) {
-      return "No Git";
-    }
-
-    if (project.git.dirty === true) {
-      return "Local memory changes";
-    }
-
-    if (project.git.dirty === false) {
-      return "Memory clean";
-    }
-
-    return "Git available";
-  }
-
-  function gitTooltip(project: ViewerProjectSummary): string | null {
-    if (!project.available || project.git === null || !project.git.available) {
-      return null;
-    }
-
-    if (project.git.dirty === true) {
-      return "`.aictx/` has local memory changes. You can keep saving memory; supported memory writes protect dirty touched files. Review with `aictx diff` or commit `.aictx/` when you want this memory versioned. Project deletion is permanent after confirmation.";
-    }
-
-    if (project.git.dirty === false) {
-      return "No local `.aictx/` memory changes are reported by Git.";
-    }
-
-    return "Git is available, but Aictx could not determine whether local memory changed.";
-  }
-
-  function statusTooltipId(registryId: string): string {
-    return `project-status-tooltip-${registryId.replace(/[^a-zA-Z0-9_-]/g, "-")}`;
-  }
-
-  function showStatusTooltip(tooltipId: string): void {
-    activeStatusTooltipId = tooltipId;
-  }
-
-  function hideStatusTooltip(tooltipId: string): void {
-    if (activeStatusTooltipId === tooltipId) {
-      activeStatusTooltipId = null;
-    }
-  }
-
-  function relationCounterpart(relation: MemoryRelationSummary, objectId: string): string {
-    return relation.from === objectId ? relation.to : relation.from;
-  }
-
-  function relationObject(relation: MemoryRelationSummary, objectId: string): MemoryObjectSummary | null {
-    return objectById.get(relationCounterpart(relation, objectId)) ?? null;
-  }
-
-  function relationDirectionLabel(relation: MemoryRelationSummary, objectId: string): string {
-    if (relation.from === objectId && relation.to === objectId) {
-      return "self";
-    }
-
-    return relation.from === objectId ? "outgoing" : "incoming";
-  }
-
-  function relationTargetLabel(relation: MemoryRelationSummary, objectId: string): string {
-    const related = relationObject(relation, objectId);
-
-    return related === null ? relationCounterpart(relation, objectId) : related.title;
-  }
-
-  function relationStatusLabel(relation: MemoryRelationSummary): string {
-    return relation.confidence === null
-      ? relation.status
-      : `${relation.status} / ${relation.confidence} confidence`;
-  }
-
-  function countLabel(count: number, singular: string, plural: string): string {
-    return `${count} ${count === 1 ? singular : plural}`;
-  }
-
-  function buildGraphNodes(
-    selected: MemoryObjectSummary,
-    relationList: MemoryRelationSummary[],
-    objectLookup: Map<string, MemoryObjectSummary>
-  ): GraphNode[] {
-    const incomingIds: string[] = [];
-    const outgoingIds: string[] = [];
-
-    for (const relation of relationList) {
-      if (
-        relation.to === selected.id &&
-        relation.from !== selected.id &&
-        !incomingIds.includes(relation.from)
-      ) {
-        incomingIds.push(relation.from);
-      }
-
-      if (
-        relation.from === selected.id &&
-        relation.to !== selected.id &&
-        !outgoingIds.includes(relation.to)
-      ) {
-        outgoingIds.push(relation.to);
-      }
-    }
-
-    const bothIds = incomingIds
-      .filter((id) => outgoingIds.includes(id))
-      .sort((left, right) => left.localeCompare(right));
-    const incomingOnlyIds = incomingIds
-      .filter((id) => !outgoingIds.includes(id))
-      .sort((left, right) => left.localeCompare(right));
-    const outgoingOnlyIds = outgoingIds
-      .filter((id) => !incomingIds.includes(id))
-      .sort((left, right) => left.localeCompare(right));
-    const nodes: GraphNode[] = [
-      graphNodeForObject(selected, "selected", graphWidth / 2, graphHeight / 2)
-    ];
-
-    nodes.push(
-      ...graphNeighborNodes(incomingOnlyIds, "incoming", 180, objectLookup),
-      ...graphNeighborNodes(outgoingOnlyIds, "outgoing", 780, objectLookup),
-      ...graphBidirectionalNodes(bothIds, objectLookup)
-    );
-
-    return nodes;
-  }
-
-  function graphNeighborNodes(
-    ids: string[],
-    role: Exclude<GraphNodeRole, "selected">,
-    x: number,
-    objectLookup: Map<string, MemoryObjectSummary>
-  ): GraphNode[] {
-    return graphYPositions(ids.length, role).map((y, index) =>
-      graphNodeForId(ids[index], role, x, y, objectLookup)
-    );
-  }
-
-  function graphBidirectionalNodes(
-    ids: string[],
-    objectLookup: Map<string, MemoryObjectSummary>
-  ): GraphNode[] {
-    return ids.map((id, index) => {
-      const position = graphBidirectionalPosition(ids.length, index);
-
-      return graphNodeForId(id, "both", position.x, position.y, objectLookup);
-    });
-  }
-
-  function graphBidirectionalPosition(count: number, index: number): { x: number; y: number } {
-    const columns = Math.min(count, 3);
-    const row = Math.floor(index / 3);
-    const column = index % 3;
-    const xStart = graphWidth / 2 - 170;
-    const xStep = columns === 1 ? 0 : 340 / (columns - 1);
-
-    return {
-      x: columns === 1 ? graphWidth / 2 : xStart + xStep * column,
-      y: row % 2 === 0 ? 76 : 344
-    };
-  }
-
-  function graphYPositions(count: number, role: Exclude<GraphNodeRole, "selected">): number[] {
-    if (count <= 0) {
-      return [];
-    }
-
-    if (role === "both") {
-      return count === 1
-        ? [76]
-        : Array.from({ length: count }, (_, index) => 76 + (268 / (count - 1)) * index);
-    }
-
-    if (count === 1) {
-      return [graphHeight / 2];
-    }
-
-    return Array.from({ length: count }, (_, index) => 88 + (244 / (count - 1)) * index);
-  }
-
-  function graphNodeForId(
-    id: string,
-    role: GraphNodeRole,
-    x: number,
-    y: number,
-    objectLookup: Map<string, MemoryObjectSummary>
-  ): GraphNode {
-    const object = objectLookup.get(id);
-
-    if (object === undefined) {
-      return {
-        id,
-        title: id,
-        subtitle: "Missing memory",
-        missing: true,
-        role,
-        x,
-        y
-      };
-    }
-
-    return graphNodeForObject(object, role, x, y);
-  }
-
-  function graphNodeForObject(
-    object: MemoryObjectSummary,
-    role: GraphNodeRole,
-    x: number,
-    y: number
-  ): GraphNode {
-    return {
-      id: object.id,
-      title: object.title,
-      subtitle: `${object.type} / ${object.status}`,
-      missing: false,
-      role,
-      x,
-      y
-    };
-  }
-
-  function graphNodeRadius(node: GraphNode): number {
-    return node.role === "selected" ? 56 : 46;
-  }
-
-  function graphConnectionPoint(node: GraphNode, toward: GraphNode, offset: number): { x: number; y: number } {
-    const deltaX = toward.x - node.x;
-    const deltaY = toward.y - node.y;
-    const length = Math.hypot(deltaX, deltaY);
-
-    if (length === 0) {
-      return {
-        x: node.x,
-        y: node.y - offset
-      };
-    }
-
-    return {
-      x: node.x + (deltaX / length) * offset,
-      y: node.y + (deltaY / length) * offset
-    };
-  }
-
-  function graphText(value: string, maxLength: number): string {
-    return value.length > maxLength ? `${value.slice(0, maxLength - 1)}...` : value;
-  }
-
-  function graphMidpoint(start: number, end: number): number {
-    return start + (end - start) / 2;
   }
 
   function sidecarJsonForObject(object: MemoryObjectSummary): Record<string, unknown> {
@@ -1030,28 +1063,19 @@
 
     const flushParagraph = (): void => {
       if (paragraph.length > 0) {
-        blocks.push({
-          kind: "paragraph",
-          text: paragraph.join(" ")
-        });
+        blocks.push({ kind: "paragraph", text: paragraph.join(" ") });
         paragraph = [];
       }
     };
     const flushList = (): void => {
       if (list.length > 0) {
-        blocks.push({
-          kind: "list",
-          items: list
-        });
+        blocks.push({ kind: "list", items: list });
         list = [];
       }
     };
     const flushQuote = (): void => {
       if (quote.length > 0) {
-        blocks.push({
-          kind: "quote",
-          text: quote.join(" ")
-        });
+        blocks.push({ kind: "quote", text: quote.join(" ") });
         quote = [];
       }
     };
@@ -1069,10 +1093,7 @@
           flushLooseBlocks();
           code = [];
         } else {
-          blocks.push({
-            kind: "code",
-            text: code.join("\n")
-          });
+          blocks.push({ kind: "code", text: code.join("\n") });
           code = null;
         }
         continue;
@@ -1089,7 +1110,6 @@
       }
 
       const heading = /^(#{1,3})\s+(.+)$/.exec(line);
-
       if (heading !== null) {
         flushLooseBlocks();
         blocks.push({
@@ -1101,7 +1121,6 @@
       }
 
       const listItem = /^\s*[-*]\s+(.+)$/.exec(line);
-
       if (listItem !== null) {
         flushParagraph();
         flushQuote();
@@ -1110,7 +1129,6 @@
       }
 
       const quoteLine = /^\s*>\s?(.+)$/.exec(line);
-
       if (quoteLine !== null) {
         flushParagraph();
         flushList();
@@ -1124,26 +1142,15 @@
     }
 
     if (code !== null) {
-      blocks.push({
-        kind: "code",
-        text: code.join("\n")
-      });
+      blocks.push({ kind: "code", text: code.join("\n") });
     }
 
     flushLooseBlocks();
     return blocks;
   }
-
-  function uniqueSorted(values: string[]): string[] {
-    return [...new Set(values)].sort((left, right) => left.localeCompare(right));
-  }
-
-  function compareRelations(left: MemoryRelationSummary, right: MemoryRelationSummary): number {
-    return left.id.localeCompare(right.id);
-  }
 </script>
 
-<main class:ready-shell={loadState === "ready" && projectsData !== null} class="viewer-shell" aria-labelledby="viewer-title">
+<main class="viewer-shell" aria-labelledby="viewer-title">
   {#if loadState === "loading"}
     <section class="system-panel" aria-live="polite">
       <p class="eyebrow">Aictx local viewer</p>
@@ -1158,89 +1165,139 @@
       <p>{errorMessage}</p>
     </section>
   {:else if projectsData !== null}
-    <aside class="nav-rail" aria-label="Viewer navigation">
-      <div class="brand-block">
-        <p class="eyebrow">Aictx local viewer</p>
-        <h1 id="viewer-title">Memory Viewer</h1>
-        <p class="project-name">{selectedProject?.project.name ?? "Projects"}</p>
-        <p class="project-id">{selectedProject?.project.id ?? projectsData.registry_path}</p>
+    <aside class="sidebar" aria-label="Viewer navigation">
+      <div class="brand">
+        <div class="brand-row">
+          <span class="book-icon" aria-hidden="true">A</span>
+          <h1 id="viewer-title">Coding Handbook</h1>
+          <button
+            type="button"
+            class="mobile-menu-toggle"
+            aria-expanded={mobileMenuOpen}
+            aria-controls="viewer-mobile-menu"
+            onclick={() => {
+              mobileMenuOpen = !mobileMenuOpen;
+            }}
+          >
+            {mobileMenuOpen ? "Close menu" : "Menu"}
+          </button>
+        </div>
+        <p>{selectedProject?.project.name ?? "No project selected"} · {selectedProject?.project.id ?? "local memory"}</p>
       </div>
 
-      <nav class="nav-list">
-        <button
-          type="button"
-          class:active={currentScreen === "projects"}
-          aria-current={currentScreen === "projects" ? "page" : undefined}
-          onclick={showProjects}
-          data-testid="nav-projects"
-        >
-          Projects
-        </button>
-        <button
-          type="button"
-          class:active={currentScreen === "memories" || currentScreen === "detail"}
-          aria-current={currentScreen === "memories" || currentScreen === "detail" ? "page" : undefined}
-          disabled={selectedProjectId === null}
-          onclick={showMemories}
-          data-testid="nav-memories"
-        >
-          Memories
-        </button>
-        <button
-          type="button"
-          class:active={currentScreen === "lenses"}
-          aria-current={currentScreen === "lenses" ? "page" : undefined}
-          disabled={selectedProjectId === null}
-          onclick={showLenses}
-          data-testid="nav-lenses"
-        >
-          Lenses
-        </button>
-        <button
-          type="button"
-          class:active={currentScreen === "export"}
-          aria-current={currentScreen === "export" ? "page" : undefined}
-          disabled={selectedProjectId === null}
-          onclick={showExport}
-          data-testid="nav-export"
-        >
-          Export
-        </button>
-      </nav>
-
-      <dl class="project-stats" aria-label="Project memory counts">
-        {#if currentScreen === "projects" || bootstrap === null}
-          <div>
-            <dt>Projects</dt>
-            <dd>{projectsData.counts.projects}</dd>
-          </div>
-          <div>
-            <dt>Available</dt>
-            <dd>{projectsData.counts.available}</dd>
-          </div>
-          <div>
-            <dt>Missing</dt>
-            <dd>{projectsData.counts.unavailable}</dd>
-          </div>
-        {:else}
-          <div>
-            <dt>Memories</dt>
-            <dd>{bootstrap.counts.objects}</dd>
-          </div>
-          <div>
-            <dt>Connections</dt>
-            <dd>{bootstrap.counts.relations}</dd>
-          </div>
-	          <div>
-	            <dt>Syntheses</dt>
-	            <dd>{bootstrap.counts.synthesis_objects}</dd>
-	          </div>
-	          <div>
-	            <dt>Sources</dt>
-	            <dd>{bootstrap.counts.source_objects}</dd>
-	          </div>
+      <div id="viewer-mobile-menu" class="sidebar-menu" class:open={mobileMenuOpen}>
+        {#if bootstrap !== null}
+          <dl class="sidebar-stats" aria-label="Memory document stats">
+            <div><dt>{activeMemoryCount}</dt><dd>memories</dd></div>
+            <div><dt>{relations.length}</dt><dd>links</dd></div>
+            <div><dt>{ruleCount}</dt><dd>rules</dd></div>
+            <div><dt>{staleMemoryCount}</dt><dd>stale</dd></div>
+          </dl>
         {/if}
-      </dl>
+
+        <label class="sidebar-search">
+          <span>Search doc</span>
+          <input
+            type="search"
+            bind:value={searchQuery}
+            placeholder="oauth, schema, cron..."
+            autocomplete="off"
+            data-testid="viewer-search"
+          />
+        </label>
+
+        <nav class="nav-list" aria-label="Memory pages">
+          <section class="nav-section" aria-labelledby="workspace-pages-heading">
+            <p class="nav-heading" id="workspace-pages-heading">Workspace</p>
+            <button
+              type="button"
+              class:active={currentScreen === "projects"}
+              aria-current={currentScreen === "projects" ? "page" : undefined}
+              data-testid="nav-projects"
+              onclick={showProjects}
+            >
+              <span class="nav-row-icon" aria-hidden="true">⌂</span>
+              <span>Projects</span>
+            </button>
+            <button
+              type="button"
+              class:active={currentScreen === "memories" || currentScreen === "detail"}
+              aria-current={currentScreen === "memories" || currentScreen === "detail" ? "page" : undefined}
+              data-testid="nav-memories"
+              disabled={selectedProjectId === null}
+              onclick={showMemories}
+            >
+              <span class="nav-row-icon" aria-hidden="true">#</span>
+              <span>Project Memory</span>
+            </button>
+            <button
+              type="button"
+              class:active={currentScreen === "export"}
+              aria-current={currentScreen === "export" ? "page" : undefined}
+              data-testid="nav-export"
+              disabled={selectedProjectId === null}
+              onclick={showExport}
+            >
+              <span class="nav-row-icon" aria-hidden="true">↗</span>
+              <span>Export</span>
+            </button>
+          </section>
+
+          <section class="nav-section" aria-labelledby="memory-views-heading">
+            <p class="nav-heading" id="memory-views-heading">Pages</p>
+            <button type="button" class:active={pagePreset === "do-not-do"} onclick={() => pageFilter("do-not-do")}>
+              <span class="nav-row-icon" aria-hidden="true">!</span>
+              <span>Do Not Do</span>
+            </button>
+            <button type="button" class:active={pagePreset === "coding-workflows"} onclick={() => pageFilter("coding-workflows")}>
+              <span class="nav-row-icon" aria-hidden="true">↳</span>
+              <span>Workflows</span>
+            </button>
+            <button type="button" class:active={pagePreset === "architecture"} onclick={() => pageFilter("architecture")}>
+              <span class="nav-row-icon" aria-hidden="true">▦</span>
+              <span>Architecture</span>
+            </button>
+            <button type="button" class:active={pagePreset === "security-notes"} onclick={() => pageFilter("security-notes")}>
+              <span class="nav-row-icon" aria-hidden="true">◇</span>
+              <span>Security Notes</span>
+            </button>
+            <button type="button" class:active={pagePreset === "commands"} onclick={() => pageFilter("commands")}>
+              <span class="nav-row-icon" aria-hidden="true">›</span>
+              <span>Commands</span>
+            </button>
+            <button type="button" class:active={pagePreset === "source-memory"} onclick={() => pageFilter("source-memory")}>
+              <span class="nav-row-icon" aria-hidden="true">≡</span>
+              <span>Source Memory</span>
+            </button>
+          </section>
+        </nav>
+
+        <details class="sidebar-export">
+          <summary>Obsidian export</summary>
+          <button
+            type="button"
+            onclick={() => window.print()}
+          >
+            Print/PDF
+          </button>
+          <label class="obsidian-field">
+            <span>Obsidian vault</span>
+            <input
+              type="text"
+              bind:value={exportOutDir}
+              placeholder=".aictx/exports/obsidian"
+              autocomplete="off"
+            />
+          </label>
+          <button
+            type="button"
+            disabled={exportState === "running" || selectedProjectId === null}
+            onclick={() => void exportObsidian()}
+          >
+            {exportState === "running" ? "Exporting" : "Export Obsidian"}
+          </button>
+        </details>
+      </div>
     </aside>
 
     <section class="main-stage" aria-label="Read-only memory browser">
@@ -1252,264 +1309,67 @@
             <p>{countLabel(projects.length, "registered project", "registered projects")}</p>
           </header>
 
-          {#if projects.length === 0}
-            <section class="empty-projects" data-testid="empty-projects">
-              <h3>No projects registered</h3>
-              <p>Run <code>aictx projects add</code> inside an initialized project, or run any successful Aictx project command to register it automatically.</p>
-              <p class="object-id">{projectsData.registry_path}</p>
-            </section>
-          {:else}
-            <div class="project-grid" data-testid="project-list">
-              {#each projects as project (project.registry_id)}
-                {@const tooltip = gitTooltip(project)}
-                {@const tooltipId = statusTooltipId(project.registry_id)}
-                <article
-                  class:unavailable-project={!project.available}
-                  class:current-project={project.current}
-                  class="project-card"
-                  data-testid={`project-card-${project.registry_id}`}
+          <div class="project-grid" data-testid="project-list">
+            {#each projects as project (project.registry_id)}
+              <article
+                class:unavailable={!project.available}
+                class:current={project.current}
+                class="project-card"
+                data-testid={`project-card-${project.registry_id}`}
+              >
+                <div class="card-topline">
+                  <span>{project.current ? "Current" : project.source}</span>
+                  <strong>{gitLabel(project)}</strong>
+                </div>
+                <h3>{project.project.name}</h3>
+                <p class="mono">{project.project.id}</p>
+                <p class="path">{project.project_root}</p>
+                <dl class="mini-stats">
+                  <div><dt>Memories</dt><dd>{project.counts?.objects ?? 0}</dd></div>
+                  <div><dt>Relations</dt><dd>{project.counts?.relations ?? 0}</dd></div>
+                  <div><dt>Syntheses</dt><dd>{project.counts?.synthesis_objects ?? 0}</dd></div>
+                </dl>
+                {#if project.warnings.length > 0}
+                  <p class="warning-copy">{project.warnings[0]}</p>
+                {/if}
+                <button
+                  type="button"
+                  class="primary-action"
+                  disabled={!project.available}
+                  onclick={() => selectProject(project.registry_id)}
+                  data-testid={`project-open-${project.registry_id}`}
                 >
-                  <div class="project-card-topline">
-                    <span>{project.source}</span>
-                    <span class="project-git-status">
-                      <strong>{gitLabel(project)}</strong>
-                      {#if tooltip !== null}
-                        <span class="project-status-info">
-                          <button
-                            type="button"
-                            class="status-info-button"
-                            aria-label={`About ${gitLabel(project).toLowerCase()}`}
-                            aria-describedby={tooltipId}
-                            onblur={() => hideStatusTooltip(tooltipId)}
-                            onfocus={() => showStatusTooltip(tooltipId)}
-                            onmouseenter={() => showStatusTooltip(tooltipId)}
-                            onmouseleave={() => hideStatusTooltip(tooltipId)}
-                            data-testid={`project-memory-info-${project.registry_id}`}
-                          >
-                            i
-                          </button>
-                          <span
-                            id={tooltipId}
-                            class:visible={activeStatusTooltipId === tooltipId}
-                            class="status-tooltip"
-                            role="tooltip"
-                            data-testid={`project-memory-tooltip-${project.registry_id}`}
-                          >
-                            {tooltip}
-                          </span>
-                        </span>
-                      {/if}
-                    </span>
-                  </div>
-                  <h3>{project.project.name}</h3>
-                  <p class="project-id">{project.project.id}</p>
-                  <p class="project-root">{project.project_root}</p>
-
-                  <dl class="project-card-stats">
-                    <div>
-                      <dt>Memories</dt>
-                      <dd>{project.counts?.objects ?? 0}</dd>
-                    </div>
-                    <div>
-                      <dt>Connections</dt>
-                      <dd>{project.counts?.relations ?? 0}</dd>
-                    </div>
-                    <div>
-                      <dt>Syntheses</dt>
-                      <dd>{project.counts?.synthesis_objects ?? 0}</dd>
-                    </div>
-                  </dl>
-
-                  {#if project.warnings.length > 0}
-                    <p class="project-warning">{project.warnings[0]}</p>
-                  {/if}
-
-                  <div class="project-actions">
-                    <button
-                      type="button"
-                      class="primary-action"
-                      disabled={!project.available}
-                      onclick={() => selectProject(project.registry_id)}
-                      data-testid={`project-open-${project.registry_id}`}
-                    >
-                      Open project
-                    </button>
-                    <button
-                      type="button"
-                      class="danger-action"
-                      aria-label={`Delete Aictx memory for ${project.project.name}`}
-                      disabled={deleteState === "running"}
-                      onclick={() => openDeleteProjectDialog(project)}
-                      data-testid={`project-delete-${project.registry_id}`}
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </article>
-              {/each}
-            </div>
-          {/if}
-
-          {#if deleteNotice !== ""}
-            <section class="delete-notice" role="status" aria-live="polite" data-testid="project-delete-notice">
-              <p>{deleteNotice}</p>
-            </section>
-          {/if}
+                  Open project
+                </button>
+              </article>
+            {:else}
+              <section class="empty-panel" data-testid="empty-projects">
+                <h3>No projects registered</h3>
+                <p>Run <code>aictx projects add</code> inside an initialized project.</p>
+                <p class="mono">{projectsData.registry_path}</p>
+              </section>
+            {/each}
+          </div>
         </section>
       {:else if projectLoadState === "error"}
         <section class="system-panel error-panel" role="alert" data-testid="project-load-error">
           <p class="eyebrow">Aictx local viewer</p>
           <h2>Project failed to load</h2>
           <p>{projectErrorMessage}</p>
-          <button type="button" class="back-action" onclick={showProjects}>Back to projects</button>
+          <button type="button" class="ghost-action" onclick={showProjects}>Back to projects</button>
         </section>
       {:else if projectLoadState === "loading" || bootstrap === null}
         <section class="system-panel" aria-live="polite" data-testid="project-loading">
           <p class="eyebrow">Aictx local viewer</p>
-          <h2>Loading Project</h2>
+          <h2>Loading project</h2>
           <p>{selectedProject?.project.name ?? "Selected project"}</p>
-        </section>
-      {:else if currentScreen === "lenses"}
-        <section class="lens-page" aria-labelledby="lens-title" data-testid="lens-view">
-          <header class="page-header">
-            <div>
-              <p class="eyebrow">Readable project views</p>
-              <h2 id="lens-title">Lenses</h2>
-            </div>
-            <p>{bootstrap.role_coverage.counts.populated} populated / {bootstrap.role_coverage.roles.length} roles</p>
-          </header>
-
-          <div class="layer-tabs lens-tabs" role="group" aria-label="Memory lenses">
-            {#each lenses as lens (lens.name)}
-              <button
-                type="button"
-                class:active={selectedLens?.name === lens.name}
-                onclick={() => {
-                  selectedLensName = lens.name;
-                }}
-                data-testid={`lens-tab-${lens.name}`}
-              >
-                {lens.title}
-              </button>
-            {/each}
-          </div>
-
-          <section class="role-coverage-grid" aria-label="Role coverage" data-testid="role-coverage">
-            {#each bootstrap.role_coverage.roles as role (role.key)}
-              <article class:coverage-gap={role.status !== "populated"} class="coverage-card">
-                <div>
-                  <h3>{role.label}</h3>
-                  <p>{role.description}</p>
-                </div>
-                <span class={`coverage-status status-${role.status}`}>{role.status}</span>
-              </article>
-            {/each}
-          </section>
-
-          {#if selectedLens !== null}
-            <section class="lens-layout">
-              <article class="lens-markdown markdown-view" aria-label={`${selectedLens.title} lens`} data-testid="lens-markdown">
-                {#each selectedLensBlocks as block, index (`lens-${block.kind}-${index}`)}
-                  {#if block.kind === "heading"}
-                    {#if block.level === 1}
-                      <h3>{block.text}</h3>
-                    {:else if block.level === 2}
-                      <h4>{block.text}</h4>
-                    {:else}
-                      <h5>{block.text}</h5>
-                    {/if}
-                  {:else if block.kind === "list"}
-                    <ul>
-                      {#each block.items ?? [] as item, itemIndex (itemIndex)}
-                        <li>{item}</li>
-                      {/each}
-                    </ul>
-                  {:else if block.kind === "quote"}
-                    <blockquote>{block.text}</blockquote>
-                  {:else if block.kind === "code"}
-                    <pre><code>{block.text}</code></pre>
-                  {:else}
-                    <p>{block.text}</p>
-                  {/if}
-                {/each}
-              </article>
-
-              <aside class="lens-side-panel" aria-label="Lens context">
-                <section>
-                  <h3>Included Memory</h3>
-                  {#if selectedLens.included_memory_ids.length === 0}
-                    <p class="empty-copy">No memories included in this lens yet.</p>
-                  {:else}
-                    <ul class="evidence-list">
-                      {#each selectedLens.included_memory_ids as id (id)}
-                        {@const object = objectById.get(id)}
-                        <li>
-                          <span class="pill">{object?.type ?? "missing"}</span>
-                          <button
-                            type="button"
-                            disabled={object === undefined}
-                            onclick={() => openRelatedObject(id)}
-                          >
-                            {object?.title ?? id}
-                          </button>
-                        </li>
-                      {/each}
-                    </ul>
-                  {/if}
-                </section>
-
-                <section>
-                  <h3>Gaps</h3>
-                  {#if selectedLens.generated_gaps.length === 0}
-                    <p class="empty-copy">No generated gaps for this lens.</p>
-                  {:else}
-                    <ul class="lens-gap-list">
-                      {#each selectedLens.generated_gaps as gap (gap)}
-                        <li>{gap}</li>
-                      {/each}
-                    </ul>
-                  {/if}
-                </section>
-
-                <section>
-                  <h3>Relations</h3>
-                  {#if selectedLens.relations.length === 0}
-                    <p class="empty-copy">No relation context for this lens yet.</p>
-                  {:else}
-                    <ul class="lens-relation-list">
-                      {#each selectedLens.relations as relation (relation.id)}
-                        {@const fromObject = objectById.get(relation.from)}
-                        {@const toObject = objectById.get(relation.to)}
-                        <li>
-                          <span>{relation.predicate}</span>
-                          <button
-                            type="button"
-                            disabled={fromObject === undefined}
-                            onclick={() => openRelatedObject(relation.from)}
-                          >
-                            {fromObject?.title ?? relation.from}
-                          </button>
-                          <button
-                            type="button"
-                            disabled={toObject === undefined}
-                            onclick={() => openRelatedObject(relation.to)}
-                          >
-                            {toObject?.title ?? relation.to}
-                          </button>
-                        </li>
-                      {/each}
-                    </ul>
-                  {/if}
-                </section>
-              </aside>
-            </section>
-          {/if}
         </section>
       {:else if currentScreen === "export"}
         <section class="export-page" aria-labelledby="export-title" data-testid="export-view">
-          <header class="page-header compact-header">
+          <header class="page-header compact">
             <p class="eyebrow">Generated projection</p>
             <h2 id="export-title">Obsidian Export</h2>
+            <p>Write the current project memory into a linked vault-shaped projection.</p>
           </header>
 
           <form
@@ -1531,20 +1391,18 @@
                 data-testid="obsidian-export-out-dir"
               />
             </label>
-
             <button
               type="submit"
               class="primary-action"
               disabled={exportState === "running"}
               data-testid="obsidian-export-submit"
             >
-              {exportState === "running" ? "Exporting" : "Export"}
+              {exportState === "running" ? "Exporting" : "Export Obsidian"}
             </button>
-
             {#if exportState !== "idle"}
               <section
-                class:export-status-error={exportState === "error"}
-                class:export-status-success={exportState === "success"}
+                class:error={exportState === "error"}
+                class:success={exportState === "success"}
                 class="export-status"
                 role={exportState === "error" ? "alert" : "status"}
                 aria-live="polite"
@@ -1552,391 +1410,41 @@
               >
                 <p>{exportMessage}</p>
                 {#if exportState === "error" && exportErrorCode !== ""}
-                  <p class="export-code">{exportErrorCode}</p>
+                  <p class="mono">{exportErrorCode}</p>
                 {/if}
                 {#if exportState === "success"}
-                  <dl>
-                    <div>
-                      <dt>Files written</dt>
-                      <dd data-testid="obsidian-export-files-written">{exportFilesWritten}</dd>
-                    </div>
-                    <div>
-                      <dt>Manifest</dt>
-                      <dd data-testid="obsidian-export-manifest-path">{exportManifestPath}</dd>
-                    </div>
+                  <dl class="mini-stats">
+                    <div><dt>Files written</dt><dd data-testid="obsidian-export-files-written">{exportFilesWritten}</dd></div>
+                    <div><dt>Manifest</dt><dd data-testid="obsidian-export-manifest-path">{exportManifestPath}</dd></div>
                   </dl>
                 {/if}
               </section>
             {/if}
           </form>
         </section>
-      {:else if currentScreen === "detail" && selectedObject !== null}
-        <article class="detail-page" aria-labelledby="selected-object-title" data-testid="selected-object">
-          <header class="detail-header">
-            <button
-              type="button"
-              class="back-action"
-              onclick={showMemories}
-              data-testid="selected-object-back"
-            >
-              Back to list
-            </button>
-
-            <div class="title-stack">
-              <p class="eyebrow">{selectedObject.type} / {selectedObject.status}</p>
-              <h2 id="selected-object-title">{selectedObject.title}</h2>
-              <p class="object-id">{selectedObject.id}</p>
-            </div>
-
-            {#if selectedObject.tags.length > 0}
-              <ul class="tag-list" aria-label="Tags">
-                {#each selectedObject.tags as tag (tag)}
-                  <li>{tag}</li>
-                {/each}
-              </ul>
-            {/if}
-          </header>
-
-	          <section class="markdown-view" aria-label="Markdown body" data-testid="markdown-view">
-            {#each markdownBlocks as block, index (`${block.kind}-${index}`)}
-              {#if block.kind === "heading"}
-                {#if block.level === 1}
-                  <h3>{block.text}</h3>
-                {:else if block.level === 2}
-                  <h4>{block.text}</h4>
-                {:else}
-                  <h5>{block.text}</h5>
-                {/if}
-              {:else if block.kind === "list"}
-                <ul>
-                  {#each block.items ?? [] as item, itemIndex (itemIndex)}
-                    <li>{item}</li>
-                  {/each}
-                </ul>
-              {:else if block.kind === "quote"}
-                <blockquote>{block.text}</blockquote>
-              {:else if block.kind === "code"}
-                <pre><code>{block.text}</code></pre>
-              {:else}
-                <p>{block.text}</p>
-              {/if}
-            {:else}
-              <p class="empty-copy">This memory object has an empty Markdown body.</p>
-	            {/each}
-	          </section>
-
-	          <section class="provenance-section" aria-labelledby="provenance-title" data-testid="provenance-links">
-	            <div class="section-heading">
-	              <div>
-	                <p class="eyebrow">Provenance</p>
-	                <h3 id="provenance-title">Sources</h3>
-	              </div>
-	              <p>{countLabel(provenanceEvidence.length + provenanceRelations.length, "link", "links")}</p>
-	            </div>
-
-	            {#if provenanceEvidence.length === 0 && provenanceRelations.length === 0}
-	              <p class="empty-copy">No provenance links on this object.</p>
-	            {:else}
-	              <div class="provenance-grid">
-	                {#if provenanceEvidence.length > 0}
-	                  <section aria-label="Evidence">
-	                    <h4>Evidence</h4>
-	                    <ul class="evidence-list">
-	                      {#each provenanceEvidence as evidence (`${evidence.kind}-${evidence.id}`)}
-	                        <li>
-	                          <span class="pill">{evidence.kind}</span>
-	                          {#if objectById.has(evidence.id)}
-	                            <button type="button" onclick={() => openRelatedObject(evidence.id)}>
-	                              {objectById.get(evidence.id)?.title ?? evidence.id}
-	                            </button>
-	                          {:else}
-	                            <code>{evidence.id}</code>
-	                          {/if}
-	                        </li>
-	                      {/each}
-	                    </ul>
-	                  </section>
-	                {/if}
-
-	                {#if provenanceRelations.length > 0}
-	                  <section aria-label="Provenance relations">
-	                    <h4>Relations</h4>
-	                    <ul class="evidence-list">
-	                      {#each provenanceRelations as relation (relation.id)}
-	                        {@const related = relationObject(relation, selectedObject.id)}
-	                        <li>
-	                          <span class="pill">{relation.predicate}</span>
-	                          <button
-	                            type="button"
-	                            disabled={related === null}
-	                            onclick={() => openRelatedObject(relationCounterpart(relation, selectedObject.id))}
-	                          >
-	                            {relationTargetLabel(relation, selectedObject.id)}
-	                          </button>
-	                        </li>
-	                      {/each}
-	                    </ul>
-	                  </section>
-	                {/if}
-	              </div>
-	            {/if}
-	          </section>
-
-	          <section class="connections-section" aria-labelledby="connections-title">
-            <div class="section-heading">
-              <div>
-                <p class="eyebrow">Direct context</p>
-                <h3 id="connections-title">Related Memories</h3>
-              </div>
-              <p>{countLabel(directRelations.length, "direct connection", "direct connections")}</p>
-            </div>
-
-            <div class="relation-columns" data-testid="relation-cards">
-              <section aria-label="Outgoing related memories">
-                <h4>Outgoing</h4>
-                {#if outgoingRelations.length === 0}
-                  <p class="empty-copy">No outgoing related memories.</p>
-                {:else}
-                  <ul class="relation-list" data-testid="outgoing-relations">
-                    {#each outgoingRelations as relation (relation.id)}
-                      {@const related = relationObject(relation, selectedObject.id)}
-                      <li class="relation-card" data-testid={`relation-card-${relation.id}`}>
-                        <div class="relation-topline">
-                          <span>{relationDirectionLabel(relation, selectedObject.id)}</span>
-                          <strong>{relation.predicate}</strong>
-                        </div>
-                        <button
-                          type="button"
-                          disabled={related === null}
-                          onclick={() => openRelatedObject(relation.to)}
-                          title={related === null ? "Memory is not present in bootstrap data" : "Open related memory"}
-                        >
-                          {relationTargetLabel(relation, selectedObject.id)}
-                        </button>
-                        <p>{relationStatusLabel(relation)}</p>
-                      </li>
-                    {/each}
-                  </ul>
-                {/if}
-              </section>
-
-              <section aria-label="Incoming related memories">
-                <h4>Incoming</h4>
-                {#if incomingRelations.length === 0}
-                  <p class="empty-copy">No incoming related memories.</p>
-                {:else}
-                  <ul class="relation-list" data-testid="incoming-relations">
-                    {#each incomingRelations as relation (relation.id)}
-                      {@const related = relationObject(relation, selectedObject.id)}
-                      <li class="relation-card" data-testid={`relation-card-${relation.id}`}>
-                        <div class="relation-topline">
-                          <span>{relationDirectionLabel(relation, selectedObject.id)}</span>
-                          <strong>{relation.predicate}</strong>
-                        </div>
-                        <button
-                          type="button"
-                          disabled={related === null}
-                          onclick={() => openRelatedObject(relation.from)}
-                          title={related === null ? "Memory is not present in bootstrap data" : "Open related memory"}
-                        >
-                          {relationTargetLabel(relation, selectedObject.id)}
-                        </button>
-                        <p>{relationStatusLabel(relation)}</p>
-                      </li>
-                    {/each}
-                  </ul>
-                {/if}
-              </section>
-            </div>
-          </section>
-
-          <section class="graph-panel" aria-label="Direct memory connection map" data-testid="relation-graph">
-            <div class="section-heading">
-              <div>
-                <p class="eyebrow">Connection map</p>
-                <h3>Direct Neighborhood</h3>
-              </div>
-              <p>
-                {countLabel(graphNodes.length, "memory", "memories")} /
-                {countLabel(graphEdges.length, "connection", "connections")}
-              </p>
-            </div>
-
-            <div class="graph-surface">
-              <svg
-                class="relation-graph-svg"
-                viewBox={`0 0 ${graphWidth} ${graphHeight}`}
-                role="img"
-                aria-labelledby="relation-graph-title"
-                data-testid="relation-graph-svg"
-              >
-                <title id="relation-graph-title">
-                  Direct memory connections for {selectedObject.title}
-                </title>
-                <defs>
-                  <marker
-                    id="graph-arrow"
-                    markerWidth="8"
-                    markerHeight="8"
-                    refX="7"
-                    refY="4"
-                    orient="auto"
-                    markerUnits="strokeWidth"
-                  >
-                    <path d="M0,0 L8,4 L0,8 Z" fill="#667085" />
-                  </marker>
-                </defs>
-
-                {#each graphEdges as edge (edge.relation.id)}
-                  {@const fromNode = graphNodeById.get(edge.fromId)}
-                  {@const toNode = graphNodeById.get(edge.toId)}
-                  {#if fromNode !== undefined && toNode !== undefined}
-                    {@const startPoint = graphConnectionPoint(fromNode, toNode, graphNodeRadius(fromNode) + 6)}
-                    {@const endPoint = graphConnectionPoint(toNode, fromNode, graphNodeRadius(toNode) + 10)}
-                    <g class="graph-edge" data-testid={`relation-graph-edge-${edge.relation.id}`}>
-                      <line
-                        x1={startPoint.x}
-                        y1={startPoint.y}
-                        x2={endPoint.x}
-                        y2={endPoint.y}
-                        marker-end="url(#graph-arrow)"
-                      />
-                      <text
-                        x={graphMidpoint(fromNode.x, toNode.x)}
-                        y={graphMidpoint(fromNode.y, toNode.y) - 12}
-                      >
-                        {edge.relation.predicate}
-                      </text>
-                    </g>
-                  {/if}
-                {/each}
-
-                {#each graphNodes as node (node.id)}
-                  <g
-                    class:selected-node={node.role === "selected"}
-                    class:incoming-node={node.role === "incoming"}
-                    class:outgoing-node={node.role === "outgoing"}
-                    class:bidirectional-node={node.role === "both"}
-                    class:missing-node={node.missing}
-                    class="graph-node"
-                    data-testid={`relation-graph-node-${node.id}`}
-                  >
-                    <title>{node.title} ({node.id})</title>
-                    <circle cx={node.x} cy={node.y} r={graphNodeRadius(node)} />
-                    <text class="graph-node-title" x={node.x} y={node.y - 6}>
-                      {graphText(node.title, node.role === "selected" ? 28 : 22)}
-                    </text>
-                    <text class="graph-node-subtitle" x={node.x} y={node.y + 16}>
-                      {graphText(node.subtitle, node.role === "selected" ? 28 : 22)}
-                    </text>
-                  </g>
-                {/each}
-              </svg>
-            </div>
-
-            {#if directRelations.length === 0}
-              <p class="empty-copy" data-testid="relation-graph-empty">
-                No direct relations for this object.
-              </p>
-            {/if}
-          </section>
-
-          <details class="technical-details" data-testid="technical-details">
-            <summary>Technical details</summary>
-            <dl>
-              <div>
-                <dt>Body</dt>
-                <dd>{selectedObject.body_path}</dd>
-              </div>
-              <div>
-                <dt>Sidecar</dt>
-                <dd>{selectedObject.json_path}</dd>
-              </div>
-              <div>
-                <dt>Scope</dt>
-                <dd>{selectedObject.scope.kind}</dd>
-              </div>
-              <div>
-                <dt>Created</dt>
-                <dd>{selectedObject.created_at}</dd>
-              </div>
-              <div>
-                <dt>Updated</dt>
-                <dd>{selectedObject.updated_at}</dd>
-              </div>
-            </dl>
-            <section class="json-view" aria-label="Object sidecar JSON" data-testid="json-view">
-              <pre>{selectedJson}</pre>
-            </section>
-          </details>
-        </article>
       {:else}
-        <section class="memory-list-page" aria-labelledby="memory-list-title" data-testid="memory-list-view">
-          <header class="page-header">
-            <div>
-              <p class="eyebrow">Project memory</p>
-              <h2 id="memory-list-title">Memories</h2>
-            </div>
-            <p>{filteredObjects.length} shown / {objects.length} total</p>
+        <article class="memory-page" aria-labelledby="memory-list-title" data-testid="memory-list-view">
+          <header class="doc-hero">
+            <span class="doc-icon" aria-hidden="true">A</span>
+            <p class="eyebrow">Local Aictx memory</p>
+            <h2 id="memory-list-title">{bootstrap.project.name} Coding Handbook</h2>
+            <p>
+              A local operating manual generated from Aictx memory. It keeps coding rules, workflows,
+              architecture notes, and source facts above the raw storage model.
+            </p>
           </header>
 
-	          <section class="filters" aria-label="Search and filters">
-	            <div class="layer-tabs" role="group" aria-label="Memory layers">
-	              {#each layerOptions as option (option.value)}
-	                <button
-	                  type="button"
-	                  class:active={layerFilter === option.value}
-	                  onclick={() => {
-	                    layerFilter = option.value;
-	                  }}
-	                  data-testid={`viewer-layer-${option.value}`}
-	                >
-	                  {option.label}
-	                </button>
-	              {/each}
-	            </div>
-
-	            <label class="field search-field">
-              <span>Search</span>
-              <input
-                type="search"
-                bind:value={searchQuery}
-                placeholder="Title, id, tag, body"
-                autocomplete="off"
-                data-testid="viewer-search"
-              />
-            </label>
-
-            <div class="filter-grid">
-              <label class="field">
-                <span>Type</span>
-                <select bind:value={typeFilter} data-testid="viewer-type-filter">
-                  <option value={allOption}>All types</option>
-                  {#each typeOptions as type (type)}
-                    <option value={type}>{type}</option>
-                  {/each}
-                </select>
-              </label>
-
-              <label class="field">
-                <span>Status</span>
-                <select bind:value={statusFilter} data-testid="viewer-status-filter">
-                  <option value={allOption}>All statuses</option>
-                  {#each statusOptions as status (status)}
-                    <option value={status}>{status}</option>
-                  {/each}
-                </select>
-              </label>
-
-              <label class="field">
-                <span>Tag</span>
-                <select bind:value={tagFilter} data-testid="viewer-tag-filter">
-                  <option value={allOption}>All tags</option>
-                  {#each tagOptions as tag (tag)}
-                    <option value={tag}>{tag}</option>
-                  {/each}
-                </select>
-              </label>
+          <section class="memory-summary" aria-label="Project memory summary">
+            <div class="summary-check" aria-hidden="true">✓</div>
+            <div class="summary-copy">
+              <strong>Handbook generated</strong>
+              <p>
+                {activeMemoryCount} memories are rendered as coding rules, workflows, architecture notes,
+                security facts, and raw source memory.
+              </p>
+              <p class="trust-copy">
+                <span>{trustLabel}</span> {trustDescription}
+              </p>
             </div>
           </section>
 
@@ -1949,131 +1457,378 @@
           {/if}
 
           {#if hasStarterMemoryOnly}
-            <section
-              class="onboarding-callout"
-              aria-label="Starter memory notice"
-              data-testid="starter-memory-notice"
-            >
-              <p>
-                <strong>Starter memory only.</strong>
-                Seed useful repo memory with setup, then reopen or refresh the viewer.
-              </p>
-              <code>aictx setup</code>
-              <code>aictx lens project-map</code>
+            <section class="onboarding-callout" aria-label="Starter memory notice" data-testid="starter-memory-notice">
+              <p><strong>Starter memory only.</strong> Seed useful repo memory with a bootstrap patch, then refresh the viewer.</p>
+              <code>aictx suggest --bootstrap --patch &gt; bootstrap-memory.json</code>
+              <code>aictx save --file bootstrap-memory.json</code>
             </section>
           {/if}
 
-          <nav class="object-list" aria-label="Memory objects">
-            {#each filteredObjects as object (object.id)}
-              <button
-                type="button"
-                class:selected={selectedObject?.id === object.id}
-                onclick={() => selectObject(object.id)}
-                data-testid={`object-row-${object.id}`}
-              >
-                <span class="object-title">{object.title}</span>
-                <span class="object-id">{object.id}</span>
-                <span class="object-meta">
-                  <span class="pill">{object.type}</span>
-                  <span class:muted-status={object.status !== "active"} class="pill">{object.status}</span>
-                </span>
-              </button>
-            {:else}
-              <p class="empty-copy">No memory objects match the current filters.</p>
-            {/each}
-          </nav>
-        </section>
-      {/if}
-    </section>
-
-    {#if projectPendingDelete !== null}
-      <section
-        class="modal-backdrop"
-        role="presentation"
-        data-testid="project-delete-modal"
-      >
-        <div
-          class="delete-dialog"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="project-delete-title"
-          aria-describedby="project-delete-description"
-        >
-          <form
-            onsubmit={(event) => {
-              event.preventDefault();
-              void confirmDeleteProject();
-            }}
-          >
-            <div class="title-stack">
-              <p class="eyebrow">Permanent project memory delete</p>
-              <h2 id="project-delete-title">Delete {projectPendingDelete.project.name}</h2>
+          <section class="context-preview-panel" aria-labelledby="context-preview-title" data-testid="context-preview-panel">
+            <div class="context-preview-heading">
+              <div>
+                <p class="eyebrow">Agent context preview</p>
+                <h3 id="context-preview-title">See what the next agent will load.</h3>
+                <p>Enter a task and Aictx will compile the same context pack used by <code>aictx load</code>.</p>
+              </div>
+              {#if previewData !== null}
+                <dl class="preview-stats" aria-label="Context preview stats">
+                  <div><dt>Included</dt><dd>{previewData.included_ids.length}</dd></div>
+                  <div><dt>Omitted</dt><dd>{previewData.omitted_ids.length}</dd></div>
+                  <div><dt>Tokens</dt><dd>{previewData.estimated_tokens}</dd></div>
+                </dl>
+              {/if}
             </div>
 
-            <p id="project-delete-description" class="delete-warning">
-              This permanently deletes this project's <code>.aictx/</code> memory directory and removes it from registered memory roots. Source files are not deleted.
-            </p>
+            <form
+              class="context-preview-form"
+              aria-label="Agent context preview"
+              onsubmit={(event) => {
+                event.preventDefault();
+                void previewContext();
+              }}
+            >
+              <label class="field preview-task-field">
+                <span>Task</span>
+                <input
+                  type="text"
+                  bind:value={previewTask}
+                  placeholder="fix viewer search filters"
+                  autocomplete="off"
+                  disabled={previewState === "running"}
+                  data-testid="context-preview-task"
+                />
+              </label>
 
-            <dl class="delete-paths">
-              <div>
-                <dt>Project root</dt>
-                <dd>{projectPendingDelete.project_root}</dd>
+              <div class="preview-mode-tabs" role="group" aria-label="Load mode">
+                {#each loadModeOptions as option (option.value)}
+                  <button
+                    type="button"
+                    class:active={previewMode === option.value}
+                    disabled={previewState === "running"}
+                    onclick={() => {
+                      previewMode = option.value;
+                    }}
+                    data-testid={`context-preview-mode-${option.value}`}
+                  >
+                    {option.label}
+                  </button>
+                {/each}
               </div>
-              <div>
-                <dt>Aictx root</dt>
-                <dd>{projectPendingDelete.aictx_root}</dd>
-              </div>
-            </dl>
 
-            <label class="field">
-              <span>Type project name to confirm</span>
-              <input
-                type="text"
-                bind:value={deleteConfirmation}
-                autocomplete="off"
-                disabled={deleteState === "running"}
-                data-testid="project-delete-confirmation"
-              />
-            </label>
-
-            {#if deleteState === "error" || deleteState === "running"}
-              <section
-                class:delete-status-error={deleteState === "error"}
-                class="delete-status"
-                role={deleteState === "error" ? "alert" : "status"}
-                aria-live="polite"
-                data-testid="project-delete-status"
-              >
-                <p>{deleteMessage}</p>
-                {#if deleteState === "error" && deleteErrorCode !== ""}
-                  <p class="export-code">{deleteErrorCode}</p>
-                {/if}
-              </section>
-            {/if}
-
-            <div class="dialog-actions">
-              <button
-                type="button"
-                class="back-action"
-                disabled={deleteState === "running"}
-                onclick={closeDeleteProjectDialog}
-                data-testid="project-delete-cancel"
-              >
-                Cancel
-              </button>
               <button
                 type="submit"
-                class="danger-action"
-                disabled={!deleteConfirmationMatches || deleteState === "running"}
-                data-testid="project-delete-confirm"
+                class="primary-action"
+                disabled={previewState === "running"}
+                data-testid="context-preview-submit"
               >
-                {deleteState === "running" ? "Deleting" : "Delete memory"}
+                {previewState === "running" ? "Previewing" : "Preview Context"}
               </button>
+
+              <details class="preview-advanced">
+                <summary>Advanced options</summary>
+                <label class="field preview-budget-field">
+                  <span>Token budget</span>
+                  <input
+                    type="text"
+                    inputmode="numeric"
+                    bind:value={previewTokenBudget}
+                    placeholder="optional"
+                    autocomplete="off"
+                    disabled={previewState === "running"}
+                    data-testid="context-preview-token-budget"
+                  />
+                </label>
+              </details>
+            </form>
+
+            {#if showPreviewCommand}
+              <div class="preview-command-strip" data-testid="context-preview-command">
+                <code>{previewCommand}</code>
+                <button type="button" onclick={() => void copyPreview("command")} data-testid="context-preview-copy-command">
+                  {copiedPreviewTarget === "command" ? "Copied" : "Copy command"}
+                </button>
+              </div>
+            {/if}
+
+            {#if previewState === "error"}
+              <section class="preview-status error" role="alert" data-testid="context-preview-error">
+                <p>{previewMessage}</p>
+                {#if previewErrorCode !== ""}
+                  <code>{previewErrorCode}</code>
+                {/if}
+              </section>
+            {:else if previewData !== null}
+              <section class="preview-result" data-testid="context-preview-result">
+                <div class="preview-result-topline">
+                  <p>{previewMessage}</p>
+                  <p>{previewSourceLabel(previewData.source)}</p>
+                  {#if previewTokenBudget.trim() !== ""}
+                    <p>{previewData.budget_status === "within_target" ? "Within budget" : "Over budget"}</p>
+                  {/if}
+                  {#if previewData.truncated}
+                    <p>Truncated</p>
+                  {/if}
+                </div>
+
+                {#if previewData.included_ids.length > 0}
+                  <div class="included-memory-group">
+                    <p>Included memories</p>
+                    <div class="included-memory-links" aria-label="Included memories" data-testid="context-preview-included">
+                      {#each previewData.included_ids as id (id)}
+                        {#if objectById.has(id)}
+                          <button type="button" onclick={() => selectRelated(id)}>{id}</button>
+                        {:else}
+                          <span>{id}</span>
+                        {/if}
+                      {/each}
+                    </div>
+                  </div>
+                {/if}
+
+                <div class="preview-result-actions">
+                  <p>Compiled context pack</p>
+                  <button type="button" onclick={() => void copyPreview("context")} data-testid="context-preview-copy-context">
+                    {copiedPreviewTarget === "context" ? "Copied context" : "Copy context pack"}
+                  </button>
+                </div>
+
+                <section class="markdown-view context-pack-view" aria-label="Context pack" data-testid="context-preview-markdown">
+                  {#each previewMarkdownBlocks as block, index (`preview-${block.kind}-${index}`)}
+                    {#if block.kind === "heading"}
+                      {#if block.level === 1}
+                        <h3>{block.text}</h3>
+                      {:else if block.level === 2}
+                        <h4>{block.text}</h4>
+                      {:else}
+                        <h5>{block.text}</h5>
+                      {/if}
+                    {:else if block.kind === "list"}
+                      <ul>
+                        {#each block.items ?? [] as item, itemIndex (itemIndex)}
+                          <li>{item}</li>
+                        {/each}
+                      </ul>
+                    {:else if block.kind === "quote"}
+                      <blockquote>{block.text}</blockquote>
+                    {:else if block.kind === "code"}
+                      <pre><code>{block.text}</code></pre>
+                    {:else}
+                      <p>{block.text}</p>
+                    {/if}
+                  {/each}
+                </section>
+              </section>
+            {/if}
+          </section>
+
+          <section class="list-controls" aria-label="Memory list controls">
+            <div>
+              <strong>Memory library</strong>
+              <span>{filteredObjects.length} rows</span>
             </div>
-          </form>
-        </div>
-      </section>
-    {/if}
+            <div class="controls-row">
+              <div class="layer-tabs" role="group" aria-label="Memory layers">
+                {#each layerOptions as option (option.value)}
+                  <button
+                      type="button"
+                      class:active={layerFilter === option.value}
+                      onclick={() => {
+                      clearPagePreset();
+                      layerFilter = option.value;
+                    }}
+                    data-testid={`viewer-layer-${option.value}`}
+                  >
+                    {option.label}
+                  </button>
+                {/each}
+              </div>
+              <select bind:value={typeFilter} onchange={clearPagePreset} data-testid="viewer-type-filter" aria-label="Type">
+                <option value={allOption}>All memory</option>
+                {#each typeOptions as type (type)}
+                  <option value={type}>{type}</option>
+                {/each}
+              </select>
+              <select bind:value={statusFilter} onchange={clearPagePreset} data-testid="viewer-status-filter" aria-label="Status">
+                <option value={allOption}>All statuses</option>
+                {#each statusOptions as status (status)}
+                  <option value={status}>{status}</option>
+                {/each}
+              </select>
+              <select bind:value={tagFilter} onchange={clearPagePreset} data-testid="viewer-tag-filter" aria-label="Tag">
+                <option value={allOption}>All tags</option>
+                {#each tagOptions as tag (tag)}
+                  <option value={tag}>{tag}</option>
+                {/each}
+              </select>
+            </div>
+          </section>
+
+          <section class="memory-workspace" class:has-preview={selectedObject !== null}>
+            <section class="sectioned-memory" aria-label="Memory objects">
+              {#each memorySections as section (section.id)}
+                <section id={section.id}>
+                  <h3><span class="section-icon" aria-hidden="true">{section.icon}</span>{section.title}</h3>
+                  <p>{countLabel(section.objects.length, "matching memory", "matching memories")}</p>
+                  <div class="object-list">
+                    {#each section.objects as object (object.id)}
+                      <button
+                        type="button"
+                        class:selected={selectedObject?.id === object.id}
+                        onclick={() => selectObject(object.id)}
+                        data-testid={`object-row-${object.id}`}
+                      >
+                        <span class="object-glyph">{objectIcon(object)}</span>
+                        <span>
+                          <strong>{object.title}</strong>
+                          <small>{bodyPreview(object)}</small>
+                        </span>
+                        <em aria-hidden="true">{selectedObject?.id === object.id ? "⌄" : "Open"}</em>
+                      </button>
+                      {#if selectedObject?.id === object.id}
+                        <article class="memory-preview" aria-label={selectedObject.title} data-testid="selected-object">
+                          <dl class="notion-properties">
+                            <div><dt>Name</dt><dd>{selectedObject.title}</dd></div>
+                            <div><dt>ID</dt><dd class="mono">{selectedObject.id}</dd></div>
+                            <div><dt>Type</dt><dd>{selectedObject.type}</dd></div>
+                            <div><dt>Status</dt><dd>{selectedObject.status}</dd></div>
+                            <div><dt>Updated</dt><dd>{selectedObject.updated_at}</dd></div>
+                          </dl>
+
+                          <div class="notion-toggle-list">
+                            <details class="notion-toggle" open>
+                              <summary>Memory</summary>
+                              <section class="markdown-view" aria-label="Markdown body" data-testid="markdown-view">
+                                {#each markdownBlocks as block, index (`${block.kind}-${index}`)}
+                                  {#if block.kind === "heading"}
+                                    {#if block.level === 1}
+                                      <h3>{block.text}</h3>
+                                    {:else if block.level === 2}
+                                      <h4>{block.text}</h4>
+                                    {:else}
+                                      <h5>{block.text}</h5>
+                                    {/if}
+                                  {:else if block.kind === "list"}
+                                    <ul>
+                                      {#each block.items ?? [] as item, itemIndex (itemIndex)}
+                                        <li>{item}</li>
+                                      {/each}
+                                    </ul>
+                                  {:else if block.kind === "quote"}
+                                    <blockquote>{block.text}</blockquote>
+                                  {:else if block.kind === "code"}
+                                    <pre><code>{block.text}</code></pre>
+                                  {:else}
+                                    <p>{block.text}</p>
+                                  {/if}
+                                {:else}
+                                  <p class="empty-copy">This memory object has an empty Markdown body.</p>
+                                {/each}
+                              </section>
+                            </details>
+
+                            {#if selectedObject.tags.length > 0}
+                              <details class="notion-toggle" open>
+                                <summary>Tags</summary>
+                                <ul class="tag-list" aria-label="Tags">
+                                  {#each selectedObject.tags as tag (tag)}
+                                    <li>{tag}</li>
+                                  {/each}
+                                </ul>
+                              </details>
+                            {/if}
+
+                            <details class="notion-toggle" open data-testid="provenance-links">
+                              <summary>Provenance</summary>
+                              <ul class="relation-list">
+                                {#each selectedObject.evidence as evidence (`${evidence.kind}-${evidence.id}`)}
+                                  <li>
+                                    <span class="pill">{evidence.kind}</span>
+                                    {#if objectById.has(evidence.id)}
+                                      <button type="button" onclick={() => selectRelated(evidence.id)}>
+                                        {objectById.get(evidence.id)?.title ?? evidence.id}
+                                      </button>
+                                    {:else}
+                                      <code>{evidence.id}</code>
+                                    {/if}
+                                  </li>
+                                {:else}
+                                  <li class="empty-copy">No evidence links.</li>
+                                {/each}
+                                {#each directRelations.filter((relation) => ["derived_from", "summarizes", "documents"].includes(relation.predicate)) as relation (relation.id)}
+                                  <li>
+                                    <span class="pill">{relation.predicate}</span>
+                                    <button type="button" onclick={() => selectRelated(relationCounterpart(relation, selectedObject.id))}>
+                                      {relationTargetLabel(relation, selectedObject.id)}
+                                    </button>
+                                  </li>
+                                {/each}
+                              </ul>
+                            </details>
+
+                            <details class="notion-toggle" open>
+                              <summary>Direct relations</summary>
+                              <section class="relation-columns">
+                                <div>
+                                  <p class="eyebrow">Outgoing</p>
+                                  <ul class="relation-list" data-testid="outgoing-relations">
+                                    {#each outgoingRelations as relation (relation.id)}
+                                      <li data-testid={`relation-card-${relation.id}`}>
+                                        <span class="pill">{relation.predicate}</span>
+                                        <button type="button" onclick={() => selectRelated(relation.to)}>
+                                          {relationTargetLabel(relation, selectedObject.id)}
+                                        </button>
+                                        <small>{relationStatusLabel(relation)}</small>
+                                      </li>
+                                    {:else}
+                                      <li class="empty-copy">No outgoing related memories.</li>
+                                    {/each}
+                                  </ul>
+                                </div>
+
+                                <div>
+                                  <p class="eyebrow">Incoming</p>
+                                  <ul class="relation-list" data-testid="incoming-relations">
+                                    {#each incomingRelations as relation (relation.id)}
+                                      <li data-testid={`relation-card-${relation.id}`}>
+                                        <span class="pill">{relation.predicate}</span>
+                                        <button type="button" onclick={() => selectRelated(relation.from)}>
+                                          {relationTargetLabel(relation, selectedObject.id)}
+                                        </button>
+                                        <small>{relationStatusLabel(relation)}</small>
+                                      </li>
+                                    {:else}
+                                      <li class="empty-copy">No incoming related memories.</li>
+                                    {/each}
+                                  </ul>
+                                </div>
+                              </section>
+                            </details>
+
+                            <details class="notion-toggle technical-details" data-testid="technical-details">
+                              <summary>Technical details</summary>
+                              <dl>
+                                <div><dt>Body</dt><dd>{selectedObject.body_path}</dd></div>
+                                <div><dt>Sidecar</dt><dd>{selectedObject.json_path}</dd></div>
+                                <div><dt>Scope</dt><dd>{selectedObject.scope.kind}</dd></div>
+                                <div><dt>Updated</dt><dd>{selectedObject.updated_at}</dd></div>
+                              </dl>
+                              <section class="json-view" aria-label="Object sidecar JSON" data-testid="json-view">
+                                <pre>{selectedJson}</pre>
+                              </section>
+                            </details>
+                          </div>
+                        </article>
+                      {/if}
+                    {/each}
+                  </div>
+                </section>
+              {/each}
+            </section>
+          </section>
+        </article>
+      {/if}
+    </section>
   {/if}
 </main>
 
@@ -2086,15 +1841,11 @@
     margin: 0;
     min-width: 320px;
     min-height: 100vh;
-    color: #172033;
-    background:
-      linear-gradient(90deg, rgb(23 32 51 / 4%) 1px, transparent 1px),
-      linear-gradient(rgb(23 32 51 / 4%) 1px, transparent 1px),
-      #f5f6f3;
-    background-size: 30px 30px;
+    color: #182230;
+    background: #f6f7f4;
     font-family:
-      "Avenir Next", "Segoe UI", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
-      sans-serif;
+      Inter, "Avenir Next", "Segoe UI", ui-sans-serif, system-ui, -apple-system,
+      BlinkMacSystemFont, sans-serif;
   }
 
   button,
@@ -2109,13 +1860,13 @@
 
   button:disabled {
     cursor: not-allowed;
+    opacity: 0.58;
   }
 
   h1,
   h2,
   h3,
   h4,
-  h5,
   p {
     margin-top: 0;
   }
@@ -2123,121 +1874,89 @@
   h1,
   h2,
   h3,
-  h4,
-  h5 {
+  h4 {
     color: #101828;
     letter-spacing: 0;
   }
 
   h1 {
     margin-bottom: 0;
-    font-size: 1.45rem;
-    line-height: 1.08;
+    font-size: 1.35rem;
+    line-height: 1.1;
   }
 
   h2 {
     margin-bottom: 0;
-    font-size: 2.1rem;
+    font-size: 2rem;
     line-height: 1.08;
   }
 
   h3 {
     margin-bottom: 0;
-    font-size: 1.35rem;
+    font-size: 1.2rem;
     line-height: 1.2;
   }
 
-  h4 {
-    margin-bottom: 0;
-    font-size: 1rem;
-    line-height: 1.25;
+  code,
+  pre,
+  .mono,
+  .path {
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
   }
 
   .viewer-shell {
+    display: grid;
+    grid-template-columns: 236px minmax(0, 1fr);
     min-height: 100vh;
-    padding: 18px;
   }
 
-  .viewer-shell.ready-shell {
-    display: grid;
-    grid-template-columns: 184px minmax(0, 1fr);
-    gap: 18px;
-  }
-
-  .nav-rail,
-  .main-stage,
-  .system-panel {
-    min-width: 0;
-    border: 1px solid #d6d9d2;
-    border-radius: 8px;
-    background: rgb(255 255 255 / 96%);
-    box-shadow: 0 16px 42px rgb(16 24 40 / 8%);
-  }
-
-  .nav-rail {
+  .sidebar {
     position: sticky;
-    top: 18px;
+    top: 0;
     display: flex;
-    align-self: start;
-    min-height: calc(100vh - 36px);
+    height: 100vh;
     flex-direction: column;
-    padding: 14px;
+    gap: 20px;
+    border-right: 1px solid #d8ded8;
+    padding: 22px 18px;
+    background: #fbfcfa;
   }
 
-  .brand-block {
+  .brand {
     display: grid;
-    gap: 6px;
-    border-bottom: 1px solid #e2e5df;
-    padding-bottom: 16px;
+    gap: 8px;
+  }
+
+  .brand p:last-child {
+    margin: 0;
+    color: #52605b;
+    font-size: 0.88rem;
+    line-height: 1.35;
   }
 
   .eyebrow {
-    margin: 0 0 6px;
+    margin: 0;
     color: #667085;
-    font-size: 0.74rem;
+    font-size: 0.72rem;
     font-weight: 800;
     letter-spacing: 0;
     text-transform: uppercase;
   }
 
-  .project-name {
-    margin: 8px 0 0;
-    color: #101828;
-    font-weight: 800;
-    line-height: 1.25;
-  }
-
-  .project-id,
-  .object-id {
-    overflow-wrap: anywhere;
-    color: #667085;
-    font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
-    font-size: 0.78rem;
-    line-height: 1.4;
-  }
-
-  .project-id {
-    margin: 0;
-  }
-
   .nav-list {
     display: grid;
     gap: 8px;
-    margin-top: 16px;
   }
 
   .nav-list button,
-  .back-action,
-  .primary-action,
-  .danger-action,
-  .relation-card button {
+  .ghost-action,
+  .primary-action {
     min-height: 40px;
-    border-radius: 6px;
+    border-radius: 7px;
     font-weight: 800;
   }
 
   .nav-list button {
-    width: 100%;
     border: 1px solid transparent;
     padding: 9px 10px;
     color: #344054;
@@ -2245,63 +1964,70 @@
     text-align: left;
   }
 
-  .nav-list button:hover,
-  .nav-list button.active {
-    border-color: #a7b6b2;
-    color: #123532;
-    background: #eef7f4;
+  .nav-list button:hover {
+    border-color: #a5bbb4;
+    color: #2f2f2b;
+    background: #ece9e1;
   }
 
-  .project-stats {
-    display: grid;
-    gap: 10px;
-    margin: auto 0 0;
-    border-top: 1px solid #e2e5df;
-    padding-top: 16px;
-  }
-
-  .project-stats div {
+  .mini-stats div {
     display: flex;
     align-items: baseline;
     justify-content: space-between;
     gap: 12px;
   }
 
-  .project-stats dt {
+  .mini-stats dt {
     color: #667085;
-    font-size: 0.73rem;
+    font-size: 0.72rem;
     font-weight: 800;
     text-transform: uppercase;
   }
 
-  .project-stats dd {
+  .mini-stats dd {
     margin: 0;
     color: #101828;
-    font-size: 1.1rem;
     font-weight: 900;
   }
 
   .main-stage {
-    min-height: calc(100vh - 36px);
+    min-width: 0;
     padding: 24px;
   }
 
-  .memory-list-page,
-  .detail-page,
-  .export-page,
-  .lens-page,
-  .projects-page {
-    width: min(100%, 1080px);
+  .system-panel {
+    width: min(720px, calc(100vw - 32px));
+    margin: 18vh auto 0;
+    border: 1px solid #d7ded7;
+    border-radius: 8px;
+    padding: 24px;
+    background: #ffffff;
+    box-shadow: 0 18px 50px rgb(16 24 40 / 8%);
+  }
+
+  .error-panel {
+    border-color: #efb5a8;
+    background: #fff8f6;
+  }
+
+  .projects-page,
+  .memory-page,
+  .export-page {
+    width: min(1180px, 100%);
     margin: 0 auto;
   }
 
-  .detail-page {
-    display: grid;
+  .page-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
     gap: 18px;
+    margin-bottom: 18px;
   }
 
-  .export-page {
-    width: min(100%, 760px);
+  .page-header p {
+    margin-bottom: 0;
+    color: #667085;
   }
 
   .project-grid {
@@ -2311,229 +2037,85 @@
   }
 
   .project-card,
-  .empty-projects {
-    display: grid;
-    gap: 12px;
-    min-width: 0;
-    border: 1px solid #d9ded7;
-    border-radius: 8px;
-    padding: 16px;
-    background: #ffffff;
-    box-shadow: 0 8px 20px rgb(16 24 40 / 5%);
-  }
-
-  .project-card.current-project {
-    border-color: #8fb5ad;
-    background: #f5faf8;
-  }
-
-  .project-card.unavailable-project {
-    border-color: #e3c1b6;
-    background: #fff8f5;
-  }
-
-  .project-card h3,
-  .empty-projects h3 {
-    margin: 0;
-  }
-
-  .project-card-topline {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    color: #667085;
-    font-size: 0.74rem;
-    font-weight: 900;
-    text-transform: uppercase;
-  }
-
-  .project-card-topline strong {
-    color: #28514b;
-  }
-
-  .project-git-status {
-    display: inline-flex;
-    position: relative;
-    align-items: center;
-    justify-content: flex-end;
-    min-width: 0;
-    gap: 6px;
-    text-align: right;
-  }
-
-  .project-status-info {
-    display: inline-flex;
-    position: relative;
-    align-items: center;
-  }
-
-  .status-info-button {
-    display: inline-grid;
-    width: 18px;
-    height: 18px;
-    place-items: center;
-    border: 1px solid #b9c8c2;
-    border-radius: 999px;
-    padding: 0;
-    color: #28514b;
-    background: #f5faf8;
-    font-size: 0.68rem;
-    font-weight: 900;
-    line-height: 1;
-  }
-
-  .status-info-button:hover,
-  .status-info-button:focus-visible {
-    border-color: #1b7f75;
-    outline: none;
-    background: #e7f4f1;
-  }
-
-  .status-info-button:focus-visible {
-    box-shadow: 0 0 0 3px rgb(27 127 117 / 18%);
-  }
-
-  .status-tooltip {
-    position: absolute;
-    z-index: 10;
-    top: calc(100% + 8px);
-    right: 0;
-    width: min(280px, calc(100vw - 48px));
-    border: 1px solid #ccd8d4;
-    border-radius: 6px;
-    padding: 10px;
-    color: #172033;
-    background: #ffffff;
-    box-shadow: 0 14px 32px rgb(16 24 40 / 14%);
-    font-size: 0.78rem;
-    font-weight: 650;
-    line-height: 1.42;
-    opacity: 0;
-    pointer-events: none;
-    text-align: left;
-    text-transform: none;
-    transform: translateY(-3px);
-    transition:
-      opacity 120ms ease,
-      transform 120ms ease,
-      visibility 120ms ease;
-    visibility: hidden;
-  }
-
-  .project-status-info:hover .status-tooltip,
-  .project-status-info:focus-within .status-tooltip,
-  .status-tooltip.visible,
-  .status-info-button:hover + .status-tooltip,
-  .status-info-button:focus + .status-tooltip,
-  .status-info-button:focus-visible + .status-tooltip {
-    opacity: 1;
-    transform: translateY(0);
-    visibility: visible;
-  }
-
-  .project-root {
-    margin: 0;
-    overflow-wrap: anywhere;
-    color: #52615d;
-    font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
-    font-size: 0.78rem;
-    line-height: 1.45;
-  }
-
-  .project-card-stats {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 8px;
-    margin: 0;
-  }
-
-  .project-card-stats div {
-    border: 1px solid #e1e6df;
-    border-radius: 6px;
-    padding: 8px;
-    background: #fbfcfa;
-  }
-
-  .project-card-stats dt {
-    color: #667085;
-    font-size: 0.68rem;
-    font-weight: 900;
-    text-transform: uppercase;
-  }
-
-  .project-card-stats dd {
-    margin: 3px 0 0;
-    color: #101828;
-    font-size: 1.05rem;
-    font-weight: 900;
-  }
-
-  .project-warning {
-    margin: 0;
-    color: #8a3d22;
-    font-size: 0.84rem;
-    line-height: 1.45;
-  }
-
-  .project-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    align-items: center;
-  }
-
-  .page-header,
-  .detail-header,
-  .section-heading {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 18px;
-  }
-
-  .page-header {
-    margin-bottom: 20px;
-    border-bottom: 1px solid #e2e5df;
-    padding-bottom: 18px;
-  }
-
-  .page-header > p,
-  .section-heading > p {
-    margin: 0;
-    color: #667085;
-    font-size: 0.86rem;
-    font-weight: 800;
-  }
-
-  .compact-header {
-    margin-bottom: 18px;
-  }
-
-  .filters,
+  .empty-panel,
+  .markdown-view,
+  .object-list,
   .export-form,
-  .provenance-section,
-  .connections-section,
-  .graph-panel,
-  .technical-details,
   .warnings,
   .onboarding-callout {
     border: 1px solid #d9ded7;
     border-radius: 8px;
     background: #ffffff;
+    box-shadow: 0 10px 28px rgb(16 24 40 / 5%);
   }
 
-  .filters {
+  .project-card {
     display: grid;
-    gap: 14px;
-    margin-bottom: 16px;
+    gap: 12px;
     padding: 16px;
   }
 
-  .filter-grid {
+  .project-card.current {
+    border-color: #bdb7ab;
+    background: #fbfaf7;
+  }
+
+  .project-card.unavailable {
+    border-color: #edc3b8;
+    background: #fff8f5;
+  }
+
+  .card-topline {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    color: #667085;
+    font-size: 0.72rem;
+    font-weight: 900;
+    text-transform: uppercase;
+  }
+
+  .card-topline strong {
+    color: #37352f;
+  }
+
+  .path,
+  .mono {
+    overflow-wrap: anywhere;
+    color: #667085;
+    font-size: 0.78rem;
+    line-height: 1.45;
+  }
+
+  .mini-stats {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 12px;
+    gap: 8px;
+    margin: 0;
+  }
+
+  .mini-stats div {
+    display: grid;
+    justify-content: stretch;
+    border-radius: 7px;
+    padding: 9px;
+    background: #f6f8f6;
+  }
+
+  .primary-action,
+  .ghost-action {
+    border: 1px solid #2b2925;
+    padding: 9px 13px;
+  }
+
+  .primary-action {
+    color: #ffffff;
+    background: #2b2925;
+  }
+
+  .ghost-action {
+    color: #2b2925;
+    background: #ffffff;
   }
 
   .layer-tabs {
@@ -2543,159 +2125,18 @@
   }
 
   .layer-tabs button {
-    min-height: 34px;
-    border: 1px solid #cfd4d3;
-    border-radius: 6px;
-    padding: 6px 10px;
-    color: #344054;
-    background: #ffffff;
-    font-weight: 800;
-  }
-
-  .layer-tabs button:hover,
-  .layer-tabs button.active {
-    border-color: #8fb5ad;
-    color: #123532;
-    background: #eef7f4;
-  }
-
-  .lens-tabs {
-    margin-bottom: 16px;
-  }
-
-  .role-coverage-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 10px;
-    margin-bottom: 16px;
-  }
-
-  .coverage-card {
-    display: grid;
-    gap: 10px;
-    min-width: 0;
-    border: 1px solid #d9ded7;
-    border-radius: 8px;
-    padding: 12px;
-    background: #ffffff;
-  }
-
-  .coverage-card.coverage-gap {
-    border-color: #e2d2a6;
-    background: #fffaf0;
-  }
-
-  .coverage-card h3 {
-    margin: 0 0 4px;
-    font-size: 0.95rem;
-  }
-
-  .coverage-card p {
-    margin: 0;
-    color: #667085;
-    font-size: 0.8rem;
-    line-height: 1.4;
-  }
-
-  .coverage-status {
-    width: fit-content;
-    border: 1px solid #cfd4d3;
+    border: 1px solid #d0d5dd;
     border-radius: 999px;
-    padding: 3px 8px;
+    padding: 7px 11px;
     color: #344054;
-    background: #f8fbfa;
-    font-size: 0.72rem;
-    font-weight: 900;
-  }
-
-  .status-populated {
-    border-color: #a7c9bd;
-    color: #1f5136;
-    background: #eff8f2;
-  }
-
-  .status-thin,
-  .status-missing,
-  .status-stale,
-  .status-conflicted {
-    border-color: #d8be78;
-    color: #6f4c00;
-    background: #fff7df;
-  }
-
-  .lens-layout {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(260px, 340px);
-    gap: 16px;
-    align-items: start;
-  }
-
-  .lens-markdown,
-  .lens-side-panel {
-    border: 1px solid #d9ded7;
-    border-radius: 8px;
     background: #ffffff;
-  }
-
-  .lens-markdown {
-    width: 100%;
-    padding: 16px;
-  }
-
-  .lens-side-panel {
-    display: grid;
-    gap: 16px;
-    padding: 16px;
-  }
-
-  .lens-side-panel section {
-    display: grid;
-    gap: 10px;
-    min-width: 0;
-  }
-
-  .lens-side-panel h3 {
-    margin: 0;
-    font-size: 1rem;
-  }
-
-  .lens-gap-list,
-  .lens-relation-list {
-    display: grid;
-    gap: 10px;
-    margin: 0;
-    padding-left: 18px;
-    color: #263141;
-    font-size: 0.86rem;
-    line-height: 1.45;
-  }
-
-  .lens-relation-list li {
-    display: grid;
-    gap: 4px;
-  }
-
-  .lens-relation-list span {
-    color: #28514b;
-    font-weight: 900;
-  }
-
-  .lens-relation-list button {
-    width: fit-content;
-    max-width: 100%;
-    border: 0;
-    padding: 0;
-    background: transparent;
-    overflow-wrap: anywhere;
-    color: #52615d;
-    font: inherit;
     font-weight: 800;
-    text-align: left;
-    cursor: pointer;
   }
 
-  .lens-relation-list button:disabled {
-    cursor: default;
+  .layer-tabs button.active {
+    border-color: #2b2925;
+    color: #ffffff;
+    background: #2b2925;
   }
 
   .field {
@@ -2704,9 +2145,9 @@
   }
 
   .field span {
-    color: #52615d;
-    font-size: 0.73rem;
-    font-weight: 800;
+    color: #667085;
+    font-size: 0.76rem;
+    font-weight: 900;
     text-transform: uppercase;
   }
 
@@ -2714,19 +2155,11 @@
   select {
     width: 100%;
     min-height: 40px;
-    border: 1px solid #cfd4d3;
-    border-radius: 6px;
+    border: 1px solid #cfd7cf;
+    border-radius: 7px;
     padding: 8px 10px;
-    color: #172033;
+    color: #101828;
     background: #ffffff;
-  }
-
-  input:focus,
-  select:focus,
-  button:focus-visible,
-  summary:focus-visible {
-    outline: 3px solid rgb(15 118 110 / 28%);
-    outline-offset: 2px;
   }
 
   .warnings,
@@ -2738,732 +2171,1908 @@
   }
 
   .warnings {
-    border-color: #e7d9a8;
-    background: #fff9e7;
-  }
-
-  .warnings p {
-    margin: 0;
-    color: #694d00;
-    font-size: 0.86rem;
-    line-height: 1.45;
+    border-color: #e5d08b;
+    background: #fffbea;
   }
 
   .onboarding-callout {
-    border-color: #b7d4c3;
-    background: #eff8f2;
-  }
-
-  .onboarding-callout p {
-    margin: 0;
-    color: #1f5136;
-    font-size: 0.88rem;
-    line-height: 1.45;
-  }
-
-  .onboarding-callout code {
-    display: block;
-    overflow-wrap: anywhere;
-    color: #123532;
-    font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
-    font-size: 0.78rem;
-    line-height: 1.45;
+    border-color: #b8c9c4;
+    background: #f7f5f0;
   }
 
   .object-list {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-    gap: 12px;
+    overflow: hidden;
   }
 
   .object-list button {
     display: grid;
-    gap: 9px;
-    min-height: 132px;
-    border: 1px solid #d9ded7;
-    border-radius: 8px;
-    padding: 14px;
-    color: inherit;
+    grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) auto;
+    gap: 12px;
+    width: 100%;
+    border: 0;
+    border-bottom: 1px solid #edf0ed;
+    padding: 13px 14px;
     background: #ffffff;
     text-align: left;
-    box-shadow: 0 8px 20px rgb(16 24 40 / 5%);
   }
 
   .object-list button:hover,
   .object-list button.selected {
-    border-color: #8fb5ad;
-    background: #f1f8f6;
-    transform: translateY(-1px);
+    background: #f7f5f0;
   }
 
-  .object-title {
-    color: #101828;
-    font-size: 1rem;
-    font-weight: 900;
-    line-height: 1.25;
-  }
-
-  .object-meta,
   .tag-list {
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
-  }
-
-  .pill,
-  .tag-list li,
-  .relation-topline span {
-    border: 1px solid #d4d9d5;
-    border-radius: 999px;
-    padding: 2px 8px;
-    color: #28514b;
-    background: #f2f8f6;
-    font-size: 0.74rem;
-    font-weight: 800;
-  }
-
-  .muted-status {
-    color: #6f4c00;
-    background: #fff7df;
-  }
-
-  .detail-header {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
-    align-items: start;
-    border-bottom: 1px solid #e2e5df;
-    padding-bottom: 18px;
-  }
-
-  .title-stack {
-    display: grid;
-    gap: 6px;
-  }
-
-  .back-action {
-    border: 1px solid #c7cfc9;
-    padding: 8px 11px;
-    color: #344054;
-    background: #ffffff;
-  }
-
-  .back-action:hover {
-    border-color: #8fb5ad;
-    color: #123532;
-    background: #eef7f4;
-  }
-
-  .tag-list {
-    grid-column: 2;
-    margin: 0;
     padding: 0;
     list-style: none;
   }
 
+  .pill,
+  .tag-list li {
+    display: inline-flex;
+    border: 1px solid #d0d5dd;
+    border-radius: 999px;
+    padding: 3px 8px;
+    color: #344054;
+    background: #f8fafc;
+    font-size: 0.75rem;
+    font-weight: 800;
+  }
+
+  .markdown-view,
+  .export-form {
+    padding: 16px;
+  }
+
   .markdown-view {
-    width: min(100%, 850px);
-    color: #263141;
-    font-size: 1rem;
-    line-height: 1.68;
+    color: #2f3a4a;
+    line-height: 1.65;
   }
 
-  .markdown-view h3 {
-    margin: 0 0 12px;
-    font-size: 1.55rem;
-  }
-
-  .markdown-view h4 {
-    margin: 22px 0 10px;
-    font-size: 1.16rem;
-  }
-
+  .markdown-view h3,
+  .markdown-view h4,
   .markdown-view h5 {
-    margin: 18px 0 8px;
-    font-size: 1rem;
-  }
-
-  .markdown-view p,
-  .markdown-view ul,
-  .markdown-view blockquote,
-  .markdown-view pre {
-    margin: 0 0 14px;
-  }
-
-  .markdown-view blockquote {
-    border-left: 3px solid #0f766e;
-    padding-left: 12px;
-    color: #465750;
+    margin-top: 1.1rem;
   }
 
   .markdown-view pre,
   .json-view pre {
     overflow: auto;
-    border: 1px solid #2a3447;
     border-radius: 7px;
-    padding: 14px;
-    background: #111827;
-    color: #f7faf9;
-    font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
-    font-size: 0.85rem;
-    line-height: 1.55;
-    white-space: pre-wrap;
+    padding: 12px;
+    background: #101828;
+    color: #f8fafc;
   }
 
-  .connections-section,
-  .provenance-section,
-  .graph-panel,
-  .technical-details {
-    display: grid;
-    gap: 14px;
-    padding: 16px;
-  }
-
-  .section-heading {
-    align-items: flex-end;
-    border-bottom: 1px solid #e2e5df;
-    padding-bottom: 14px;
-  }
-
-  .relation-columns {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 14px;
-  }
-
-  .provenance-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 14px;
-  }
-
-  .evidence-list {
-    display: grid;
-    gap: 10px;
+  .markdown-view blockquote {
     margin: 0;
-    padding: 0;
-    list-style: none;
-  }
-
-  .evidence-list li {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 8px;
-    min-width: 0;
-  }
-
-  .evidence-list button {
-    min-height: 34px;
-    border: 1px solid #b9c8c4;
-    border-radius: 6px;
-    padding: 6px 9px;
-    color: #17443e;
-    background: #eef7f4;
-    overflow-wrap: anywhere;
-    text-align: left;
-  }
-
-  .evidence-list code {
-    overflow-wrap: anywhere;
-    color: #52615d;
-    font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
-    font-size: 0.78rem;
-  }
-
-  .relation-columns section {
-    display: grid;
-    align-content: start;
-    gap: 10px;
-    min-width: 0;
+    border-left: 3px solid #bdb7ab;
+    padding-left: 12px;
+    color: #475467;
   }
 
   .relation-list {
     display: grid;
-    gap: 10px;
-    margin: 0;
+    gap: 9px;
+    margin: 10px 0 0;
     padding: 0;
     list-style: none;
   }
 
-  .relation-card {
+  .relation-list li {
     display: grid;
-    gap: 9px;
-    border: 1px solid #e0e4e1;
-    border-radius: 8px;
-    padding: 12px;
-    background: #fbfcfa;
+    gap: 5px;
   }
 
-  .relation-topline {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .relation-topline strong {
-    color: #101828;
-    font-size: 0.92rem;
-  }
-
-  .relation-card button {
-    width: 100%;
-    border: 1px solid #b9c8c4;
-    padding: 8px 10px;
-    color: #17443e;
-    background: #eef7f4;
-    overflow-wrap: anywhere;
+  .relation-list button {
+    justify-self: start;
+    border: 0;
+    padding: 0;
+    color: #2b2925;
+    background: transparent;
+    font-weight: 900;
     text-align: left;
   }
 
-  .relation-card button:hover:not(:disabled) {
-    border-color: #0f766e;
-    background: #e1f1ed;
-  }
-
-  .relation-card button:disabled {
-    color: #7b8581;
-    background: #f1f1ee;
-  }
-
-  .relation-card p {
-    margin: 0;
+  .relation-list small {
     color: #667085;
-    font-size: 0.82rem;
-    font-weight: 800;
   }
 
-  .graph-surface {
-    min-height: 360px;
-    border: 1px solid #d4d9d5;
-    border-radius: 8px;
-    background:
-      linear-gradient(90deg, rgb(16 24 40 / 5%) 1px, transparent 1px),
-      linear-gradient(rgb(16 24 40 / 5%) 1px, transparent 1px),
-      #f8fbfa;
-    background-size: 24px 24px;
-  }
-
-  .relation-graph-svg {
-    display: block;
-    width: 100%;
-    min-height: 360px;
-  }
-
-  .graph-edge line {
-    stroke: #667085;
-    stroke-width: 3;
-    vector-effect: non-scaling-stroke;
-  }
-
-  .graph-edge text {
-    fill: #344054;
-    font-size: 18px;
-    font-weight: 900;
-    paint-order: stroke;
-    pointer-events: none;
-    stroke: #f8fbfa;
-    stroke-linejoin: round;
-    stroke-width: 6px;
-    text-anchor: middle;
-  }
-
-  .graph-node circle {
-    fill: #ffffff;
-    stroke: #9fb6b1;
-    stroke-width: 3;
-    vector-effect: non-scaling-stroke;
-  }
-
-  .graph-node.incoming-node circle {
-    fill: #f0f7ff;
-    stroke: #5b8fc9;
-  }
-
-  .graph-node.outgoing-node circle {
-    fill: #fff6e9;
-    stroke: #d9902f;
-  }
-
-  .graph-node.bidirectional-node circle {
-    fill: #f6f1ff;
-    stroke: #8b6bb8;
-  }
-
-  .graph-node.selected-node circle {
-    fill: #0f766e;
-    stroke: #0b5f59;
-  }
-
-  .graph-node.missing-node circle {
-    fill: #fff7df;
-    stroke: #c9a84d;
-    stroke-dasharray: 6 5;
-  }
-
-  .graph-node text {
-    pointer-events: none;
-    text-anchor: middle;
-  }
-
-  .graph-node-title {
-    fill: #101828;
-    font-size: 18px;
-    font-weight: 900;
-  }
-
-  .graph-node-subtitle {
-    fill: #52615d;
-    font-size: 12px;
-    font-weight: 800;
-  }
-
-  .graph-node.selected-node .graph-node-title,
-  .graph-node.selected-node .graph-node-subtitle {
-    fill: #ffffff;
+  .technical-details {
+    border-top: 1px solid #e4e8e4;
+    padding-top: 12px;
   }
 
   .technical-details summary {
-    color: #101828;
     cursor: pointer;
     font-weight: 900;
   }
 
   .technical-details dl {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px;
-    margin: 0;
-  }
-
-  .technical-details div {
-    display: grid;
-    gap: 4px;
-  }
-
-  .technical-details dt {
-    color: #667085;
-    font-size: 0.72rem;
-    font-weight: 800;
-    text-transform: uppercase;
+    gap: 8px;
   }
 
   .technical-details dd {
     margin: 0;
     overflow-wrap: anywhere;
-    color: #172033;
-    font-size: 0.86rem;
+    color: #667085;
+  }
+
+  .export-page {
+    width: min(760px, 100%);
   }
 
   .export-form {
     display: grid;
     gap: 14px;
-    padding: 16px;
-  }
-
-  .primary-action {
-    width: fit-content;
-    min-width: 132px;
-    border: 1px solid #0b5f59;
-    padding: 9px 13px;
-    color: #ffffff;
-    background: #0f766e;
-  }
-
-  .primary-action:hover:not(:disabled) {
-    background: #0b5f59;
-  }
-
-  .primary-action:disabled {
-    border-color: #a7b6b2;
-    color: #52615d;
-    background: #eef2f1;
-  }
-
-  .danger-action {
-    width: fit-content;
-    min-width: 96px;
-    border: 1px solid #b93815;
-    padding: 9px 13px;
-    color: #ffffff;
-    background: #c2411d;
-  }
-
-  .danger-action:hover:not(:disabled) {
-    background: #9f3318;
-  }
-
-  .danger-action:disabled {
-    border-color: #d7b9ad;
-    color: #8a3d22;
-    background: #f7e4dc;
   }
 
   .export-status {
-    display: grid;
-    gap: 8px;
-    border: 1px solid #cfd4d3;
     border-radius: 7px;
     padding: 12px;
-    background: #f8fbfa;
-    color: #263141;
+    background: #f8fafc;
   }
 
-  .export-status p {
-    margin: 0;
-    overflow-wrap: anywhere;
-    font-size: 0.86rem;
-    line-height: 1.4;
+  .export-status.success {
+    background: #f7f5f0;
   }
 
-  .export-status-success {
-    border-color: #85aaa4;
-    background: #eef7f4;
-  }
-
-  .export-status-error {
-    border-color: #dab0a3;
-    background: #fff4ef;
-  }
-
-  .export-code {
-    color: #8b2e19;
-    font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
-    font-weight: 800;
-  }
-
-  .export-status dl {
-    display: grid;
-    gap: 8px;
-    margin: 0;
-  }
-
-  .export-status div {
-    display: grid;
-    gap: 3px;
-  }
-
-  .export-status dt {
-    color: #52615d;
-    font-size: 0.7rem;
-    font-weight: 800;
-    text-transform: uppercase;
-  }
-
-  .export-status dd {
-    margin: 0;
-    overflow-wrap: anywhere;
-    font-size: 0.82rem;
-  }
-
-  .delete-notice {
-    margin-top: 14px;
-    border: 1px solid #85aaa4;
-    border-radius: 7px;
-    padding: 12px;
-    color: #263141;
-    background: #eef7f4;
-  }
-
-  .delete-notice p {
-    margin: 0;
-    font-size: 0.86rem;
-    line-height: 1.4;
-  }
-
-  .modal-backdrop {
-    position: fixed;
-    z-index: 40;
-    inset: 0;
-    display: grid;
-    place-items: center;
-    padding: 18px;
-    background: rgb(16 24 40 / 44%);
-  }
-
-  .delete-dialog {
-    width: min(100%, 560px);
-    max-height: calc(100vh - 36px);
-    overflow: auto;
-    border: 1px solid #d7b9ad;
-    border-radius: 8px;
-    padding: 18px;
-    background: #ffffff;
-    box-shadow: 0 24px 70px rgb(16 24 40 / 28%);
-  }
-
-  .delete-dialog form {
-    display: grid;
-    gap: 14px;
-  }
-
-  .delete-warning {
-    margin: 0;
-    color: #344054;
-    font-size: 0.92rem;
-    line-height: 1.5;
-  }
-
-  .delete-paths {
-    display: grid;
-    gap: 8px;
-    margin: 0;
-    border: 1px solid #e5d9d3;
-    border-radius: 7px;
-    padding: 12px;
-    background: #fff8f5;
-  }
-
-  .delete-paths div {
-    display: grid;
-    gap: 3px;
-  }
-
-  .delete-paths dt {
-    color: #8a3d22;
-    font-size: 0.7rem;
-    font-weight: 850;
-    text-transform: uppercase;
-  }
-
-  .delete-paths dd {
-    margin: 0;
-    overflow-wrap: anywhere;
-    color: #172033;
-    font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
-    font-size: 0.8rem;
-    line-height: 1.4;
-  }
-
-  .delete-status {
-    display: grid;
-    gap: 6px;
-    border: 1px solid #cfd4d3;
-    border-radius: 7px;
-    padding: 10px;
-    background: #f8fbfa;
-  }
-
-  .delete-status p {
-    margin: 0;
-    overflow-wrap: anywhere;
-    font-size: 0.86rem;
-    line-height: 1.4;
-  }
-
-  .delete-status-error {
-    border-color: #dab0a3;
-    background: #fff4ef;
-  }
-
-  .dialog-actions {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: flex-end;
-    gap: 8px;
+  .export-status.error {
+    background: #fff1f0;
   }
 
   .empty-copy {
     margin: 0;
     color: #667085;
-    font-size: 0.9rem;
-    line-height: 1.5;
   }
 
-  .system-panel {
-    width: min(100%, 680px);
-    margin: 12vh auto 0;
-    padding: 28px;
-  }
+  @media (max-width: 900px) {
+    .viewer-shell {
+      display: block;
+    }
 
-  .system-panel p:last-child {
-    margin-bottom: 0;
-    color: #52615d;
-  }
+    .sidebar {
+      position: static;
+      height: auto;
+      border-right: 0;
+      border-bottom: 1px solid #d8ded8;
+    }
 
-  .error-panel {
-    border-color: #dab0a3;
-    background: #fff4ef;
-  }
-
-  @media (max-width: 980px) {
-    .viewer-shell.ready-shell {
+    .object-list button {
       grid-template-columns: 1fr;
     }
 
-    .nav-rail {
+  }
+
+  :global(body) {
+    color: #2b2b2b;
+    background: #ffffff;
+    font-family:
+      Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+
+  .viewer-shell {
+    grid-template-columns: 248px minmax(0, 1fr);
+    background: #ffffff;
+  }
+
+  .sidebar {
+    border-right: 1px solid #e6e3dc;
+    background: #f7f6f2;
+    padding: 14px 10px;
+    gap: 14px;
+  }
+
+  .brand-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 32px;
+    border-radius: 6px;
+    padding: 4px 6px;
+  }
+
+  .mobile-menu-toggle {
+    display: none;
+  }
+
+  .sidebar-menu {
+    display: grid;
+    gap: 14px;
+  }
+
+  .book-icon,
+  .object-glyph {
+    display: inline-grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    flex: 0 0 auto;
+    border-radius: 6px;
+    background: #ebe9e3;
+    color: #4e504b;
+    font-size: 0.78rem;
+    font-weight: 900;
+  }
+
+  .brand h1 {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 800;
+    letter-spacing: 0;
+  }
+
+  .brand p:last-child {
+    overflow: hidden;
+    padding: 0 6px 0 36px;
+    color: #8b8a84;
+    font-size: 0.76rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .sidebar-search,
+  .obsidian-field {
+    display: grid;
+    gap: 6px;
+  }
+
+  .sidebar-search span,
+  .obsidian-field span,
+  .nav-heading {
+    margin: 0;
+    color: #8a8880;
+    font-size: 0.68rem;
+    font-weight: 800;
+    text-transform: uppercase;
+  }
+
+  .sidebar-search input,
+  .obsidian-field input,
+  .list-controls select {
+    min-height: 32px;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    background: #eeece6;
+    color: #33332f;
+    font-size: 0.83rem;
+  }
+
+  .sidebar-search input {
+    width: 100%;
+    padding: 0 10px;
+  }
+
+  .sidebar-search input:focus,
+  .obsidian-field input:focus {
+    border-color: #d1cdc4;
+    background: #ffffff;
+    outline: 0;
+    box-shadow: 0 0 0 2px rgb(18 53 50 / 8%);
+  }
+
+  .nav-list {
+    display: grid;
+    gap: 16px;
+    border-top: 1px solid #ebe8e0;
+    padding-top: 12px;
+  }
+
+  .nav-section {
+    display: grid;
+    gap: 2px;
+  }
+
+  .nav-list button {
+    display: grid;
+    grid-template-columns: 20px minmax(0, 1fr);
+    align-items: center;
+    gap: 7px;
+    min-height: 30px;
+    border: 0;
+    border-radius: 6px;
+    padding: 4px 7px;
+    color: #5f5e58;
+    background: transparent;
+    font-size: 0.88rem;
+    font-weight: 560;
+    text-align: left;
+  }
+
+  .nav-list button span:last-child {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .nav-row-icon {
+    display: inline-grid;
+    place-items: center;
+    width: 20px;
+    color: #96948c;
+    font-size: 0.84rem;
+  }
+
+  .nav-list button:hover,
+  .nav-list button.active {
+    color: #262621;
+    background: #e9e6df;
+  }
+
+  .nav-list button.active .nav-row-icon {
+    color: #2b2925;
+  }
+
+  .nav-list button:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  .nav-list button:disabled:hover {
+    color: #5f5e58;
+    background: transparent;
+  }
+
+  .sidebar-export {
+    display: grid;
+    gap: 9px;
+    border-top: 1px solid #ebe8e0;
+    padding-top: 12px;
+  }
+
+  .sidebar-export summary {
+    border-radius: 6px;
+    padding: 5px 7px;
+    color: #6a6861;
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: 760;
+  }
+
+  .sidebar-export summary:hover {
+    background: #e9e6df;
+    color: #262621;
+  }
+
+  .sidebar-export button {
+    min-height: 28px;
+    border: 1px solid #dedbd5;
+    border-radius: 6px;
+    color: #464646;
+    background: #ffffff;
+    font-weight: 700;
+  }
+
+  .main-stage {
+    padding: 56px clamp(28px, 6vw, 88px) 72px;
+  }
+
+  .memory-page,
+  .projects-page,
+  .export-page {
+    width: min(1180px, 100%);
+  }
+
+  .memory-page {
+    display: grid;
+    gap: 22px;
+  }
+
+  .doc-hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 16px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid #e9e6e0;
+  }
+
+  .doc-hero h2 {
+    font-size: clamp(1.9rem, 3vw, 2.45rem);
+    line-height: 1.06;
+    font-weight: 950;
+  }
+
+  .doc-hero p:not(.eyebrow) {
+    margin: 8px 0 0;
+    max-width: 720px;
+    color: #777777;
+    font-size: 0.98rem;
+    line-height: 1.55;
+  }
+
+  .list-controls button {
+    border: 1px solid #e1ded7;
+    border-radius: 7px;
+    padding: 7px 10px;
+    color: #343434;
+    background: #ffffff;
+    text-decoration: none;
+    font-size: 0.82rem;
+    font-weight: 800;
+  }
+
+  .memory-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    border-bottom: 1px solid #e9e6e0;
+    padding-bottom: 18px;
+  }
+
+  .memory-summary p {
+    margin: 0;
+    max-width: 640px;
+    color: #666666;
+    line-height: 1.5;
+  }
+
+  .sectioned-memory h3 {
+    color: #2f2f2b;
+    font-size: 1.16rem;
+    font-weight: 760;
+  }
+
+  .sectioned-memory > section > p {
+    margin: 4px 0 0;
+    color: #9a988f;
+    font-size: 0.86rem;
+  }
+
+  .list-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+    border-bottom: 1px solid #e9e6e0;
+    padding-bottom: 14px;
+  }
+
+  .list-controls strong,
+  .list-controls span {
+    display: block;
+  }
+
+  .list-controls span {
+    color: #777777;
+    font-size: 0.85rem;
+  }
+
+  .layer-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-left: auto;
+  }
+
+  .layer-tabs button {
+    border-color: #e2dfd8;
+    border-radius: 7px;
+    padding: 7px 10px;
+    font-size: 0.84rem;
+  }
+
+  .layer-tabs button.active {
+    border-color: #bdb7ab;
+    color: #2f2f2b;
+    background: #ece9e1;
+  }
+
+  .list-controls select {
+    width: auto;
+    min-width: 138px;
+    padding: 0 32px 0 12px;
+  }
+
+  .list-controls [data-testid="viewer-tag-filter"] {
+    min-width: 170px;
+  }
+
+  .memory-workspace {
+    display: grid;
+    gap: 18px;
+  }
+
+  .memory-workspace.has-preview {
+    grid-template-columns: 1fr;
+  }
+
+  .memory-preview {
+    display: grid;
+    gap: 10px;
+    margin: 2px 0 14px 34px;
+    padding: 2px 0 8px;
+    background: transparent;
+  }
+
+  .notion-properties {
+    display: grid;
+    gap: 4px;
+    margin: 0;
+    padding: 2px 0 10px;
+    border-bottom: 1px solid #f0eee8;
+  }
+
+  .notion-properties div {
+    display: grid;
+    grid-template-columns: 92px minmax(0, 1fr);
+    gap: 12px;
+    align-items: baseline;
+  }
+
+  .notion-properties dt {
+    color: #9a988f;
+    font-size: 0.78rem;
+    font-weight: 650;
+  }
+
+  .notion-properties dd {
+    margin: 0;
+    color: #44443f;
+    font-size: 0.86rem;
+    overflow-wrap: anywhere;
+  }
+
+  .notion-toggle-list {
+    display: grid;
+    gap: 4px;
+  }
+
+  .notion-toggle {
+    border: 0;
+    padding: 0;
+  }
+
+  .notion-toggle summary {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 30px;
+    border-radius: 5px;
+    padding: 4px 6px;
+    color: #3d3d38;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 760;
+    list-style: none;
+  }
+
+  .notion-toggle summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .notion-toggle summary::before {
+    content: "›";
+    display: inline-grid;
+    place-items: center;
+    width: 14px;
+    color: #8a8880;
+    transition: transform 120ms ease;
+  }
+
+  .notion-toggle[open] > summary::before {
+    transform: rotate(90deg);
+  }
+
+  .notion-toggle summary:hover {
+    background: #f1efea;
+  }
+
+  .notion-toggle > :not(summary) {
+    margin-left: 22px;
+    padding: 4px 0 12px;
+  }
+
+  .memory-preview .markdown-view {
+    border: 0;
+    border-radius: 0;
+    padding: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .relation-columns {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+  }
+
+  .sectioned-memory > section {
+    margin-top: 24px;
+    border-top: 1px solid #f0eee8;
+    padding-top: 14px;
+  }
+
+  .sectioned-memory > section:first-child {
+    margin-top: 0;
+    border-top: 0;
+    padding-top: 0;
+  }
+
+  .object-list {
+    display: grid;
+    gap: 1px;
+    margin-top: 8px;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .object-list button {
+    grid-template-columns: 24px minmax(0, 1fr) 18px;
+    align-items: center;
+    border: 0;
+    border-radius: 4px;
+    padding: 6px 8px;
+    background: transparent;
+  }
+
+  .object-list button:hover,
+  .object-list button.selected {
+    background: #f1efea;
+  }
+
+  .object-list button.selected {
+    box-shadow: none;
+  }
+
+  .object-list button:focus-visible {
+    outline: 0;
+    background: #ebe9e3;
+  }
+
+  .object-list strong {
+    display: block;
+    color: #37352f;
+    font-size: 0.96rem;
+    font-weight: 650;
+  }
+
+  .object-list small {
+    display: block;
+    margin-top: 1px;
+    color: #8f8d86;
+    font-size: 0.84rem;
+    line-height: 1.35;
+  }
+
+  .object-list em {
+    display: inline-grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    color: #8a8a8a;
+    font-style: normal;
+    font-weight: 900;
+  }
+
+  .object-list .object-glyph {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    background: transparent;
+    color: #7d7b74;
+    font-size: 0.82rem;
+  }
+
+  @media (max-width: 980px) {
+    .doc-hero,
+    .list-controls {
+      grid-template-columns: 1fr;
+    }
+
+    .memory-summary {
+      align-items: flex-start;
+      flex-direction: column;
+    }
+
+    .memory-workspace.has-preview {
+      grid-template-columns: 1fr;
+    }
+
+    .memory-preview {
       position: static;
-      min-height: auto;
+      max-height: none;
     }
 
-    .brand-block {
-      grid-template-columns: minmax(0, 1fr);
-    }
-
-    .nav-list {
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-    }
-
-    .project-stats {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      margin-top: 16px;
-    }
-
-    .project-stats div {
-      display: grid;
-      gap: 3px;
-    }
-
-    .main-stage {
-      min-height: auto;
+    .list-controls {
+      align-items: stretch;
     }
   }
 
-  @media (max-width: 760px) {
+  @media (max-width: 900px) {
     .viewer-shell {
-      padding: 10px;
+      display: block;
+      min-height: 100vh;
     }
 
-    .main-stage,
-    .nav-rail,
-    .system-panel {
+    .sidebar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      height: auto;
+      gap: 0;
+      border-right: 0;
+      border-bottom: 1px solid #dedbd5;
+      padding: 12px 14px;
+      box-shadow: 0 8px 22px rgb(16 24 40 / 7%);
+    }
+
+    .brand {
+      gap: 4px;
+    }
+
+    .brand-row {
+      gap: 8px;
+    }
+
+    .mobile-menu-toggle {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 34px;
+      margin-left: auto;
+      border: 1px solid #d9d5cc;
+      border-radius: 7px;
+      padding: 0 12px;
+      color: #343434;
+      background: #ffffff;
+      font-size: 0.84rem;
+      font-weight: 850;
+      box-shadow: 0 1px 2px rgb(16 24 40 / 5%);
+    }
+
+    .mobile-menu-toggle[aria-expanded="true"] {
+      border-color: #bdb7ab;
+      color: #2f2f2b;
+      background: #ece9e1;
+    }
+
+    .book-icon {
+      width: 22px;
+      height: 22px;
+      border-radius: 5px;
+      font-size: 0.78rem;
+    }
+
+    .brand h1 {
+      font-size: 1rem;
+      line-height: 1.1;
+    }
+
+    .brand p:last-child {
+      max-width: 100%;
+      overflow: hidden;
+      padding-left: 30px;
+      font-size: 0.78rem;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .sidebar-menu {
+      display: none;
+      position: absolute;
+      top: calc(100% + 8px);
+      right: 10px;
+      left: 10px;
+      gap: 14px;
+      max-height: calc(100dvh - 96px);
+      overflow: auto;
+      border: 1px solid #e1ded7;
+      border-radius: 10px;
       padding: 14px;
+      background: #fffefa;
+      box-shadow:
+        0 24px 60px rgb(16 24 40 / 18%),
+        0 2px 8px rgb(16 24 40 / 8%);
     }
 
-    h2 {
+    .sidebar-menu.open {
+      display: grid;
+    }
+
+    .sidebar-search {
+      gap: 5px;
+    }
+
+    .sidebar-search input {
+      width: 100%;
+      min-height: 40px;
+      padding: 0 13px;
+      font-size: 0.9rem;
+    }
+
+    .nav-list {
+      display: grid;
+      gap: 12px;
+      border-top: 0;
+      padding: 0;
+    }
+
+    .nav-section {
+      gap: 3px;
+    }
+
+    .nav-list button {
+      min-height: 36px;
+      border: 0;
+      border-radius: 6px;
+      padding: 7px 9px;
+      background: transparent;
+      color: #3f4643;
+      font-size: 0.9rem;
+      font-weight: 700;
+      text-align: left;
+    }
+
+    .nav-heading {
+      margin-bottom: 1px;
+    }
+
+    .nav-list button:hover,
+    .nav-list button.active {
+      color: #2b2925;
+      background: #e9e6df;
+    }
+
+    .sidebar-export {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+      border-top: 1px solid #e7e2db;
+      padding-top: 14px;
+    }
+
+    .sidebar-export .obsidian-field {
+      grid-column: 1 / -1;
+    }
+
+    .sidebar-export button {
+      min-height: 36px;
+    }
+
+    .main-stage {
+      padding: 26px 14px 48px;
+    }
+
+    .memory-page {
+      gap: 24px;
+    }
+
+    .doc-hero {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 8px;
+      padding-bottom: 14px;
+    }
+
+    .doc-hero h2 {
+      font-size: 1.9rem;
+      line-height: 1.08;
+    }
+
+    .doc-hero p:not(.eyebrow) {
+      margin-top: 8px;
+      font-size: 0.94rem;
+    }
+
+    .list-controls button {
+      min-height: 36px;
+      white-space: nowrap;
+    }
+
+    .list-controls {
+      gap: 12px;
+      margin-bottom: 12px;
+      padding-top: 18px;
+    }
+
+    .layer-tabs {
+      flex-wrap: nowrap;
+      justify-content: flex-start;
+      overflow-x: auto;
+      padding-bottom: 2px;
+      scrollbar-width: none;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .layer-tabs::-webkit-scrollbar {
+      display: none;
+    }
+
+    .layer-tabs button {
+      flex: 0 0 auto;
+      min-height: 36px;
+      white-space: nowrap;
+    }
+
+    .list-controls select {
+      width: 100%;
+      min-height: 38px;
+    }
+
+    .object-list button {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 10px;
+      padding: 12px;
+    }
+
+    .markdown-view pre {
+      overflow-x: auto;
+      font-size: 0.74rem;
+    }
+  }
+
+  @media (max-width: 560px) {
+    .main-stage {
+      padding-inline: 10px;
+    }
+
+    .sidebar {
+      padding-inline: 10px;
+    }
+
+    .doc-hero h2 {
       font-size: 1.65rem;
     }
 
-    .page-header,
-    .section-heading {
+    .sectioned-memory h3 {
+      font-size: 1.35rem;
+    }
+
+    .list-controls button {
+      padding: 7px 9px;
+      font-size: 0.78rem;
+    }
+
+  }
+
+  /* Document-style viewer pass. */
+  :global(body) {
+    color: #2f2f2b;
+    background: #fbfaf7;
+    font-family:
+      Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+
+  .viewer-shell {
+    grid-template-columns: 340px minmax(0, 1fr);
+    background: #fbfaf7;
+  }
+
+  .sidebar {
+    border-right: 1px solid #dedbd2;
+    background: #f4f1eb;
+    padding: 30px 28px;
+    gap: 28px;
+  }
+
+  .brand {
+    gap: 22px;
+  }
+
+  .brand-row {
+    gap: 10px;
+    padding: 0;
+  }
+
+  .book-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 999px;
+    background: #111214;
+    color: #faf9f5;
+    font-size: 0.9rem;
+    box-shadow:
+      0 1px 2px rgb(16 24 40 / 8%),
+      inset 0 0 0 1px rgb(255 255 255 / 8%);
+  }
+
+  .brand h1 {
+    color: #242423;
+    font-size: 1.46rem;
+    line-height: 1.1;
+    font-weight: 850;
+  }
+
+  .brand p:last-child {
+    padding: 0;
+    color: #6c6962;
+    font-size: 1.02rem;
+    line-height: 1.35;
+    white-space: normal;
+  }
+
+  .sidebar-stats {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin: 0;
+    border-top: 1px solid #dfdbd1;
+    padding-top: 24px;
+  }
+
+  .sidebar-stats div {
+    min-height: 84px;
+    border: 1px solid #dfdbd1;
+    border-radius: 8px;
+    padding: 14px 16px;
+    background: #fffefa;
+    box-shadow: 0 1px 2px rgb(16 24 40 / 5%);
+  }
+
+  .sidebar-stats dt {
+    color: #262522;
+    font-size: 1.7rem;
+    line-height: 1.05;
+    font-weight: 850;
+  }
+
+  .sidebar-stats dd {
+    margin: 7px 0 0;
+    color: #74716a;
+    font-size: 0.92rem;
+    font-weight: 560;
+  }
+
+  .sidebar-menu {
+    gap: 24px;
+  }
+
+  .sidebar-search {
+    gap: 9px;
+  }
+
+  .sidebar-search span,
+  .nav-heading,
+  .obsidian-field span {
+    color: #9a968d;
+    font-size: 0.72rem;
+    letter-spacing: 0;
+  }
+
+  .sidebar-search input,
+  .obsidian-field input {
+    min-height: 44px;
+    border: 1px solid #dedbd3;
+    border-radius: 8px;
+    background: #fffefa;
+    color: #37352f;
+    font-size: 0.94rem;
+    box-shadow: 0 1px 2px rgb(16 24 40 / 4%);
+  }
+
+  .nav-list {
+    gap: 22px;
+    border-top: 1px solid #dfdbd1;
+    padding-top: 22px;
+  }
+
+  .nav-section {
+    gap: 6px;
+  }
+
+  .nav-list button {
+    min-height: 32px;
+    grid-template-columns: 18px minmax(0, 1fr);
+    gap: 9px;
+    border: 0;
+    border-radius: 6px;
+    padding: 5px 9px;
+    color: #6e6b65;
+    background: transparent;
+    font-size: 0.98rem;
+    font-weight: 520;
+  }
+
+  .nav-list button:hover,
+  .nav-list button.active {
+    color: #2f2f2b;
+    background: #e9e6df;
+  }
+
+  .nav-row-icon {
+    width: 18px;
+    color: #9a968d;
+  }
+
+  .sidebar-export {
+    border-top: 1px solid #dfdbd1;
+    padding-top: 18px;
+  }
+
+  .main-stage {
+    min-width: 0;
+    padding: 46px clamp(36px, 6vw, 104px) 88px;
+    background: #fffefa;
+  }
+
+  .memory-page,
+  .projects-page,
+  .export-page {
+    width: min(1060px, 100%);
+    margin: 0 auto;
+  }
+
+  .memory-page {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    justify-content: center;
+    gap: 24px;
+  }
+
+  .doc-hero {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+    max-width: none;
+    margin: 0;
+    border-bottom: 0;
+    padding: 0;
+  }
+
+  .doc-icon {
+    display: inline-grid;
+    place-items: center;
+    width: 46px;
+    height: 46px;
+    border-radius: 999px;
+    background: #111214;
+    color: #faf9f5;
+    font-size: 1.38rem;
+    font-weight: 850;
+    line-height: 1;
+    box-shadow:
+      0 16px 42px rgb(16 24 40 / 10%),
+      inset 0 0 0 1px rgb(255 255 255 / 8%);
+  }
+
+  .doc-hero .eyebrow {
+    margin-top: 4px;
+    color: #9a968d;
+  }
+
+  .doc-hero h2 {
+    max-width: 860px;
+    color: #202020;
+    font-size: clamp(2.7rem, 4.1vw, 3.85rem);
+    line-height: 1;
+    font-weight: 880;
+  }
+
+  .doc-hero p:not(.eyebrow) {
+    max-width: 680px;
+    color: #6d6a65;
+    font-size: 1rem;
+    line-height: 1.48;
+  }
+
+  .memory-summary {
+    display: grid;
+    grid-template-columns: 30px minmax(0, 1fr);
+    gap: 16px;
+    max-width: none;
+    margin: 0;
+    border: 1px solid #e2ded5;
+    border-radius: 8px;
+    padding: 18px 20px;
+    background: #ffffff;
+    box-shadow: 0 10px 28px rgb(16 24 40 / 5%);
+  }
+
+  .summary-check {
+    display: inline-grid;
+    place-items: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    color: #ffffff;
+    background: #2b2925;
+    font-weight: 900;
+  }
+
+  .summary-copy strong {
+    display: block;
+    color: #34332f;
+    font-size: 1.04rem;
+    font-weight: 820;
+  }
+
+  .summary-copy p {
+    margin: 4px 0 0;
+    color: #76736c;
+    font-size: 1rem;
+    line-height: 1.45;
+  }
+
+  .trust-copy {
+    margin-top: 10px !important;
+    color: #6f6b63 !important;
+    font-size: 0.92rem !important;
+  }
+
+  .trust-copy span {
+    display: inline-flex;
+    margin-right: 6px;
+    border: 1px solid #d6d2ca;
+    border-radius: 999px;
+    padding: 2px 8px;
+    color: #37352f;
+    background: #f7f6f2;
+    font-size: 0.78rem;
+    font-weight: 820;
+  }
+
+  .context-preview-panel {
+    display: grid;
+    gap: 18px;
+    border: 1px solid #e2ded5;
+    border-radius: 8px;
+    padding: 22px;
+    background: #ffffff;
+    box-shadow: 0 10px 28px rgb(16 24 40 / 5%);
+  }
+
+  .context-preview-heading {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 22px;
+    align-items: start;
+  }
+
+  .context-preview-heading h3 {
+    margin: 4px 0 0;
+    color: #202020;
+    font-size: 1.38rem;
+    line-height: 1.12;
+    font-weight: 850;
+  }
+
+  .context-preview-heading p:not(.eyebrow) {
+    margin: 7px 0 0;
+    max-width: 620px;
+    color: #746f68;
+    line-height: 1.45;
+  }
+
+  .preview-stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(78px, 1fr));
+    gap: 8px;
+    margin: 0;
+  }
+
+  .preview-stats div {
+    border: 1px solid #e3dfd7;
+    border-radius: 8px;
+    padding: 10px;
+    background: #fbfaf7;
+  }
+
+  .preview-stats dt {
+    color: #8d897f;
+    font-size: 0.7rem;
+    font-weight: 850;
+    text-transform: uppercase;
+  }
+
+  .preview-stats dd {
+    margin: 4px 0 0;
+    color: #262522;
+    font-size: 1.2rem;
+    font-weight: 850;
+  }
+
+  .context-preview-form {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "task task"
+      "mode action"
+      "advanced advanced";
+    gap: 16px 18px;
+    align-items: end;
+    border-top: 1px solid #ebe7de;
+    padding-top: 18px;
+  }
+
+  .preview-task-field {
+    grid-area: task;
+  }
+
+  .preview-budget-field {
+    max-width: 220px;
+  }
+
+  .context-preview-form > .primary-action {
+    grid-area: action;
+    min-height: 44px;
+    padding-inline: 18px;
+    white-space: nowrap;
+  }
+
+  .context-preview-form .field span {
+    color: #9a968d;
+    font-size: 0.72rem;
+    letter-spacing: 0;
+  }
+
+  .context-preview-form input {
+    min-height: 44px;
+    border-color: #dedbd3;
+    border-radius: 8px;
+    background: #fffefa;
+    box-shadow: 0 1px 2px rgb(16 24 40 / 4%);
+  }
+
+  .preview-advanced {
+    grid-area: advanced;
+    max-width: 330px;
+    color: #716d66;
+  }
+
+  .preview-advanced summary {
+    width: fit-content;
+    cursor: pointer;
+    color: #77736c;
+    font-size: 0.84rem;
+    font-weight: 720;
+  }
+
+  .preview-advanced[open] {
+    display: grid;
+    gap: 10px;
+    padding-top: 2px;
+  }
+
+  .preview-advanced[open] summary {
+    margin-bottom: 2px;
+  }
+
+  .preview-mode-tabs {
+    grid-area: mode;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .preview-mode-tabs::before {
+    content: "Mode";
+    flex: 0 0 100%;
+    color: #9a968d;
+    font-size: 0.72rem;
+    font-weight: 850;
+    text-transform: uppercase;
+  }
+
+  .preview-mode-tabs button,
+  .preview-command-strip button,
+  .preview-result-actions button,
+  .included-memory-links button {
+    min-height: 36px;
+    border: 1px solid #dedbd3;
+    border-radius: 999px;
+    padding: 7px 11px;
+    color: #6d6a65;
+    background: #ffffff;
+    font-size: 0.84rem;
+    font-weight: 700;
+    box-shadow: 0 1px 2px rgb(16 24 40 / 4%);
+  }
+
+  .preview-mode-tabs button.active {
+    border-color: #202020;
+    color: #ffffff;
+    background: #202020;
+  }
+
+  .preview-command-strip {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    border: 1px solid #e6e2da;
+    border-radius: 8px;
+    padding: 12px 14px;
+    background: #f7f6f2;
+  }
+
+  .preview-command-strip code {
+    overflow-wrap: anywhere;
+    color: #37352f;
+  }
+
+  .preview-status,
+  .preview-result {
+    display: grid;
+    gap: 13px;
+    border-top: 1px solid #ebe7de;
+    padding-top: 15px;
+  }
+
+  .preview-status.error {
+    border: 1px solid #efc3b8;
+    border-radius: 8px;
+    padding: 12px;
+    background: #fff8f5;
+  }
+
+  .preview-status p,
+  .preview-result-topline p {
+    margin: 0;
+    color: #68645d;
+  }
+
+  .preview-result-topline {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .preview-result-topline p {
+    border: 1px solid #ddd8ce;
+    border-radius: 999px;
+    padding: 3px 9px;
+    background: #fbfaf7;
+    font-size: 0.8rem;
+    font-weight: 760;
+  }
+
+  .included-memory-group {
+    display: grid;
+    gap: 8px;
+  }
+
+  .included-memory-group > p,
+  .preview-result-actions > p {
+    margin: 0;
+    color: #8d897f;
+    font-size: 0.72rem;
+    font-weight: 850;
+    text-transform: uppercase;
+  }
+
+  .included-memory-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+  }
+
+  .preview-result-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .included-memory-links span {
+    display: inline-flex;
+    align-items: center;
+    min-height: 34px;
+    border: 1px solid #e1ddd5;
+    border-radius: 999px;
+    padding: 7px 11px;
+    color: #7b766e;
+    background: #f7f6f2;
+    font-size: 0.84rem;
+    font-weight: 700;
+  }
+
+  .context-pack-view {
+    max-height: 440px;
+    overflow: auto;
+    border-color: #e3dfd7;
+    border-radius: 8px;
+    background: #fffefa;
+  }
+
+  .warnings,
+  .onboarding-callout,
+  .list-controls,
+  .sectioned-memory {
+    max-width: none;
+    margin-right: 0;
+    margin-left: 0;
+  }
+
+  .list-controls {
+    display: grid;
+    grid-template-columns: 1fr;
+    align-items: start;
+    justify-content: stretch;
+    gap: 14px;
+    border-bottom: 1px solid #ebe7de;
+    padding: 4px 0 24px;
+  }
+
+  .list-controls > div:first-child {
+    text-align: left;
+  }
+
+  .list-controls strong {
+    color: #2f2f2b;
+    font-size: 0.98rem;
+  }
+
+  .list-controls span {
+    color: #8b8880;
+    font-size: 0.9rem;
+  }
+
+  .controls-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .layer-tabs {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    margin: 0;
+    gap: 8px;
+  }
+
+  .layer-tabs button,
+  .list-controls button {
+    min-height: 36px;
+    border: 1px solid #dedbd3;
+    border-radius: 999px;
+    padding: 7px 12px;
+    color: #6d6a65;
+    background: #ffffff;
+    font-size: 0.86rem;
+    font-weight: 650;
+    box-shadow: 0 1px 2px rgb(16 24 40 / 4%);
+  }
+
+  .layer-tabs button.active {
+    border-color: #202020;
+    color: #ffffff;
+    background: #202020;
+  }
+
+  .list-controls select {
+    width: auto;
+    min-width: 150px;
+    min-height: 38px;
+    border-color: #dedbd3;
+    border-radius: 999px;
+    background-color: #efede8;
+    color: #504d48;
+    font-size: 0.9rem;
+  }
+
+  .list-controls [data-testid="viewer-tag-filter"] {
+    min-width: 180px;
+  }
+
+  .sectioned-memory {
+    display: grid;
+    gap: 36px;
+  }
+
+  .sectioned-memory > section {
+    margin: 0;
+    border-top: 0;
+    padding-top: 0;
+  }
+
+  .sectioned-memory h3 {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #202020;
+    font-size: 2.05rem;
+    line-height: 1.08;
+    font-weight: 850;
+  }
+
+  .section-icon {
+    display: inline-grid;
+    place-items: center;
+    width: 1.1em;
+    color: #77736d;
+    font-size: 0.86em;
+    line-height: 1;
+  }
+
+  .sectioned-memory > section > p {
+    margin: 6px 0 18px;
+    color: #77736d;
+    font-size: 1.04rem;
+  }
+
+  .object-list {
+    display: grid;
+    gap: 12px;
+    overflow: visible;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .object-list button {
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 14px;
+    min-height: 72px;
+    border: 1px solid #e3dfd7;
+    border-radius: 8px;
+    padding: 12px 18px;
+    background: #ffffff;
+    color: #37352f;
+    box-shadow: 0 1px 2px rgb(16 24 40 / 4%);
+  }
+
+  .object-list button:hover {
+    border-color: #d7d2c8;
+    background: #fbfaf7;
+  }
+
+  .object-list button.selected {
+    border-color: #e3dfd7;
+    border-bottom-color: transparent;
+    border-radius: 8px 8px 0 0;
+    background: #f1efea;
+    box-shadow: none;
+  }
+
+  .object-list button:focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: 2px;
+    background: #f7f5f0;
+  }
+
+  .object-list .object-glyph {
+    width: 26px;
+    height: 26px;
+    border-radius: 7px;
+    background: #f1efea;
+    color: #68818d;
+    font-size: 0.92rem;
+    font-weight: 850;
+  }
+
+  .object-list strong {
+    color: #2c2c29;
+    font-size: 1.1rem;
+    line-height: 1.22;
+    font-weight: 800;
+  }
+
+  .object-list small {
+    margin-top: 3px;
+    color: #77736d;
+    font-size: 0.94rem;
+    line-height: 1.35;
+  }
+
+  .object-list em {
+    width: auto;
+    min-width: 34px;
+    color: #9a968d;
+    font-size: 0.92rem;
+    font-style: normal;
+    font-weight: 620;
+    text-align: right;
+  }
+
+  .memory-preview {
+    display: grid;
+    gap: 18px;
+    margin: -12px 0 4px;
+    border: 1px solid #e3dfd7;
+    border-top: 0;
+    border-radius: 0 0 8px 8px;
+    padding: 24px 56px 28px;
+    background: #ffffff;
+    box-shadow: 0 16px 32px rgb(16 24 40 / 5%);
+  }
+
+  .notion-properties {
+    gap: 0;
+    padding: 0 0 14px;
+    border-bottom: 1px solid #e7e3dc;
+  }
+
+  .notion-properties div {
+    grid-template-columns: 92px minmax(0, 1fr);
+    min-height: 26px;
+    gap: 18px;
+  }
+
+  .notion-properties dt {
+    color: #99958d;
+    font-size: 0.9rem;
+    font-weight: 780;
+  }
+
+  .notion-properties dd {
+    color: #3e3d39;
+    font-size: 0.98rem;
+  }
+
+  .notion-toggle-list {
+    gap: 12px;
+  }
+
+  .notion-toggle summary {
+    min-height: 30px;
+    padding: 2px 0;
+    color: #37352f;
+    font-size: 1.02rem;
+    font-weight: 760;
+  }
+
+  .notion-toggle summary:hover {
+    background: transparent;
+  }
+
+  .notion-toggle > :not(summary) {
+    margin-left: 22px;
+    padding: 8px 0 18px;
+  }
+
+  .memory-preview .markdown-view {
+    color: #283247;
+    font-size: 1.05rem;
+    line-height: 1.55;
+  }
+
+  .memory-preview .markdown-view h3 {
+    margin: 0 0 6px;
+    color: #182230;
+    font-size: 1.45rem;
+    line-height: 1.18;
+  }
+
+  .tag-list li,
+  .pill {
+    border-color: #d6d2ca;
+    background: #f7f6f2;
+    color: #4e5a6b;
+  }
+
+  .relation-columns {
+    gap: 28px;
+  }
+
+  .technical-details {
+    border-top: 0;
+    padding-top: 0;
+  }
+
+  @media (max-width: 1040px) {
+    .viewer-shell {
+      grid-template-columns: 286px minmax(0, 1fr);
+    }
+
+    .sidebar {
+      padding: 24px 20px;
+    }
+
+    .main-stage {
+      padding: 52px 28px 72px;
+    }
+
+    .doc-hero h2 {
+      font-size: clamp(2.8rem, 7vw, 4.3rem);
+    }
+  }
+
+  @media (max-width: 900px) {
+    .viewer-shell {
+      display: block;
+    }
+
+    .sidebar {
+      position: sticky;
+      padding: 12px 14px;
+      background: #f4f1eb;
+    }
+
+    .brand {
+      gap: 4px;
+    }
+
+    .brand-row {
+      min-height: 36px;
+    }
+
+    .brand p:last-child {
+      padding-left: 38px;
+      font-size: 0.82rem;
+      white-space: nowrap;
+    }
+
+    .sidebar-stats {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+      padding-top: 0;
+      border-top: 0;
+    }
+
+    .sidebar-stats div {
+      min-height: auto;
+      padding: 9px;
+    }
+
+    .sidebar-stats dt {
+      font-size: 1.08rem;
+    }
+
+    .sidebar-stats dd {
+      margin-top: 2px;
+      font-size: 0.72rem;
+    }
+
+    .main-stage {
+      padding: 34px 16px 58px;
+    }
+
+    .doc-hero {
+      margin: 0 0 18px;
+    }
+
+    .doc-hero h2 {
+      font-size: 2.45rem;
+    }
+
+    .memory-summary {
+      margin: 0;
+    }
+
+    .context-preview-heading,
+    .context-preview-form {
+      grid-template-columns: 1fr;
+    }
+
+    .context-preview-form {
+      grid-template-areas:
+        "task"
+        "mode"
+        "action"
+        "advanced";
+    }
+
+    .preview-advanced,
+    .preview-budget-field {
+      max-width: none;
+    }
+
+    .preview-stats {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .preview-command-strip {
       align-items: stretch;
       flex-direction: column;
     }
 
-    .filter-grid,
-    .lens-layout,
-    .provenance-grid,
-    .relation-columns,
-    .project-card-stats,
-    .technical-details dl {
-      grid-template-columns: 1fr;
+    .list-controls {
+      justify-content: flex-start;
     }
 
-    .detail-header {
-      grid-template-columns: 1fr;
+    .list-controls > div:first-child {
+      text-align: left;
     }
 
-    .tag-list {
-      grid-column: auto;
+    .controls-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: stretch;
     }
 
-    .object-list {
-      grid-template-columns: 1fr;
-    }
-
-    .graph-surface,
-    .relation-graph-svg {
-      min-height: 300px;
+    .memory-preview {
+      padding: 20px 18px 24px;
     }
   }
 </style>
