@@ -10,17 +10,18 @@ describe("site landing page", () => {
   it("states the sharpened value proposition and primary actions", async () => {
     const landing = await readFile(resolve(repoRoot, "site/src/pages/index.astro"), "utf8");
 
-    expect(landing).toContain("Stop re-explaining your repo to AI agents.");
+    expect(landing).toContain("Project memory<br />for AI Agents");
     expect(landing).toContain(
-      "Aictx gives agents durable project memory they can load before work and update after"
+      "Aictx stores your repo’s intent, architecture, conventions, setup, and known traps"
     );
     expect(landing).toContain("Install Aictx");
     expect(landing).toContain("Browse demo");
     expect(landing).not.toContain("Join discussions");
     expect(landing).toContain("npm install -g @aictx/memory");
+    expect(landing).toContain("Works with Codex, Claude Code, Cursor, and MCP-capable agents.");
     expect(landing).toContain("Aictx is not another chat UI or hosted memory service.");
-    expect(landing).toContain("No hosted dependency");
-    expect(landing).toContain(
+    expect(landing).not.toContain("No hosted dependency");
+    expect(landing).not.toContain(
       "Core memory works without a cloud account, embeddings, hosted sync, or external model API."
     );
     expect(landing).toContain("Project memory for Codex.");
@@ -34,10 +35,18 @@ describe("site landing page", () => {
     expect(landing).toContain("Viewer memory page follows a document-style handbook layout.");
     expect(landing).not.toContain("Inspect the memory agents will use.");
     expect(landing).toContain("How it works");
-    expect(landing).toContain("Aictx keeps memory local, explicit, and reviewable.");
-    expect(landing).toContain("The agent loads the project context it needs.");
-    expect(landing).toContain("The agent does the work with that context.");
-    expect(landing).toContain("The agent saves what future agents should remember.");
+    expect(landing).toContain("Aictx keeps the everyday loop small");
+    expect(landing).toContain("load relevant memory");
+    expect(landing).toContain("save what should last");
+    expect(landing).toContain("Load the right project context.");
+    expect(landing).toContain("Aictx compiles a focused context pack");
+    expect(landing).toContain("Do the work with that context.");
+    expect(landing).toContain("known traps, and the verification path already in view");
+    expect(landing).toContain("Save what future sessions should remember.");
+    expect(landing).toContain("humans can inspect, diff, commit, or roll back");
+    expect(landing).not.toContain("The agent loads the project context it needs.");
+    expect(landing).not.toContain("The agent does the work with that context.");
+    expect(landing).not.toContain("The agent saves what future agents should remember.");
     expect(landing).not.toContain("Load context. Save memory. Review the diff.");
     expect(landing).not.toContain("aictx load \"change auth routes\"");
     expect(landing).not.toContain("aictx save --stdin");
@@ -47,18 +56,24 @@ describe("site landing page", () => {
     expect(landing).not.toContain("Review, commit, or roll back.");
   });
 
-  it("keeps community navigation in the header instead of the hero", async () => {
+  it("keeps header and footer navigation focused", async () => {
     const layout = await readFile(resolve(repoRoot, "site/src/layouts/BaseLayout.astro"), "utf8");
 
-    expect(layout).toContain("Discussions");
-    expect(layout).toContain("https://github.com/MicrexIT/aictx/discussions");
+    expect(layout).toContain("Open navigation menu");
+    expect(layout).toContain('href="/#demo">Demo</a>');
+    expect(layout).not.toContain(">Viewer</a>");
+    expect(layout).not.toContain("Discussions");
+    expect(layout).not.toContain("https://github.com/MicrexIT/aictx/discussions");
+    expect(layout).toContain('<strong data-star-count="compact"></strong>');
+    expect(layout).toContain("Footer navigation");
+    expect(layout).toContain("Local, reviewable project memory for AI coding tools.");
   });
 
-  it("frames the demo as human inspection of future agent memory", async () => {
+  it("frames the demo as human inspection of future project memory", async () => {
     const landing = await readFile(resolve(repoRoot, "site/src/pages/index.astro"), "utf8");
 
-    expect(landing).toContain("See the memory future agents will use.");
-    expect(landing).toContain("Inspect the local project memory your agents load before work.");
+    expect(landing).toContain("See the memory future work will use.");
+    expect(landing).toContain("Inspect the local project memory your AI tools load before work.");
     expect(landing).not.toContain("Browse the local handbook");
   });
 });

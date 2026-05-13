@@ -8,8 +8,8 @@ interface Props {
 }
 
 const {
-  title = "Aictx - Local memory for AI coding agents",
-  description = "Aictx gives AI coding agents local, reviewable project memory so they stop starting from scratch on every task."
+  title = "Aictx - Local memory for AI coding tools",
+  description = "Aictx gives AI coding tools local, reviewable project memory so every session stops starting from scratch."
 } = Astro.props;
 ---
 
@@ -33,23 +33,47 @@ const {
       <nav aria-label="Primary navigation">
         <a href="/#context">Context</a>
         <a href="/#workflow">How it works</a>
-        <a href="/#demo">Viewer</a>
+        <a href="/#demo">Demo</a>
         <a href="/blog/">Blog</a>
-        <a href="https://github.com/MicrexIT/aictx/discussions" rel="noreferrer">Discussions</a>
         <a href="https://docs.aictx.dev" rel="noreferrer">Docs</a>
       </nav>
 
+      <details class="mobile-menu">
+        <summary aria-label="Open navigation menu">
+          <span></span>
+          <span></span>
+          <span></span>
+        </summary>
+        <div class="mobile-menu-panel">
+          <a href="/#context">Context</a>
+          <a href="/#workflow">How it works</a>
+          <a href="/#demo">Demo</a>
+          <a href="/blog/">Blog</a>
+          <a href="https://docs.aictx.dev" rel="noreferrer">Docs</a>
+          <a href="https://github.com/MicrexIT/aictx" rel="noreferrer">GitHub</a>
+        </div>
+      </details>
+
       <a class="github-pill" href="https://github.com/MicrexIT/aictx" rel="noreferrer">
         <GitHubIcon />
-        <span>Star</span>
-        <strong data-star-count>GitHub</strong>
+        <span>GitHub</span>
+        <strong data-star-count="compact"></strong>
       </a>
     </header>
 
     <slot />
 
     <footer class="site-footer">
-      <p>Local, reviewable project memory for AI coding agents.</p>
+      <div>
+        <strong>Aictx</strong>
+        <p>Local, reviewable project memory for AI coding tools.</p>
+      </div>
+      <nav class="footer-links" aria-label="Footer navigation">
+        <a href="https://docs.aictx.dev" rel="noreferrer">Docs</a>
+        <a href="https://demo.aictx.dev/?token=demo" rel="noreferrer">Demo</a>
+        <a href="/blog/">Blog</a>
+        <a href="https://github.com/MicrexIT/aictx" rel="noreferrer">GitHub</a>
+      </nav>
     </footer>
   </body>
 </html>

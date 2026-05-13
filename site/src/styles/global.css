@@ -51,7 +51,7 @@ code {
   top: 0;
   z-index: 10;
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   gap: 16px;
   align-items: center;
   min-height: 64px;
@@ -63,6 +63,7 @@ code {
 
 .brand,
 .site-header nav,
+.mobile-menu-panel,
 .github-pill,
 .hero-actions,
 .eyebrow-link,
@@ -101,10 +102,69 @@ code {
   display: none;
 }
 
+.mobile-menu {
+  position: relative;
+  justify-self: end;
+}
+
+.mobile-menu summary {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 38px;
+  height: 38px;
+  align-items: center;
+  justify-content: center;
+  padding: 9px;
+  color: var(--ink);
+  border: 1px solid rgba(17, 18, 20, 0.12);
+  border-radius: 999px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.mobile-menu summary::-webkit-details-marker {
+  display: none;
+}
+
+.mobile-menu summary span {
+  width: 16px;
+  height: 2px;
+  background: currentColor;
+  border-radius: 999px;
+}
+
+.mobile-menu-panel {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  display: grid;
+  min-width: 210px;
+  padding: 8px;
+  background: rgba(252, 252, 249, 0.98);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: 0 18px 42px rgba(37, 39, 36, 0.14);
+}
+
+.mobile-menu-panel a {
+  padding: 12px 14px;
+  color: var(--ink);
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 720;
+  text-decoration: none;
+}
+
 .github-pill {
   justify-self: end;
-  gap: 8px;
+  gap: 0;
   min-height: 36px;
+  padding: 0 10px;
+  color: var(--ink);
+  background: rgba(255, 255, 252, 0.62);
+  border: 1px solid rgba(17, 18, 20, 0.12);
+  border-radius: 999px;
   font-size: 13px;
   font-weight: 740;
   text-decoration: none;
@@ -119,6 +179,14 @@ code {
 .github-pill span,
 .github-pill strong {
   display: none;
+}
+
+.github-pill strong:empty {
+  display: none;
+}
+
+.github-pill strong {
+  font-variant-numeric: tabular-nums;
 }
 
 main {
@@ -281,6 +349,15 @@ h1 {
   box-shadow: 0 12px 34px rgba(37, 39, 36, 0.08);
 }
 
+.hero-compatibility {
+  max-width: 520px;
+  margin: 14px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 620;
+  line-height: 1.35;
+}
+
 .workflow,
 .split-section,
 .impact-section,
@@ -315,14 +392,18 @@ h2 {
 
 .steps {
   display: grid;
-  gap: 0;
-  border-top: 1px solid var(--line);
+  gap: 12px;
 }
 
 .steps article {
-  display: block;
-  padding: 18px 0;
-  border-bottom: 1px solid var(--line);
+  display: grid;
+  align-content: start;
+  min-height: 0;
+  padding: 18px;
+  background: rgba(255, 255, 252, 0.72);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: 0 14px 34px rgba(37, 39, 36, 0.045);
 }
 
 .steps span {
@@ -331,6 +412,30 @@ h2 {
   color: #9ea2a7;
   font-size: 12px;
   font-weight: 780;
+}
+
+.workflow-loop {
+  display: none;
+  gap: 8px;
+  margin-bottom: 14px;
+  padding: 12px;
+  color: #40444a;
+  background: rgba(255, 255, 252, 0.74);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.workflow-loop span {
+  position: relative;
+  display: block;
+  padding: 9px 12px;
+  background: #f4f3ee;
+  border: 1px solid rgba(17, 18, 20, 0.08);
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 760;
+  line-height: 1.2;
+  text-align: center;
 }
 
 h3 {
@@ -355,6 +460,20 @@ h3 {
   color: var(--muted);
   font-size: 15px;
   line-height: 1.45;
+}
+
+.steps p {
+  font-size: 14px;
+}
+
+.steps .step-label {
+  margin-bottom: 14px;
+  color: #6f7772;
+  font-size: 12px;
+  font-weight: 760;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  text-transform: uppercase;
 }
 
 .split-section {
@@ -1529,11 +1648,13 @@ h3 {
 }
 
 .site-footer {
-  justify-content: center;
-  padding: 26px 20px 30px;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 22px;
+  padding: 28px 20px 32px;
   background: #edede7;
   border-top: 1px solid var(--line);
-  text-align: center;
 }
 
 .site-footer p {
@@ -1543,10 +1664,31 @@ h3 {
   line-height: 1.45;
 }
 
+.site-footer strong {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 16px;
+}
+
+.footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px 20px;
+}
+
+.footer-links a {
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 720;
+  text-decoration: none;
+}
+
 @media (hover: hover) {
   .post-card a:hover h2,
   .back-link:hover,
   .site-header nav a:hover,
+  .mobile-menu-panel a:hover,
+  .footer-links a:hover,
   .text-link:hover {
     text-decoration: underline;
     text-decoration-thickness: 1px;
@@ -1574,9 +1716,28 @@ h3 {
     white-space: nowrap;
   }
 
-  .github-pill strong {
+  .mobile-menu {
+    display: none;
+  }
+
+  .github-pill span,
+  .github-pill strong:not(:empty) {
     display: block;
-    min-width: 2.4em;
+  }
+
+  .github-pill span {
+    margin-left: 7px;
+  }
+
+  .github-pill strong {
+    min-width: 0;
+    margin-left: 8px;
+    padding: 3px 7px;
+    color: #4f5359;
+    background: rgba(17, 18, 20, 0.06);
+    border-radius: 999px;
+    font-size: 12px;
+    line-height: 1;
   }
 
   .site-header {
@@ -1637,19 +1798,41 @@ h3 {
 
   .steps {
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: clamp(34px, 5vw, 72px);
-    border-top: 0;
+    gap: 14px;
   }
 
   .steps article {
-    display: block;
-    padding: 0;
-    border-bottom: 0;
+    min-height: 230px;
+    padding: clamp(18px, 2vw, 24px);
   }
 
   .steps span {
     display: block;
+    margin-bottom: 34px;
+  }
+
+  .workflow-loop {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0;
     margin-bottom: 18px;
+    padding: 10px;
+  }
+
+  .workflow-loop span {
+    min-height: 42px;
+    align-content: center;
+  }
+
+  .workflow-loop span:not(:last-child)::after {
+    position: absolute;
+    top: 50%;
+    right: -8px;
+    z-index: 1;
+    width: 16px;
+    height: 1px;
+    background: rgba(17, 18, 20, 0.24);
+    content: "";
   }
 
   .comparison {
@@ -1760,6 +1943,8 @@ h3 {
   }
 
   .site-footer {
-    padding: 30px clamp(72px, 9vw, 132px);
+    flex-direction: row;
+    align-items: center;
+    padding: 32px clamp(72px, 9vw, 132px);
   }
 }
