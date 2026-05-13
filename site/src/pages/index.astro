@@ -2,7 +2,7 @@
 import GitHubIcon from "../components/GitHubIcon.astro";
 import BaseLayout from "../layouts/BaseLayout.astro";
 
-const demoUrl = "https://demo.aictx.dev/";
+const demoUrl = "https://demo.aictx.dev/?token=demo";
 ---
 
 <BaseLayout>
@@ -13,10 +13,14 @@ const demoUrl = "https://demo.aictx.dev/";
           <GitHubIcon />
           Local-first and open source <span data-star-count></span>
         </a>
-        <h1>Stop re-explaining your repo to AI agents.</h1>
+        <h1>Stop re-explaining your<br />repo to AI agents.</h1>
         <p class="hero-copy">
           Aictx gives agents durable project memory they can load before work and update after,
           stored as local files you can review with Git.
+        </p>
+        <p class="hero-note">
+          Not a chat transcript archive or always-on capture server. Aictx saves durable
+          project knowledge as reviewable repo memory.
         </p>
 
         <div class="hero-actions">
@@ -48,8 +52,8 @@ const demoUrl = "https://demo.aictx.dev/";
           <p>Keep product intent, conventions, and sharp edges available across sessions.</p>
         </div>
         <div>
-          <strong>Token-efficient context</strong>
-          <p>Load compact, task-relevant memory instead of pasting broad setup notes.</p>
+          <strong>Not capture-everything memory</strong>
+          <p>Keep decisions, constraints, workflows, and gotchas future agents should trust.</p>
         </div>
         <div>
           <strong>Reviewable memory</strong>
@@ -60,10 +64,9 @@ const demoUrl = "https://demo.aictx.dev/";
 
     <section class="impact-section" id="before-after" aria-labelledby="before-after-title">
       <div class="section-heading">
-        <h2 id="before-after-title">Use the context window for work, not repeated setup.</h2>
+        <h2 id="before-after-title">Project memory for Codex.</h2>
         <p>
-          Aictx loads compact project memory for the task at hand, so fewer tokens go to
-          re-explaining the repo and more can go to files, diffs, tests, and reasoning.
+          Load context before work. Inspect agent memory. Review changes like code.
         </p>
       </div>
 
@@ -72,104 +75,109 @@ const demoUrl = "https://demo.aictx.dev/";
           <div class="impact-tabs" role="tablist" aria-label="Before and after use cases">
             <button type="button" role="tab" aria-selected="true" aria-controls="impact-token" data-impact-tab="impact-token">
               <span>01</span>
-              Token efficiency
+              Context
             </button>
             <button type="button" role="tab" aria-selected="false" aria-controls="impact-explain" data-impact-tab="impact-explain">
               <span>02</span>
-              Re-explaining
+              Viewer
             </button>
             <button type="button" role="tab" aria-selected="false" aria-controls="impact-handoffs" data-impact-tab="impact-handoffs">
               <span>03</span>
-              Reviewable memory
+              Review
             </button>
           </div>
 
           <div class="impact-panel-copy is-active" data-impact-copy="impact-token">
-            <span class="section-kicker">Token efficiency</span>
-            <h3>Spend the context window on the task.</h3>
+            <span class="section-kicker">Start with context</span>
+            <h3>Codex starts with the missing context.</h3>
             <p>
-              Aictx loads compact, relevant project memory so agents have more room for files,
-              diffs, tests, and reasoning instead of repeated setup.
+              Aictx loads the decisions, gotchas, and workflows Codex would otherwise spend the
+              first minutes rediscovering.
             </p>
           </div>
 
           <div class="impact-panel-copy" data-impact-copy="impact-explain" hidden>
-            <span class="section-kicker">Re-explaining</span>
-            <h3>Stop onboarding every new AI session.</h3>
+            <span class="section-kicker">See what agents know</span>
+            <h3>Inspect the memory agents will use.</h3>
             <p>
-              Product intent, architecture notes, conventions, and sharp edges live with the repo,
-              ready for the next agent to load when they matter.
+              Keep AGENTS.md for operating rules. Use the viewer for searchable decisions, sources,
+              workflows, and gotchas.
             </p>
           </div>
 
           <div class="impact-panel-copy" data-impact-copy="impact-handoffs" hidden>
-            <span class="section-kicker">Reviewable memory</span>
-            <h3>Review memory before it guides future agents.</h3>
+            <span class="section-kicker">Review like code</span>
+            <h3>Let agents learn under review.</h3>
             <p>
-              Memory is written as local Markdown and JSON, so humans can inspect, diff, commit,
-              or roll it back like code.
+              Aictx writes local memory files, so new agent knowledge can be diffed, committed,
+              or rolled back.
             </p>
           </div>
         </div>
 
         <div class="impact-visual">
-          <div class="impact-visual-panel is-active" id="impact-token" role="tabpanel" data-impact-panel="impact-token" style="--reveal: 54%">
+          <div class="impact-visual-panel is-active" id="impact-token" role="tabpanel" data-impact-panel="impact-token" style="--reveal: 48%">
             <div class="comparison-labels" aria-hidden="true">
               <span>Before</span>
               <span>After</span>
             </div>
             <div class="comparison-state" aria-hidden="true">Compare</div>
             <div class="scene-layer before">
-              <div class="token-meter wasteful">
-                <div class="token-block repeated"><span>Repeated repo summary</span></div>
-                <div class="token-block paste"><span>Pasted README</span></div>
-                <div class="token-block chats"><span>Old chat excerpts</span></div>
-                <div class="token-block warnings"><span>Warnings and caveats</span></div>
-                <div class="token-block sliver"><span>Code room</span></div>
+              <div class="codex-chat codex-chat-before" aria-label="Codex chat without Aictx">
+                <div class="codex-chat-topbar">
+                  <span>Update viewer search behavior</span>
+                  <strong>•••</strong>
+                </div>
+                <div class="codex-user-bubble">
+                  <p>Can you polish viewer search?</p>
+                </div>
+                <div class="codex-work-pill">Worked for 7m 18s⌄</div>
+                <div class="codex-divider"></div>
+                <div class="codex-response">
+                  <p>I need to inspect the docs and viewer code to recover the product direction.</p>
+                </div>
+                <div class="codex-command-row">
+                  <span aria-hidden="true">›</span>
+                  Ran <code>rg "viewer|search|handbook|dashboard"</code>
+                </div>
+                <div class="codex-command-row">
+                  <span aria-hidden="true">›</span>
+                  Read <code>docs/viewer.md</code>, <code>viewer/src/App.svelte</code>
+                </div>
+                <div class="codex-command-row muted-row">
+                  <span aria-hidden="true">›</span>
+                  Explored 11 files, 4 searches
+                </div>
+                <div class="codex-response warning-message">
+                  <p>Remind me: are we still avoiding dashboard-style UI here?</p>
+                </div>
               </div>
             </div>
             <div class="scene-layer after">
-              <div class="token-meter efficient">
-                <div class="token-block memory"><span>Loaded Aictx memory</span></div>
-                <div class="token-block code"><span>Code</span></div>
-                <div class="token-block tests"><span>Test output</span></div>
-                <div class="token-block reason"><span>Reasoning room</span></div>
-              </div>
-            </div>
-            <span class="reveal-divider" aria-hidden="true"></span>
-            <span class="reveal-handle" aria-hidden="true"></span>
-            <input
-              class="reveal-scrubber"
-              type="range"
-              min="0"
-              max="100"
-              value="54"
-              aria-label="Slide between before and after for repeated explanations"
-            />
-          </div>
-
-          <div class="impact-visual-panel" id="impact-explain" role="tabpanel" data-impact-panel="impact-explain" style="--reveal: 48%" hidden>
-            <div class="comparison-labels" aria-hidden="true">
-              <span>Before</span>
-              <span>After</span>
-            </div>
-            <div class="comparison-state" aria-hidden="true">Compare</div>
-            <div class="scene-layer before">
-              <div class="chat-window noisy">
-                <div class="chat-line wide">Auth uses session claims, not route params...</div>
-                <div class="chat-line">Do not touch legacy billing API.</div>
-                <div class="chat-line wide">Tests need DATABASE_URL and seeded fixtures.</div>
-                <div class="chat-line">We already decided against runtime RAG.</div>
-                <div class="chat-composer">18 min explaining</div>
-              </div>
-            </div>
-            <div class="scene-layer after">
-              <div class="memory-brief">
-                <code>aictx load "change auth routes"</code>
-                <div class="memory-card">Architecture</div>
-                <div class="memory-card">Conventions</div>
-                <div class="memory-card">Gotchas</div>
-                <div class="edit-strip">agent edits code with context loaded</div>
+              <div class="codex-chat codex-chat-after" aria-label="Codex chat with Aictx">
+                <div class="codex-chat-topbar">
+                  <span>Update viewer search behavior</span>
+                  <strong>•••</strong>
+                </div>
+                <div class="codex-user-bubble">
+                  <p>Can you polish viewer search?</p>
+                </div>
+                <div class="codex-command-row aictx-command-row">
+                  <span aria-hidden="true">›</span>
+                  Ran <code>aictx load "improve viewer search UI"</code>
+                </div>
+                <div class="aictx-context-pack">
+                  <span>AI Context Pack</span>
+                  <strong>Viewer memory page follows a document-style handbook layout.</strong>
+                  <p>Keep accents neutral. Avoid dashboard-style controls. Verify with viewer tests.</p>
+                </div>
+                <div class="codex-command-row muted-row">
+                  <span aria-hidden="true">›</span>
+                  Loaded 6 relevant memories before editing
+                </div>
+                <div class="codex-response ready-message">
+                  <p>I have the UI constraint and verification path. I’ll update search without reopening old decisions.</p>
+                </div>
               </div>
             </div>
             <span class="reveal-divider" aria-hidden="true"></span>
@@ -180,7 +188,59 @@ const demoUrl = "https://demo.aictx.dev/";
               min="0"
               max="100"
               value="48"
-              aria-label="Slide between before and after for re-explaining"
+                aria-label="Slide between before and after for repeated explanations"
+            />
+          </div>
+
+          <div class="impact-visual-panel" id="impact-explain" role="tabpanel" data-impact-panel="impact-explain" style="--reveal: 48%" hidden>
+            <div class="comparison-labels" aria-hidden="true">
+              <span>Before</span>
+              <span>After</span>
+            </div>
+            <div class="comparison-state" aria-hidden="true">Compare</div>
+            <div class="scene-layer before">
+              <div class="agents-file" aria-label="Overloaded AGENTS.md file">
+                <div class="file-title">
+                  <span>AGENTS.md</span>
+                  <strong>only source of context</strong>
+                </div>
+                <div class="markdown-line heading">## Agent Instructions</div>
+                <div class="markdown-line">- Use pnpm for package workflows.</div>
+                <div class="markdown-line">- Load memory before non-trivial work.</div>
+                <div class="markdown-line heading">## Product Decisions</div>
+                <div class="markdown-line overloaded">- Viewer should feel like a document handbook, not a dashboard.</div>
+                <div class="markdown-line overloaded">- Do not show relation graphs by default.</div>
+                <div class="markdown-line heading">## Gotchas</div>
+                <div class="markdown-line">- CI tests need built viewer artifacts.</div>
+                <div class="file-search">Search “viewer decision” → 17 matches</div>
+              </div>
+            </div>
+            <div class="scene-layer after">
+              <div class="viewer-snapshot" aria-label="Aictx viewer demo">
+                <span class="browser-bar">
+                  <i></i>
+                  <i></i>
+                  <i></i>
+                  <code>demo.aictx.dev</code>
+                </span>
+                <img
+                  src="/assets/viewer-demo.png"
+                  alt="Aictx viewer showing searchable project memory and memory rows."
+                />
+                <div class="viewer-callout">
+                  Searchable decisions, workflows, gotchas, and sources
+                </div>
+              </div>
+            </div>
+            <span class="reveal-divider" aria-hidden="true"></span>
+            <span class="reveal-handle" aria-hidden="true"></span>
+            <input
+              class="reveal-scrubber"
+              type="range"
+              min="0"
+              max="100"
+              value="48"
+                aria-label="Slide between before and after for re-explaining"
             />
           </div>
 
@@ -191,18 +251,27 @@ const demoUrl = "https://demo.aictx.dev/";
             </div>
             <div class="comparison-state" aria-hidden="true">Compare</div>
             <div class="scene-layer before">
-              <div class="fade-chats">
-                <div>CI fails without DATABASE_URL</div>
-                <div>CI fails without DATABASE_URL</div>
-                <div>CI fails without DATABASE_URL</div>
+              <div class="lost-chat-memory" aria-label="Useful memory buried in chat history">
+                <div class="lost-chat-title">Previous chats</div>
+                <div class="lost-chat-line">“CI needs built viewer artifacts before tests.”</div>
+                <div class="lost-chat-line">“Keep viewer UI document-like, not dashboard-like.”</div>
+                <div class="lost-chat-line">“Use pnpm 10.11.0 for package workflows.”</div>
+                <div class="lost-chat-line faded">“Relation rows beat tiny node diagrams.”</div>
+                <div class="lost-chat-footer">Useful knowledge. No durable review.</div>
               </div>
             </div>
             <div class="scene-layer after">
-              <div class="repo-memory">
-                <div class="repo-core">Project Memory</div>
-                <span>CI workflow</span>
-                <span>Migration rules</span>
-                <span>Deprecated paths</span>
+              <div class="memory-diff" aria-label="Aictx memory diff">
+                <div class="diff-title">
+                  <span>aictx diff</span>
+                  <strong>2 memory files</strong>
+                </div>
+                <div class="diff-file">.aictx/memory/decisions/viewer-handbook-layout.md</div>
+                <div class="diff-line added">+ Viewer pages should read like a document-style handbook.</div>
+                <div class="diff-line added">+ Avoid dashboard-style relation graphs.</div>
+                <div class="diff-file">.aictx/memory/workflows/post-task-verification.md</div>
+                <div class="diff-line added">+ Verify with pnpm run typecheck and focused viewer tests.</div>
+                <div class="diff-footer">Review, commit, or roll back.</div>
               </div>
             </div>
             <span class="reveal-divider" aria-hidden="true"></span>
@@ -213,7 +282,7 @@ const demoUrl = "https://demo.aictx.dev/";
               min="0"
               max="100"
               value="50"
-              aria-label="Slide between before and after for handoffs"
+                aria-label="Slide between before and after for handoffs"
             />
           </div>
         </div>
@@ -298,7 +367,9 @@ const demoUrl = "https://demo.aictx.dev/";
       };
 
       control.addEventListener("input", setReveal);
-      setReveal();
+      if (control.closest("[data-impact-panel]")?.classList.contains("is-active")) {
+        setReveal();
+      }
     }
 
     for (const tab of impactTabs) {
