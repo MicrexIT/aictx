@@ -23,3 +23,4 @@
 {"actor":"agent","event":"memory.created","id":"workflow.demo-viewer-deployment","timestamp":"2026-05-13T18:23:33+02:00"}
 {"actor":"agent","event":"memory.updated","id":"workflow.package-scripts","timestamp":"2026-05-13T18:23:33+02:00"}
 {"actor":"agent","event":"relation.created","relation_id":"rel.workflow-demo-viewer-deployment-documents-workflow-package-scripts","timestamp":"2026-05-13T18:23:33+02:00"}
+{"actor":"agent","event":"memory.updated","id":"workflow.demo-viewer-deployment","timestamp":"2026-05-13T18:51:45+02:00"}

@@ -269,7 +269,7 @@
   let copiedPreviewTarget = $state<"command" | "context" | null>(null);
 
   const allOption = "all";
-  const token = new URLSearchParams(window.location.search).get("token") ?? "";
+  const token = viewerToken();
   const isDemoMode = token === "demo";
   const layerOptions: Array<{ value: LayerFilter; label: string }> = [
     { value: "all", label: "All" },
@@ -352,6 +352,16 @@
   onMount(() => {
     void loadProjects();
   });
+
+  function viewerToken(): string {
+    const explicitToken = new URLSearchParams(window.location.search).get("token");
+
+    if (explicitToken !== null) {
+      return explicitToken;
+    }
+
+    return window.location.hostname === "demo.aictx.dev" ? "demo" : "";
+  }
 
   async function loadProjects(): Promise<void> {
     if (token === "") {
