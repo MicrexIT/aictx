@@ -47,18 +47,11 @@ Obsidian projections, and explicitly delete project memory roots".
 
 ## How it works
 
-1. Set up Aictx inside an existing project with `aictx setup`.
-2. Use `aictx lens project-map` for a readable overview.
-3. Load task-focused context with `aictx load "<task summary>"`.
-4. Save durable knowledge with `aictx remember --stdin` or `remember_memory`
-   when MCP is already configured.
-5. Inspect the setup result in the local viewer URL printed by `setup`, or
-   reopen it later with `aictx view`.
+1. The agent loads the project context it needs.
+2. The agent does the work with that context.
+3. The agent saves what future agents should remember.
 
-Saved memory is active immediately after Aictx validates and writes it. Aictx
-never commits for you. As a human, mainly look directly at the viewer.
-Use `aictx diff`, Git tools, or MCP `diff_memory` when available for
-change review and audit.
+Aictx keeps that memory local, explicit, and reviewable.
 
 ## First-time setup prompt
 

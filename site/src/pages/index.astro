@@ -37,8 +37,8 @@ const demoUrl = "https://demo.aictx.dev/?token=demo";
         <h2 id="context-title">Durable memory beats bigger prompts.</h2>
         <p>
           AGENTS.md and CLAUDE.md files can help, but loading them on every task adds noise.
-          Aictx stores project knowledge once, then loads the relevant pieces for the work in
-          front of the agent.
+          Aictx is not another chat UI or hosted memory service. It stores project knowledge
+          once, then loads the relevant pieces for the work in front of the agent.
         </p>
       </div>
 
@@ -55,6 +55,10 @@ const demoUrl = "https://demo.aictx.dev/?token=demo";
           <strong>Reviewable memory</strong>
           <p>Store memory as local files that fit normal Git review and rollback.</p>
         </div>
+        <div>
+          <strong>No hosted dependency</strong>
+          <p>Core memory works without a cloud account, embeddings, hosted sync, or external model API.</p>
+        </div>
       </div>
     </section>
 
@@ -66,27 +70,9 @@ const demoUrl = "https://demo.aictx.dev/?token=demo";
         </p>
       </div>
 
-      <div class="impact-module" style="--reveal: 48%">
-        <div class="impact-copy">
-          <div class="impact-tabs" role="tablist" aria-label="Before and after use cases">
-            <button type="button" role="tab" aria-selected="true" aria-controls="impact-token" data-impact-tab="impact-token">
-              <span>01</span>
-              Context
-            </button>
-            <button type="button" role="tab" aria-selected="false" aria-controls="impact-explain" data-impact-tab="impact-explain">
-              <span>02</span>
-              Viewer
-            </button>
-            <button type="button" role="tab" aria-selected="false" aria-controls="impact-handoffs" data-impact-tab="impact-handoffs">
-              <span>03</span>
-              Review
-            </button>
-          </div>
-
-        </div>
-
+      <div class="impact-module impact-module-single" style="--reveal: 48%">
         <div class="impact-visual">
-          <div class="impact-visual-panel is-active" id="impact-token" role="tabpanel" data-impact-panel="impact-token">
+          <div class="impact-visual-panel is-active" id="impact-context" data-impact-panel="impact-context">
             <div class="comparison-labels" aria-hidden="true">
               <span>Before</span>
               <span>After</span>
@@ -157,99 +143,7 @@ const demoUrl = "https://demo.aictx.dev/?token=demo";
               min="0"
               max="100"
               value="48"
-                aria-label="Slide between before and after for repeated explanations"
-            />
-          </div>
-
-          <div class="impact-visual-panel" id="impact-explain" role="tabpanel" data-impact-panel="impact-explain" hidden>
-            <div class="comparison-labels" aria-hidden="true">
-              <span>Before</span>
-              <span>After</span>
-            </div>
-            <div class="comparison-state" aria-hidden="true">Compare</div>
-            <div class="scene-layer before">
-              <div class="agents-file" aria-label="Overloaded AGENTS.md file">
-                <div class="file-title">
-                  <span>AGENTS.md</span>
-                  <strong>only source of context</strong>
-                </div>
-                <div class="markdown-line heading">## Agent Instructions</div>
-                <div class="markdown-line">- Use pnpm for package workflows.</div>
-                <div class="markdown-line">- Load memory before non-trivial work.</div>
-                <div class="markdown-line heading">## Product Decisions</div>
-                <div class="markdown-line overloaded">- Viewer should feel like a document handbook, not a dashboard.</div>
-                <div class="markdown-line overloaded">- Do not show relation graphs by default.</div>
-                <div class="markdown-line heading">## Gotchas</div>
-                <div class="markdown-line">- CI tests need built viewer artifacts.</div>
-                <div class="file-search">Search “viewer decision” → 17 matches</div>
-              </div>
-            </div>
-            <div class="scene-layer after">
-              <div class="viewer-snapshot" aria-label="Aictx viewer demo">
-                <span class="browser-bar">
-                  <i></i>
-                  <i></i>
-                  <i></i>
-                  <code>demo.aictx.dev</code>
-                </span>
-                <img
-                  src="/assets/viewer-demo.png"
-                  alt="Aictx viewer showing searchable project memory and memory rows."
-                />
-                <div class="viewer-callout">
-                  Searchable decisions, workflows, gotchas, and sources
-                </div>
-              </div>
-            </div>
-            <span class="reveal-divider" aria-hidden="true"></span>
-            <input
-              class="reveal-scrubber"
-              type="range"
-              min="0"
-              max="100"
-              value="48"
-                aria-label="Slide between before and after for re-explaining"
-            />
-          </div>
-
-          <div class="impact-visual-panel" id="impact-handoffs" role="tabpanel" data-impact-panel="impact-handoffs" hidden>
-            <div class="comparison-labels" aria-hidden="true">
-              <span>Before</span>
-              <span>After</span>
-            </div>
-            <div class="comparison-state" aria-hidden="true">Compare</div>
-            <div class="scene-layer before">
-              <div class="lost-chat-memory" aria-label="Useful memory buried in chat history">
-                <div class="lost-chat-title">Previous chats</div>
-                <div class="lost-chat-line">“CI needs built viewer artifacts before tests.”</div>
-                <div class="lost-chat-line">“Keep viewer UI document-like, not dashboard-like.”</div>
-                <div class="lost-chat-line">“Use pnpm 10.11.0 for package workflows.”</div>
-                <div class="lost-chat-line faded">“Relation rows beat tiny node diagrams.”</div>
-                <div class="lost-chat-footer">Useful knowledge. No durable review.</div>
-              </div>
-            </div>
-            <div class="scene-layer after">
-              <div class="memory-diff" aria-label="Aictx memory diff">
-                <div class="diff-title">
-                  <span>aictx diff</span>
-                  <strong>2 memory files</strong>
-                </div>
-                <div class="diff-file">.aictx/memory/decisions/viewer-handbook-layout.md</div>
-                <div class="diff-line added">+ Viewer pages should read like a document-style handbook.</div>
-                <div class="diff-line added">+ Avoid dashboard-style relation graphs.</div>
-                <div class="diff-file">.aictx/memory/workflows/post-task-verification.md</div>
-                <div class="diff-line added">+ Verify with pnpm run typecheck and focused viewer tests.</div>
-                <div class="diff-footer">Review, commit, or roll back.</div>
-              </div>
-            </div>
-            <span class="reveal-divider" aria-hidden="true"></span>
-            <input
-              class="reveal-scrubber"
-              type="range"
-              min="0"
-              max="100"
-              value="50"
-                aria-label="Slide between before and after for handoffs"
+              aria-label="Slide between before and after for context loading"
             />
           </div>
         </div>
@@ -258,31 +152,24 @@ const demoUrl = "https://demo.aictx.dev/?token=demo";
 
     <section class="workflow" id="workflow" aria-labelledby="workflow-title">
       <div class="section-heading">
-        <h2 id="workflow-title">Load context. Save memory. Review the diff.</h2>
+        <h2 id="workflow-title">How it works</h2>
         <p>
-          Aictx stores memory as readable local files beside your repo, so changes stay visible
-          and reviewable.
+          Aictx keeps memory local, explicit, and reviewable.
         </p>
       </div>
 
       <div class="steps">
         <article>
           <span>01</span>
-          <h3>Load before work</h3>
-          <code>aictx load "change auth routes"</code>
-          <p>Agents start with the project knowledge that matters for the task.</p>
+          <h3>The agent loads the project context it needs.</h3>
         </article>
         <article>
           <span>02</span>
-          <h3>Save durable knowledge</h3>
-          <code>aictx save --stdin</code>
-          <p>Agents save decisions, gotchas, workflows, and handoffs as they work.</p>
+          <h3>The agent does the work with that context.</h3>
         </article>
         <article>
           <span>03</span>
-          <h3>Review like code</h3>
-          <code>aictx diff</code>
-          <p>Inspect memory changes before they guide future agents.</p>
+          <h3>The agent saves what future agents should remember.</h3>
         </article>
       </div>
     </section>
@@ -317,10 +204,7 @@ const demoUrl = "https://demo.aictx.dev/?token=demo";
   </main>
 
   <script>
-    const impactModule = document.querySelector(".impact-module");
     const revealControls = document.querySelectorAll(".reveal-scrubber");
-    const impactTabs = document.querySelectorAll("[data-impact-tab]");
-    const impactPanels = document.querySelectorAll("[data-impact-panel]");
 
     for (const control of revealControls) {
       const module = control.closest(".impact-module");
@@ -338,41 +222,6 @@ const demoUrl = "https://demo.aictx.dev/?token=demo";
       if (control.closest("[data-impact-panel]")?.classList.contains("is-active")) {
         setReveal();
       }
-    }
-
-    for (const tab of impactTabs) {
-      tab.addEventListener("click", () => {
-        const target = tab.getAttribute("data-impact-tab");
-
-        for (const item of impactTabs) {
-          item.setAttribute("aria-selected", String(item === tab));
-        }
-
-        for (const panel of impactPanels) {
-          const isActive = panel.getAttribute("data-impact-panel") === target;
-          panel.hidden = !isActive;
-          panel.classList.toggle("is-active", isActive);
-
-          if (isActive) {
-            const scrubber = panel.querySelector(".reveal-scrubber");
-            impactModule?.style.setProperty("--reveal", `${scrubber?.value ?? 50}%`);
-            impactModule?.style.setProperty(
-              "--handle",
-              `clamp(28px, ${scrubber?.value ?? 50}%, calc(100% - 28px))`
-            );
-            const state = panel.querySelector(".comparison-state");
-            if (state) {
-              state.textContent =
-                scrubber?.value === "0"
-                  ? "Showing after"
-                  : scrubber?.value === "100"
-                    ? "Showing before"
-                    : "Compare";
-            }
-          }
-        }
-
-      });
     }
   </script>
 </BaseLayout>
