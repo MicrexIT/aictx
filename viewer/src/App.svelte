@@ -270,6 +270,7 @@
 
   const allOption = "all";
   const token = new URLSearchParams(window.location.search).get("token") ?? "";
+  const isDemoMode = token === "demo";
   const layerOptions: Array<{ value: LayerFilter; label: string }> = [
     { value: "all", label: "All" },
     { value: "memories", label: "Core" },
@@ -420,6 +421,13 @@
   }
 
   async function exportObsidian(): Promise<void> {
+    if (isDemoMode) {
+      exportState = "error";
+      exportErrorCode = "AICtxValidationFailed";
+      exportMessage = "The public demo viewer is read-only.";
+      return;
+    }
+
     if (selectedProjectId === null) {
       exportState = "error";
       exportErrorCode = "AICtxValidationFailed";
@@ -584,6 +592,11 @@
   }
 
   function showExport(): void {
+    if (isDemoMode) {
+      showMemories();
+      return;
+    }
+
     currentScreen = selectedProjectId === null ? "projects" : "export";
   }
 
@@ -1230,17 +1243,19 @@
               <span class="nav-row-icon" aria-hidden="true">#</span>
               <span>Project Memory</span>
             </button>
-            <button
-              type="button"
-              class:active={currentScreen === "export"}
-              aria-current={currentScreen === "export" ? "page" : undefined}
-              data-testid="nav-export"
-              disabled={selectedProjectId === null}
-              onclick={showExport}
-            >
-              <span class="nav-row-icon" aria-hidden="true">↗</span>
-              <span>Export</span>
-            </button>
+            {#if !isDemoMode}
+              <button
+                type="button"
+                class:active={currentScreen === "export"}
+                aria-current={currentScreen === "export" ? "page" : undefined}
+                data-testid="nav-export"
+                disabled={selectedProjectId === null}
+                onclick={showExport}
+              >
+                <span class="nav-row-icon" aria-hidden="true">↗</span>
+                <span>Export</span>
+              </button>
+            {/if}
           </section>
 
           <section class="nav-section" aria-labelledby="memory-views-heading">
@@ -1272,31 +1287,33 @@
           </section>
         </nav>
 
-        <details class="sidebar-export">
-          <summary>Obsidian export</summary>
-          <button
-            type="button"
-            onclick={() => window.print()}
-          >
-            Print/PDF
-          </button>
-          <label class="obsidian-field">
-            <span>Obsidian vault</span>
-            <input
-              type="text"
-              bind:value={exportOutDir}
-              placeholder=".aictx/exports/obsidian"
-              autocomplete="off"
-            />
-          </label>
-          <button
-            type="button"
-            disabled={exportState === "running" || selectedProjectId === null}
-            onclick={() => void exportObsidian()}
-          >
-            {exportState === "running" ? "Exporting" : "Export Obsidian"}
-          </button>
-        </details>
+        {#if !isDemoMode}
+          <details class="sidebar-export">
+            <summary>Obsidian export</summary>
+            <button
+              type="button"
+              onclick={() => window.print()}
+            >
+              Print/PDF
+            </button>
+            <label class="obsidian-field">
+              <span>Obsidian vault</span>
+              <input
+                type="text"
+                bind:value={exportOutDir}
+                placeholder=".aictx/exports/obsidian"
+                autocomplete="off"
+              />
+            </label>
+            <button
+              type="button"
+              disabled={exportState === "running" || selectedProjectId === null}
+              onclick={() => void exportObsidian()}
+            >
+              {exportState === "running" ? "Exporting" : "Export Obsidian"}
+            </button>
+          </details>
+        {/if}
       </div>
     </aside>
 
@@ -1364,7 +1381,7 @@
           <h2>Loading project</h2>
           <p>{selectedProject?.project.name ?? "Selected project"}</p>
         </section>
-      {:else if currentScreen === "export"}
+      {:else if currentScreen === "export" && !isDemoMode}
         <section class="export-page" aria-labelledby="export-title" data-testid="export-view">
           <header class="page-header compact">
             <p class="eyebrow">Generated projection</p>

@@ -20,3 +20,6 @@
 {"actor":"cli","event":"memory.created","id":"workflow.post-task-verification","timestamp":"2026-05-12T17:53:06+02:00"}
 {"actor":"cli","event":"memory.created","id":"constraint.node-engine","timestamp":"2026-05-12T17:53:06+02:00"}
 {"actor":"cli","event":"memory.created","id":"constraint.package-manager","timestamp":"2026-05-12T17:53:06+02:00"}
+{"actor":"agent","event":"memory.created","id":"workflow.demo-viewer-deployment","timestamp":"2026-05-13T18:23:33+02:00"}
+{"actor":"agent","event":"memory.updated","id":"workflow.package-scripts","timestamp":"2026-05-13T18:23:33+02:00"}
+{"actor":"agent","event":"relation.created","relation_id":"rel.workflow-demo-viewer-deployment-documents-workflow-package-scripts","timestamp":"2026-05-13T18:23:33+02:00"}

@@ -1,0 +1,937 @@
+{
+  "version": 1,
+  "token": "demo",
+  "registry_id": "demo",
+  "seed": {
+    "memory_ids": [
+      "project.aictx",
+      "architecture.current",
+      "constraint.node-engine",
+      "constraint.package-manager",
+      "source.docs-src-content-docs-agent-integration",
+      "source.package-json",
+      "source.readme",
+      "synthesis.agent-guidance",
+      "synthesis.conventions-quality",
+      "synthesis.feature-map",
+      "synthesis.product-intent",
+      "synthesis.repository-map",
+      "synthesis.stack-and-tooling",
+      "workflow.package-scripts",
+      "workflow.post-task-verification"
+    ],
+    "source": "curated-aictx-project-memory"
+  },
+  "defaults": {
+    "token_budget": 6000,
+    "mode": "coding"
+  },
+  "meta": {
+    "project_root": "demo://aictx",
+    "aictx_root": "demo://aictx/.aictx",
+    "git": {
+      "available": true,
+      "branch": "main",
+      "commit": "demo-seed",
+      "dirty": false
+    }
+  },
+  "projects": {
+    "registry_path": "demo://aictx/projects.json",
+    "projects": [
+      {
+        "registry_id": "demo",
+        "project": {
+          "id": "project.aictx",
+          "name": "Aictx"
+        },
+        "project_root": "demo://aictx",
+        "aictx_root": "demo://aictx/.aictx",
+        "source": "manual",
+        "registered_at": "2026-05-12T17:53:06+02:00",
+        "last_seen_at": "2026-05-13T18:23:33+02:00",
+        "current": true,
+        "available": true,
+        "counts": {
+          "objects": 15,
+          "relations": 8,
+          "stale_objects": 0,
+          "superseded_objects": 0,
+          "source_objects": 3,
+          "synthesis_objects": 6,
+          "active_relations": 8
+        },
+        "git": {
+          "available": true,
+          "branch": "main",
+          "commit": "demo-seed",
+          "dirty": false
+        },
+        "warnings": []
+      }
+    ],
+    "counts": {
+      "projects": 1,
+      "available": 1,
+      "unavailable": 0
+    },
+    "current_project_registry_id": "demo"
+  },
+  "bootstrap": {
+    "project": {
+      "id": "project.aictx",
+      "name": "Aictx"
+    },
+    "objects": [
+      {
+        "id": "architecture.current",
+        "type": "architecture",
+        "status": "active",
+        "title": "Current Architecture",
+        "body_path": ".aictx/memory/architecture.md",
+        "json_path": ".aictx/memory/architecture.json",
+        "scope": {
+          "kind": "project",
+          "project": "project.aictx",
+          "branch": null,
+          "task": null
+        },
+        "tags": [
+          "architecture"
+        ],
+        "facets": {
+          "category": "architecture"
+        },
+        "evidence": [],
+        "source": {
+          "kind": "system",
+          "task": "Curated public demo seed"
+        },
+        "superseded_by": null,
+        "created_at": "2026-05-12T17:53:06+02:00",
+        "updated_at": "2026-05-12T17:53:06+02:00",
+        "body": "# Current Architecture\n\n- Primary source files are under `src/`.\n- The codebase uses TypeScript.\n- The package is configured as an ESM package with `type: module`.\n- Vitest is the configured test runner.\n"
+      },
+      {
+        "id": "constraint.node-engine",
+        "type": "constraint",
+        "status": "active",
+        "title": "Node engine requirement",
+        "body_path": ".aictx/memory/constraints/node-engine.md",
+        "json_path": ".aictx/memory/constraints/node-engine.json",
+        "scope": {
+          "kind": "project",
+          "project": "project.aictx",
+          "branch": null,
+          "task": null
+        },
+        "tags": [
+          "node",
+          "runtime"
+        ],
+        "facets": null,
+        "evidence": [],
+        "source": {
+          "kind": "system",
+          "task": "Curated public demo seed"
+        },
+        "superseded_by": null,
+        "created_at": "2026-05-12T17:53:06+02:00",
+        "updated_at": "2026-05-12T17:53:06+02:00",
+        "body": "# Node engine requirement\n\nThe package declares Node.js `>=22` in `package.json` engines.\n"
+      },
+      {
+        "id": "constraint.package-manager",
+        "type": "constraint",
+        "status": "active",
+        "title": "Package manager",
+        "body_path": ".aictx/memory/constraints/package-manager.md",
+        "json_path": ".aictx/memory/constraints/package-manager.json",
+        "scope": {
+          "kind": "project",
+          "project": "project.aictx",
+          "branch": null,
+          "task": null
+        },
+        "tags": [
+          "dependencies",
+          "pnpm"
+        ],
+        "facets": null,
+        "evidence": [],
+        "source": {
+          "kind": "system",
+          "task": "Curated public demo seed"
+        },
+        "superseded_by": null,
+        "created_at": "2026-05-12T17:53:06+02:00",
+        "updated_at": "2026-05-12T17:53:06+02:00",
+        "body": "# Package manager\n\nUse `pnpm@10.11.0` for dependency workflows; this is declared in `package.json`.\n"
+      },
+      {
+        "id": "project.aictx",
+        "type": "project",
+        "status": "active",
+        "title": "Aictx",
+        "body_path": ".aictx/memory/project.md",
+        "json_path": ".aictx/memory/project.json",
+        "scope": {
+          "kind": "project",
+          "project": "project.aictx",
+          "branch": null,
+          "task": null
+        },
+        "tags": [
+          "project"
+        ],
+        "facets": {
+          "category": "project-description"
+        },
+        "evidence": [],
+        "source": {
+          "kind": "system",
+          "task": "Curated public demo seed"
+        },
+        "superseded_by": null,
+        "created_at": "2026-05-12T17:53:06+02:00",
+        "updated_at": "2026-05-12T17:53:06+02:00",
+        "body": "# Aictx\n\nLocal-first project memory for AI coding agents.\n\nPackage: `@aictx/memory`.\n"
+      },
+      {
+        "id": "source.docs-src-content-docs-agent-integration",
+        "type": "source",
+        "status": "active",
+        "title": "Source: docs/src/content/docs/agent-integration.md",
+        "body_path": ".aictx/memory/sources/docs-src-content-docs-agent-integration.md",
+        "json_path": ".aictx/memory/sources/docs-src-content-docs-agent-integration.json",
+        "scope": {
+          "kind": "project",
+          "project": "project.aictx",
+          "branch": null,
+          "task": null
+        },
+        "tags": [
+          "source"
+        ],
+        "facets": {
+          "applies_to": [
+            "docs/src/content/docs/agent-integration.md"
+          ],
+          "category": "source",
+          "load_modes": [
+            "onboarding",
+            "architecture"
+          ]
+        },
+        "evidence": [
+          {
+            "kind": "file",
+            "id": "docs/src/content/docs/agent-integration.md"
+          }
+        ],
+        "source": {
+          "kind": "system",
+          "task": "Curated public demo seed"
+        },
+        "superseded_by": null,
+        "created_at": "2026-05-12T17:53:06+02:00",
+        "updated_at": "2026-05-12T17:53:06+02:00",
+        "body": "# Source: docs/src/content/docs/agent-integration.md\n\nThis source records that durable Aictx memory can be derived from `docs/src/content/docs/agent-integration.md`.\n"
+      },
+      {
+        "id": "source.package-json",
+        "type": "source",
+        "status": "active",
+        "title": "Source: package.json",
+        "body_path": ".aictx/memory/sources/package-json.md",
+        "json_path": ".aictx/memory/sources/package-json.json",
+        "scope": {
+          "kind": "project",
+          "project": "project.aictx",
+          "branch": null,
+          "task": null
+        },
+        "tags": [
+          "source"
+        ],
+        "facets": {
+          "applies_to": [
+            "package.json"
+          ],
+          "category": "source",
+          "load_modes": [
+            "onboarding",
+            "architecture"
+          ]
+        },
+        "evidence": [
+          {
+            "kind": "file",
+            "id": "package.json"
+          }
+        ],
+        "source": {
+          "kind": "system",
+          "task": "Curated public demo seed"
+        },
+        "superseded_by": null,
+        "created_at": "2026-05-12T17:53:06+02:00",
+        "updated_at": "2026-05-12T17:53:06+02:00",
+        "body": "# Source: package.json\n\nThis source records that durable Aictx memory can be derived from `package.json`.\n\nCaptured signals:\n- Package name: @aictx/memory\n- Package description: Local-first project memory for AI coding agents.\n"
+      },
+      {
+        "id": "source.readme",
+        "type": "source",
+        "status": "active",
+        "title": "Source: README.md",
+        "body_path": ".aictx/memory/sources/readme.md",
+        "json_path": ".aictx/memory/sources/readme.json",
+        "scope": {
+          "kind": "project",
+          "project": "project.aictx",
+          "branch": null,
+          "task": null
+        },
+        "tags": [
+          "source"
+        ],
+        "facets": {
+          "applies_to": [
+            "README.md"
+          ],
+          "category": "source",
+          "load_modes": [
+            "onboarding",
+            "architecture"
+          ]
+        },
+        "evidence": [
+          {
+            "kind": "file",
+            "id": "README.md"
+          }
+        ],
+        "source": {
+          "kind": "system",
+          "task": "Curated public demo seed"
+        },
+        "superseded_by": null,
+        "created_at": "2026-05-12T17:53:06+02:00",
+        "updated_at": "2026-05-12T17:53:06+02:00",
+        "body": "# Source: README.md\n\nThis source records that durable Aictx memory can be derived from `README.md`.\n\nCaptured signals:\n- README title: Aictx\n- README summary: ![CI](https://github.com/MicrexIT/aictx/actions/workflows/ci.yml) ![CodeQL](https://github.com/MicrexIT/aictx/actions/workflows/codeql.yml) ![npm](https://www.npmjs.com/package/@aictx/memory) ![License: MIT](LICENSE)\n"
+      },
+      {
+        "id": "synthesis.agent-guidance",
+        "type": "synthesis",
+        "status": "active",
+        "title": "Agent guidance",
+        "body_path": ".aictx/memory/syntheses/agent-guidance.md",
+        "json_path": ".aictx/memory/syntheses/agent-guidance.json",
+        "scope": {
+          "kind": "project",
+          "project": "project.aictx",
+          "branch": null,
+          "task": null
+        },
+        "tags": [
+          "agents",
+          "guidance",
+          "synthesis"
+        ],
+        "facets": {
+          "applies_to": [],
+          "category": "agent-guidance",
+          "load_modes": [
+            "coding",
+            "review",
+            "onboarding"
+          ]
+        },
+        "evidence": [],
+        "source": {
+          "kind": "system",
+          "task": "Curated public demo seed"
+        },
+        "superseded_by": null,
+        "created_at": "2026-05-12T17:53:06+02:00",
+        "updated_at": "2026-05-12T17:53:06+02:00",
+        "body": "# Agent guidance\n\n\nVerification workflows:\n- pnpm run typecheck: package.json script `typecheck`: `tsc --noEmit && svelte-check --tsconfig viewer/tsconfig.json`\n- pnpm run test:local: package.json script `test:local`: `pnpm typecheck && pnpm test:package`\n- pnpm run test:watch: package.json script `test:watch`: `vitest`\n- pnpm run test: package.json script `test`: `vitest run`\n- pnpm run test:package: package.json script `test:package`: `vitest run test/integration/release/packaging.test.ts`\n- pnpm run build: package.json script `build`: `pnpm build:guidance && pnpm build:version && pnpm build:code && pnpm build:schemas && pnpm build:viewer`\n\nUpdate this synthesis when agent instructions, conventions, or verification workflows change.\n"
+      },
+      {
+        "id": "synthesis.conventions-quality",
+        "type": "synthesis",
+        "status": "active",
+        "title": "Conventions and quality bar",
+        "body_path": ".aictx/memory/syntheses/conventions-quality.md",
+        "json_path": ".aictx/memory/syntheses/conventions-quality.json",
+        "scope": {
+          "kind": "project",
+          "project": "project.aictx",
+          "branch": null,
+          "task": null
+        },
+        "tags": [
+          "convention",
+          "quality",
+          "synthesis"
+        ],
+        "facets": {
+          "applies_to": [
+            "package.json"
+          ],
+          "category": "convention",
+          "load_modes": [
+            "coding",
+            "review",
+            "onboarding"
+          ]
+        },
+        "evidence": [
+          {
+            "kind": "file",
+            "id": "package.json"
+          },
+          {
+            "kind": "source",
+            "id": "source.package-json"
+          }
+        ],
+        "source": {
+          "kind": "system",
+          "task": "Curated public demo seed"
+        },
+        "superseded_by": null,
+        "created_at": "2026-05-12T17:53:06+02:00",
+        "updated_at": "2026-05-12T17:53:06+02:00",
+        "body": "# Conventions and quality bar\n\nVerification expectations:\n- pnpm run typecheck: package.json script `typecheck`: `tsc --noEmit && svelte-check --tsconfig viewer/tsconfig.json`\n- pnpm run test:local: package.json script `test:local`: `pnpm typecheck && pnpm test:package`\n- pnpm run test:watch: package.json script `test:watch`: `vitest`\n- pnpm run test: package.json script `test`: `vitest run`\n- pnpm run test:package: package.json script `test:package`: `vitest run test/integration/release/packaging.test.ts`\n- pnpm run build: package.json script `build`: `pnpm build:guidance && pnpm build:version && pnpm build:code && pnpm build:schemas && pnpm build:viewer`\n\nUpdate this synthesis when explicit repo conventions, review expectations, or completion checks change.\n"
+      },
+      {
+        "id": "synthesis.feature-map",
+        "type": "synthesis",
+        "status": "active",
+        "title": "Feature map",
+        "body_path": ".aictx/memory/syntheses/feature-map.md",
+        "json_path": ".aictx/memory/syntheses/feature-map.json",
+        "scope": {
+          "kind": "project",
+          "project": "project.aictx",
+          "branch": null,
+          "task": null
+        },
+        "tags": [
+          "features",
+          "synthesis"
+        ],
+        "facets": {
+          "applies_to": [
+            "package.json",
+            "src/cli/commands/audit.ts",
+            "src/cli/commands/check.ts",
+            "src/cli/commands/diff.ts",
+            "src/cli/commands/docs.ts",
+            "src/cli/commands/export.ts"
+          ],
+          "category": "feature-map",
+          "load_modes": [
+            "coding",
+            "onboarding"
+          ]
+        },
+        "evidence": [
+          {
+            "kind": "source",
+            "id": "source.package-json"
+          }
+        ],
+        "source": {
+          "kind": "system",
+          "task": "Curated public demo seed"
+        },
+        "superseded_by": null,
+        "created_at": "2026-05-12T17:53:06+02:00",
+        "updated_at": "2026-05-12T17:53:06+02:00",
+        "body": "# Feature map\n\nCurrent product capabilities inferred from durable repository evidence:\n- CLI binary aictx: The `aictx` executable is published by `package.json` and points to `dist/cli/main.js`.\n- CLI binary aictx-mcp: The `aictx-mcp` executable is published by `package.json` and points to `dist/mcp/server.js`.\n- CLI command audit: The `audit` CLI command report deterministic Aictx memory hygiene findings.\n- CLI command check: The `check` CLI command validate Aictx canonical storage and generated index health.\n- CLI command diff: The `diff` CLI command show Aictx memory changes, including untracked memory files.\n- CLI command docs: The `docs` CLI command read bundled public Aictx docs or open the hosted docs site.\n- CLI command export: The `export` CLI command export generated Aictx projections.\n- CLI command obsidian: The `obsidian` CLI command export a generated Obsidian-compatible projection.\n\nUpdate this synthesis when features are added, removed, renamed, or replaced.\n"
+      },
+      {
+        "id": "synthesis.product-intent",
+        "type": "synthesis",
+        "status": "active",
+        "title": "Product intent",
+        "body_path": ".aictx/memory/syntheses/product-intent.md",
+        "json_path": ".aictx/memory/syntheses/product-intent.json",
+        "scope": {
+          "kind": "project",
+          "project": "project.aictx",
+          "branch": null,
+          "task": null
+        },
+        "tags": [
+          "product-intent",
+          "synthesis"
+        ],
+        "facets": {
+          "category": "product-intent",
+          "load_modes": [
+            "coding",
+            "architecture",
+            "onboarding"
+          ]
+        },
+        "evidence": [
+          {
+            "kind": "source",
+            "id": "source.package-json"
+          },
+          {
+            "kind": "source",
+            "id": "source.readme"
+          }
+        ],
+        "source": {
+          "kind": "system",
+          "task": "Curated public demo seed"
+        },
+        "superseded_by": null,
+        "created_at": "2026-05-12T17:53:06+02:00",
+        "updated_at": "2026-05-12T17:53:06+02:00",
+        "body": "# Product intent\n\nLocal-first project memory for AI coding agents.\n\nMaintain this synthesis when the project's purpose, user promise, or product direction changes.\n"
+      },
+      {
+        "id": "synthesis.repository-map",
+        "type": "synthesis",
+        "status": "active",
+        "title": "Repository map",
+        "body_path": ".aictx/memory/syntheses/repository-map.md",
+        "json_path": ".aictx/memory/syntheses/repository-map.json",
+        "scope": {
+          "kind": "project",
+          "project": "project.aictx",
+          "branch": null,
+          "task": null
+        },
+        "tags": [
+          "repository-map",
+          "synthesis"
+        ],
+        "facets": {
+          "applies_to": [
+            "docs/src/content/docs/agent-integration.md",
+            "docs/src/content/docs/agent-recipes.md",
+            "docs/src/content/docs/capabilities.md",
+            "docs/src/content/docs/cli.md",
+            "docs/src/content/docs/demand-driven-memory.md",
+            "docs/src/content/docs/getting-started.md",
+            "docs/src/content/docs/index.md",
+            "docs/src/content/docs/mcp.md",
+            "package.json",
+            "src/app/operations.ts",
+            "src/cli/commands/audit.ts",
+            "src/cli/commands/check.ts",
+            "src/cli/commands/diff.ts",
+            "src/cli/commands/docs.ts",
+            "src/cli/commands/export.ts",
+            "src/cli/commands/graph.ts",
+            "src/cli/commands/handoff.ts",
+            "tsconfig.json",
+            "vitest.config.ts"
+          ],
+          "category": "file-layout",
+          "load_modes": [
+            "coding",
+            "architecture",
+            "onboarding"
+          ]
+        },
+        "evidence": [
+          {
+            "kind": "file",
+            "id": "docs/src/content/docs/agent-integration.md"
+          },
+          {
+            "kind": "file",
+            "id": "docs/src/content/docs/agent-recipes.md"
+          },
+          {
+            "kind": "file",
+            "id": "docs/src/content/docs/capabilities.md"
+          },
+          {
+            "kind": "file",
+            "id": "docs/src/content/docs/cli.md"
+          },
+          {
+            "kind": "file",
+            "id": "docs/src/content/docs/demand-driven-memory.md"
+          },
+          {
+            "kind": "file",
+            "id": "docs/src/content/docs/getting-started.md"
+          },
+          {
+            "kind": "file",
+            "id": "docs/src/content/docs/index.md"
+          },
+          {
+            "kind": "file",
+            "id": "docs/src/content/docs/mcp.md"
+          },
+          {
+            "kind": "file",
+            "id": "package.json"
+          },
+          {
+            "kind": "file",
+            "id": "src/app/operations.ts"
+          },
+          {
+            "kind": "file",
+            "id": "src/cli/commands/audit.ts"
+          },
+          {
+            "kind": "file",
+            "id": "src/cli/commands/check.ts"
+          },
+          {
+            "kind": "source",
+            "id": "source.package-json"
+          },
+          {
+            "kind": "source",
+            "id": "source.readme"
+          }
+        ],
+        "source": {
+          "kind": "system",
+          "task": "Curated public demo seed"
+        },
+        "superseded_by": null,
+        "created_at": "2026-05-12T17:53:06+02:00",
+        "updated_at": "2026-05-12T17:53:06+02:00",
+        "body": "# Repository map\n\nImportant repository areas inferred from durable files:\n- Source: Primary implementation code.\n- Documentation: Human and agent-facing project documentation.\n- Manifests and config: `package.json`, `tsconfig.json`, `vitest.config.ts`\n\nUpdate this synthesis when major directories, packages, generated assets, or entrypoints move.\n"
+      },
+      {
+        "id": "synthesis.stack-and-tooling",
+        "type": "synthesis",
+        "status": "active",
+        "title": "Stack and tooling",
+        "body_path": ".aictx/memory/syntheses/stack-and-tooling.md",
+        "json_path": ".aictx/memory/syntheses/stack-and-tooling.json",
+        "scope": {
+          "kind": "project",
+          "project": "project.aictx",
+          "branch": null,
+          "task": null
+        },
+        "tags": [
+          "stack",
+          "synthesis",
+          "tooling"
+        ],
+        "facets": {
+          "applies_to": [
+            "package.json",
+            "tsconfig.json",
+            "vitest.config.ts"
+          ],
+          "category": "stack",
+          "load_modes": [
+            "coding",
+            "debugging",
+            "review",
+            "architecture",
+            "onboarding"
+          ]
+        },
+        "evidence": [
+          {
+            "kind": "file",
+            "id": "package.json"
+          },
+          {
+            "kind": "file",
+            "id": "tsconfig.json"
+          },
+          {
+            "kind": "file",
+            "id": "vitest.config.ts"
+          },
+          {
+            "kind": "source",
+            "id": "source.package-json"
+          }
+        ],
+        "source": {
+          "kind": "system",
+          "task": "Curated public demo seed"
+        },
+        "superseded_by": null,
+        "created_at": "2026-05-12T17:53:06+02:00",
+        "updated_at": "2026-05-12T17:53:06+02:00",
+        "body": "# Stack and tooling\n\nTooling and runtime signals inferred from manifests and config:\n- Commander is used for CLI command handling.\n- Node.js engine constraint: `>=22`.\n- Package manager is declared as `pnpm@10.11.0`.\n- Package name: `@aictx/memory`.\n- Svelte tooling is present.\n- The package is configured as an ESM package with `type: module`.\n- TypeScript configuration is present.\n- Useful package scripts include `typecheck`, `test:local`, `test:watch`, `test`, `test:package`, `build`, `build:code`, `build:docs`.\n- Vite tooling is present.\n- Vitest is available for tests.\n\nUpdate this synthesis when the language stack, runtime constraints, package manager, or verification tooling changes.\n"
+      },
+      {
+        "id": "workflow.package-scripts",
+        "type": "workflow",
+        "status": "active",
+        "title": "Package scripts",
+        "body_path": ".aictx/memory/workflows/package-scripts.md",
+        "json_path": ".aictx/memory/workflows/package-scripts.json",
+        "scope": {
+          "kind": "project",
+          "project": "project.aictx",
+          "branch": null,
+          "task": null
+        },
+        "tags": [
+          "package",
+          "workflow"
+        ],
+        "facets": {
+          "applies_to": [
+            "package.json",
+            "wrangler.demo.jsonc",
+            "scripts/build-viewer-demo-data.mjs"
+          ],
+          "category": "workflow"
+        },
+        "evidence": [
+          {
+            "kind": "file",
+            "id": "package.json"
+          },
+          {
+            "kind": "file",
+            "id": "scripts/build-viewer-demo-data.mjs"
+          },
+          {
+            "kind": "file",
+            "id": "wrangler.demo.jsonc"
+          }
+        ],
+        "source": {
+          "kind": "system",
+          "task": "Curated public demo seed"
+        },
+        "superseded_by": null,
+        "created_at": "2026-05-12T17:53:06+02:00",
+        "updated_at": "2026-05-13T18:23:33+02:00",
+        "body": "# Package scripts\n\nUse the package scripts in `package.json` for repeated project workflows:\n- `build`: `pnpm build:guidance && pnpm build:version && pnpm build:code && pnpm build:schemas && pnpm build:viewer`\n- `build:code`: `tsup`\n- `build:docs`: `astro build --root docs`\n- `build:guidance`: `node scripts/generate-agent-guidance.mjs`\n- `build:schemas`: `node scripts/copy-schemas.mjs`\n- `build:site`: `astro build --root site`\n- `build:version`: `node scripts/generate-version.mjs`\n- `build:viewer`: `vite build --config viewer/vite.config.ts`\n- `build:demo-viewer`: `pnpm build:viewer && node scripts/build-viewer-demo-data.mjs && tsc --noEmit`\n- `deploy:site:cloudflare`: `wrangler deploy`\n- `deploy:demo:cloudflare`: `wrangler deploy --config wrangler.demo.jsonc`"
+      },
+      {
+        "id": "workflow.post-task-verification",
+        "type": "workflow",
+        "status": "active",
+        "title": "Post-task verification",
+        "body_path": ".aictx/memory/workflows/post-task-verification.md",
+        "json_path": ".aictx/memory/workflows/post-task-verification.json",
+        "scope": {
+          "kind": "project",
+          "project": "project.aictx",
+          "branch": null,
+          "task": null
+        },
+        "tags": [
+          "testing",
+          "verification",
+          "workflow"
+        ],
+        "facets": {
+          "applies_to": [
+            "package.json"
+          ],
+          "category": "testing",
+          "load_modes": [
+            "coding",
+            "debugging",
+            "review"
+          ]
+        },
+        "evidence": [
+          {
+            "kind": "file",
+            "id": "package.json"
+          }
+        ],
+        "source": {
+          "kind": "system",
+          "task": "Curated public demo seed"
+        },
+        "superseded_by": null,
+        "created_at": "2026-05-12T17:53:06+02:00",
+        "updated_at": "2026-05-12T17:53:06+02:00",
+        "body": "# Post-task verification\n\nAfter meaningful code changes, prefer these repo verification commands when relevant:\n- `pnpm run typecheck`: package.json script `typecheck`: `tsc --noEmit && svelte-check --tsconfig viewer/tsconfig.json`\n- `pnpm run test:local`: package.json script `test:local`: `pnpm typecheck && pnpm test:package`\n- `pnpm run test:watch`: package.json script `test:watch`: `vitest`\n- `pnpm run test`: package.json script `test`: `vitest run`\n- `pnpm run test:package`: package.json script `test:package`: `vitest run test/integration/release/packaging.test.ts`\n- `pnpm run build`: package.json script `build`: `pnpm build:guidance && pnpm build:version && pnpm build:code && pnpm build:schemas && pnpm build:viewer`\n"
+      }
+    ],
+    "relations": [
+      {
+        "id": "rel.project-aictx-related-to-architecture-current",
+        "from": "project.aictx",
+        "predicate": "related_to",
+        "to": "architecture.current",
+        "status": "active",
+        "confidence": "high",
+        "evidence": [
+          {
+            "kind": "memory",
+            "id": "architecture.current"
+          },
+          {
+            "kind": "memory",
+            "id": "project.aictx"
+          }
+        ],
+        "content_hash": "sha256:6f773e225926211ce055ed98af5cc1707ccd304a83b68f797d3a7eaac3b51f09",
+        "created_at": "2026-05-12T17:53:06+02:00",
+        "updated_at": "2026-05-12T17:53:06+02:00",
+        "json_path": ".aictx/relations/project-aictx-related-to-architecture-current.json"
+      },
+      {
+        "id": "rel.synthesis-conventions-quality-derived-from-source-package-json",
+        "from": "synthesis.conventions-quality",
+        "predicate": "derived_from",
+        "to": "source.package-json",
+        "status": "active",
+        "confidence": "high",
+        "evidence": [
+          {
+            "kind": "source",
+            "id": "source.package-json"
+          }
+        ],
+        "content_hash": "sha256:eb3eeb0eb3bf19d8287d6c404174cf0af62259b83dc06fe3ef7032b0a7ae2b2d",
+        "created_at": "2026-05-12T17:53:06+02:00",
+        "updated_at": "2026-05-12T17:53:06+02:00",
+        "json_path": ".aictx/relations/synthesis-conventions-quality-derived-from-source-package-json.json"
+      },
+      {
+        "id": "rel.synthesis-feature-map-derived-from-source-package-json",
+        "from": "synthesis.feature-map",
+        "predicate": "derived_from",
+        "to": "source.package-json",
+        "status": "active",
+        "confidence": "high",
+        "evidence": [
+          {
+            "kind": "source",
+            "id": "source.package-json"
+          }
+        ],
+        "content_hash": "sha256:e8da2f7eccbe130b7014a3fcc9dbb464ec441cec76b8ae9ac6427edc93778712",
+        "created_at": "2026-05-12T17:53:06+02:00",
+        "updated_at": "2026-05-12T17:53:06+02:00",
+        "json_path": ".aictx/relations/synthesis-feature-map-derived-from-source-package-json.json"
+      },
+      {
+        "id": "rel.synthesis-product-intent-derived-from-source-package-json",
+        "from": "synthesis.product-intent",
+        "predicate": "derived_from",
+        "to": "source.package-json",
+        "status": "active",
+        "confidence": "high",
+        "evidence": [
+          {
+            "kind": "source",
+            "id": "source.package-json"
+          }
+        ],
+        "content_hash": "sha256:1bfe4acb619e6c9885d74d34e91c60dd3704eb93bb3094543163898dde7e3287",
+        "created_at": "2026-05-12T17:53:06+02:00",
+        "updated_at": "2026-05-12T17:53:06+02:00",
+        "json_path": ".aictx/relations/synthesis-product-intent-derived-from-source-package-json.json"
+      },
+      {
+        "id": "rel.synthesis-product-intent-derived-from-source-readme",
+        "from": "synthesis.product-intent",
+        "predicate": "derived_from",
+        "to": "source.readme",
+        "status": "active",
+        "confidence": "high",
+        "evidence": [
+          {
+            "kind": "source",
+            "id": "source.readme"
+          }
+        ],
+        "content_hash": "sha256:079478a73513dd727c66dbfa8aae331d546d8b8092201527325c783f4f832b96",
+        "created_at": "2026-05-12T17:53:06+02:00",
+        "updated_at": "2026-05-12T17:53:06+02:00",
+        "json_path": ".aictx/relations/synthesis-product-intent-derived-from-source-readme.json"
+      },
+      {
+        "id": "rel.synthesis-repository-map-derived-from-source-package-json",
+        "from": "synthesis.repository-map",
+        "predicate": "derived_from",
+        "to": "source.package-json",
+        "status": "active",
+        "confidence": "high",
+        "evidence": [
+          {
+            "kind": "source",
+            "id": "source.package-json"
+          }
+        ],
+        "content_hash": "sha256:30187fc3b8066bb6cf0e569d851e6f74e4d71aa917e5a7dc223e626c9ddbe801",
+        "created_at": "2026-05-12T17:53:06+02:00",
+        "updated_at": "2026-05-12T17:53:06+02:00",
+        "json_path": ".aictx/relations/synthesis-repository-map-derived-from-source-package-json.json"
+      },
+      {
+        "id": "rel.synthesis-repository-map-derived-from-source-readme",
+        "from": "synthesis.repository-map",
+        "predicate": "derived_from",
+        "to": "source.readme",
+        "status": "active",
+        "confidence": "high",
+        "evidence": [
+          {
+            "kind": "source",
+            "id": "source.readme"
+          }
+        ],
+        "content_hash": "sha256:57063f3777ca8fa82b0b5cfc63b736e60eec96d22388e90e53e31f38e4afd9f7",
+        "created_at": "2026-05-12T17:53:06+02:00",
+        "updated_at": "2026-05-12T17:53:06+02:00",
+        "json_path": ".aictx/relations/synthesis-repository-map-derived-from-source-readme.json"
+      },
+      {
+        "id": "rel.synthesis-stack-and-tooling-derived-from-source-package-json",
+        "from": "synthesis.stack-and-tooling",
+        "predicate": "derived_from",
+        "to": "source.package-json",
+        "status": "active",
+        "confidence": "high",
+        "evidence": [
+          {
+            "kind": "source",
+            "id": "source.package-json"
+          }
+        ],
+        "content_hash": "sha256:20ed529f9f39d3ee557fc90588e7b002b9d8d0a495e37b44a420735c41efcd6b",
+        "created_at": "2026-05-12T17:53:06+02:00",
+        "updated_at": "2026-05-12T17:53:06+02:00",
+        "json_path": ".aictx/relations/synthesis-stack-and-tooling-derived-from-source-package-json.json"
+      }
+    ],
+    "counts": {
+      "objects": 15,
+      "relations": 8,
+      "stale_objects": 0,
+      "superseded_objects": 0,
+      "source_objects": 3,
+      "synthesis_objects": 6,
+      "active_relations": 8
+    },
+    "role_coverage": {
+      "roles": [],
+      "counts": {
+        "populated": 0,
+        "thin": 0,
+        "missing": 0,
+        "stale": 0,
+        "conflicted": 0
+      }
+    },
+    "lenses": [],
+    "storage_warnings": []
+  }
+}

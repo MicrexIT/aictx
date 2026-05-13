@@ -1,8 +1,29 @@
 {
   "body_path": "memory/workflows/package-scripts.md",
-  "content_hash": "sha256:b919810b9c15d619ac4adc3f9f046d2884940c8ceb5b492854ee466cea28edf5",
+  "content_hash": "sha256:68054fe2082bc8dff550d14736ea34c507947da7f663801bfc205d76f13b8b42",
   "created_at": "2026-05-12T17:53:06+02:00",
-  "evidence": [],
+  "evidence": [
+    {
+      "id": "package.json",
+      "kind": "file"
+    },
+    {
+      "id": "wrangler.demo.jsonc",
+      "kind": "file"
+    },
+    {
+      "id": "scripts/build-viewer-demo-data.mjs",
+      "kind": "file"
+    }
+  ],
+  "facets": {
+    "applies_to": [
+      "package.json",
+      "wrangler.demo.jsonc",
+      "scripts/build-viewer-demo-data.mjs"
+    ],
+    "category": "workflow"
+  },
   "id": "workflow.package-scripts",
   "scope": {
     "branch": null,
@@ -21,5 +42,5 @@
   ],
   "title": "Package scripts",
   "type": "workflow",
-  "updated_at": "2026-05-12T17:53:06+02:00"
+  "updated_at": "2026-05-13T18:23:33+02:00"
 }
