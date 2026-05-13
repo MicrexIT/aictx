@@ -274,6 +274,7 @@ const requiredPackedPaths = [
   "dist/schemas/object.schema.json",
   "dist/schemas/patch.schema.json",
   "dist/schemas/relation.schema.json",
+  "dist/viewer/favicon.svg",
   "dist/viewer/index.html",
   "docs/src/content/docs/agent-integration.md",
   "docs/src/content/docs/agent-recipes.md",
@@ -780,6 +781,7 @@ async function expectInstalledViewerAssetsServe(url: string): Promise<void> {
   const assetPaths = extractViewerAssetPaths(html);
 
   expect(html).toContain('<script type="module"');
+  expect(html).toContain('href="./favicon.svg"');
   expect(assetPaths.some((path) => path.endsWith(".js"))).toBe(true);
   expect(assetPaths.some((path) => path.endsWith(".css"))).toBe(true);
 
@@ -799,6 +801,12 @@ async function expectInstalledViewerAssetsServe(url: string): Promise<void> {
       expect(assetResponse.headers.get("content-type")).toContain("text/css");
     }
   }
+
+  const fallbackFaviconResponse = await fetch(new URL("/favicon.ico", viewerUrl));
+
+  expect(fallbackFaviconResponse.status).toBe(200);
+  expect(fallbackFaviconResponse.headers.get("content-type")).toContain("image/svg+xml");
+  await expect(fallbackFaviconResponse.text()).resolves.toContain("<svg");
 
   const bootstrapUrl = new URL("/api/bootstrap", viewerUrl);
   bootstrapUrl.searchParams.set("token", viewerUrl.searchParams.get("token") ?? "");

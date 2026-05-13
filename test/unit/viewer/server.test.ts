@@ -51,6 +51,14 @@ describe("viewer local server", () => {
       expect(script.status).toBe(200);
       expect(script.headers.get("content-type")).toContain("text/javascript");
       await expect(script.text()).resolves.toContain("viewer asset script");
+
+      const favicon = await fetch(
+        `http://${random.data.host}:${random.data.port}/favicon.ico`
+      );
+
+      expect(favicon.status).toBe(200);
+      expect(favicon.headers.get("content-type")).toContain("image/svg+xml");
+      await expect(favicon.text()).resolves.toContain("<svg");
     } finally {
       await random.data.close();
     }
@@ -415,6 +423,11 @@ async function createViewerAssets(prefix: string): Promise<string> {
     assetsRoot,
     "assets/app.js",
     "console.log('viewer asset script');\n"
+  );
+  await writeProjectFile(
+    assetsRoot,
+    "favicon.svg",
+    "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 64 64\"></svg>\n"
   );
 
   return assetsRoot;

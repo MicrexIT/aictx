@@ -67,7 +67,7 @@ const demoUrl = "https://demo.aictx.dev/";
         </p>
       </div>
 
-      <div class="impact-module" style="--reveal: 54%">
+      <div class="impact-module">
         <div class="impact-copy">
           <div class="impact-tabs" role="tablist" aria-label="Before and after use cases">
             <button type="button" role="tab" aria-selected="true" aria-controls="impact-token" data-impact-tab="impact-token">
@@ -113,7 +113,7 @@ const demoUrl = "https://demo.aictx.dev/";
         </div>
 
         <div class="impact-visual">
-          <div class="impact-visual-panel is-active" id="impact-token" role="tabpanel" data-impact-panel="impact-token">
+          <div class="impact-visual-panel is-active" id="impact-token" role="tabpanel" data-impact-panel="impact-token" style="--reveal: 54%">
             <div class="comparison-labels" aria-hidden="true">
               <span>Before</span>
               <span>After</span>
@@ -137,6 +137,7 @@ const demoUrl = "https://demo.aictx.dev/";
               </div>
             </div>
             <span class="reveal-divider" aria-hidden="true"></span>
+            <span class="reveal-handle" aria-hidden="true"></span>
             <input
               class="reveal-scrubber"
               type="range"
@@ -147,7 +148,7 @@ const demoUrl = "https://demo.aictx.dev/";
             />
           </div>
 
-          <div class="impact-visual-panel" id="impact-explain" role="tabpanel" data-impact-panel="impact-explain" hidden>
+          <div class="impact-visual-panel" id="impact-explain" role="tabpanel" data-impact-panel="impact-explain" style="--reveal: 48%" hidden>
             <div class="comparison-labels" aria-hidden="true">
               <span>Before</span>
               <span>After</span>
@@ -172,6 +173,7 @@ const demoUrl = "https://demo.aictx.dev/";
               </div>
             </div>
             <span class="reveal-divider" aria-hidden="true"></span>
+            <span class="reveal-handle" aria-hidden="true"></span>
             <input
               class="reveal-scrubber"
               type="range"
@@ -182,7 +184,7 @@ const demoUrl = "https://demo.aictx.dev/";
             />
           </div>
 
-          <div class="impact-visual-panel" id="impact-handoffs" role="tabpanel" data-impact-panel="impact-handoffs" hidden>
+          <div class="impact-visual-panel" id="impact-handoffs" role="tabpanel" data-impact-panel="impact-handoffs" style="--reveal: 50%" hidden>
             <div class="comparison-labels" aria-hidden="true">
               <span>Before</span>
               <span>After</span>
@@ -204,6 +206,7 @@ const demoUrl = "https://demo.aictx.dev/";
               </div>
             </div>
             <span class="reveal-divider" aria-hidden="true"></span>
+            <span class="reveal-handle" aria-hidden="true"></span>
             <input
               class="reveal-scrubber"
               type="range"
@@ -278,18 +281,16 @@ const demoUrl = "https://demo.aictx.dev/";
   </main>
 
   <script>
-    const impactModule = document.querySelector(".impact-module");
     const revealControls = document.querySelectorAll(".reveal-scrubber");
     const impactTabs = document.querySelectorAll("[data-impact-tab]");
     const impactPanels = document.querySelectorAll("[data-impact-panel]");
     const impactCopy = document.querySelectorAll("[data-impact-copy]");
 
     for (const control of revealControls) {
-      const module = control.closest(".impact-module");
+      const panel = control.closest("[data-impact-panel]");
       const setReveal = () => {
-        module?.style.setProperty("--reveal", `${control.value}%`);
-        module?.style.setProperty("--handle", `clamp(18px, ${control.value}%, calc(100% - 18px))`);
-        const state = control.closest("[data-impact-panel]")?.querySelector(".comparison-state");
+        panel?.style.setProperty("--reveal", `${control.value}%`);
+        const state = panel?.querySelector(".comparison-state");
         if (state) {
           state.textContent =
             control.value === "0" ? "Showing after" : control.value === "100" ? "Showing before" : "Compare";
@@ -315,11 +316,7 @@ const demoUrl = "https://demo.aictx.dev/";
 
           if (isActive) {
             const scrubber = panel.querySelector(".reveal-scrubber");
-            impactModule?.style.setProperty("--reveal", `${scrubber?.value ?? 50}%`);
-            impactModule?.style.setProperty(
-              "--handle",
-              `clamp(18px, ${scrubber?.value ?? 50}%, calc(100% - 18px))`
-            );
+            panel.style.setProperty("--reveal", `${scrubber?.value ?? 50}%`);
             const state = panel.querySelector(".comparison-state");
             if (state) {
               state.textContent =

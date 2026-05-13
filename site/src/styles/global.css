@@ -565,7 +565,7 @@ h3 {
     font-size: 11px;
   }
 
-  .reveal-divider::before {
+  .reveal-handle {
     width: 30px;
     height: 30px;
     font-size: 12px;
@@ -586,10 +586,11 @@ h3 {
   transform: translateX(-1px);
 }
 
-.reveal-divider::before {
+.reveal-handle {
   position: absolute;
   top: 50%;
-  left: calc(var(--handle, var(--reveal)) - var(--reveal) + 1px);
+  left: clamp(18px, var(--reveal), calc(100% - 18px));
+  z-index: 4;
   display: grid;
   width: 34px;
   height: 34px;
@@ -605,6 +606,7 @@ h3 {
     0 0 0 1px rgba(17, 18, 20, 0.14),
     0 10px 22px rgba(37, 39, 36, 0.18);
   transform: translate(-50%, -50%);
+  pointer-events: none;
 }
 
 .reveal-scrubber {
@@ -618,7 +620,7 @@ h3 {
   cursor: ew-resize;
 }
 
-.impact-visual-panel:focus-within .reveal-divider::before {
+.impact-visual-panel:focus-within .reveal-handle {
   outline: 2px solid var(--ink);
   outline-offset: 3px;
 }

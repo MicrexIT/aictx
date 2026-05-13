@@ -253,7 +253,12 @@ function resolveAssetPath(assetsDir: string, pathname: string): string | null {
     return null;
   }
 
-  const relativePath = decoded === "/" ? "index.html" : decoded.replace(/^\/+/, "");
+  const relativePath =
+    decoded === "/"
+      ? "index.html"
+      : decoded === "/favicon.ico"
+        ? "favicon.svg"
+        : decoded.replace(/^\/+/, "");
   const resolved = resolve(assetsDir, relativePath);
 
   return isInsideOrEqual(assetsDir, resolved) ? resolved : null;
