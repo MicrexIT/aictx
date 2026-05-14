@@ -7,28 +7,53 @@
 
 ![Stop re-explaining your repo to AI agents. Aictx saves durable project knowledge as reviewable repo memory.](site/public/assets/readme-value-header.png)
 
-Aictx gives AI coding agents a project memory they can come back to.
+Stop re-explaining the same product intent, architecture decisions, repo
+conventions, setup steps, and known traps every time a new AI coding session
+starts. Aictx saves durable project knowledge as local, reviewable repo memory,
+then loads only the pieces that matter for the task in front of the agent.
 
-Use it when you are tired of re-explaining the same product intent,
-architecture decisions, repo conventions, setup steps, and known traps every
-time a new chat or agent session starts. Aictx stores durable project facts,
-decisions, warnings, workflows, source records, and syntheses under `.aictx/`
-as reviewable local files, indexes them locally for fast retrieval, and keeps
-them compatible with Git workflows.
+Aictx is not a chat transcript archive, always-on capture server, hosted memory
+service, vector DB, or prompt template. It stores typed memory under `.aictx/`,
+indexes it locally, validates changes before writing, and never commits for you.
+
+This repository publishes the npm package `@aictx/memory`. It is unrelated to
+similarly named packages in other ecosystems.
+
+## Inside Aictx
+
+Three surfaces ship today. Each one works locally and fits normal Git review.
+
+| Surface | What it gives agents and humans | Try |
+| --- | --- | --- |
+| Task-focused loading | Pulls relevant project memory before coding, debugging, review, architecture, or onboarding work. | `aictx load "change auth routes"` |
+| Visual memory viewer | Opens a local browser for memory objects, facets, role coverage, provenance, and graph context. | `aictx view` |
+| Save discipline | Saves only durable facts, decisions, workflows, gotchas, source records, and syntheses. | `aictx remember --stdin` |
+
+## How it works
+
+![Aictx workflow: load relevant memory, do work, and remember durable knowledge.](site/public/assets/readme-how-it-works.png)
 
 ```text
 load relevant memory -> do work -> save durable memory
 ```
 
-![Aictx workflow: load relevant memory, do work, and remember durable knowledge.](site/public/assets/readme-how-it-works.png)
+The loop is deliberately small. Load before non-trivial work, use the current
+repo and tests as evidence, then save only knowledge that should survive future
+sessions, branches, and reviews.
+
+## What gets stored
+
+| Memory | Use it for |
+| --- | --- |
+| `decision` / `constraint` | Choices and boundaries future agents should respect. |
+| `workflow` / `gotcha` | Repeatable procedures and known traps. |
+| `source` | Where important project facts came from. |
+| `synthesis` | Compact summaries of product intent, architecture, feature maps, conventions, and agent guidance. |
+| `question` / `fact` / `concept` | Open scope, reusable facts, and domain ideas. |
 
 Aictx does not require a cloud account, embeddings, hosted sync, an external
 model API, or network access for core memory commands. Saved memory is active
-immediately after Aictx validates and writes it, and Aictx never commits for
-you.
-
-This repository publishes the npm package `@aictx/memory`. It is unrelated to
-similarly named packages in other ecosystems.
+immediately after Aictx validates and writes it.
 
 ## Why Aictx?
 
