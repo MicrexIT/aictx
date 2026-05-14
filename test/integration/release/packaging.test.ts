@@ -550,7 +550,10 @@ async function expectInstalledMemoryDisciplineDocs(installRoot: string): Promise
 function expectMcpBoundaryContent(content: string): void {
   expect(content).toMatch(/MCP\s+exposes\s+exactly/i);
   expect(content).toMatch(
-    /setup,\s+lenses,\s+(?:branch\s+)?handoff,\s+maintenance,\s+recovery,\s+export,\s+registry,\s+viewer,\s+docs,\s+suggest,\s+audit,\s+stale,\s+and graph/i
+    /setup,\s+lenses,\s+(?:branch\s+)?handoff,\s+maintenance,\s+recovery,\s+export,\s+registry,\s+viewer,\s+docs,\s+suggest,\s+audit,\s+and stale/i
+  );
+  expect(content).toMatch(
+    /graph inspection[\s\S]{0,120}(?:CLI|local viewer)[\s\S]{0,120}outside local MCP|graph inspection[\s\S]{0,120}outside MCP/i
   );
 
   for (const tool of mcpTools) {
@@ -588,7 +591,10 @@ function expectGeneratedGuidanceContent(content: string): void {
   expect(content).toContain("`gotcha`");
   expect(content).toContain("`workflow`");
   expect(content).toMatch(
-    /setup,\s+lenses,\s+(?:branch\s+)?handoff,\s+maintenance,\s+recovery,\s+export,\s+registry,\s+viewer,\s+docs,\s+suggest,\s+audit,\s+stale,\s+and graph/i
+    /setup,\s+lenses,\s+(?:branch\s+)?handoff,\s+maintenance,\s+recovery,\s+export,\s+registry,\s+viewer,\s+docs,\s+suggest,\s+audit,\s+and stale/i
+  );
+  expect(content).toMatch(
+    /graph inspection[\s\S]{0,120}(?:CLI|local viewer)[\s\S]{0,120}outside local MCP|graph inspection[\s\S]{0,120}outside MCP/i
   );
 
   for (const tool of mcpTools) {

@@ -246,7 +246,7 @@ Do not modify:
 Acceptance:
 - README, public docs, and generated guidance list the local MCP tools.
 - Guidance says CLI is default and MCP is available when the client already exposes Aictx tools.
-- Docs keep setup, maintenance, recovery, export, registry, viewer, docs, suggest, audit, stale, and graph outside local MCP.
+- Docs keep setup, maintenance, recovery, export, registry, viewer, docs, suggest, audit, and stale outside local MCP, with graph inspection available in the CLI and local viewer but still outside MCP.
 - Release/package checks validate updated guidance.
 
 Run:

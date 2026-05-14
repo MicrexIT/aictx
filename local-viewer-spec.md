@@ -153,9 +153,8 @@ Required features:
 * Show sidecar JSON and raw paths/timestamps for the selected object in collapsed technical details.
 * Show incoming and outgoing related memories before raw relation details.
 * Show provenance links in detail view, including source evidence and `derived_from`, `summarizes`, or `documents` relations.
-* Provide a direct-neighborhood map only: selected object plus direct incoming/outgoing neighbor objects and relations.
-* Provide lens tabs/cards using the shared lens service: Project Map, Current Work, Review/Risk, Provenance, and Maintenance.
-* Show role coverage and generated gaps as read-only context; missing project-truth roles are not validation failures and do not create placeholder files. Missing optional branch handoff does not display a source-backed gap.
+* Provide a dedicated relation graph screen with current active objects and active relations by default, plus an explicit all-memory scope.
+* Keep lens and role coverage data available through existing read-only services without showing guided-view panels above canonical objects.
 * Let users trigger the Obsidian projection export and see success/failure output.
 * Let users explicitly delete a project's Aictx memory root after confirming the project name.
 * Let users return from a selected project to the Projects dashboard.
@@ -164,7 +163,7 @@ Non-goals:
 
 * Editing memory.
 * Creating, deleting, superseding, or marking individual memory objects stale.
-* Full-project graph visualization as the primary UX.
+* Graph visualization as the primary UX.
 * File watching or live reload of canonical memory.
 * Cross-project merged search or combined memory browsing.
 * Hosted sharing or team review workflows.
@@ -205,10 +204,10 @@ Required test coverage:
 * API requests without the per-run token fail.
 * `GET /api/bootstrap` reads canonical storage and does not mutate canonical files.
 * Init-created starter project and architecture placeholders render with a first-run bootstrap notice.
-* Lens tabs render role coverage, generated gaps, included memory, and relation context. Closed or stale handoffs appear only as historical memory, not current active handoff context.
+* Guided lens and role coverage APIs remain read-only even when the main viewer does not show guided panels.
 * Client-side search/filter returns expected visible objects.
 * Markdown rendering does not execute raw HTML.
-* Selected-node graph contains only the selected object, direct neighbors, and direct relations.
+* Graph screen renders visible nodes and relation links, supports fit/reset/zoom controls, and exposes selected node or edge details.
 * Obsidian export action writes generated projection files only and does not mutate canonical memory.
 * Project deletion requires confirmation, removes the target `.aictx/` directory, unregisters the project, preserves source files, and handles stale registry entries whose `.aictx/` directory is already missing.
 * Packed package includes viewer assets and can serve them.

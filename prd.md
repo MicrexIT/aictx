@@ -88,8 +88,9 @@ Required in v1:
 Agent capability split:
 
 * MCP + CLI capabilities: load, search, inspect object, remember memory, save patch, diff.
-* CLI-only capabilities in v1: init, setup, lens, handoff, patch review, check, rebuild, reset, upgrade, history, restore, rewind, stale, graph, export obsidian, projects, view, docs, suggest, audit.
-* CLI-only capabilities are intentionally not MCP parity gaps and should not be added to MCP solely for command-list parity.
+* CLI-only capabilities in v1: init, setup, lens, handoff, patch review, check, rebuild, reset, upgrade, history, restore, rewind, stale, export obsidian, projects, view, docs, suggest, audit.
+* Graph inspection is available in the CLI and local viewer, but remains outside MCP.
+* Non-MCP capabilities are intentionally not MCP parity gaps and should not be added to MCP solely for command-list parity.
 * Agents should use supported MCP or CLI entrypoints instead of editing `.aictx/` files directly when a supported command exists.
 
 Deferred from v1:
@@ -657,10 +658,11 @@ Design principle:
 * All memory writes should go through structured patch submission.
 * MCP should make Aictx easy to insert into existing coding-agent flows without becoming a spaghetti API.
 * MCP exposes load, search, inspect, save, and diff; the CLI also exposes those routine capabilities.
-* Setup, lenses, handoff, maintenance, recovery, export, registry management, local viewing, suggestion, and audit capabilities remain CLI-only in v1: init, setup, lens, handoff, check, rebuild, reset, history, restore, rewind, stale, graph, export obsidian, projects, view, suggest, and audit.
+* Setup, lenses, handoff, maintenance, recovery, export, registry management, local viewing, suggestion, audit, and stale capabilities remain CLI-only in v1: init, setup, lens, handoff, check, rebuild, reset, history, restore, rewind, stale, export obsidian, projects, view, suggest, and audit.
+* Graph inspection is available through `aictx graph` and the local viewer graph screen; it remains outside MCP.
 * CLI-first must not mean MCP-unavailable: AI agents may use MCP equivalents when the client has already launched and connected to `aictx-mcp`.
 * Every supported Aictx capability should remain reachable to an AI agent through MCP or CLI without requiring direct `.aictx/` file edits.
-* CLI-only capabilities should not be added to MCP just to create command-list parity.
+* Non-MCP capabilities should not be added to MCP just to create command-list parity.
 
 7.1 Required MCP tools
 

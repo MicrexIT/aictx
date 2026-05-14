@@ -757,13 +757,14 @@ Agent capability split:
 
 ```text
 MCP + CLI: load, search, inspect object, remember, save patch, diff
-CLI-only in v1: init, setup, lens, handoff, check, rebuild, history, restore, rewind, stale, graph, export obsidian, projects, view, docs, suggest, audit
+CLI-only in v1: init, setup, lens, handoff, check, rebuild, history, restore, rewind, stale, export obsidian, projects, view, docs, suggest, audit
+Graph inspection: `aictx graph` and local viewer graph screen; outside MCP
 ```
 
 Rules:
 
 * MCP must expose only the normalized v1 tool set.
-* CLI-only capabilities are intentionally not MCP parity gaps and must not be added to MCP solely to mirror CLI commands.
+* Non-MCP capabilities are intentionally not MCP parity gaps and must not be added to MCP solely to mirror CLI commands.
 * MCP must not expose arbitrary shell access.
 * MCP must not expose arbitrary filesystem access.
 * MCP must not expose low-level graph mutation tools.

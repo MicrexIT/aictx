@@ -106,7 +106,8 @@ The v1 agent model is CLI-first and MCP-compatible.
 Local MCP exposes exactly `load_memory`, `search_memory`, `inspect_memory`,
 `remember_memory`, `save_memory_patch`, and `diff_memory`. Setup, lenses,
 handoff, maintenance, recovery, export, registry, viewer, docs, suggest, audit,
-stale, and graph workflows are CLI-only in v1. CLI-only capabilities are v1
+and stale workflows are CLI-only in v1. Graph inspection is available in the
+CLI and local viewer, but remains outside MCP. Non-MCP capabilities are v1
 surfaces, not MCP parity gaps.
 
 Local MCP is the near-term integration path for local agent harnesses. Remote
@@ -131,7 +132,7 @@ aliases over search/inspect behavior, not local MCP tool names.
 | Restore memory | none | `aictx restore` |
 | Rewind memory | none | `aictx rewind` |
 | List stale memory | none | `aictx stale` |
-| Show graph neighborhood | none | `aictx graph` |
+| Show graph neighborhood | none | `aictx graph`, `aictx view` graph screen |
 | Show memory lens | none | `aictx lens` |
 | Manage branch handoff | none | `aictx handoff` |
 | Export Obsidian projection | none | `aictx export obsidian` |
@@ -142,7 +143,8 @@ aliases over search/inspect behavior, not local MCP tool names.
 | Read public docs | none | `aictx docs` |
 
 For setup, lenses, handoff, maintenance, recovery, export, registry, viewer,
-docs, suggest, audit, stale, and graph workflows, the CLI is the supported interface. Supported
+docs, suggest, audit, and stale workflows, the CLI is the supported interface.
+Graph inspection is supported by both `aictx graph` and the local viewer. Supported
 CLI or MCP save paths should handle `.aictx/` changes; editing `.aictx/` files directly
 is reserved for exceptional manual recovery or explicit user requests.
 

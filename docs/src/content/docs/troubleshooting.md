@@ -45,7 +45,8 @@ path provides the same routine memory workflow.
 Local MCP exposes exactly `load_memory`, `search_memory`, `inspect_memory`,
 `remember_memory`, `save_memory_patch`, and `diff_memory` when the client already exposes Aictx
 tools. Setup, lenses, handoff, maintenance, recovery, export, registry, viewer,
-docs, suggest, audit, stale, and graph workflows remain CLI-only.
+docs, suggest, audit, and stale workflows remain CLI-only. Graph inspection is
+available in the CLI and local viewer, but remains outside MCP.
 
 Local MCP is the near-term integration path. Remote MCP, hosted sync, cloud
 auth, cloud hosting, and ChatGPT App SDK surfaces are future work, and future

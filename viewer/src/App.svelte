@@ -2,7 +2,8 @@
 
 <script lang="ts">
   import { FACET_CATEGORIES, OBJECT_TYPES } from "../../src/core/types.js";
-  import { onMount } from "svelte";
+  import cytoscape from "cytoscape";
+  import { onDestroy, onMount } from "svelte";
 
   type FacetCategory = (typeof FACET_CATEGORIES)[number];
   type ObjectStatus = "active" | "stale" | "superseded" | "open" | "closed";
@@ -172,7 +173,7 @@
   type ExportEnvelope = ViewerSuccessEnvelope<ExportObsidianProjectionData> | ViewerErrorEnvelope;
   type LoadPreviewEnvelope = ViewerSuccessEnvelope<LoadPreviewData> | ViewerErrorEnvelope;
   type ViewerState = "loading" | "ready" | "error";
-  type ViewerScreen = "projects" | "memories" | "detail" | "export";
+  type ViewerScreen = "projects" | "memories" | "detail" | "graph" | "export";
   type ExportState = "idle" | "running" | "success" | "error";
   type PreviewState = "idle" | "running" | "success" | "error";
   type LayerFilter = "all" | "memories" | "syntheses" | "sources" | "inactive";
@@ -290,6 +291,11 @@
   let previewErrorCode = $state("");
   let previewData = $state<LoadPreviewData | null>(null);
   let copiedPreviewTarget = $state<"command" | "context" | null>(null);
+  let graphContainer = $state<HTMLDivElement | null>(null);
+  let graphInstance: cytoscape.Core | null = null;
+  let graphShowInactive = $state(false);
+  let selectedGraphObjectId = $state<string | null>(null);
+  let selectedGraphRelationId = $state<string | null>(null);
 
   const allOption = "all";
   const token = viewerToken();
@@ -308,6 +314,68 @@
     { value: "architecture", label: "Architecture" },
     { value: "onboarding", label: "Onboarding" }
   ];
+  const graphStyles: cytoscape.StylesheetJson = [
+    {
+      selector: "node",
+      style: {
+        "background-color": "data(color)",
+        "border-color": "data(borderColor)",
+        "border-width": 2,
+        color: "#37352f",
+        "font-size": 10,
+        "font-weight": 700,
+        height: "data(size)",
+        label: "data(label)",
+        "min-zoomed-font-size": 8,
+        "overlay-opacity": 0,
+        "text-background-color": "#fffefa",
+        "text-background-opacity": 0.86,
+        "text-background-padding": "3px",
+        "text-margin-y": 8,
+        "text-max-width": "126px",
+        "text-wrap": "wrap",
+        width: "data(size)"
+      }
+    },
+    {
+      selector: "edge",
+      style: {
+        "curve-style": "bezier",
+        "font-size": 8,
+        "line-color": "data(color)",
+        opacity: 0.72,
+        "overlay-opacity": 0,
+        "target-arrow-color": "data(color)",
+        "target-arrow-shape": "triangle",
+        width: "data(width)"
+      }
+    },
+    {
+      selector: ".graph-selected",
+      style: {
+        "border-color": "#111214",
+        "border-width": 4,
+        "line-color": "#111214",
+        opacity: 1,
+        "target-arrow-color": "#111214",
+        width: 3,
+        "z-index": 20
+      }
+    },
+    {
+      selector: ".graph-neighbor",
+      style: {
+        opacity: 1,
+        "z-index": 12
+      }
+    },
+    {
+      selector: ".graph-faded",
+      style: {
+        opacity: 0.16
+      }
+    }
+  ];
 
   const projects = $derived(projectsData?.projects ?? []);
   const selectedProject = $derived.by(() =>
@@ -323,6 +391,37 @@
   );
   const selectedObject = $derived.by(() =>
     selectedObjectId === null ? null : objectById.get(selectedObjectId) ?? null
+  );
+  const graphObjects = $derived.by(() =>
+    objects.filter((object) =>
+      (graphShowInactive || isCurrentStatus(object.status)) &&
+      objectMatchesSearch(object, searchQuery)
+    )
+  );
+  const graphVisibleObjectIds = $derived(new Set(graphObjects.map((object) => object.id)));
+  const graphRelations = $derived.by(() =>
+    relations.filter((relation) =>
+      (graphShowInactive || relation.status === "active") &&
+      graphVisibleObjectIds.has(relation.from) &&
+      graphVisibleObjectIds.has(relation.to)
+    )
+  );
+  const graphElements = $derived.by(() => buildGraphElements(graphObjects, graphRelations));
+  const selectedGraphObject = $derived.by(() =>
+    selectedGraphObjectId === null || !graphVisibleObjectIds.has(selectedGraphObjectId)
+      ? null
+      : objectById.get(selectedGraphObjectId) ?? null
+  );
+  const selectedGraphRelation = $derived.by(() =>
+    selectedGraphRelationId === null
+      ? null
+      : graphRelations.find((relation) => relation.id === selectedGraphRelationId) ?? null
+  );
+  const selectedGraphRelationSource = $derived(
+    selectedGraphRelation === null ? null : objectById.get(selectedGraphRelation.from) ?? null
+  );
+  const selectedGraphRelationTarget = $derived(
+    selectedGraphRelation === null ? null : objectById.get(selectedGraphRelation.to) ?? null
   );
   const directRelations = $derived.by(() =>
     selectedObject === null
@@ -387,6 +486,28 @@
 
   onMount(() => {
     void loadProjects();
+  });
+
+  onDestroy(() => {
+    destroyGraph();
+  });
+
+  $effect(() => {
+    if (currentScreen !== "graph" || graphContainer === null || bootstrap === null) {
+      destroyGraph();
+      return;
+    }
+
+    renderGraph(graphElements);
+    queueMicrotask(() => {
+      applyGraphSelection();
+    });
+  });
+
+  $effect(() => {
+    if (currentScreen === "graph") {
+      applyGraphSelection();
+    }
   });
 
   function viewerToken(): string {
@@ -617,6 +738,9 @@
     previewData = null;
     previewMessage = "";
     previewErrorCode = "";
+    graphShowInactive = false;
+    selectedGraphObjectId = null;
+    selectedGraphRelationId = null;
     currentScreen = "memories";
     void loadBootstrap(registryId);
   }
@@ -637,6 +761,20 @@
 
   function showMemories(): void {
     currentScreen = selectedProjectId === null ? "projects" : "memories";
+  }
+
+  function showGraph(): void {
+    if (selectedProjectId === null) {
+      showProjects();
+      return;
+    }
+
+    currentScreen = "graph";
+    mobileMenuOpen = false;
+
+    if (selectedGraphObjectId === null) {
+      selectedGraphObjectId = preferredGraphObjectId();
+    }
   }
 
   function showExport(): void {
@@ -752,6 +890,89 @@
     }
   }
 
+  function selectGraphObject(id: string): void {
+    if (!objectById.has(id)) {
+      return;
+    }
+
+    selectedGraphObjectId = id;
+    selectedGraphRelationId = null;
+    selectedObjectId = id;
+  }
+
+  function selectGraphRelation(id: string): void {
+    if (!relations.some((relation) => relation.id === id)) {
+      return;
+    }
+
+    selectedGraphRelationId = id;
+    selectedGraphObjectId = null;
+  }
+
+  function setGraphShowInactive(showInactive: boolean): void {
+    if (graphShowInactive === showInactive) {
+      return;
+    }
+
+    graphShowInactive = showInactive;
+    selectedGraphObjectId = null;
+    selectedGraphRelationId = null;
+  }
+
+  function preferredGraphObjectId(): string | null {
+    if (selectedObjectId !== null && graphVisibleObjectIds.has(selectedObjectId)) {
+      return selectedObjectId;
+    }
+
+    const degreeById = new Map<string, number>();
+
+    for (const relation of graphRelations) {
+      degreeById.set(relation.from, (degreeById.get(relation.from) ?? 0) + 1);
+      degreeById.set(relation.to, (degreeById.get(relation.to) ?? 0) + 1);
+    }
+
+    return [...graphObjects]
+      .sort((left, right) => {
+        const degreeComparison = (degreeById.get(right.id) ?? 0) - (degreeById.get(left.id) ?? 0);
+        return degreeComparison === 0 ? left.id.localeCompare(right.id) : degreeComparison;
+      })[0]?.id ?? null;
+  }
+
+  function fitGraph(): void {
+    graphInstance?.fit(undefined, 48);
+  }
+
+  function zoomGraph(factor: number): void {
+    if (graphInstance === null) {
+      return;
+    }
+
+    const nextZoom = clamp(graphInstance.zoom() * factor, 0.25, 3);
+
+    graphInstance.zoom({
+      level: nextZoom,
+      renderedPosition: {
+        x: graphInstance.width() / 2,
+        y: graphInstance.height() / 2
+      }
+    });
+  }
+
+  function resetGraphLayout(): void {
+    runGraphLayout(true);
+  }
+
+  function focusGraphSelection(): void {
+    if (selectedGraphObjectId !== null) {
+      focusGraphNode(selectedGraphObjectId, true);
+      return;
+    }
+
+    if (selectedGraphRelationId !== null) {
+      focusGraphEdge(selectedGraphRelationId, true);
+    }
+  }
+
   function clearPagePreset(): void {
     pagePreset = "all";
   }
@@ -760,6 +981,241 @@
     return relations
       .filter((relation) => relation.from === id || relation.to === id)
       .sort(compareRelations);
+  }
+
+  function buildGraphElements(
+    memoryObjects: MemoryObjectSummary[],
+    relationList: MemoryRelationSummary[]
+  ): cytoscape.ElementDefinition[] {
+    const degreeById = new Map<string, number>();
+
+    for (const relation of relationList) {
+      degreeById.set(relation.from, (degreeById.get(relation.from) ?? 0) + 1);
+      degreeById.set(relation.to, (degreeById.get(relation.to) ?? 0) + 1);
+    }
+
+    return [
+      ...memoryObjects.map((object) => ({
+        group: "nodes" as const,
+        data: {
+          id: object.id,
+          label: object.title,
+          type: object.type,
+          status: object.status,
+          color: graphObjectColor(object),
+          borderColor: graphObjectBorderColor(object),
+          size: 28 + Math.min(degreeById.get(object.id) ?? 0, 8) * 3
+        }
+      })),
+      ...relationList.map((relation) => ({
+        group: "edges" as const,
+        data: {
+          id: relation.id,
+          source: relation.from,
+          target: relation.to,
+          predicate: relation.predicate,
+          status: relation.status,
+          color: graphRelationColor(relation),
+          width: relation.status === "active" ? 1.8 : 1
+        }
+      }))
+    ];
+  }
+
+  function renderGraph(elements: cytoscape.ElementDefinition[]): void {
+    if (graphContainer === null) {
+      return;
+    }
+
+    if (graphInstance === null) {
+      graphInstance = cytoscape({
+        container: graphContainer,
+        elements,
+        style: graphStyles,
+        layout: graphLayoutOptions(true),
+        minZoom: 0.25,
+        maxZoom: 3,
+        boxSelectionEnabled: false
+      });
+      graphInstance.on("tap", "node", (event: cytoscape.EventObject) => {
+        selectGraphObject(event.target.id());
+      });
+      graphInstance.on("tap", "edge", (event: cytoscape.EventObject) => {
+        selectGraphRelation(event.target.id());
+      });
+      graphInstance.on("tap", (event: cytoscape.EventObject) => {
+        if (event.target === graphInstance) {
+          selectedGraphObjectId = null;
+          selectedGraphRelationId = null;
+        }
+      });
+      return;
+    }
+
+    graphInstance.batch(() => {
+      graphInstance?.elements().remove();
+      graphInstance?.add(elements);
+    });
+    runGraphLayout(true);
+  }
+
+  function destroyGraph(): void {
+    graphInstance?.destroy();
+    graphInstance = null;
+  }
+
+  function graphLayoutOptions(fit: boolean): cytoscape.LayoutOptions {
+    return {
+      name: "cose",
+      animate: false,
+      componentSpacing: 92,
+      edgeElasticity: 90,
+      fit,
+      gravity: 0.24,
+      idealEdgeLength: 92,
+      nodeOverlap: 18,
+      nodeRepulsion: 6200,
+      numIter: 900,
+      padding: 48,
+      randomize: true
+    };
+  }
+
+  function runGraphLayout(fit: boolean): void {
+    if (graphInstance === null) {
+      return;
+    }
+
+    graphInstance.layout(graphLayoutOptions(fit)).run();
+  }
+
+  function applyGraphSelection(): void {
+    if (graphInstance === null) {
+      return;
+    }
+
+    graphInstance.elements().removeClass("graph-selected graph-neighbor graph-faded");
+
+    if (selectedGraphObjectId !== null) {
+      const node = graphInstance.getElementById(selectedGraphObjectId);
+
+      if (node.nonempty()) {
+        const neighborhood = node.closedNeighborhood();
+        node.addClass("graph-selected");
+        neighborhood.addClass("graph-neighbor");
+        graphInstance.elements().difference(neighborhood).addClass("graph-faded");
+      }
+      return;
+    }
+
+    if (selectedGraphRelationId !== null) {
+      const edge = graphInstance.getElementById(selectedGraphRelationId);
+
+      if (edge.nonempty()) {
+        const neighborhood = edge.connectedNodes().union(edge);
+        edge.addClass("graph-selected");
+        neighborhood.addClass("graph-neighbor");
+        graphInstance.elements().difference(neighborhood).addClass("graph-faded");
+      }
+    }
+  }
+
+  function focusGraphNode(id: string, animate: boolean): void {
+    if (graphInstance === null) {
+      return;
+    }
+
+    const node = graphInstance.getElementById(id);
+
+    if (node.nonempty()) {
+      graphInstance.animate({
+        center: { eles: node },
+        duration: animate ? 260 : 0,
+        zoom: Math.max(graphInstance.zoom(), 1.12)
+      });
+    }
+  }
+
+  function focusGraphEdge(id: string, animate: boolean): void {
+    if (graphInstance === null) {
+      return;
+    }
+
+    const edge = graphInstance.getElementById(id);
+
+    if (edge.nonempty()) {
+      graphInstance.animate({
+        center: { eles: edge.connectedNodes() },
+        duration: animate ? 260 : 0,
+        zoom: Math.max(graphInstance.zoom(), 1.04)
+      });
+    }
+  }
+
+  function graphObjectColor(object: MemoryObjectSummary): string {
+    if (!isCurrentStatus(object.status)) {
+      return "#c7c1b8";
+    }
+
+    switch (object.type) {
+      case "project":
+        return "#2f5d62";
+      case "architecture":
+        return "#8b5e34";
+      case "synthesis":
+        return "#574b90";
+      case "decision":
+        return "#9a5b23";
+      case "constraint":
+        return "#8e3b46";
+      case "question":
+        return "#5f6c37";
+      case "fact":
+        return "#356b4f";
+      case "workflow":
+        return "#3f648c";
+      case "gotcha":
+        return "#b54708";
+      case "source":
+        return "#6b6f76";
+      case "concept":
+        return "#7a5c99";
+      case "note":
+        return "#6f6259";
+      default:
+        return "#5f6b65";
+    }
+  }
+
+  function graphObjectBorderColor(object: MemoryObjectSummary): string {
+    if (object.type === "source") {
+      return "#9a968d";
+    }
+
+    return isCurrentStatus(object.status) ? "#fffefa" : "#8f8a81";
+  }
+
+  function graphRelationColor(relation: MemoryRelationSummary): string {
+    if (relation.status !== "active") {
+      return "#b9b2a8";
+    }
+
+    switch (relation.predicate) {
+      case "requires":
+      case "depends_on":
+        return "#5b6f95";
+      case "supersedes":
+      case "conflicts_with":
+        return "#a14a3d";
+      case "derived_from":
+      case "summarizes":
+      case "documents":
+        return "#6b637d";
+      case "implements":
+        return "#4d745b";
+      default:
+        return "#78736b";
+    }
   }
 
   function pageFilter(section: string): void {
@@ -1036,6 +1492,10 @@
     return `${count} ${count === 1 ? singular : plural}`;
   }
 
+  function clamp(value: number, min: number, max: number): number {
+    return Math.min(max, Math.max(min, value));
+  }
+
   function uniqueSorted(values: string[]): string[] {
     return [...new Set(values)].sort((left, right) => left.localeCompare(right));
   }
@@ -1265,6 +1725,17 @@
               <span class="nav-row-icon" aria-hidden="true">#</span>
               <span>Schema Browser</span>
             </button>
+            <button
+              type="button"
+              class:active={currentScreen === "graph"}
+              aria-current={currentScreen === "graph" ? "page" : undefined}
+              data-testid="nav-graph"
+              disabled={selectedProjectId === null}
+              onclick={showGraph}
+            >
+              <span class="nav-row-icon" aria-hidden="true">◎</span>
+              <span>Graph</span>
+            </button>
             {#if !isDemoMode}
               <button
                 type="button"
@@ -1399,6 +1870,139 @@
           <h2>Loading project</h2>
           <p>{selectedProject?.project.name ?? "Selected project"}</p>
         </section>
+      {:else if currentScreen === "graph"}
+        <article class="graph-page" aria-labelledby="graph-title" data-testid="graph-view">
+          <header class="page-header compact">
+            <div>
+              <p class="eyebrow">Relation map</p>
+              <h2 id="graph-title">Graph</h2>
+            </div>
+            <dl class="graph-counts" aria-label="Visible graph counts">
+              <div><dt>Nodes</dt><dd data-testid="graph-node-count">{graphObjects.length}</dd></div>
+              <div><dt>Links</dt><dd data-testid="graph-relation-count">{graphRelations.length}</dd></div>
+            </dl>
+          </header>
+
+          <section class="graph-panel">
+            <div class="graph-toolbar" aria-label="Graph controls">
+              <div class="graph-filter-tabs" role="group" aria-label="Graph item scope">
+                <button
+                  type="button"
+                  class:active={!graphShowInactive}
+                  onclick={() => setGraphShowInactive(false)}
+                  data-testid="graph-filter-current"
+                >
+                  Current
+                </button>
+                <button
+                  type="button"
+                  class:active={graphShowInactive}
+                  onclick={() => setGraphShowInactive(true)}
+                  data-testid="graph-filter-all"
+                >
+                  All
+                </button>
+              </div>
+              <div class="graph-actions">
+                <button type="button" onclick={() => zoomGraph(1.18)} data-testid="graph-zoom-in">Zoom in</button>
+                <button type="button" onclick={() => zoomGraph(0.84)} data-testid="graph-zoom-out">Zoom out</button>
+                <button type="button" onclick={fitGraph} data-testid="graph-fit">Fit</button>
+                <button type="button" onclick={resetGraphLayout} data-testid="graph-reset-layout">Reset layout</button>
+                <button
+                  type="button"
+                  disabled={selectedGraphObject === null && selectedGraphRelation === null}
+                  onclick={focusGraphSelection}
+                  data-testid="graph-focus-selected"
+                >
+                  Focus
+                </button>
+              </div>
+            </div>
+
+            <section class="graph-workspace">
+              <div class="graph-canvas-wrap">
+                <div
+                  class="graph-canvas"
+                  bind:this={graphContainer}
+                  aria-label="Memory relation graph"
+                  data-testid="relation-graph"
+                ></div>
+                {#if graphObjects.length === 0}
+                  <div class="graph-empty" data-testid="graph-empty">
+                    <h3>No visible graph nodes</h3>
+                    <p>Clear search or show all memory.</p>
+                  </div>
+                {/if}
+              </div>
+
+              <aside class="graph-inspector" aria-label="Graph selection" data-testid="graph-inspector">
+                {#if selectedGraphObject !== null}
+                  <section>
+                    <p class="eyebrow">Selected object</p>
+                    <h3>{selectedGraphObject.title}</h3>
+                    <p class="mono">{selectedGraphObject.id}</p>
+                    <dl class="graph-meta">
+                      <div><dt>Type</dt><dd>{selectedGraphObject.type}</dd></div>
+                      <div><dt>Status</dt><dd>{selectedGraphObject.status}</dd></div>
+                      <div><dt>Facet</dt><dd>{facetCategoryLabel(selectedGraphObject)}</dd></div>
+                      <div><dt>Relations</dt><dd>{relationsForObject(selectedGraphObject.id).length}</dd></div>
+                    </dl>
+                    <p class="graph-body-preview">{bodyPreview(selectedGraphObject)}</p>
+                    <div class="graph-inspector-actions">
+                      <button type="button" onclick={() => selectRelated(selectedGraphObject.id)}>
+                        Open in schema browser
+                      </button>
+                      <button type="button" onclick={focusGraphSelection}>Focus node</button>
+                    </div>
+                    <details class="graph-relations" open>
+                      <summary>Direct relations</summary>
+                      <ul class="relation-list">
+                        {#each graphRelations.filter((relation) => relation.from === selectedGraphObject.id || relation.to === selectedGraphObject.id) as relation (relation.id)}
+                          <li>
+                            <span class="pill">{relation.predicate}</span>
+                            <button type="button" onclick={() => selectGraphRelation(relation.id)}>
+                              {relationTargetLabel(relation, selectedGraphObject.id)}
+                            </button>
+                            <small>{relationStatusLabel(relation)}</small>
+                          </li>
+                        {:else}
+                          <li class="empty-copy">No visible related memories.</li>
+                        {/each}
+                      </ul>
+                    </details>
+                  </section>
+                {:else if selectedGraphRelation !== null}
+                  <section>
+                    <p class="eyebrow">Selected relation</p>
+                    <h3>{selectedGraphRelation.predicate}</h3>
+                    <p class="mono">{selectedGraphRelation.id}</p>
+                    <dl class="graph-meta">
+                      <div><dt>Status</dt><dd>{selectedGraphRelation.status}</dd></div>
+                      <div><dt>Confidence</dt><dd>{selectedGraphRelation.confidence ?? "not set"}</dd></div>
+                      <div><dt>Source</dt><dd>{selectedGraphRelationSource?.title ?? selectedGraphRelation.from}</dd></div>
+                      <div><dt>Target</dt><dd>{selectedGraphRelationTarget?.title ?? selectedGraphRelation.to}</dd></div>
+                    </dl>
+                    <div class="graph-inspector-actions">
+                      <button type="button" onclick={() => selectGraphObject(selectedGraphRelation.from)}>
+                        Source node
+                      </button>
+                      <button type="button" onclick={() => selectGraphObject(selectedGraphRelation.to)}>
+                        Target node
+                      </button>
+                      <button type="button" onclick={focusGraphSelection}>Focus link</button>
+                    </div>
+                  </section>
+                {:else}
+                  <section class="graph-empty-selection">
+                    <p class="eyebrow">Selection</p>
+                    <h3>{graphObjects.length} visible objects</h3>
+                    <p>{graphRelations.length} visible relation links.</p>
+                  </section>
+                {/if}
+              </aside>
+            </section>
+          </section>
+        </article>
       {:else if currentScreen === "export" && !isDemoMode}
         <section class="export-page" aria-labelledby="export-title" data-testid="export-view">
           <header class="page-header compact">
@@ -1498,267 +2102,6 @@
               <code>aictx save --file bootstrap-memory.json</code>
             </section>
           {/if}
-
-          {#if guidedLenses.length > 0 || roleCoverage.roles.length > 0}
-            <section class="guided-views-panel" aria-labelledby="guided-views-title" data-testid="guided-views-panel">
-              <div class="guided-heading">
-                <div>
-                  <p class="eyebrow">Guided views</p>
-                  <h3 id="guided-views-title">Connected context over the same storage.</h3>
-                  <p>Lenses and role coverage are generated from the objects and relations below.</p>
-                </div>
-                <dl class="role-coverage-counts" aria-label="Role coverage counts">
-                  <div><dt>Populated</dt><dd>{roleCoverage.counts.populated}</dd></div>
-                  <div><dt>Thin</dt><dd>{roleCoverage.counts.thin}</dd></div>
-                  <div><dt>Missing</dt><dd>{roleCoverage.counts.missing}</dd></div>
-                </dl>
-              </div>
-
-              {#if guidedLenses.length > 0}
-                <div class="lens-tabs" role="group" aria-label="Memory lenses">
-                  {#each guidedLenses as lens (lens.name)}
-                    <button
-                      type="button"
-                      class:active={activeGuidedLens?.name === lens.name}
-                      onclick={() => {
-                        activeLensName = lens.name;
-                      }}
-                      data-testid={`viewer-lens-${lens.name}`}
-                    >
-                      {lens.title}
-                    </button>
-                  {/each}
-                </div>
-              {/if}
-
-              {#if activeGuidedLens !== null}
-                <section class="lens-detail" aria-label={activeGuidedLens.title} data-testid="active-lens">
-                  <div class="lens-meta">
-                    <span>{activeGuidedLens.included_memory_ids.length} objects</span>
-                    <span>{activeGuidedLens.relation_ids.length} relations</span>
-                    <span>{activeGuidedLens.generated_gaps.length} gaps</span>
-                  </div>
-
-                  {#if activeGuidedLens.included_memory_ids.length > 0}
-                    <div class="included-memory-group">
-                      <p>Included storage IDs</p>
-                      <div class="included-memory-links" aria-label="Lens included memories" data-testid="lens-included-memory">
-                        {#each activeGuidedLens.included_memory_ids as id (id)}
-                          {#if objectById.has(id)}
-                            <button type="button" onclick={() => selectRelated(id)}>{id}</button>
-                          {:else}
-                            <span>{id}</span>
-                          {/if}
-                        {/each}
-                      </div>
-                    </div>
-                  {/if}
-
-                  <section class="markdown-view lens-markdown" aria-label="Lens Markdown" data-testid="lens-markdown">
-                    {#each activeLensMarkdownBlocks as block, index (`lens-${block.kind}-${index}`)}
-                      {#if block.kind === "heading"}
-                        {#if block.level === 1}
-                          <h3>{block.text}</h3>
-                        {:else if block.level === 2}
-                          <h4>{block.text}</h4>
-                        {:else}
-                          <h5>{block.text}</h5>
-                        {/if}
-                      {:else if block.kind === "list"}
-                        <ul>
-                          {#each block.items ?? [] as item, itemIndex (itemIndex)}
-                            <li>{item}</li>
-                          {/each}
-                        </ul>
-                      {:else if block.kind === "quote"}
-                        <blockquote>{block.text}</blockquote>
-                      {:else if block.kind === "code"}
-                        <pre><code>{block.text}</code></pre>
-                      {:else}
-                        <p>{block.text}</p>
-                      {/if}
-                    {/each}
-                  </section>
-                </section>
-              {/if}
-
-              {#if roleCoverage.roles.length > 0}
-                <details class="role-coverage-detail" data-testid="role-coverage-detail">
-                  <summary>Role coverage</summary>
-                  <ul class="role-list">
-                    {#each roleCoverage.roles as role (role.key)}
-                      <li>
-                        <span class={`role-status ${roleStatusClass(role.status)}`}>{role.status}</span>
-                        <strong>{role.label}</strong>
-                        <small>{role.description}</small>
-                        {#if role.memory_ids.length > 0}
-                          <span class="role-memory-ids">{role.memory_ids.join(", ")}</span>
-                        {/if}
-                      </li>
-                    {/each}
-                  </ul>
-                </details>
-              {/if}
-            </section>
-          {/if}
-
-          <section class="context-preview-panel" aria-labelledby="context-preview-title" data-testid="context-preview-panel">
-            <div class="context-preview-heading">
-              <div>
-                <p class="eyebrow">Agent context preview</p>
-                <h3 id="context-preview-title">See what the next agent will load.</h3>
-                <p>Enter a task and Aictx will compile the same context pack used by <code>aictx load</code>.</p>
-              </div>
-              {#if previewData !== null}
-                <dl class="preview-stats" aria-label="Context preview stats">
-                  <div><dt>Included</dt><dd>{previewData.included_ids.length}</dd></div>
-                  <div><dt>Omitted</dt><dd>{previewData.omitted_ids.length}</dd></div>
-                  <div><dt>Tokens</dt><dd>{previewData.estimated_tokens}</dd></div>
-                </dl>
-              {/if}
-            </div>
-
-            <form
-              class="context-preview-form"
-              aria-label="Agent context preview"
-              onsubmit={(event) => {
-                event.preventDefault();
-                void previewContext();
-              }}
-            >
-              <label class="field preview-task-field">
-                <span>Task</span>
-                <input
-                  type="text"
-                  bind:value={previewTask}
-                  placeholder="fix viewer search filters"
-                  autocomplete="off"
-                  disabled={previewState === "running"}
-                  data-testid="context-preview-task"
-                />
-              </label>
-
-              <div class="preview-mode-tabs" role="group" aria-label="Load mode">
-                {#each loadModeOptions as option (option.value)}
-                  <button
-                    type="button"
-                    class:active={previewMode === option.value}
-                    disabled={previewState === "running"}
-                    onclick={() => {
-                      previewMode = option.value;
-                    }}
-                    data-testid={`context-preview-mode-${option.value}`}
-                  >
-                    {option.label}
-                  </button>
-                {/each}
-              </div>
-
-              <button
-                type="submit"
-                class="primary-action"
-                disabled={previewState === "running"}
-                data-testid="context-preview-submit"
-              >
-                {previewState === "running" ? "Previewing" : "Preview Context"}
-              </button>
-
-              <details class="preview-advanced">
-                <summary>Advanced options</summary>
-                <label class="field preview-budget-field">
-                  <span>Token budget</span>
-                  <input
-                    type="text"
-                    inputmode="numeric"
-                    bind:value={previewTokenBudget}
-                    placeholder="optional"
-                    autocomplete="off"
-                    disabled={previewState === "running"}
-                    data-testid="context-preview-token-budget"
-                  />
-                </label>
-              </details>
-            </form>
-
-            {#if showPreviewCommand}
-              <div class="preview-command-strip" data-testid="context-preview-command">
-                <code>{previewCommand}</code>
-                <button type="button" onclick={() => void copyPreview("command")} data-testid="context-preview-copy-command">
-                  {copiedPreviewTarget === "command" ? "Copied" : "Copy command"}
-                </button>
-              </div>
-            {/if}
-
-            {#if previewState === "error"}
-              <section class="preview-status error" role="alert" data-testid="context-preview-error">
-                <p>{previewMessage}</p>
-                {#if previewErrorCode !== ""}
-                  <code>{previewErrorCode}</code>
-                {/if}
-              </section>
-            {:else if previewData !== null}
-              <section class="preview-result" data-testid="context-preview-result">
-                <div class="preview-result-topline">
-                  <p>{previewMessage}</p>
-                  <p>{previewSourceLabel(previewData.source)}</p>
-                  {#if previewTokenBudget.trim() !== ""}
-                    <p>{previewData.budget_status === "within_target" ? "Within budget" : "Over budget"}</p>
-                  {/if}
-                  {#if previewData.truncated}
-                    <p>Truncated</p>
-                  {/if}
-                </div>
-
-                {#if previewData.included_ids.length > 0}
-                  <div class="included-memory-group">
-                    <p>Included memories</p>
-                    <div class="included-memory-links" aria-label="Included memories" data-testid="context-preview-included">
-                      {#each previewData.included_ids as id (id)}
-                        {#if objectById.has(id)}
-                          <button type="button" onclick={() => selectRelated(id)}>{id}</button>
-                        {:else}
-                          <span>{id}</span>
-                        {/if}
-                      {/each}
-                    </div>
-                  </div>
-                {/if}
-
-                <div class="preview-result-actions">
-                  <p>Compiled context pack</p>
-                  <button type="button" onclick={() => void copyPreview("context")} data-testid="context-preview-copy-context">
-                    {copiedPreviewTarget === "context" ? "Copied context" : "Copy context pack"}
-                  </button>
-                </div>
-
-                <section class="markdown-view context-pack-view" aria-label="Context pack" data-testid="context-preview-markdown">
-                  {#each previewMarkdownBlocks as block, index (`preview-${block.kind}-${index}`)}
-                    {#if block.kind === "heading"}
-                      {#if block.level === 1}
-                        <h3>{block.text}</h3>
-                      {:else if block.level === 2}
-                        <h4>{block.text}</h4>
-                      {:else}
-                        <h5>{block.text}</h5>
-                      {/if}
-                    {:else if block.kind === "list"}
-                      <ul>
-                        {#each block.items ?? [] as item, itemIndex (itemIndex)}
-                          <li>{item}</li>
-                        {/each}
-                      </ul>
-                    {:else if block.kind === "quote"}
-                      <blockquote>{block.text}</blockquote>
-                    {:else if block.kind === "code"}
-                      <pre><code>{block.text}</code></pre>
-                    {:else}
-                      <p>{block.text}</p>
-                    {/if}
-                  {/each}
-                </section>
-              </section>
-            {/if}
-          </section>
 
           <section class="list-controls" aria-label="Memory list controls">
             <div>
@@ -3460,9 +3803,14 @@
 
   .memory-page,
   .projects-page,
+  .graph-page,
   .export-page {
     width: min(1060px, 100%);
     margin: 0 auto;
+  }
+
+  .graph-page {
+    width: min(1280px, 100%);
   }
 
   .memory-page {
@@ -3574,403 +3922,197 @@
     font-weight: 820;
   }
 
-  .guided-views-panel,
-  .context-preview-panel {
-    display: grid;
-    gap: 18px;
+  .graph-counts {
+    display: flex;
+    gap: 10px;
+    margin: 0;
+  }
+
+  .graph-counts div {
+    min-width: 88px;
     border: 1px solid #e2ded5;
     border-radius: 8px;
-    padding: 22px;
+    padding: 10px 12px;
+    background: #ffffff;
+    box-shadow: 0 1px 2px rgb(16 24 40 / 4%);
+  }
+
+  .graph-counts dt {
+    color: #9a968d;
+    font-size: 0.68rem;
+    font-weight: 850;
+    text-transform: uppercase;
+  }
+
+  .graph-counts dd {
+    margin: 3px 0 0;
+    color: #262522;
+    font-size: 1.25rem;
+    font-weight: 880;
+  }
+
+  .graph-panel {
+    display: grid;
+    gap: 14px;
+  }
+
+  .graph-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    border: 1px solid #e2ded5;
+    border-radius: 8px;
+    padding: 12px;
     background: #ffffff;
     box-shadow: 0 10px 28px rgb(16 24 40 / 5%);
   }
 
-  .guided-heading,
-  .context-preview-heading {
+  .graph-filter-tabs,
+  .graph-actions,
+  .graph-inspector-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .graph-filter-tabs button,
+  .graph-actions button,
+  .graph-inspector-actions button {
+    min-height: 34px;
+    border: 1px solid #dedbd3;
+    border-radius: 7px;
+    padding: 7px 11px;
+    color: #5e5a53;
+    background: #ffffff;
+    font-size: 0.84rem;
+    font-weight: 760;
+  }
+
+  .graph-filter-tabs button.active {
+    border-color: #2b2925;
+    color: #ffffff;
+    background: #2b2925;
+  }
+
+  .graph-workspace {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: 22px;
-    align-items: start;
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 340px);
+    gap: 14px;
+    align-items: stretch;
   }
 
-  .guided-heading h3,
-  .context-preview-heading h3 {
-    margin: 4px 0 0;
-    color: #202020;
-    font-size: 1.38rem;
-    line-height: 1.12;
-    font-weight: 850;
+  .graph-canvas-wrap,
+  .graph-inspector {
+    border: 1px solid #e2ded5;
+    border-radius: 8px;
+    background: #ffffff;
+    box-shadow: 0 10px 28px rgb(16 24 40 / 5%);
   }
 
-  .guided-heading p:not(.eyebrow),
-  .context-preview-heading p:not(.eyebrow) {
-    margin: 7px 0 0;
-    max-width: 620px;
+  .graph-canvas-wrap {
+    position: relative;
+    min-height: 640px;
+    overflow: hidden;
+  }
+
+  .graph-canvas {
+    width: 100%;
+    height: 100%;
+    min-height: 640px;
+    background:
+      linear-gradient(rgb(242 239 232 / 68%) 1px, transparent 1px),
+      linear-gradient(90deg, rgb(242 239 232 / 68%) 1px, transparent 1px),
+      #fffefa;
+    background-size: 28px 28px;
+  }
+
+  .graph-empty {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-content: center;
+    gap: 8px;
+    padding: 24px;
+    text-align: center;
+    background: rgb(255 254 250 / 86%);
+  }
+
+  .graph-empty h3,
+  .graph-empty p,
+  .graph-empty-selection h3,
+  .graph-empty-selection p {
+    margin: 0;
+  }
+
+  .graph-empty p,
+  .graph-empty-selection p,
+  .graph-body-preview {
     color: #746f68;
     line-height: 1.45;
   }
 
-  .role-coverage-counts,
-  .preview-stats {
+  .graph-inspector {
+    align-self: stretch;
+    min-height: 640px;
+    padding: 18px;
+  }
+
+  .graph-inspector section {
     display: grid;
-    grid-template-columns: repeat(3, minmax(78px, 1fr));
-    gap: 8px;
-    margin: 0;
+    gap: 12px;
   }
 
-  .role-coverage-counts div,
-  .preview-stats div {
-    border: 1px solid #e3dfd7;
-    border-radius: 8px;
-    padding: 10px;
-    background: #fbfaf7;
-  }
-
-  .role-coverage-counts dt,
-  .preview-stats dt {
-    color: #8d897f;
-    font-size: 0.7rem;
-    font-weight: 850;
-    text-transform: uppercase;
-  }
-
-  .role-coverage-counts dd,
-  .preview-stats dd {
-    margin: 4px 0 0;
-    color: #262522;
+  .graph-inspector h3 {
+    color: #242423;
     font-size: 1.2rem;
     font-weight: 850;
   }
 
-  .lens-tabs {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    border-top: 1px solid #ebe7de;
-    padding-top: 16px;
-  }
-
-  .lens-tabs button {
-    min-height: 36px;
-    border: 1px solid #dedbd3;
-    border-radius: 999px;
-    padding: 7px 12px;
-    color: #6d6a65;
-    background: #ffffff;
-    font-size: 0.86rem;
-    font-weight: 700;
-    box-shadow: 0 1px 2px rgb(16 24 40 / 4%);
-  }
-
-  .lens-tabs button.active {
-    border-color: #202020;
-    color: #ffffff;
-    background: #202020;
-  }
-
-  .lens-detail {
+  .graph-meta {
     display: grid;
-    gap: 14px;
-    border-top: 1px solid #ebe7de;
-    padding-top: 16px;
-  }
-
-  .lens-meta {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-
-  .lens-meta span {
-    border: 1px solid #ddd8ce;
-    border-radius: 999px;
-    padding: 3px 9px;
-    color: #68645d;
-    background: #fbfaf7;
-    font-size: 0.8rem;
-    font-weight: 760;
-  }
-
-  .lens-markdown {
-    max-height: 360px;
-    overflow: auto;
-    border-color: #e3dfd7;
-    border-radius: 8px;
-    background: #fffefa;
-  }
-
-  .role-coverage-detail {
-    border-top: 1px solid #ebe7de;
-    padding-top: 14px;
-    color: #716d66;
-  }
-
-  .role-coverage-detail summary {
-    cursor: pointer;
-    color: #37352f;
-    font-weight: 760;
-  }
-
-  .role-list {
-    display: grid;
-    gap: 9px;
-    margin: 12px 0 0;
-    padding: 0;
-    list-style: none;
-  }
-
-  .role-list li {
-    display: grid;
-    grid-template-columns: auto minmax(0, 0.5fr) minmax(0, 1fr);
-    gap: 8px 12px;
-    align-items: baseline;
-    border: 1px solid #e3dfd7;
-    border-radius: 8px;
-    padding: 10px 12px;
-    background: #fbfaf7;
-  }
-
-  .role-list strong {
-    color: #37352f;
-    font-size: 0.94rem;
-  }
-
-  .role-list small,
-  .role-memory-ids {
-    color: #746f68;
-    font-size: 0.84rem;
-    line-height: 1.35;
-  }
-
-  .role-memory-ids {
-    grid-column: 2 / -1;
-    font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
-    overflow-wrap: anywhere;
-  }
-
-  .role-status {
-    border-radius: 999px;
-    padding: 3px 8px;
-    color: #4e5a6b;
-    background: #f0f4f6;
-    font-size: 0.72rem;
-    font-weight: 850;
-    text-transform: uppercase;
-  }
-
-  .role-status.status-populated {
-    color: #2f5b44;
-    background: #eaf4ed;
-  }
-
-  .role-status.status-missing,
-  .role-status.status-stale,
-  .role-status.status-conflicted {
-    color: #7c2d12;
-    background: #fff1e7;
-  }
-
-  .context-preview-form {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    grid-template-areas:
-      "task task"
-      "mode action"
-      "advanced advanced";
-    gap: 16px 18px;
-    align-items: end;
-    border-top: 1px solid #ebe7de;
-    padding-top: 18px;
-  }
-
-  .preview-task-field {
-    grid-area: task;
-  }
-
-  .preview-budget-field {
-    max-width: 220px;
-  }
-
-  .context-preview-form > .primary-action {
-    grid-area: action;
-    min-height: 44px;
-    padding-inline: 18px;
-    white-space: nowrap;
-  }
-
-  .context-preview-form .field span {
-    color: #9a968d;
-    font-size: 0.72rem;
-    letter-spacing: 0;
-  }
-
-  .context-preview-form input {
-    min-height: 44px;
-    border-color: #dedbd3;
-    border-radius: 8px;
-    background: #fffefa;
-    box-shadow: 0 1px 2px rgb(16 24 40 / 4%);
-  }
-
-  .preview-advanced {
-    grid-area: advanced;
-    max-width: 330px;
-    color: #716d66;
-  }
-
-  .preview-advanced summary {
-    width: fit-content;
-    cursor: pointer;
-    color: #77736c;
-    font-size: 0.84rem;
-    font-weight: 720;
-  }
-
-  .preview-advanced[open] {
-    display: grid;
-    gap: 10px;
-    padding-top: 2px;
-  }
-
-  .preview-advanced[open] summary {
-    margin-bottom: 2px;
-  }
-
-  .preview-mode-tabs {
-    grid-area: mode;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-
-  .preview-mode-tabs::before {
-    content: "Mode";
-    flex: 0 0 100%;
-    color: #9a968d;
-    font-size: 0.72rem;
-    font-weight: 850;
-    text-transform: uppercase;
-  }
-
-  .preview-mode-tabs button,
-  .preview-command-strip button,
-  .preview-result-actions button,
-  .included-memory-links button {
-    min-height: 36px;
-    border: 1px solid #dedbd3;
-    border-radius: 999px;
-    padding: 7px 11px;
-    color: #6d6a65;
-    background: #ffffff;
-    font-size: 0.84rem;
-    font-weight: 700;
-    box-shadow: 0 1px 2px rgb(16 24 40 / 4%);
-  }
-
-  .preview-mode-tabs button.active {
-    border-color: #202020;
-    color: #ffffff;
-    background: #202020;
-  }
-
-  .preview-command-strip {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    border: 1px solid #e6e2da;
-    border-radius: 8px;
-    padding: 12px 14px;
-    background: #f7f6f2;
-  }
-
-  .preview-command-strip code {
-    overflow-wrap: anywhere;
-    color: #37352f;
-  }
-
-  .preview-status,
-  .preview-result {
-    display: grid;
-    gap: 13px;
-    border-top: 1px solid #ebe7de;
-    padding-top: 15px;
-  }
-
-  .preview-status.error {
-    border: 1px solid #efc3b8;
-    border-radius: 8px;
-    padding: 12px;
-    background: #fff8f5;
-  }
-
-  .preview-status p,
-  .preview-result-topline p {
-    margin: 0;
-    color: #68645d;
-  }
-
-  .preview-result-topline {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-
-  .preview-result-topline p {
-    border: 1px solid #ddd8ce;
-    border-radius: 999px;
-    padding: 3px 9px;
-    background: #fbfaf7;
-    font-size: 0.8rem;
-    font-weight: 760;
-  }
-
-  .included-memory-group {
-    display: grid;
-    gap: 8px;
-  }
-
-  .included-memory-group > p,
-  .preview-result-actions > p {
-    margin: 0;
-    color: #8d897f;
-    font-size: 0.72rem;
-    font-weight: 850;
-    text-transform: uppercase;
-  }
-
-  .included-memory-links {
-    display: flex;
-    flex-wrap: wrap;
     gap: 7px;
+    margin: 0;
+    border-top: 1px solid #f0eee8;
+    border-bottom: 1px solid #f0eee8;
+    padding: 12px 0;
   }
 
-  .preview-result-actions {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
+  .graph-meta div {
+    display: grid;
+    grid-template-columns: 82px minmax(0, 1fr);
+    gap: 10px;
+    align-items: baseline;
   }
 
-  .included-memory-links span {
-    display: inline-flex;
-    align-items: center;
-    min-height: 34px;
-    border: 1px solid #e1ddd5;
-    border-radius: 999px;
-    padding: 7px 11px;
-    color: #7b766e;
-    background: #f7f6f2;
-    font-size: 0.84rem;
-    font-weight: 700;
+  .graph-meta dt {
+    color: #9a968d;
+    font-size: 0.76rem;
+    font-weight: 780;
   }
 
-  .context-pack-view {
-    max-height: 440px;
-    overflow: auto;
-    border-color: #e3dfd7;
-    border-radius: 8px;
-    background: #fffefa;
+  .graph-meta dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+    color: #3d3d38;
+    font-size: 0.88rem;
+  }
+
+  .graph-body-preview {
+    margin: 0;
+    font-size: 0.92rem;
+  }
+
+  .graph-relations {
+    border-top: 1px solid #f0eee8;
+    padding-top: 10px;
+  }
+
+  .graph-relations summary {
+    cursor: pointer;
+    color: #37352f;
+    font-weight: 780;
   }
 
   .warnings,
@@ -4378,40 +4520,30 @@
       margin: 0;
     }
 
-    .guided-heading,
-    .context-preview-heading,
-    .context-preview-form {
+    .graph-workspace {
       grid-template-columns: 1fr;
     }
 
-    .role-list li {
-      grid-template-columns: 1fr;
+    .graph-canvas-wrap,
+    .graph-canvas,
+    .graph-inspector {
+      min-height: 420px;
     }
 
-    .role-memory-ids {
-      grid-column: auto;
-    }
-
-    .context-preview-form {
-      grid-template-areas:
-        "task"
-        "mode"
-        "action"
-        "advanced";
-    }
-
-    .preview-advanced,
-    .preview-budget-field {
-      max-width: none;
-    }
-
-    .preview-stats {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
-
-    .preview-command-strip {
+    .graph-toolbar,
+    .graph-actions {
       align-items: stretch;
       flex-direction: column;
+    }
+
+    .graph-filter-tabs,
+    .graph-actions {
+      width: 100%;
+    }
+
+    .graph-filter-tabs button,
+    .graph-actions button {
+      flex: 1 1 auto;
     }
 
     .list-controls {

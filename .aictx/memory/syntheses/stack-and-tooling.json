@@ -1,29 +1,22 @@
 {
   "body_path": "memory/syntheses/stack-and-tooling.md",
-  "content_hash": "sha256:de28d1e2cbdda5bb264162f890b4497cde243e429109cedef8cd70dfaaa2649c",
+  "content_hash": "sha256:05b8c18da5acf91b7fc758d2ed22b6f225bb076c14ff2020dc091436e24e2e13",
   "created_at": "2026-05-12T17:53:06+02:00",
   "evidence": [
-    {
-      "id": "source.package-json",
-      "kind": "source"
-    },
     {
       "id": "package.json",
       "kind": "file"
     },
     {
-      "id": "tsconfig.json",
-      "kind": "file"
-    },
-    {
-      "id": "vitest.config.ts",
+      "id": "viewer/src/App.svelte",
       "kind": "file"
     }
   ],
   "facets": {
     "applies_to": [
       "package.json",
-      "tsconfig.json",
+      "viewer/src/App.svelte",
+      "viewer/vite.config.ts",
       "vitest.config.ts"
     ],
     "category": "stack",
@@ -54,5 +47,5 @@
   ],
   "title": "Stack and tooling",
   "type": "synthesis",
-  "updated_at": "2026-05-12T17:53:06+02:00"
+  "updated_at": "2026-05-14T16:40:33+02:00"
 }

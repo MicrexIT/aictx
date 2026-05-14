@@ -29,3 +29,6 @@
 {"actor":"agent","event":"memory.updated","id":"synthesis.product-intent","timestamp":"2026-05-14T15:25:33+02:00"}
 {"actor":"agent","event":"memory.updated","id":"synthesis.product-intent","timestamp":"2026-05-14T15:26:02+02:00"}
 {"actor":"agent","event":"memory.updated","id":"workflow.demo-viewer-deployment","timestamp":"2026-05-14T16:04:32+02:00"}
+{"actor":"agent","event":"memory.updated","id":"decision.viewer-is-schema-first-with-guided-views-secondary","timestamp":"2026-05-14T16:40:33+02:00"}
+{"actor":"agent","event":"memory.updated","id":"synthesis.stack-and-tooling","timestamp":"2026-05-14T16:40:33+02:00"}
+{"actor":"agent","event":"relation.created","relation_id":"rel.decision-viewer-is-schema-first-with-guided-views-secondary-mentions-synthesis-stack-and-tooling","timestamp":"2026-05-14T16:40:33+02:00"}

@@ -103,7 +103,7 @@ Use `aictx setup` for guided first-run onboarding and conservative bootstrap mem
 
 ## Capability Map
 
-The v1 agent model is CLI-first and MCP-compatible. CLI handles routine memory work by default; MCP remains a supported integration path when the agent client has already launched and connected to `aictx-mcp`. The CLI remains the supported path for setup, lenses, branch handoff, maintenance, recovery, export, registry management, local viewing, suggestion, and audit operations; stale lists and graph neighborhoods also remain CLI-only.
+The v1 agent model is CLI-first and MCP-compatible. CLI handles routine memory work by default; MCP remains a supported integration path when the agent client has already launched and connected to `aictx-mcp`. The CLI remains the supported path for setup, lenses, branch handoff, maintenance, recovery, export, registry management, local viewing, suggestion, and audit operations; stale lists remain CLI-only. Graph inspection is available in the CLI and local viewer, but remains outside MCP.
 
 | Capability | MCP | CLI |
 | --- | --- | --- |
@@ -122,7 +122,7 @@ The v1 agent model is CLI-first and MCP-compatible. CLI handles routine memory w
 | Restore memory | none | `aictx restore` |
 | Rewind memory | none | `aictx rewind` |
 | List stale memory | none | `aictx stale` |
-| Show graph neighborhood | none | `aictx graph` |
+| Show graph neighborhood | none | `aictx graph`, `aictx view` graph screen |
 | Show memory lens | none | `aictx lens` |
 | Manage branch handoff | none | `aictx handoff` |
 | Export Obsidian projection | none | `aictx export obsidian` |
@@ -131,9 +131,9 @@ The v1 agent model is CLI-first and MCP-compatible. CLI handles routine memory w
 | Suggest memory decision packet | none | `aictx suggest` |
 | Audit memory hygiene | none | `aictx audit` |
 
-CLI-only capabilities are not MCP parity gaps. Do not expose setup, lenses, branch handoff, maintenance, recovery, export, registry management, local viewing, suggestion, audit, stale-list, or graph-neighborhood commands as MCP tools solely to mirror the CLI command list.
+Non-MCP capabilities are not MCP parity gaps. Do not expose setup, lenses, branch handoff, maintenance, recovery, export, registry management, local viewing, suggestion, audit, stale-list, or graph-neighborhood commands as MCP tools solely to mirror command-list parity.
 
-Agents may use the CLI for supported setup, lenses, branch handoff, maintenance, recovery, export, registry management, local viewing, suggestion, audit, stale-list, and graph-neighborhood operations. They should use supported MCP or CLI entrypoints instead of editing `.aictx/` files directly when a supported command exists.
+Agents may use the CLI for supported setup, lenses, branch handoff, maintenance, recovery, export, registry management, local viewing, suggestion, audit, stale-list, and graph-neighborhood operations. They may use the local viewer for graph inspection. They should use supported MCP, CLI, or viewer entrypoints instead of editing `.aictx/` files directly when a supported entrypoint exists.
 
 MCP exposes exactly `load_memory`, `search_memory`, `inspect_memory`, `remember_memory`, `save_memory_patch`, and `diff_memory` in v1.
 

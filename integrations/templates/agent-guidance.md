@@ -89,7 +89,8 @@ When one global MCP server serves multiple projects, include `project_root` on
 routine tool calls so reads and writes target the intended `.aictx/` directory.
 
 Setup, lenses, branch handoff, maintenance, recovery, export, registry, viewer,
-docs, suggest, audit, stale, and graph workflows are CLI-only in v1. CLI-only
+docs, suggest, audit, and stale workflows are CLI-only in v1. Graph inspection
+is available in the CLI and local viewer, but remains outside MCP. Non-MCP
 capabilities are not MCP parity gaps. `aictx init` does not start MCP; MCP
 clients must launch `aictx-mcp`.
 

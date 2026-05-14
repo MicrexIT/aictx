@@ -1,6 +1,6 @@
 {
   "body_path": "memory/decisions/viewer-is-schema-first-with-guided-views-secondary.md",
-  "content_hash": "sha256:1d8d896e69c5a5848bf039288eb0ea1ace0653579e7e7af1992cccd6ef8dc0f2",
+  "content_hash": "sha256:b3dec704d011b3557bab3d205aec73290636e29ce91ca3b3baf1e4869684a342",
   "created_at": "2026-05-14T14:59:25+02:00",
   "evidence": [
     {
@@ -8,19 +8,24 @@
       "kind": "file"
     },
     {
-      "id": "src/core/types.ts",
+      "id": "test/integration/viewer/shell.test.ts",
       "kind": "file"
     },
     {
-      "id": "test/integration/viewer/shell.test.ts",
+      "id": "local-viewer-spec.md",
+      "kind": "file"
+    },
+    {
+      "id": "mcp-and-cli-api-spec.md",
       "kind": "file"
     }
   ],
   "facets": {
     "applies_to": [
       "viewer/src/App.svelte",
-      "src/core/types.ts",
-      "test/integration/viewer/shell.test.ts"
+      "test/integration/viewer/shell.test.ts",
+      "local-viewer-spec.md",
+      "mcp-and-cli-api-spec.md"
     ],
     "category": "decision-rationale"
   },
@@ -37,7 +42,7 @@
   },
   "status": "active",
   "tags": [],
-  "title": "Viewer is schema-first with guided views secondary",
+  "title": "Viewer is schema-first with graph screen",
   "type": "decision",
-  "updated_at": "2026-05-14T14:59:25+02:00"
+  "updated_at": "2026-05-14T16:40:33+02:00"
 }

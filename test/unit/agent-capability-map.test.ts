@@ -153,8 +153,8 @@ const cliOnlyCapabilities = [
   {
     capability: "Show graph neighborhood",
     mcp: "none",
-    cli: "`aictx graph`",
-    notes: "Debug graph neighborhood remains CLI-only in v1."
+    cli: "`aictx graph`, `aictx view` graph screen",
+    notes: "Graph map is available in the CLI and local viewer; it remains outside MCP."
   },
   {
     capability: "Show memory lens",
@@ -226,7 +226,7 @@ const exactCliOnlyCommands = [
   "`aictx restore`",
   "`aictx rewind`",
   "`aictx stale`",
-  "`aictx graph`",
+  "`aictx graph`, `aictx view` graph screen",
   "`aictx lens`",
   "`aictx handoff`",
   "`aictx export obsidian`",
@@ -533,7 +533,10 @@ describe("agent capability map guardrail", () => {
         "* MCP + CLI capabilities: load, search, inspect object, remember memory, save patch, diff."
       );
       expect(content).toContain(
-        "* CLI-only capabilities in v1: init, setup, lens, handoff, patch review, check, rebuild, reset, upgrade, history, restore, rewind, stale, graph, export obsidian, projects, view, docs, suggest, audit."
+        "* CLI-only capabilities in v1: init, setup, lens, handoff, patch review, check, rebuild, reset, upgrade, history, restore, rewind, stale, export obsidian, projects, view, docs, suggest, audit."
+      );
+      expect(content).toContain(
+        "* Graph inspection is available in the CLI and local viewer, but remains outside MCP."
       );
     }
   });
@@ -602,7 +605,7 @@ describe("agent capability map guardrail", () => {
       );
       expect(guidance).toContain("Use `aictx save --stdin` only when you need");
       expect(guidance).toContain("Use MCP only when the client already exposes Aictx tools.");
-      expect(guidance).toMatch(/CLI-only\s+capabilities are not\s+MCP parity gaps\./);
+      expect(guidance).toMatch(/Non-MCP\s+capabilities are not\s+MCP parity gaps\./);
       expect(guidance).toContain(
         "do not work around it by editing"
       );
@@ -629,9 +632,9 @@ describe("agent capability map guardrail", () => {
     for (const path of docsAndGuidance) {
       const content = await readProjectFile(path);
 
-      expect(content).toMatch(/CLI-only\s+capabilities[\s\S]{0,120}not\s+MCP parity gaps/);
+      expect(content).toMatch(/(?:CLI-only|Non-MCP)\s+capabilities[\s\S]{0,120}not\s+MCP parity gaps/);
       expect(content).toMatch(
-        /do not add[\s\S]{0,200}to MCP|do not add MCP tools|not (?:be )?added to MCP|do not add or ask for MCP tools solely to mirror these CLI\s+commands|has no MCP equivalent|have no MCP equivalents?|part of the v1 integration model rather than MCP parity gaps|CLI-only\s+capabilities are not\s+MCP parity gaps|CLI is the supported interface/i
+        /do not add[\s\S]{0,200}to MCP|do not add MCP tools|not (?:be )?added to MCP|do not add or ask for MCP tools solely to mirror these CLI\s+commands|has no MCP equivalent|have no MCP equivalents?|part of the v1 integration model rather than MCP parity gaps|(?:CLI-only|Non-MCP)\s+capabilities are not\s+MCP parity gaps|CLI is the supported interface/i
       );
       expect(content).toMatch(/edit(?:ing)?\s+`\.aictx\/` (?:files directly|manually)/);
     }
@@ -658,7 +661,10 @@ describe("agent capability map guardrail", () => {
     }
 
     expect(prd).toContain(
-      "CLI-only capabilities in v1: init, setup, lens, handoff, patch review, check, rebuild, reset, upgrade, history, restore, rewind, stale, graph, export obsidian, projects, view, docs, suggest, audit."
+      "CLI-only capabilities in v1: init, setup, lens, handoff, patch review, check, rebuild, reset, upgrade, history, restore, rewind, stale, export obsidian, projects, view, docs, suggest, audit."
+    );
+    expect(prd).toContain(
+      "Graph inspection is available in the CLI and local viewer, but remains outside MCP."
     );
     expect(apiSpec).toContain("Do not expose an MCP tool for local viewing.");
     expect(localViewerSpec).toContain("Do not add `aictx view`, `aictx lens`, or `aictx handoff` to MCP.");

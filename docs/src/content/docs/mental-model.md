@@ -138,7 +138,8 @@ the agent client has launched and connected to `aictx-mcp`.
 MCP exposes exactly `load_memory`, `search_memory`, `inspect_memory`,
 `remember_memory`, `save_memory_patch`, and `diff_memory`. Setup, lenses,
 handoff, maintenance, recovery, export, registry, viewer, docs, suggest, audit,
-stale, and graph workflows are CLI-only in v1. These CLI-only commands are part
+and stale workflows are CLI-only in v1. Graph inspection is available in the
+CLI and local viewer, but remains outside MCP. These non-MCP surfaces are part
 of the v1 integration model rather than MCP parity gaps.
 
 Local MCP is the near-term integration path for local agent harnesses. Remote

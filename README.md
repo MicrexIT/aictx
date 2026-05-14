@@ -223,10 +223,11 @@ ChatGPT-compatible `search`/`fetch` names are adapter aliases over Aictx
 search/inspect behavior, not local MCP tool names.
 
 Setup, lenses, handoff, maintenance, recovery, export, registry, viewer, docs,
-suggest, audit, stale, and graph workflows remain outside local MCP. CLI-only
-capabilities are not MCP parity gaps. Do not add or ask for MCP tools solely to
-mirror these CLI commands, and do not edit `.aictx/` files directly when a
-supported MCP tool or CLI command exists.
+suggest, audit, and stale workflows remain outside local MCP. Graph inspection
+is available in the CLI and local viewer, but remains outside local MCP.
+Non-MCP capabilities are not MCP parity gaps. Do not add or ask for MCP tools
+solely to mirror these surfaces, and do not edit `.aictx/` files directly when
+a supported MCP tool or CLI command exists.
 
 | Capability | MCP | CLI |
 | --- | --- | --- |
@@ -240,7 +241,7 @@ supported MCP tool or CLI command exists.
 | Maintain storage | none | `aictx check`, `aictx rebuild`, `aictx reset`, `aictx upgrade` |
 | Recover memory history | none | `aictx history`, `aictx restore`, `aictx rewind` |
 | Review patch files | none | `aictx patch review` |
-| Inspect stale memory and graph neighborhoods | none | `aictx stale`, `aictx graph` |
+| Inspect stale memory and graph neighborhoods | none | `aictx stale`, `aictx graph`, `aictx view` graph screen |
 | Show readable memory views | none | `aictx lens` |
 | Manage branch handoff | none | `aictx handoff` |
 | Export projections | none | `aictx export obsidian` |

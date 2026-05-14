@@ -6,9 +6,10 @@ description: Configure Aictx MCP and understand the CLI/MCP capability boundary.
 `aictx-mcp` is an MCP stdio server. Configure your MCP client to launch the
 global binary, or a project-local binary when the project pins Aictx.
 
-MCP is useful when the agent client already supports MCP tools. The CLI remains
-the default path for routine memory work and all setup, lenses, handoff,
-maintenance, recovery, viewer, docs, suggestion, audit, stale, and graph workflows.
+MCP is useful when the agent client already supports MCP tools. The CLI and
+local viewer remain the default path for routine memory work, graph inspection,
+and all setup, lenses, handoff, maintenance, recovery, viewer, docs,
+suggestion, audit, and stale workflows.
 
 :::tip
 `aictx init` does not start MCP. Starting `aictx-mcp` in a shell usually cannot
@@ -96,7 +97,8 @@ resolved project's `.aictx/` directory.
 ## CLI-only boundaries
 
 Setup, lenses, handoff, maintenance, recovery, export, registry, viewer, docs,
-suggest, audit, stale, and graph workflows are CLI-only in v1:
+suggest, audit, and stale workflows are CLI-only in v1. Graph inspection is
+available in the CLI and local viewer, but remains outside MCP:
 
 - Setup: `aictx init`, `aictx setup`
 - Lenses: `aictx lens`
@@ -108,9 +110,10 @@ suggest, audit, stale, and graph workflows are CLI-only in v1:
 - Viewer: `aictx view`
 - Docs: `aictx docs`
 - Suggest and audit: `aictx suggest`, `aictx audit`
-- Stale and graph inspection: `aictx stale`, `aictx graph`
+- Stale inspection: `aictx stale`
+- Graph inspection: `aictx graph`, `aictx view` graph screen
 
-These CLI-only commands are part of the v1 integration model rather than MCP
+These non-MCP surfaces are part of the v1 integration model rather than MCP
 parity gaps. Local viewing remains a browser inspection surface, not a routine
 MCP memory operation, so `aictx view` has no MCP equivalent.
 

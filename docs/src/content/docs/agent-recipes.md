@@ -175,7 +175,8 @@ diff_memory({})
 ```
 
 Setup, lenses, handoff, maintenance, recovery, export, registry, viewer, docs,
-suggest, audit, stale, and graph workflows remain CLI-only in v1.
+suggest, audit, and stale workflows remain CLI-only in v1. Graph inspection is
+available in the CLI and local viewer, but remains outside MCP.
 
 ## CLI and MCP boundary
 
@@ -184,8 +185,9 @@ MCP exposes exactly `load_memory`, `search_memory`, `inspect_memory`,
 already exposes Aictx MCP tools.
 
 Setup, lenses, handoff, maintenance, recovery, export, registry, viewer, docs,
-suggest, audit, stale, and graph workflows are CLI-only in v1. These CLI-only
-commands are part of the v1 integration model rather than MCP parity gaps.
+suggest, audit, and stale workflows are CLI-only in v1. Graph inspection is
+available in the CLI and local viewer, but remains outside MCP. These non-MCP
+surfaces are part of the v1 integration model rather than MCP parity gaps.
 
 Local MCP is the near-term integration path for local agent harnesses. Remote
 MCP, hosted sync, cloud auth, cloud hosting, and ChatGPT App SDK UI are future

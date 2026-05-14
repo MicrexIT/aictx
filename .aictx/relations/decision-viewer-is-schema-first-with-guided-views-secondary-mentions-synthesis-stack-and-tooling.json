@@ -1,0 +1,21 @@
+{
+  "confidence": "medium",
+  "content_hash": "sha256:fa3989b58a344afd585b30cc7f8b82c70b37d140fc753b110af7244578bcb21b",
+  "created_at": "2026-05-14T16:40:33+02:00",
+  "evidence": [
+    {
+      "id": "package.json",
+      "kind": "file"
+    },
+    {
+      "id": "viewer/src/App.svelte",
+      "kind": "file"
+    }
+  ],
+  "from": "decision.viewer-is-schema-first-with-guided-views-secondary",
+  "id": "rel.decision-viewer-is-schema-first-with-guided-views-secondary-mentions-synthesis-stack-and-tooling",
+  "predicate": "mentions",
+  "status": "active",
+  "to": "synthesis.stack-and-tooling",
+  "updated_at": "2026-05-14T16:40:33+02:00"
+}

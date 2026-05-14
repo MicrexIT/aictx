@@ -40,7 +40,7 @@ V1 API behavior must follow these rules:
 * MCP is a supported integration path when the agent client has already launched and connected to `aictx-mcp`.
 * Local MCP is a generic local-agent interface for MCP-capable harnesses, not a ChatGPT-specific API.
 * Local MCP is the near-term integration path; remote MCP, hosted sync, cloud hosting, OAuth or cloud auth, tenancy, billing, and ChatGPT App SDK UI are future work.
-* CLI is the supported path for setup, lenses, branch handoff, maintenance, recovery, export, registry management, local viewing, public documentation, suggestion, and audit workflows.
+* CLI is the supported path for setup, lenses, branch handoff, maintenance, recovery, export, registry management, local viewing, public documentation, suggestion, audit, and stale workflows. Graph neighborhoods are available in the CLI and local viewer.
 * The API must be usable without a cloud account, external API, embeddings, or hosted service.
 
 ### 2.1 Agent Capability Map
@@ -67,7 +67,7 @@ When a supported MCP or CLI entrypoint exists, agents must use that entrypoint i
 | Restore memory | none | `aictx restore` | Recovery remains CLI-only in v1. |
 | Rewind memory | none | `aictx rewind` | Recovery remains CLI-only in v1. |
 | List stale memory | none | `aictx stale` | Debug list remains CLI-only in v1. |
-| Show graph neighborhood | none | `aictx graph` | Debug graph neighborhood remains CLI-only in v1. |
+| Show graph neighborhood | none | `aictx graph`, `aictx view` graph screen | Graph map is available in the CLI and local viewer; it remains outside MCP. |
 | Show memory lens | none | `aictx lens` | Readable project views remain CLI-only in v1. |
 | Manage branch handoff | none | `aictx handoff` | Branch-scoped continuity remains CLI-only in v1. |
 | Export Obsidian projection | none | `aictx export obsidian` | Generated projection remains CLI-only in v1. |
