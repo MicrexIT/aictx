@@ -1,17 +1,19 @@
 # Aictx
 
+![Stop re-explaining your repo to AI agents. Aictx saves durable project knowledge as reviewable repo memory.](site/public/assets/readme-value-header.png)
+
 <p align="center">
   <a href="https://aictx.dev"><img alt="Website" src="https://img.shields.io/badge/website-aictx.dev-111214?style=for-the-badge"></a>
   <a href="https://docs.aictx.dev"><img alt="Docs" src="https://img.shields.io/badge/docs-read-111214?style=for-the-badge"></a>
   <a href="https://demo.aictx.dev/?token=demo"><img alt="Live demo" src="https://img.shields.io/badge/demo-viewer-111214?style=for-the-badge"></a>
 </p>
 
-[![CI](https://github.com/aictx/memory/actions/workflows/ci.yml/badge.svg)](https://github.com/aictx/memory/actions/workflows/ci.yml)
-[![CodeQL](https://github.com/aictx/memory/actions/workflows/codeql.yml/badge.svg)](https://github.com/aictx/memory/actions/workflows/codeql.yml)
-[![npm](https://img.shields.io/npm/v/@aictx/memory)](https://www.npmjs.com/package/@aictx/memory)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-
-![Stop re-explaining your repo to AI agents. Aictx saves durable project knowledge as reviewable repo memory.](site/public/assets/readme-value-header.png)
+<p align="center">
+  <a href="https://github.com/aictx/memory/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/aictx/memory/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="https://github.com/aictx/memory/actions/workflows/codeql.yml"><img alt="CodeQL" src="https://github.com/aictx/memory/actions/workflows/codeql.yml/badge.svg"></a>
+  <a href="https://www.npmjs.com/package/@aictx/memory"><img alt="npm" src="https://img.shields.io/npm/v/@aictx/memory"></a>
+  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-yellow.svg"></a>
+</p>
 
 Stop re-explaining the same product intent, architecture decisions, repo
 conventions, setup steps, and known traps every time a new AI coding session
