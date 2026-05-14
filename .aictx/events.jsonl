@@ -26,3 +26,5 @@
 {"actor":"agent","event":"memory.updated","id":"workflow.demo-viewer-deployment","timestamp":"2026-05-13T18:51:45+02:00"}
 {"actor":"agent","event":"memory.created","id":"decision.viewer-is-schema-first-with-guided-views-secondary","timestamp":"2026-05-14T14:59:25+02:00"}
 {"actor":"agent","event":"memory.updated","id":"workflow.demo-viewer-deployment","timestamp":"2026-05-14T14:59:25+02:00"}
+{"actor":"agent","event":"memory.updated","id":"synthesis.product-intent","timestamp":"2026-05-14T15:25:33+02:00"}
+{"actor":"agent","event":"memory.updated","id":"synthesis.product-intent","timestamp":"2026-05-14T15:26:02+02:00"}
