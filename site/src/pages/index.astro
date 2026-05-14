@@ -13,30 +13,26 @@ const demoUrl = "https://demo.aictx.dev/?token=demo";
           <GitHubIcon />
           Local-first and open source
         </a>
-        <h1>Project memory<br />for AI Agents</h1>
+        <h1 class="hero-title">
+          <span class="hero-title-desktop">Stop re&#8209;explaining your</span>
+          <span class="hero-title-desktop">repo to AI agents.</span>
+          <span class="hero-title-mobile">Stop re&#8209;explaining</span>
+          <span class="hero-title-mobile">your repo to AI agents.</span>
+        </h1>
         <p class="hero-copy">
-          Aictx stores your repo’s intent, architecture, conventions, setup, and known traps
-          as local, reviewable files, then gives each agent the focused context it needs for the task.
-        </p>
-        <p class="hero-note">
-          Stop re-explaining your repo to AI agents.<br />
-          Aictx saves durable project knowledge as reviewable repo memory.
+          <span>Aictx saves durable project knowledge</span>
+          <span>as reviewable repo memory.</span>
         </p>
 
-        <div class="hero-actions">
-          <a class="button primary" href="https://github.com/MicrexIT/aictx" rel="noreferrer">Install Aictx</a>
-          <a class="button secondary" href={demoUrl} rel="noreferrer">
-            Browse demo
-          </a>
+        <div class="hero-install" aria-label="Install Aictx">
+          <div class="hero-command" aria-label="Quick start command">
+            <code>npm install -g @aictx/memory</code>
+          </div>
+
+          <div class="hero-actions">
+            <a class="button primary" href="https://github.com/MicrexIT/aictx" rel="noreferrer">Install Aictx</a>
+          </div>
         </div>
-
-        <div class="hero-command" aria-label="Quick start commands">
-          <code>npm install -g @aictx/memory</code>
-        </div>
-
-        <p class="hero-compatibility">
-          Works with Codex, Claude Code, Cursor, and MCP-capable agents.
-        </p>
       </div>
     </section>
 
