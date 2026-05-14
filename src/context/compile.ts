@@ -5,7 +5,13 @@ import { writeMarkdownAtomic } from "../core/fs.js";
 import { slugify } from "../core/ids.js";
 import type { ProjectPaths } from "../core/paths.js";
 import { err, ok, type Result } from "../core/result.js";
-import type { GitState, ObjectId, ObjectStatus, ProjectId } from "../core/types.js";
+import type {
+  GitState,
+  ObjectId,
+  ObjectStatus,
+  ProjectId,
+  SourceOrigin
+} from "../core/types.js";
 import { searchIndex, type SearchResult } from "../index/search.js";
 import { openIndexDatabase, type IndexDatabaseConnection } from "../index/sqlite.js";
 import type { StoredMemoryObject } from "../storage/objects.js";
@@ -558,6 +564,7 @@ function objectMatchesTask(
     hasTagMatch(sidecar.tags ?? [], taskTerms) ||
     hasFacetMatch(sidecar.facets, taskText, taskTerms) ||
     hasEvidenceMatch(sidecar.evidence ?? [], taskText, taskTerms) ||
+    hasOriginMatch(sidecar.origin, taskText, taskTerms) ||
     hintedFilePaths.some((filePath) => objectReferencesFile(object, filePath))
   );
 }
@@ -658,6 +665,13 @@ function objectReferencesFile(object: StoredMemoryObject, filePath: string): boo
     return true;
   }
 
+  if (
+    object.sidecar.origin?.kind === "file" &&
+    normalizeProjectFileReference(object.sidecar.origin.locator) === normalized
+  ) {
+    return true;
+  }
+
   return extractProjectFileReferences(object.body).includes(normalized);
 }
 
@@ -714,6 +728,7 @@ function rankCandidateFromStoredObject(object: StoredMemoryObject): RankMemoryCa
     tags: sidecar.tags ?? [],
     ...(sidecar.facets === undefined ? {} : { facets: sidecar.facets }),
     ...(sidecar.evidence === undefined ? {} : { evidence: sidecar.evidence }),
+    ...(sidecar.origin === undefined ? {} : { origin: sidecar.origin }),
     updated_at: sidecar.updated_at
   };
 }
@@ -730,7 +745,10 @@ function memoryConflictsForCandidates(
   const conflicts: MemoryConflict[] = [];
 
   for (const relation of relations) {
-    if (relation.status !== "active" || relation.predicate !== "conflicts_with") {
+    if (
+      relation.status !== "active" ||
+      (relation.predicate !== "conflicts_with" && relation.predicate !== "challenges")
+    ) {
       continue;
     }
 
@@ -866,6 +884,31 @@ function hasEvidenceMatch(
     const id = item.id.toLowerCase();
     return taskText.includes(id) || extractTerms(id).some((term) => terms.has(term));
   });
+}
+
+function hasOriginMatch(
+  origin: SourceOrigin | undefined,
+  taskText: string,
+  taskTerms: readonly string[]
+): boolean {
+  if (origin === undefined) {
+    return false;
+  }
+
+  const terms = new Set(taskTerms);
+  const originText = [
+    origin.kind,
+    origin.locator,
+    origin.captured_at ?? "",
+    origin.digest ?? "",
+    origin.media_type ?? ""
+  ].join(" ");
+  const locator = origin.locator.toLowerCase();
+
+  return (
+    taskText.includes(locator) ||
+    extractTerms(originText).some((term) => terms.has(term))
+  );
 }
 
 function extractTerms(value: string): string[] {

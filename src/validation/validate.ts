@@ -79,7 +79,7 @@ type RelativeFileRead =
       issue: ValidationIssue;
     };
 
-const SUPPORTED_STORAGE_VERSIONS = new Set([1, 2, 3]);
+const SUPPORTED_STORAGE_VERSIONS = new Set([1, 2, 3, 4]);
 const RELATED_TO_WARNING_MINIMUM = 5;
 
 export function validateConfig(

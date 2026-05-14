@@ -14,6 +14,7 @@ The CLI is the default interface for routine memory work.
 | Setup | `aictx init`, `aictx setup` |
 | Maintenance | `aictx check`, `aictx rebuild`, `aictx reset`, `aictx upgrade` |
 | Routine memory | `aictx load`, `aictx search`, `aictx suggest`, `aictx audit`, `aictx remember`, `aictx save` |
+| Wiki workflow | `aictx wiki ingest`, `aictx wiki file`, `aictx wiki lint`, `aictx wiki log` |
 | Inspection | `aictx inspect`, `aictx stale`, `aictx graph`, `aictx lens` |
 | Branch continuity | `aictx handoff show`, `aictx handoff update --stdin`, `aictx handoff close --stdin` |
 | Inspection and recovery | `aictx diff`, `aictx history`, `aictx restore`, `aictx rewind` |
@@ -46,7 +47,7 @@ MCP exposes exactly:
 - `diff_memory`
 
 Setup, lenses, handoff, maintenance, recovery, export, registry, viewer, docs,
-suggest, audit, and stale workflows are CLI-only in v1. Graph inspection is
+suggest, audit, wiki, and stale workflows are CLI-only in v1. Graph inspection is
 available in the CLI and local viewer, but remains outside MCP. These non-MCP
 surfaces are part of the v1 integration model rather than MCP parity gaps.
 

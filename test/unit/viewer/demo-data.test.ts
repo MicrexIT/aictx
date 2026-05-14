@@ -63,8 +63,19 @@ describe("viewer demo data seed", () => {
       projects: { projects: Array<{ registry_id: string; project_root: string }> };
       bootstrap: {
         project: { id: string; name: string };
-        objects: Array<{ id: string; type: string; facets: { category: string } | null }>;
-        relations: Array<{ from: string; to: string }>;
+        objects: Array<{
+          id: string;
+          type: string;
+          facets: { category: string } | null;
+          origin: {
+            kind: string;
+            locator: string;
+            captured_at?: string;
+            digest?: string;
+            media_type?: string;
+          } | null;
+        }>;
+        relations: Array<{ from: string; predicate: string; to: string }>;
         role_coverage: { roles: unknown[]; counts: { populated: number } };
         lenses: Array<{ name: string; included_memory_ids: string[] }>;
       };
@@ -74,6 +85,9 @@ describe("viewer demo data seed", () => {
     const relationEndpointIds = new Set(
       data.bootstrap.relations.flatMap((relation) => [relation.from, relation.to])
     );
+    const sourceObjects = data.bootstrap.objects.filter((object) => object.type === "source");
+    const packageJsonSource = data.bootstrap.objects.find((object) => object.id === "source.package-json");
+    const predicates = new Set(data.bootstrap.relations.map((relation) => relation.predicate));
 
     expect(second).toBe(first);
     expect(second).toBe(committed);
@@ -89,6 +103,20 @@ describe("viewer demo data seed", () => {
       facets: { category: "project-description" }
     });
     expect(data.bootstrap.objects.some((object) => object.id === "project.aictx")).toBe(false);
+    expect(sourceObjects.length).toBeGreaterThan(0);
+    for (const source of sourceObjects) {
+      expect(source.origin).toMatchObject({
+        kind: "file",
+        locator: expect.any(String)
+      });
+    }
+    expect(packageJsonSource?.origin).toMatchObject({
+      kind: "file",
+      locator: "package.json",
+      media_type: "application/json"
+    });
+    expect(predicates).toContain("supports");
+    expect(predicates).toContain("challenges");
     expect(data.meta.project_root).toBe("demo://todo-app");
     expect(data.meta.aictx_root).toBe("demo://todo-app/.aictx");
     expect(data.projects.projects).toHaveLength(1);

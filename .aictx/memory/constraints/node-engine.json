@@ -1,8 +1,11 @@
 {
   "body_path": "memory/constraints/node-engine.md",
-  "content_hash": "sha256:5da278e9d3ce22b0d52869a8543f3dffd2ef91cf71bbce7f38a1e874302b78bc",
+  "content_hash": "sha256:9ac716ab9e9c1a96c4670ee61ccd3c287903a340b51f54fedb730a90480a2b73",
   "created_at": "2026-05-12T17:53:06+02:00",
   "evidence": [],
+  "facets": {
+    "category": "stack"
+  },
   "id": "constraint.node-engine",
   "scope": {
     "branch": null,

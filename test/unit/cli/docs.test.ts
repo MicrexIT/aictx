@@ -15,6 +15,7 @@ describe("aictx docs", () => {
     expect(output.stdout()).toContain("- capabilities:");
     expect(output.stdout()).toContain("- specializing-aictx:");
     expect(output.stdout()).toContain("- demand-driven-memory:");
+    expect(output.stdout()).toContain("- wiki-workflow:");
     expect(output.stdout()).toContain("- agent-integration:");
     expect(output.stdout()).toContain("- agent-recipes:");
   });
@@ -78,6 +79,18 @@ describe("aictx docs", () => {
     expect(output.stderr()).toBe("");
     expect(output.stdout()).toContain("# Capabilities");
     expect(output.stdout()).toContain("Routine memory work");
+  });
+
+  it("prints the bundled wiki workflow topic", async () => {
+    const output = createCapturedOutput();
+
+    const exitCode = await main(["node", "aictx", "docs", "wiki"], output.writers);
+
+    expect(exitCode).toBe(0);
+    expect(output.stderr()).toBe("");
+    expect(output.stdout()).toContain("# Wiki workflow");
+    expect(output.stdout()).toContain("aictx wiki ingest");
+    expect(output.stdout()).toContain("does not call an LLM");
   });
 
   it("prints the bundled agent recipes topic", async () => {

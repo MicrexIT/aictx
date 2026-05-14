@@ -198,7 +198,8 @@ function maintenanceObjects(
       .filter(
         (relation) =>
           relation.relation.status === "active" &&
-          relation.relation.predicate === "conflicts_with"
+          (relation.relation.predicate === "conflicts_with" ||
+            relation.relation.predicate === "challenges")
       )
       .flatMap((relation) => [relation.relation.from, relation.relation.to])
   );

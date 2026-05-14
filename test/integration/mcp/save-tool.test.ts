@@ -145,7 +145,7 @@ describe("aictx MCP save_memory_patch tool", () => {
     expect(started.stderr()).toBe("");
   });
 
-  it("advertises the v2 structured patch shape", async () => {
+  it("advertises the v4 structured patch shape", async () => {
     const projectRoot = await createProjectRoot("aictx-mcp-save-schema-");
     const started = await startMcpClient(projectRoot);
 
@@ -159,6 +159,7 @@ describe("aictx MCP save_memory_patch tool", () => {
       expect(schema).toContain("update_object");
       expect(schema).toContain("facets");
       expect(schema).toContain("evidence");
+      expect(schema).toContain("origin");
       expect(schema).toContain("abandoned-attempt");
       expect(schema).toContain("product-feature");
       expect(schema).not.toContain("additionalProperties\":{}");
@@ -418,6 +419,75 @@ describe("aictx MCP save_memory_patch tool", () => {
         { kind: "task", id: "Save MCP faceted memory" },
         { kind: "source", id: "source.mcp-docs" }
       ]);
+    } finally {
+      await started.close();
+    }
+
+    expect(started.stderr()).toBe("");
+  });
+
+  it("saves source origin through MCP remember and patch contracts", async () => {
+    const projectRoot = await createInitializedProject("aictx-mcp-save-origin-");
+    const started = await startMcpClient(projectRoot);
+
+    try {
+      const remembered = await started.client.callTool({
+        name: "remember_memory",
+        arguments: {
+          task: "Remember source origin",
+          memories: [
+            {
+              kind: "source",
+              id: "source.mcp-remember-origin",
+              title: "MCP remember origin source",
+              body: "MCP remember_memory can set raw-source origin metadata on source records.",
+              origin: {
+                kind: "url",
+                locator: "https://example.com/mcp-remember-origin",
+                captured_at: "2026-05-14T12:00:00+02:00",
+                media_type: "text/markdown"
+              }
+            }
+          ]
+        }
+      });
+      const saved = await started.client.callTool({
+        name: "save_memory_patch",
+        arguments: {
+          patch: createSourceOriginPatch()
+        }
+      });
+      const rememberedEnvelope = parseToolEnvelope<SaveEnvelope>(remembered);
+      const savedEnvelope = parseToolEnvelope<SaveEnvelope>(saved);
+
+      expect(rememberedEnvelope.ok).toBe(true);
+      expect(savedEnvelope.ok).toBe(true);
+
+      const storage = await readCanonicalStorage(projectRoot);
+
+      expect(storage.ok).toBe(true);
+      if (!storage.ok) {
+        return;
+      }
+
+      const rememberedSource = storage.data.objects.find(
+        (object) => object.sidecar.id === "source.mcp-remember-origin"
+      );
+      const savedSource = storage.data.objects.find(
+        (object) => object.sidecar.id === "source.mcp-patch-origin"
+      );
+
+      expect(rememberedSource?.sidecar.origin).toMatchObject({
+        kind: "url",
+        locator: "https://example.com/mcp-remember-origin",
+        captured_at: "2026-05-14T12:00:00+02:00",
+        media_type: "text/markdown"
+      });
+      expect(savedSource?.sidecar.origin).toMatchObject({
+        kind: "file",
+        locator: "docs/mcp-origin.md",
+        media_type: "text/markdown"
+      });
     } finally {
       await started.close();
     }
@@ -774,6 +844,30 @@ function createFacetedPatch() {
           { kind: "task", id: "Save MCP faceted memory" },
           { kind: "source", id: "source.mcp-docs" }
         ]
+      }
+    ]
+  };
+}
+
+function createSourceOriginPatch() {
+  return {
+    source: {
+      kind: "agent",
+      task: "Save MCP source origin"
+    },
+    changes: [
+      {
+        op: "create_object",
+        id: "source.mcp-patch-origin",
+        type: "source",
+        title: "MCP patch origin source",
+        body: "# MCP patch origin source\n\nMCP save_memory_patch can set raw-source origin metadata.\n",
+        tags: ["mcp", "origin"],
+        origin: {
+          kind: "file",
+          locator: "docs/mcp-origin.md",
+          media_type: "text/markdown"
+        }
       }
     ]
   };

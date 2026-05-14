@@ -223,7 +223,7 @@ ChatGPT-compatible `search`/`fetch` names are adapter aliases over Aictx
 search/inspect behavior, not local MCP tool names.
 
 Setup, lenses, handoff, maintenance, recovery, export, registry, viewer, docs,
-suggest, audit, and stale workflows remain outside local MCP. Graph inspection
+suggest, audit, wiki, and stale workflows remain outside local MCP. Graph inspection
 is available in the CLI and local viewer, but remains outside local MCP.
 Non-MCP capabilities are not MCP parity gaps. Do not add or ask for MCP tools
 solely to mirror these surfaces, and do not edit `.aictx/` files directly when
@@ -248,6 +248,7 @@ a supported MCP tool or CLI command exists.
 | Manage project registry | none | `aictx projects` |
 | View local memory | none | `aictx view` |
 | Suggest or audit memory | none | `aictx suggest`, `aictx audit` |
+| Wiki source workflow | none | `aictx wiki` |
 | Read public docs | none | `aictx docs` |
 
 `aictx view [--port <number>] [--open] [--detach] [--json]` starts the local
@@ -271,7 +272,8 @@ Right-size memory. Use atomic memories for precise reusable claims,
 `synthesis` memories for compact area-level understanding, and `source`
 memories to preserve where context came from. Create relations only when the
 connection matters, using predicates such as `derived_from`, `summarizes`,
-`documents`, `requires`, `depends_on`, `affects`, or `supersedes`.
+`documents`, `supports`, `challenges`, `requires`, `depends_on`, `affects`, or
+`supersedes`.
 
 Use `update_object`, `mark_stale`, `supersede_object`, `delete_object`, and
 `create_relation` when they fit better than creating another object. Use

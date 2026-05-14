@@ -59,12 +59,12 @@
         "available": true,
         "counts": {
           "objects": 20,
-          "relations": 17,
+          "relations": 19,
           "stale_objects": 0,
           "superseded_objects": 0,
           "source_objects": 4,
           "synthesis_objects": 6,
-          "active_relations": 17
+          "active_relations": 19
         },
         "git": {
           "available": true,
@@ -113,6 +113,7 @@
           "kind": "system",
           "task": "Curated public Todo App demo seed"
         },
+        "origin": null,
         "superseded_by": null,
         "created_at": "2026-05-12T09:00:00+02:00",
         "updated_at": "2026-05-13T15:30:00+02:00",
@@ -148,6 +149,7 @@
           "kind": "system",
           "task": "Curated public Todo App demo seed"
         },
+        "origin": null,
         "superseded_by": null,
         "created_at": "2026-05-12T09:00:00+02:00",
         "updated_at": "2026-05-13T15:30:00+02:00",
@@ -183,6 +185,7 @@
           "kind": "system",
           "task": "Curated public Todo App demo seed"
         },
+        "origin": null,
         "superseded_by": null,
         "created_at": "2026-05-12T09:00:00+02:00",
         "updated_at": "2026-05-13T15:30:00+02:00",
@@ -224,6 +227,7 @@
           "kind": "system",
           "task": "Curated public Todo App demo seed"
         },
+        "origin": null,
         "superseded_by": null,
         "created_at": "2026-05-12T09:00:00+02:00",
         "updated_at": "2026-05-13T15:30:00+02:00",
@@ -263,6 +267,7 @@
           "kind": "system",
           "task": "Curated public Todo App demo seed"
         },
+        "origin": null,
         "superseded_by": null,
         "created_at": "2026-05-12T09:00:00+02:00",
         "updated_at": "2026-05-13T15:30:00+02:00",
@@ -304,6 +309,7 @@
           "kind": "system",
           "task": "Curated public Todo App demo seed"
         },
+        "origin": null,
         "superseded_by": null,
         "created_at": "2026-05-12T09:00:00+02:00",
         "updated_at": "2026-05-13T15:30:00+02:00",
@@ -344,6 +350,7 @@
           "kind": "system",
           "task": "Curated public Todo App demo seed"
         },
+        "origin": null,
         "superseded_by": null,
         "created_at": "2026-05-12T09:00:00+02:00",
         "updated_at": "2026-05-13T15:30:00+02:00",
@@ -382,6 +389,7 @@
           "kind": "system",
           "task": "Curated public Todo App demo seed"
         },
+        "origin": null,
         "superseded_by": null,
         "created_at": "2026-05-12T09:00:00+02:00",
         "updated_at": "2026-05-13T15:30:00+02:00",
@@ -415,6 +423,7 @@
           "kind": "system",
           "task": "Curated public Todo App demo seed"
         },
+        "origin": null,
         "superseded_by": null,
         "created_at": "2026-05-12T09:00:00+02:00",
         "updated_at": "2026-05-13T15:30:00+02:00",
@@ -448,6 +457,7 @@
           "kind": "system",
           "task": "Curated public Todo App demo seed"
         },
+        "origin": null,
         "superseded_by": null,
         "created_at": "2026-05-12T09:00:00+02:00",
         "updated_at": "2026-05-13T15:30:00+02:00",
@@ -485,6 +495,7 @@
           "kind": "system",
           "task": "Curated public Todo App demo seed"
         },
+        "origin": null,
         "superseded_by": null,
         "created_at": "2026-05-12T09:00:00+02:00",
         "updated_at": "2026-05-13T15:30:00+02:00",
@@ -524,6 +535,7 @@
           "kind": "system",
           "task": "Curated public Todo App demo seed"
         },
+        "origin": null,
         "superseded_by": null,
         "created_at": "2026-05-12T09:00:00+02:00",
         "updated_at": "2026-05-13T15:30:00+02:00",
@@ -568,6 +580,7 @@
           "kind": "system",
           "task": "Curated public Todo App demo seed"
         },
+        "origin": null,
         "superseded_by": null,
         "created_at": "2026-05-12T09:00:00+02:00",
         "updated_at": "2026-05-13T15:30:00+02:00",
@@ -605,6 +618,7 @@
           "kind": "system",
           "task": "Curated public Todo App demo seed"
         },
+        "origin": null,
         "superseded_by": null,
         "created_at": "2026-05-12T09:00:00+02:00",
         "updated_at": "2026-05-13T15:30:00+02:00",
@@ -635,6 +649,7 @@
           "kind": "system",
           "task": "Curated public Todo App demo seed"
         },
+        "origin": null,
         "superseded_by": null,
         "created_at": "2026-05-12T09:00:00+02:00",
         "updated_at": "2026-05-13T15:30:00+02:00",
@@ -674,6 +689,7 @@
           "kind": "system",
           "task": "Curated public Todo App demo seed"
         },
+        "origin": null,
         "superseded_by": null,
         "created_at": "2026-05-12T09:00:00+02:00",
         "updated_at": "2026-05-13T15:30:00+02:00",
@@ -711,6 +727,12 @@
         "source": {
           "kind": "system",
           "task": "Curated public Todo App demo seed"
+        },
+        "origin": {
+          "kind": "file",
+          "locator": "docs/product-brief.md",
+          "captured_at": "2026-05-12T09:00:00+02:00",
+          "media_type": "text/markdown"
         },
         "superseded_by": null,
         "created_at": "2026-05-12T09:00:00+02:00",
@@ -750,6 +772,12 @@
           "kind": "system",
           "task": "Curated public Todo App demo seed"
         },
+        "origin": {
+          "kind": "file",
+          "locator": "package.json",
+          "captured_at": "2026-05-12T09:00:00+02:00",
+          "media_type": "application/json"
+        },
         "superseded_by": null,
         "created_at": "2026-05-12T09:00:00+02:00",
         "updated_at": "2026-05-13T15:30:00+02:00",
@@ -788,6 +816,12 @@
           "kind": "system",
           "task": "Curated public Todo App demo seed"
         },
+        "origin": {
+          "kind": "file",
+          "locator": "README.md",
+          "captured_at": "2026-05-12T09:00:00+02:00",
+          "media_type": "text/markdown"
+        },
         "superseded_by": null,
         "created_at": "2026-05-12T09:00:00+02:00",
         "updated_at": "2026-05-13T15:30:00+02:00",
@@ -825,6 +859,12 @@
         "source": {
           "kind": "system",
           "task": "Curated public Todo App demo seed"
+        },
+        "origin": {
+          "kind": "file",
+          "locator": "AGENTS.md",
+          "captured_at": "2026-05-12T09:00:00+02:00",
+          "media_type": "text/markdown"
         },
         "superseded_by": null,
         "created_at": "2026-05-12T09:00:00+02:00",
@@ -888,6 +928,24 @@
         "json_path": ".aictx/relations/synthesis-product-intent-derived-from-source-product-brief.json"
       },
       {
+        "id": "rel.source-product-brief-supports-synthesis-product-intent",
+        "from": "source.product-brief",
+        "predicate": "supports",
+        "to": "synthesis.product-intent",
+        "status": "active",
+        "confidence": "high",
+        "evidence": [
+          {
+            "kind": "memory",
+            "id": "source.product-brief"
+          }
+        ],
+        "content_hash": null,
+        "created_at": "2026-05-12T09:00:00+02:00",
+        "updated_at": "2026-05-13T15:30:00+02:00",
+        "json_path": ".aictx/relations/source-product-brief-supports-synthesis-product-intent.json"
+      },
+      {
         "id": "rel.synthesis-feature-map-derived-from-source-product-brief",
         "from": "synthesis.feature-map",
         "predicate": "derived_from",
@@ -904,6 +962,24 @@
         "created_at": "2026-05-12T09:00:00+02:00",
         "updated_at": "2026-05-13T15:30:00+02:00",
         "json_path": ".aictx/relations/synthesis-feature-map-derived-from-source-product-brief.json"
+      },
+      {
+        "id": "rel.question-recurring-tasks-challenges-synthesis-feature-map",
+        "from": "question.recurring-tasks",
+        "predicate": "challenges",
+        "to": "synthesis.feature-map",
+        "status": "active",
+        "confidence": "high",
+        "evidence": [
+          {
+            "kind": "memory",
+            "id": "question.recurring-tasks"
+          }
+        ],
+        "content_hash": null,
+        "created_at": "2026-05-12T09:00:00+02:00",
+        "updated_at": "2026-05-13T15:30:00+02:00",
+        "json_path": ".aictx/relations/question-recurring-tasks-challenges-synthesis-feature-map.json"
       },
       {
         "id": "rel.synthesis-feature-map-summarizes-concept-quick-add",
@@ -1142,12 +1218,12 @@
     ],
     "counts": {
       "objects": 20,
-      "relations": 17,
+      "relations": 19,
       "stale_objects": 0,
       "superseded_objects": 0,
       "source_objects": 4,
       "synthesis_objects": 6,
-      "active_relations": 17
+      "active_relations": 19
     },
     "role_coverage": {
       "roles": [
@@ -1161,6 +1237,7 @@
             "synthesis.product-intent"
           ],
           "relation_ids": [
+            "rel.source-product-brief-supports-synthesis-product-intent",
             "rel.synthesis-product-intent-derived-from-source-product-brief"
           ],
           "gap": null
@@ -1181,6 +1258,7 @@
             "rel.gotcha-completed-filter-counts-affects-concept-filtered-views",
             "rel.project-todo-app-implements-concept-filtered-views",
             "rel.project-todo-app-implements-concept-quick-add",
+            "rel.question-recurring-tasks-challenges-synthesis-feature-map",
             "rel.question-recurring-tasks-related-to-synthesis-feature-map",
             "rel.synthesis-feature-map-derived-from-source-product-brief",
             "rel.synthesis-feature-map-summarizes-concept-filtered-views",
@@ -1300,6 +1378,7 @@
             "question.recurring-tasks"
           ],
           "relation_ids": [
+            "rel.question-recurring-tasks-challenges-synthesis-feature-map",
             "rel.question-recurring-tasks-related-to-synthesis-feature-map"
           ],
           "gap": null
@@ -1318,6 +1397,7 @@
           ],
           "relation_ids": [
             "rel.architecture-local-first-derived-from-source-readme",
+            "rel.source-product-brief-supports-synthesis-product-intent",
             "rel.synthesis-agent-guidance-derived-from-source-agent-guidance",
             "rel.synthesis-conventions-quality-derived-from-source-product-brief",
             "rel.synthesis-feature-map-derived-from-source-product-brief",
@@ -1368,7 +1448,7 @@
       {
         "name": "project-map",
         "title": "Project Map",
-        "markdown": "# Project Map\n\nDefault overview for purpose, capabilities, layout, stack, and operating norms.\n\n## Role coverage\n\n- Product Intent: populated\n- Capability Map: populated\n- Repository Map: populated\n- Architecture / Patterns: populated\n- Stack / Tooling: populated\n- Conventions / Quality Bar: populated\n- Workflows / How-tos: populated\n- Verification: populated\n- Gotchas / Risks: populated\n- Open Questions: populated\n- Agent Guidance: populated\n\n## Local-first todo architecture\n\nMemory: `architecture.local-first-todo-app` (architecture, active)\n\nThe app keeps task state in a small client-side store and persists a normalized task list to localStorage.\n\nRendering code reads from the store; persistence code only serializes and validates task records.\n\n## Filtered task views\n\nMemory: `concept.filtered-views` (concept, active)\n\nThe list supports all, active, completed, and overdue views. Counts must match the same predicate used to render each view.\n\n## Quick add\n\nMemory: `concept.quick-add` (concept, active)\n\nQuick add accepts a non-empty task title, trims whitespace, creates an active task, and clears the input after save.\n\n## Stay offline first\n\nMemory: `constraint.offline-first` (constraint, active)\n\nTask creation, completion, filtering, and persistence must work without a backend service.\n\nDo not add a hosted database or login flow to satisfy demo requirements.\n\n## Completed filter counts can drift\n\nMemory: `gotcha.completed-filter-counts` (gotcha, active)\n\nDo not compute filter badges with a different predicate than the rendered list. This caused completed tasks to appear in the active count before.\n\n## Recurring task scope\n\nMemory: `question.recurring-tasks` (question, open)\n\nShould recurring tasks be part of the Todo App, or should the app stay focused on one-off personal tasks for the first release?\n\n## Agent guidance\n\nMemory: `synthesis.agent-guidance` (synthesis, active)\n\nLoad Aictx memory before non-trivial Todo App work. Preserve the offline-first scope, keep UI behavior keyboard accessible, and verify persistence after reload.\n\n## Conventions and quality bar\n\nMemory: `synthesis.conventions-quality` (synthesis, active)\n\nKeep task mutations explicit, preserve keyboard access for every task action, and keep empty states tied to the active filter.\n\nAvoid adding accounts, sync, or collaboration features unless the product scope changes.\n\n## Feature map\n\nMemory: `synthesis.feature-map` (synthesis, active)\n\n- Quick add creates a task from a single text input.\n- Filtered views separate all, active, completed, and overdue tasks.\n- Local persistence keeps tasks available after reload.\n- Empty states explain the current filter without sending the user to documentation.\n\n## Product intent\n\nMemory: `synthesis.product-intent` (synthesis, active)\n\nThe Todo App helps a single user keep a trustworthy short list of work without account setup or network dependency.\n\nUseful output means fast capture, clear completion state, and no surprise data loss after refresh.\n\n## Repository map\n\nMemory: `synthesis.repository-map` (synthesis, active)\n\nApplication code lives under `src/`, reusable UI pieces live under `src/components/`, and persistence helpers live under `src/storage/`.\n\nTests mirror those areas under `test/` with browser coverage for task creation and filtering.\n\n## Stack and tooling\n\nMemory: `synthesis.stack-and-tooling` (synthesis, active)\n\nThe demo Todo App uses TypeScript, Vite, and Vitest. Browser behavior is covered with Playwright-style flow tests.\n\nPackage scripts are the preferred interface for build, test, and lint checks.\n\n## Local development workflow\n\nMemory: `workflow.local-development` (workflow, active)\n\nRun `pnpm install`, `pnpm dev`, and then open the Vite URL. Use the browser flow before changing persistence behavior.\n\n## Post-task verification\n\nMemory: `workflow.post-task-verification` (workflow, active)\n\nBefore finishing Todo App work, run `pnpm test`, `pnpm run typecheck`, and a browser check for add, complete, filter, and reload behavior.\n\n## Relation context\n\n- `project.todo-app` implements `concept.quick-add` (active)\n- `project.todo-app` implements `concept.filtered-views` (active)\n- `synthesis.product-intent` derived_from `source.product-brief` (active)\n- `synthesis.feature-map` derived_from `source.product-brief` (active)\n- `synthesis.feature-map` summarizes `concept.quick-add` (active)\n- `synthesis.feature-map` summarizes `concept.filtered-views` (active)\n- `synthesis.repository-map` derived_from `source.readme` (active)\n- `architecture.local-first-todo-app` derived_from `source.readme` (active)\n- `synthesis.stack-and-tooling` derived_from `source.package-json` (active)\n- `synthesis.conventions-quality` derived_from `source.product-brief` (active)\n- `workflow.local-development` documents `source.package-json` (active)\n- `workflow.post-task-verification` documents `source.package-json` (active)\n- `gotcha.completed-filter-counts` affects `concept.filtered-views` (active)\n- `concept.filtered-views` depends_on `fact.storage-localstorage` (active)\n- `question.recurring-tasks` related_to `synthesis.feature-map` (active)\n- `synthesis.agent-guidance` derived_from `source.agent-guidance` (active)\n- `constraint.offline-first` requires `fact.storage-localstorage` (active)\n",
+        "markdown": "# Project Map\n\nDefault overview for purpose, capabilities, layout, stack, and operating norms.\n\n## Role coverage\n\n- Product Intent: populated\n- Capability Map: populated\n- Repository Map: populated\n- Architecture / Patterns: populated\n- Stack / Tooling: populated\n- Conventions / Quality Bar: populated\n- Workflows / How-tos: populated\n- Verification: populated\n- Gotchas / Risks: populated\n- Open Questions: populated\n- Agent Guidance: populated\n\n## Local-first todo architecture\n\nMemory: `architecture.local-first-todo-app` (architecture, active)\n\nThe app keeps task state in a small client-side store and persists a normalized task list to localStorage.\n\nRendering code reads from the store; persistence code only serializes and validates task records.\n\n## Filtered task views\n\nMemory: `concept.filtered-views` (concept, active)\n\nThe list supports all, active, completed, and overdue views. Counts must match the same predicate used to render each view.\n\n## Quick add\n\nMemory: `concept.quick-add` (concept, active)\n\nQuick add accepts a non-empty task title, trims whitespace, creates an active task, and clears the input after save.\n\n## Stay offline first\n\nMemory: `constraint.offline-first` (constraint, active)\n\nTask creation, completion, filtering, and persistence must work without a backend service.\n\nDo not add a hosted database or login flow to satisfy demo requirements.\n\n## Completed filter counts can drift\n\nMemory: `gotcha.completed-filter-counts` (gotcha, active)\n\nDo not compute filter badges with a different predicate than the rendered list. This caused completed tasks to appear in the active count before.\n\n## Recurring task scope\n\nMemory: `question.recurring-tasks` (question, open)\n\nShould recurring tasks be part of the Todo App, or should the app stay focused on one-off personal tasks for the first release?\n\n## Agent guidance\n\nMemory: `synthesis.agent-guidance` (synthesis, active)\n\nLoad Aictx memory before non-trivial Todo App work. Preserve the offline-first scope, keep UI behavior keyboard accessible, and verify persistence after reload.\n\n## Conventions and quality bar\n\nMemory: `synthesis.conventions-quality` (synthesis, active)\n\nKeep task mutations explicit, preserve keyboard access for every task action, and keep empty states tied to the active filter.\n\nAvoid adding accounts, sync, or collaboration features unless the product scope changes.\n\n## Feature map\n\nMemory: `synthesis.feature-map` (synthesis, active)\n\n- Quick add creates a task from a single text input.\n- Filtered views separate all, active, completed, and overdue tasks.\n- Local persistence keeps tasks available after reload.\n- Empty states explain the current filter without sending the user to documentation.\n\n## Product intent\n\nMemory: `synthesis.product-intent` (synthesis, active)\n\nThe Todo App helps a single user keep a trustworthy short list of work without account setup or network dependency.\n\nUseful output means fast capture, clear completion state, and no surprise data loss after refresh.\n\n## Repository map\n\nMemory: `synthesis.repository-map` (synthesis, active)\n\nApplication code lives under `src/`, reusable UI pieces live under `src/components/`, and persistence helpers live under `src/storage/`.\n\nTests mirror those areas under `test/` with browser coverage for task creation and filtering.\n\n## Stack and tooling\n\nMemory: `synthesis.stack-and-tooling` (synthesis, active)\n\nThe demo Todo App uses TypeScript, Vite, and Vitest. Browser behavior is covered with Playwright-style flow tests.\n\nPackage scripts are the preferred interface for build, test, and lint checks.\n\n## Local development workflow\n\nMemory: `workflow.local-development` (workflow, active)\n\nRun `pnpm install`, `pnpm dev`, and then open the Vite URL. Use the browser flow before changing persistence behavior.\n\n## Post-task verification\n\nMemory: `workflow.post-task-verification` (workflow, active)\n\nBefore finishing Todo App work, run `pnpm test`, `pnpm run typecheck`, and a browser check for add, complete, filter, and reload behavior.\n\n## Relation context\n\n- `project.todo-app` implements `concept.quick-add` (active)\n- `project.todo-app` implements `concept.filtered-views` (active)\n- `synthesis.product-intent` derived_from `source.product-brief` (active)\n- `source.product-brief` supports `synthesis.product-intent` (active)\n- `synthesis.feature-map` derived_from `source.product-brief` (active)\n- `question.recurring-tasks` challenges `synthesis.feature-map` (active)\n- `synthesis.feature-map` summarizes `concept.quick-add` (active)\n- `synthesis.feature-map` summarizes `concept.filtered-views` (active)\n- `synthesis.repository-map` derived_from `source.readme` (active)\n- `architecture.local-first-todo-app` derived_from `source.readme` (active)\n- `synthesis.stack-and-tooling` derived_from `source.package-json` (active)\n- `synthesis.conventions-quality` derived_from `source.product-brief` (active)\n- `workflow.local-development` documents `source.package-json` (active)\n- `workflow.post-task-verification` documents `source.package-json` (active)\n- `gotcha.completed-filter-counts` affects `concept.filtered-views` (active)\n- `concept.filtered-views` depends_on `fact.storage-localstorage` (active)\n- `question.recurring-tasks` related_to `synthesis.feature-map` (active)\n- `synthesis.agent-guidance` derived_from `source.agent-guidance` (active)\n- `constraint.offline-first` requires `fact.storage-localstorage` (active)\n",
         "role_coverage": {
           "roles": [
             {
@@ -1381,6 +1461,7 @@
                 "synthesis.product-intent"
               ],
               "relation_ids": [
+                "rel.source-product-brief-supports-synthesis-product-intent",
                 "rel.synthesis-product-intent-derived-from-source-product-brief"
               ],
               "gap": null
@@ -1401,6 +1482,7 @@
                 "rel.gotcha-completed-filter-counts-affects-concept-filtered-views",
                 "rel.project-todo-app-implements-concept-filtered-views",
                 "rel.project-todo-app-implements-concept-quick-add",
+                "rel.question-recurring-tasks-challenges-synthesis-feature-map",
                 "rel.question-recurring-tasks-related-to-synthesis-feature-map",
                 "rel.synthesis-feature-map-derived-from-source-product-brief",
                 "rel.synthesis-feature-map-summarizes-concept-filtered-views",
@@ -1520,6 +1602,7 @@
                 "question.recurring-tasks"
               ],
               "relation_ids": [
+                "rel.question-recurring-tasks-challenges-synthesis-feature-map",
                 "rel.question-recurring-tasks-related-to-synthesis-feature-map"
               ],
               "gap": null
@@ -1538,6 +1621,7 @@
               ],
               "relation_ids": [
                 "rel.architecture-local-first-derived-from-source-readme",
+                "rel.source-product-brief-supports-synthesis-product-intent",
                 "rel.synthesis-agent-guidance-derived-from-source-agent-guidance",
                 "rel.synthesis-conventions-quality-derived-from-source-product-brief",
                 "rel.synthesis-feature-map-derived-from-source-product-brief",
@@ -1607,7 +1691,9 @@
           "rel.gotcha-completed-filter-counts-affects-concept-filtered-views",
           "rel.project-todo-app-implements-concept-filtered-views",
           "rel.project-todo-app-implements-concept-quick-add",
+          "rel.question-recurring-tasks-challenges-synthesis-feature-map",
           "rel.question-recurring-tasks-related-to-synthesis-feature-map",
+          "rel.source-product-brief-supports-synthesis-product-intent",
           "rel.synthesis-agent-guidance-derived-from-source-agent-guidance",
           "rel.synthesis-conventions-quality-derived-from-source-product-brief",
           "rel.synthesis-feature-map-derived-from-source-product-brief",
@@ -1675,6 +1761,24 @@
             "json_path": ".aictx/relations/synthesis-product-intent-derived-from-source-product-brief.json"
           },
           {
+            "id": "rel.source-product-brief-supports-synthesis-product-intent",
+            "from": "source.product-brief",
+            "predicate": "supports",
+            "to": "synthesis.product-intent",
+            "status": "active",
+            "confidence": "high",
+            "evidence": [
+              {
+                "kind": "memory",
+                "id": "source.product-brief"
+              }
+            ],
+            "content_hash": null,
+            "created_at": "2026-05-12T09:00:00+02:00",
+            "updated_at": "2026-05-13T15:30:00+02:00",
+            "json_path": ".aictx/relations/source-product-brief-supports-synthesis-product-intent.json"
+          },
+          {
             "id": "rel.synthesis-feature-map-derived-from-source-product-brief",
             "from": "synthesis.feature-map",
             "predicate": "derived_from",
@@ -1691,6 +1795,24 @@
             "created_at": "2026-05-12T09:00:00+02:00",
             "updated_at": "2026-05-13T15:30:00+02:00",
             "json_path": ".aictx/relations/synthesis-feature-map-derived-from-source-product-brief.json"
+          },
+          {
+            "id": "rel.question-recurring-tasks-challenges-synthesis-feature-map",
+            "from": "question.recurring-tasks",
+            "predicate": "challenges",
+            "to": "synthesis.feature-map",
+            "status": "active",
+            "confidence": "high",
+            "evidence": [
+              {
+                "kind": "memory",
+                "id": "question.recurring-tasks"
+              }
+            ],
+            "content_hash": null,
+            "created_at": "2026-05-12T09:00:00+02:00",
+            "updated_at": "2026-05-13T15:30:00+02:00",
+            "json_path": ".aictx/relations/question-recurring-tasks-challenges-synthesis-feature-map.json"
           },
           {
             "id": "rel.synthesis-feature-map-summarizes-concept-quick-add",
@@ -1932,7 +2054,7 @@
       {
         "name": "current-work",
         "title": "Current Work",
-        "markdown": "# Current Work\n\nOpen scope questions and verification context for the next Todo App change.\n\n## Role coverage\n\n- Open Questions: populated\n- Verification: populated\n- Gotchas / Risks: populated\n\n## Completed filter counts can drift\n\nMemory: `gotcha.completed-filter-counts` (gotcha, active)\n\nDo not compute filter badges with a different predicate than the rendered list. This caused completed tasks to appear in the active count before.\n\n## Recurring task scope\n\nMemory: `question.recurring-tasks` (question, open)\n\nShould recurring tasks be part of the Todo App, or should the app stay focused on one-off personal tasks for the first release?\n\n## Post-task verification\n\nMemory: `workflow.post-task-verification` (workflow, active)\n\nBefore finishing Todo App work, run `pnpm test`, `pnpm run typecheck`, and a browser check for add, complete, filter, and reload behavior.\n\n## Relation context\n\n- `workflow.post-task-verification` documents `source.package-json` (active)\n- `gotcha.completed-filter-counts` affects `concept.filtered-views` (active)\n- `question.recurring-tasks` related_to `synthesis.feature-map` (active)\n",
+        "markdown": "# Current Work\n\nOpen scope questions and verification context for the next Todo App change.\n\n## Role coverage\n\n- Open Questions: populated\n- Verification: populated\n- Gotchas / Risks: populated\n\n## Completed filter counts can drift\n\nMemory: `gotcha.completed-filter-counts` (gotcha, active)\n\nDo not compute filter badges with a different predicate than the rendered list. This caused completed tasks to appear in the active count before.\n\n## Recurring task scope\n\nMemory: `question.recurring-tasks` (question, open)\n\nShould recurring tasks be part of the Todo App, or should the app stay focused on one-off personal tasks for the first release?\n\n## Post-task verification\n\nMemory: `workflow.post-task-verification` (workflow, active)\n\nBefore finishing Todo App work, run `pnpm test`, `pnpm run typecheck`, and a browser check for add, complete, filter, and reload behavior.\n\n## Relation context\n\n- `question.recurring-tasks` challenges `synthesis.feature-map` (active)\n- `workflow.post-task-verification` documents `source.package-json` (active)\n- `gotcha.completed-filter-counts` affects `concept.filtered-views` (active)\n- `question.recurring-tasks` related_to `synthesis.feature-map` (active)\n",
         "role_coverage": {
           "roles": [
             {
@@ -1945,6 +2067,7 @@
                 "synthesis.product-intent"
               ],
               "relation_ids": [
+                "rel.source-product-brief-supports-synthesis-product-intent",
                 "rel.synthesis-product-intent-derived-from-source-product-brief"
               ],
               "gap": null
@@ -1965,6 +2088,7 @@
                 "rel.gotcha-completed-filter-counts-affects-concept-filtered-views",
                 "rel.project-todo-app-implements-concept-filtered-views",
                 "rel.project-todo-app-implements-concept-quick-add",
+                "rel.question-recurring-tasks-challenges-synthesis-feature-map",
                 "rel.question-recurring-tasks-related-to-synthesis-feature-map",
                 "rel.synthesis-feature-map-derived-from-source-product-brief",
                 "rel.synthesis-feature-map-summarizes-concept-filtered-views",
@@ -2084,6 +2208,7 @@
                 "question.recurring-tasks"
               ],
               "relation_ids": [
+                "rel.question-recurring-tasks-challenges-synthesis-feature-map",
                 "rel.question-recurring-tasks-related-to-synthesis-feature-map"
               ],
               "gap": null
@@ -2102,6 +2227,7 @@
               ],
               "relation_ids": [
                 "rel.architecture-local-first-derived-from-source-readme",
+                "rel.source-product-brief-supports-synthesis-product-intent",
                 "rel.synthesis-agent-guidance-derived-from-source-agent-guidance",
                 "rel.synthesis-conventions-quality-derived-from-source-product-brief",
                 "rel.synthesis-feature-map-derived-from-source-product-brief",
@@ -2155,10 +2281,29 @@
         ],
         "relation_ids": [
           "rel.gotcha-completed-filter-counts-affects-concept-filtered-views",
+          "rel.question-recurring-tasks-challenges-synthesis-feature-map",
           "rel.question-recurring-tasks-related-to-synthesis-feature-map",
           "rel.workflow-post-task-verification-documents-source-package-json"
         ],
         "relations": [
+          {
+            "id": "rel.question-recurring-tasks-challenges-synthesis-feature-map",
+            "from": "question.recurring-tasks",
+            "predicate": "challenges",
+            "to": "synthesis.feature-map",
+            "status": "active",
+            "confidence": "high",
+            "evidence": [
+              {
+                "kind": "memory",
+                "id": "question.recurring-tasks"
+              }
+            ],
+            "content_hash": null,
+            "created_at": "2026-05-12T09:00:00+02:00",
+            "updated_at": "2026-05-13T15:30:00+02:00",
+            "json_path": ".aictx/relations/question-recurring-tasks-challenges-synthesis-feature-map.json"
+          },
           {
             "id": "rel.workflow-post-task-verification-documents-source-package-json",
             "from": "workflow.post-task-verification",
@@ -2219,7 +2364,7 @@
       {
         "name": "review-risk",
         "title": "Review / Risk",
-        "markdown": "# Review / Risk\n\nQuality expectations, verification, risks, and unresolved questions.\n\n## Role coverage\n\n- Conventions / Quality Bar: populated\n- Verification: populated\n- Gotchas / Risks: populated\n- Open Questions: populated\n\n## Stay offline first\n\nMemory: `constraint.offline-first` (constraint, active)\n\nTask creation, completion, filtering, and persistence must work without a backend service.\n\nDo not add a hosted database or login flow to satisfy demo requirements.\n\n## Completed filter counts can drift\n\nMemory: `gotcha.completed-filter-counts` (gotcha, active)\n\nDo not compute filter badges with a different predicate than the rendered list. This caused completed tasks to appear in the active count before.\n\n## Recurring task scope\n\nMemory: `question.recurring-tasks` (question, open)\n\nShould recurring tasks be part of the Todo App, or should the app stay focused on one-off personal tasks for the first release?\n\n## Conventions and quality bar\n\nMemory: `synthesis.conventions-quality` (synthesis, active)\n\nKeep task mutations explicit, preserve keyboard access for every task action, and keep empty states tied to the active filter.\n\nAvoid adding accounts, sync, or collaboration features unless the product scope changes.\n\n## Post-task verification\n\nMemory: `workflow.post-task-verification` (workflow, active)\n\nBefore finishing Todo App work, run `pnpm test`, `pnpm run typecheck`, and a browser check for add, complete, filter, and reload behavior.\n\n## Relation context\n\n- `synthesis.conventions-quality` derived_from `source.product-brief` (active)\n- `workflow.post-task-verification` documents `source.package-json` (active)\n- `gotcha.completed-filter-counts` affects `concept.filtered-views` (active)\n- `question.recurring-tasks` related_to `synthesis.feature-map` (active)\n- `constraint.offline-first` requires `fact.storage-localstorage` (active)\n",
+        "markdown": "# Review / Risk\n\nQuality expectations, verification, risks, and unresolved questions.\n\n## Role coverage\n\n- Conventions / Quality Bar: populated\n- Verification: populated\n- Gotchas / Risks: populated\n- Open Questions: populated\n\n## Stay offline first\n\nMemory: `constraint.offline-first` (constraint, active)\n\nTask creation, completion, filtering, and persistence must work without a backend service.\n\nDo not add a hosted database or login flow to satisfy demo requirements.\n\n## Completed filter counts can drift\n\nMemory: `gotcha.completed-filter-counts` (gotcha, active)\n\nDo not compute filter badges with a different predicate than the rendered list. This caused completed tasks to appear in the active count before.\n\n## Recurring task scope\n\nMemory: `question.recurring-tasks` (question, open)\n\nShould recurring tasks be part of the Todo App, or should the app stay focused on one-off personal tasks for the first release?\n\n## Conventions and quality bar\n\nMemory: `synthesis.conventions-quality` (synthesis, active)\n\nKeep task mutations explicit, preserve keyboard access for every task action, and keep empty states tied to the active filter.\n\nAvoid adding accounts, sync, or collaboration features unless the product scope changes.\n\n## Post-task verification\n\nMemory: `workflow.post-task-verification` (workflow, active)\n\nBefore finishing Todo App work, run `pnpm test`, `pnpm run typecheck`, and a browser check for add, complete, filter, and reload behavior.\n\n## Relation context\n\n- `question.recurring-tasks` challenges `synthesis.feature-map` (active)\n- `synthesis.conventions-quality` derived_from `source.product-brief` (active)\n- `workflow.post-task-verification` documents `source.package-json` (active)\n- `gotcha.completed-filter-counts` affects `concept.filtered-views` (active)\n- `question.recurring-tasks` related_to `synthesis.feature-map` (active)\n- `constraint.offline-first` requires `fact.storage-localstorage` (active)\n",
         "role_coverage": {
           "roles": [
             {
@@ -2232,6 +2377,7 @@
                 "synthesis.product-intent"
               ],
               "relation_ids": [
+                "rel.source-product-brief-supports-synthesis-product-intent",
                 "rel.synthesis-product-intent-derived-from-source-product-brief"
               ],
               "gap": null
@@ -2252,6 +2398,7 @@
                 "rel.gotcha-completed-filter-counts-affects-concept-filtered-views",
                 "rel.project-todo-app-implements-concept-filtered-views",
                 "rel.project-todo-app-implements-concept-quick-add",
+                "rel.question-recurring-tasks-challenges-synthesis-feature-map",
                 "rel.question-recurring-tasks-related-to-synthesis-feature-map",
                 "rel.synthesis-feature-map-derived-from-source-product-brief",
                 "rel.synthesis-feature-map-summarizes-concept-filtered-views",
@@ -2371,6 +2518,7 @@
                 "question.recurring-tasks"
               ],
               "relation_ids": [
+                "rel.question-recurring-tasks-challenges-synthesis-feature-map",
                 "rel.question-recurring-tasks-related-to-synthesis-feature-map"
               ],
               "gap": null
@@ -2389,6 +2537,7 @@
               ],
               "relation_ids": [
                 "rel.architecture-local-first-derived-from-source-readme",
+                "rel.source-product-brief-supports-synthesis-product-intent",
                 "rel.synthesis-agent-guidance-derived-from-source-agent-guidance",
                 "rel.synthesis-conventions-quality-derived-from-source-product-brief",
                 "rel.synthesis-feature-map-derived-from-source-product-brief",
@@ -2445,11 +2594,30 @@
         "relation_ids": [
           "rel.constraint-offline-first-requires-fact-storage-localstorage",
           "rel.gotcha-completed-filter-counts-affects-concept-filtered-views",
+          "rel.question-recurring-tasks-challenges-synthesis-feature-map",
           "rel.question-recurring-tasks-related-to-synthesis-feature-map",
           "rel.synthesis-conventions-quality-derived-from-source-product-brief",
           "rel.workflow-post-task-verification-documents-source-package-json"
         ],
         "relations": [
+          {
+            "id": "rel.question-recurring-tasks-challenges-synthesis-feature-map",
+            "from": "question.recurring-tasks",
+            "predicate": "challenges",
+            "to": "synthesis.feature-map",
+            "status": "active",
+            "confidence": "high",
+            "evidence": [
+              {
+                "kind": "memory",
+                "id": "question.recurring-tasks"
+              }
+            ],
+            "content_hash": null,
+            "created_at": "2026-05-12T09:00:00+02:00",
+            "updated_at": "2026-05-13T15:30:00+02:00",
+            "json_path": ".aictx/relations/question-recurring-tasks-challenges-synthesis-feature-map.json"
+          },
           {
             "id": "rel.synthesis-conventions-quality-derived-from-source-product-brief",
             "from": "synthesis.conventions-quality",
@@ -2546,7 +2714,7 @@
       {
         "name": "provenance",
         "title": "Provenance",
-        "markdown": "# Provenance\n\nSource records and relation chains that explain where durable memory came from.\n\n## Role coverage\n\n- Sources / Provenance: populated\n- Product Intent: populated\n- Capability Map: populated\n- Architecture / Patterns: populated\n\n## Local-first todo architecture\n\nMemory: `architecture.local-first-todo-app` (architecture, active)\n\nThe app keeps task state in a small client-side store and persists a normalized task list to localStorage.\n\nRendering code reads from the store; persistence code only serializes and validates task records.\n\n## Filtered task views\n\nMemory: `concept.filtered-views` (concept, active)\n\nThe list supports all, active, completed, and overdue views. Counts must match the same predicate used to render each view.\n\n## Quick add\n\nMemory: `concept.quick-add` (concept, active)\n\nQuick add accepts a non-empty task title, trims whitespace, creates an active task, and clears the input after save.\n\n## Source: AGENTS.md\n\nMemory: `source.agent-guidance` (source, active)\n\nAgent instructions require loading memory before substantial Todo App changes and saving only durable project knowledge.\n\n## Source: package.json\n\nMemory: `source.package-json` (source, active)\n\nThe package manifest records TypeScript, Vite, Vitest, and the package scripts used for local development and verification.\n\n## Source: docs/product-brief.md\n\nMemory: `source.product-brief` (source, active)\n\nThe product brief describes a local-first Todo App for quick capture, filtering, and dependable reload behavior.\n\n## Source: README.md\n\nMemory: `source.readme` (source, active)\n\nThe README explains the Todo App repository layout, local development path, and browser behavior users should expect.\n\n## Feature map\n\nMemory: `synthesis.feature-map` (synthesis, active)\n\n- Quick add creates a task from a single text input.\n- Filtered views separate all, active, completed, and overdue tasks.\n- Local persistence keeps tasks available after reload.\n- Empty states explain the current filter without sending the user to documentation.\n\n## Product intent\n\nMemory: `synthesis.product-intent` (synthesis, active)\n\nThe Todo App helps a single user keep a trustworthy short list of work without account setup or network dependency.\n\nUseful output means fast capture, clear completion state, and no surprise data loss after refresh.\n\n## Relation context\n\n- `project.todo-app` implements `concept.quick-add` (active)\n- `project.todo-app` implements `concept.filtered-views` (active)\n- `synthesis.product-intent` derived_from `source.product-brief` (active)\n- `synthesis.feature-map` derived_from `source.product-brief` (active)\n- `synthesis.feature-map` summarizes `concept.quick-add` (active)\n- `synthesis.feature-map` summarizes `concept.filtered-views` (active)\n- `synthesis.repository-map` derived_from `source.readme` (active)\n- `architecture.local-first-todo-app` derived_from `source.readme` (active)\n- `synthesis.stack-and-tooling` derived_from `source.package-json` (active)\n- `synthesis.conventions-quality` derived_from `source.product-brief` (active)\n- `workflow.local-development` documents `source.package-json` (active)\n- `workflow.post-task-verification` documents `source.package-json` (active)\n- `gotcha.completed-filter-counts` affects `concept.filtered-views` (active)\n- `concept.filtered-views` depends_on `fact.storage-localstorage` (active)\n- `question.recurring-tasks` related_to `synthesis.feature-map` (active)\n- `synthesis.agent-guidance` derived_from `source.agent-guidance` (active)\n",
+        "markdown": "# Provenance\n\nSource records and relation chains that explain where durable memory came from.\n\n## Role coverage\n\n- Sources / Provenance: populated\n- Product Intent: populated\n- Capability Map: populated\n- Architecture / Patterns: populated\n\n## Local-first todo architecture\n\nMemory: `architecture.local-first-todo-app` (architecture, active)\n\nThe app keeps task state in a small client-side store and persists a normalized task list to localStorage.\n\nRendering code reads from the store; persistence code only serializes and validates task records.\n\n## Filtered task views\n\nMemory: `concept.filtered-views` (concept, active)\n\nThe list supports all, active, completed, and overdue views. Counts must match the same predicate used to render each view.\n\n## Quick add\n\nMemory: `concept.quick-add` (concept, active)\n\nQuick add accepts a non-empty task title, trims whitespace, creates an active task, and clears the input after save.\n\n## Source: AGENTS.md\n\nMemory: `source.agent-guidance` (source, active)\n\nAgent instructions require loading memory before substantial Todo App changes and saving only durable project knowledge.\n\n## Source: package.json\n\nMemory: `source.package-json` (source, active)\n\nThe package manifest records TypeScript, Vite, Vitest, and the package scripts used for local development and verification.\n\n## Source: docs/product-brief.md\n\nMemory: `source.product-brief` (source, active)\n\nThe product brief describes a local-first Todo App for quick capture, filtering, and dependable reload behavior.\n\n## Source: README.md\n\nMemory: `source.readme` (source, active)\n\nThe README explains the Todo App repository layout, local development path, and browser behavior users should expect.\n\n## Feature map\n\nMemory: `synthesis.feature-map` (synthesis, active)\n\n- Quick add creates a task from a single text input.\n- Filtered views separate all, active, completed, and overdue tasks.\n- Local persistence keeps tasks available after reload.\n- Empty states explain the current filter without sending the user to documentation.\n\n## Product intent\n\nMemory: `synthesis.product-intent` (synthesis, active)\n\nThe Todo App helps a single user keep a trustworthy short list of work without account setup or network dependency.\n\nUseful output means fast capture, clear completion state, and no surprise data loss after refresh.\n\n## Relation context\n\n- `project.todo-app` implements `concept.quick-add` (active)\n- `project.todo-app` implements `concept.filtered-views` (active)\n- `synthesis.product-intent` derived_from `source.product-brief` (active)\n- `source.product-brief` supports `synthesis.product-intent` (active)\n- `synthesis.feature-map` derived_from `source.product-brief` (active)\n- `question.recurring-tasks` challenges `synthesis.feature-map` (active)\n- `synthesis.feature-map` summarizes `concept.quick-add` (active)\n- `synthesis.feature-map` summarizes `concept.filtered-views` (active)\n- `synthesis.repository-map` derived_from `source.readme` (active)\n- `architecture.local-first-todo-app` derived_from `source.readme` (active)\n- `synthesis.stack-and-tooling` derived_from `source.package-json` (active)\n- `synthesis.conventions-quality` derived_from `source.product-brief` (active)\n- `workflow.local-development` documents `source.package-json` (active)\n- `workflow.post-task-verification` documents `source.package-json` (active)\n- `gotcha.completed-filter-counts` affects `concept.filtered-views` (active)\n- `concept.filtered-views` depends_on `fact.storage-localstorage` (active)\n- `question.recurring-tasks` related_to `synthesis.feature-map` (active)\n- `synthesis.agent-guidance` derived_from `source.agent-guidance` (active)\n",
         "role_coverage": {
           "roles": [
             {
@@ -2559,6 +2727,7 @@
                 "synthesis.product-intent"
               ],
               "relation_ids": [
+                "rel.source-product-brief-supports-synthesis-product-intent",
                 "rel.synthesis-product-intent-derived-from-source-product-brief"
               ],
               "gap": null
@@ -2579,6 +2748,7 @@
                 "rel.gotcha-completed-filter-counts-affects-concept-filtered-views",
                 "rel.project-todo-app-implements-concept-filtered-views",
                 "rel.project-todo-app-implements-concept-quick-add",
+                "rel.question-recurring-tasks-challenges-synthesis-feature-map",
                 "rel.question-recurring-tasks-related-to-synthesis-feature-map",
                 "rel.synthesis-feature-map-derived-from-source-product-brief",
                 "rel.synthesis-feature-map-summarizes-concept-filtered-views",
@@ -2698,6 +2868,7 @@
                 "question.recurring-tasks"
               ],
               "relation_ids": [
+                "rel.question-recurring-tasks-challenges-synthesis-feature-map",
                 "rel.question-recurring-tasks-related-to-synthesis-feature-map"
               ],
               "gap": null
@@ -2716,6 +2887,7 @@
               ],
               "relation_ids": [
                 "rel.architecture-local-first-derived-from-source-readme",
+                "rel.source-product-brief-supports-synthesis-product-intent",
                 "rel.synthesis-agent-guidance-derived-from-source-agent-guidance",
                 "rel.synthesis-conventions-quality-derived-from-source-product-brief",
                 "rel.synthesis-feature-map-derived-from-source-product-brief",
@@ -2779,7 +2951,9 @@
           "rel.gotcha-completed-filter-counts-affects-concept-filtered-views",
           "rel.project-todo-app-implements-concept-filtered-views",
           "rel.project-todo-app-implements-concept-quick-add",
+          "rel.question-recurring-tasks-challenges-synthesis-feature-map",
           "rel.question-recurring-tasks-related-to-synthesis-feature-map",
+          "rel.source-product-brief-supports-synthesis-product-intent",
           "rel.synthesis-agent-guidance-derived-from-source-agent-guidance",
           "rel.synthesis-conventions-quality-derived-from-source-product-brief",
           "rel.synthesis-feature-map-derived-from-source-product-brief",
@@ -2847,6 +3021,24 @@
             "json_path": ".aictx/relations/synthesis-product-intent-derived-from-source-product-brief.json"
           },
           {
+            "id": "rel.source-product-brief-supports-synthesis-product-intent",
+            "from": "source.product-brief",
+            "predicate": "supports",
+            "to": "synthesis.product-intent",
+            "status": "active",
+            "confidence": "high",
+            "evidence": [
+              {
+                "kind": "memory",
+                "id": "source.product-brief"
+              }
+            ],
+            "content_hash": null,
+            "created_at": "2026-05-12T09:00:00+02:00",
+            "updated_at": "2026-05-13T15:30:00+02:00",
+            "json_path": ".aictx/relations/source-product-brief-supports-synthesis-product-intent.json"
+          },
+          {
             "id": "rel.synthesis-feature-map-derived-from-source-product-brief",
             "from": "synthesis.feature-map",
             "predicate": "derived_from",
@@ -2863,6 +3055,24 @@
             "created_at": "2026-05-12T09:00:00+02:00",
             "updated_at": "2026-05-13T15:30:00+02:00",
             "json_path": ".aictx/relations/synthesis-feature-map-derived-from-source-product-brief.json"
+          },
+          {
+            "id": "rel.question-recurring-tasks-challenges-synthesis-feature-map",
+            "from": "question.recurring-tasks",
+            "predicate": "challenges",
+            "to": "synthesis.feature-map",
+            "status": "active",
+            "confidence": "high",
+            "evidence": [
+              {
+                "kind": "memory",
+                "id": "question.recurring-tasks"
+              }
+            ],
+            "content_hash": null,
+            "created_at": "2026-05-12T09:00:00+02:00",
+            "updated_at": "2026-05-13T15:30:00+02:00",
+            "json_path": ".aictx/relations/question-recurring-tasks-challenges-synthesis-feature-map.json"
           },
           {
             "id": "rel.synthesis-feature-map-summarizes-concept-quick-add",
@@ -3086,7 +3296,7 @@
       {
         "name": "maintenance",
         "title": "Maintenance",
-        "markdown": "# Maintenance\n\nCoverage gaps, stale memory, supersessions, and conflicts that need cleanup.\n\n## Role coverage\n\n- Product Intent: populated\n- Capability Map: populated\n- Repository Map: populated\n- Architecture / Patterns: populated\n- Stack / Tooling: populated\n- Conventions / Quality Bar: populated\n- Workflows / How-tos: populated\n- Verification: populated\n- Gotchas / Risks: populated\n- Open Questions: populated\n- Sources / Provenance: populated\n- Agent Guidance: populated\n- Branch Handoff: missing (optional)\n\n## Local-first todo architecture\n\nMemory: `architecture.local-first-todo-app` (architecture, active)\n\nThe app keeps task state in a small client-side store and persists a normalized task list to localStorage.\n\nRendering code reads from the store; persistence code only serializes and validates task records.\n\n## Filtered task views\n\nMemory: `concept.filtered-views` (concept, active)\n\nThe list supports all, active, completed, and overdue views. Counts must match the same predicate used to render each view.\n\n## Quick add\n\nMemory: `concept.quick-add` (concept, active)\n\nQuick add accepts a non-empty task title, trims whitespace, creates an active task, and clears the input after save.\n\n## Stay offline first\n\nMemory: `constraint.offline-first` (constraint, active)\n\nTask creation, completion, filtering, and persistence must work without a backend service.\n\nDo not add a hosted database or login flow to satisfy demo requirements.\n\n## Completed filter counts can drift\n\nMemory: `gotcha.completed-filter-counts` (gotcha, active)\n\nDo not compute filter badges with a different predicate than the rendered list. This caused completed tasks to appear in the active count before.\n\n## Recurring task scope\n\nMemory: `question.recurring-tasks` (question, open)\n\nShould recurring tasks be part of the Todo App, or should the app stay focused on one-off personal tasks for the first release?\n\n## Source: AGENTS.md\n\nMemory: `source.agent-guidance` (source, active)\n\nAgent instructions require loading memory before substantial Todo App changes and saving only durable project knowledge.\n\n## Source: package.json\n\nMemory: `source.package-json` (source, active)\n\nThe package manifest records TypeScript, Vite, Vitest, and the package scripts used for local development and verification.\n\n## Source: docs/product-brief.md\n\nMemory: `source.product-brief` (source, active)\n\nThe product brief describes a local-first Todo App for quick capture, filtering, and dependable reload behavior.\n\n## Source: README.md\n\nMemory: `source.readme` (source, active)\n\nThe README explains the Todo App repository layout, local development path, and browser behavior users should expect.\n\n## Agent guidance\n\nMemory: `synthesis.agent-guidance` (synthesis, active)\n\nLoad Aictx memory before non-trivial Todo App work. Preserve the offline-first scope, keep UI behavior keyboard accessible, and verify persistence after reload.\n\n## Conventions and quality bar\n\nMemory: `synthesis.conventions-quality` (synthesis, active)\n\nKeep task mutations explicit, preserve keyboard access for every task action, and keep empty states tied to the active filter.\n\nAvoid adding accounts, sync, or collaboration features unless the product scope changes.\n\n## Feature map\n\nMemory: `synthesis.feature-map` (synthesis, active)\n\n- Quick add creates a task from a single text input.\n- Filtered views separate all, active, completed, and overdue tasks.\n- Local persistence keeps tasks available after reload.\n- Empty states explain the current filter without sending the user to documentation.\n\n## Product intent\n\nMemory: `synthesis.product-intent` (synthesis, active)\n\nThe Todo App helps a single user keep a trustworthy short list of work without account setup or network dependency.\n\nUseful output means fast capture, clear completion state, and no surprise data loss after refresh.\n\n## Repository map\n\nMemory: `synthesis.repository-map` (synthesis, active)\n\nApplication code lives under `src/`, reusable UI pieces live under `src/components/`, and persistence helpers live under `src/storage/`.\n\nTests mirror those areas under `test/` with browser coverage for task creation and filtering.\n\n## Stack and tooling\n\nMemory: `synthesis.stack-and-tooling` (synthesis, active)\n\nThe demo Todo App uses TypeScript, Vite, and Vitest. Browser behavior is covered with Playwright-style flow tests.\n\nPackage scripts are the preferred interface for build, test, and lint checks.\n\n## Local development workflow\n\nMemory: `workflow.local-development` (workflow, active)\n\nRun `pnpm install`, `pnpm dev`, and then open the Vite URL. Use the browser flow before changing persistence behavior.\n\n## Post-task verification\n\nMemory: `workflow.post-task-verification` (workflow, active)\n\nBefore finishing Todo App work, run `pnpm test`, `pnpm run typecheck`, and a browser check for add, complete, filter, and reload behavior.\n\n## Relation context\n\n- `project.todo-app` implements `concept.quick-add` (active)\n- `project.todo-app` implements `concept.filtered-views` (active)\n- `synthesis.product-intent` derived_from `source.product-brief` (active)\n- `synthesis.feature-map` derived_from `source.product-brief` (active)\n- `synthesis.feature-map` summarizes `concept.quick-add` (active)\n- `synthesis.feature-map` summarizes `concept.filtered-views` (active)\n- `synthesis.repository-map` derived_from `source.readme` (active)\n- `architecture.local-first-todo-app` derived_from `source.readme` (active)\n- `synthesis.stack-and-tooling` derived_from `source.package-json` (active)\n- `synthesis.conventions-quality` derived_from `source.product-brief` (active)\n- `workflow.local-development` documents `source.package-json` (active)\n- `workflow.post-task-verification` documents `source.package-json` (active)\n- `gotcha.completed-filter-counts` affects `concept.filtered-views` (active)\n- `concept.filtered-views` depends_on `fact.storage-localstorage` (active)\n- `question.recurring-tasks` related_to `synthesis.feature-map` (active)\n- `synthesis.agent-guidance` derived_from `source.agent-guidance` (active)\n- `constraint.offline-first` requires `fact.storage-localstorage` (active)\n",
+        "markdown": "# Maintenance\n\nCoverage gaps, stale memory, supersessions, and conflicts that need cleanup.\n\n## Role coverage\n\n- Product Intent: populated\n- Capability Map: populated\n- Repository Map: populated\n- Architecture / Patterns: populated\n- Stack / Tooling: populated\n- Conventions / Quality Bar: populated\n- Workflows / How-tos: populated\n- Verification: populated\n- Gotchas / Risks: populated\n- Open Questions: populated\n- Sources / Provenance: populated\n- Agent Guidance: populated\n- Branch Handoff: missing (optional)\n\n## Local-first todo architecture\n\nMemory: `architecture.local-first-todo-app` (architecture, active)\n\nThe app keeps task state in a small client-side store and persists a normalized task list to localStorage.\n\nRendering code reads from the store; persistence code only serializes and validates task records.\n\n## Filtered task views\n\nMemory: `concept.filtered-views` (concept, active)\n\nThe list supports all, active, completed, and overdue views. Counts must match the same predicate used to render each view.\n\n## Quick add\n\nMemory: `concept.quick-add` (concept, active)\n\nQuick add accepts a non-empty task title, trims whitespace, creates an active task, and clears the input after save.\n\n## Stay offline first\n\nMemory: `constraint.offline-first` (constraint, active)\n\nTask creation, completion, filtering, and persistence must work without a backend service.\n\nDo not add a hosted database or login flow to satisfy demo requirements.\n\n## Completed filter counts can drift\n\nMemory: `gotcha.completed-filter-counts` (gotcha, active)\n\nDo not compute filter badges with a different predicate than the rendered list. This caused completed tasks to appear in the active count before.\n\n## Recurring task scope\n\nMemory: `question.recurring-tasks` (question, open)\n\nShould recurring tasks be part of the Todo App, or should the app stay focused on one-off personal tasks for the first release?\n\n## Source: AGENTS.md\n\nMemory: `source.agent-guidance` (source, active)\n\nAgent instructions require loading memory before substantial Todo App changes and saving only durable project knowledge.\n\n## Source: package.json\n\nMemory: `source.package-json` (source, active)\n\nThe package manifest records TypeScript, Vite, Vitest, and the package scripts used for local development and verification.\n\n## Source: docs/product-brief.md\n\nMemory: `source.product-brief` (source, active)\n\nThe product brief describes a local-first Todo App for quick capture, filtering, and dependable reload behavior.\n\n## Source: README.md\n\nMemory: `source.readme` (source, active)\n\nThe README explains the Todo App repository layout, local development path, and browser behavior users should expect.\n\n## Agent guidance\n\nMemory: `synthesis.agent-guidance` (synthesis, active)\n\nLoad Aictx memory before non-trivial Todo App work. Preserve the offline-first scope, keep UI behavior keyboard accessible, and verify persistence after reload.\n\n## Conventions and quality bar\n\nMemory: `synthesis.conventions-quality` (synthesis, active)\n\nKeep task mutations explicit, preserve keyboard access for every task action, and keep empty states tied to the active filter.\n\nAvoid adding accounts, sync, or collaboration features unless the product scope changes.\n\n## Feature map\n\nMemory: `synthesis.feature-map` (synthesis, active)\n\n- Quick add creates a task from a single text input.\n- Filtered views separate all, active, completed, and overdue tasks.\n- Local persistence keeps tasks available after reload.\n- Empty states explain the current filter without sending the user to documentation.\n\n## Product intent\n\nMemory: `synthesis.product-intent` (synthesis, active)\n\nThe Todo App helps a single user keep a trustworthy short list of work without account setup or network dependency.\n\nUseful output means fast capture, clear completion state, and no surprise data loss after refresh.\n\n## Repository map\n\nMemory: `synthesis.repository-map` (synthesis, active)\n\nApplication code lives under `src/`, reusable UI pieces live under `src/components/`, and persistence helpers live under `src/storage/`.\n\nTests mirror those areas under `test/` with browser coverage for task creation and filtering.\n\n## Stack and tooling\n\nMemory: `synthesis.stack-and-tooling` (synthesis, active)\n\nThe demo Todo App uses TypeScript, Vite, and Vitest. Browser behavior is covered with Playwright-style flow tests.\n\nPackage scripts are the preferred interface for build, test, and lint checks.\n\n## Local development workflow\n\nMemory: `workflow.local-development` (workflow, active)\n\nRun `pnpm install`, `pnpm dev`, and then open the Vite URL. Use the browser flow before changing persistence behavior.\n\n## Post-task verification\n\nMemory: `workflow.post-task-verification` (workflow, active)\n\nBefore finishing Todo App work, run `pnpm test`, `pnpm run typecheck`, and a browser check for add, complete, filter, and reload behavior.\n\n## Relation context\n\n- `project.todo-app` implements `concept.quick-add` (active)\n- `project.todo-app` implements `concept.filtered-views` (active)\n- `synthesis.product-intent` derived_from `source.product-brief` (active)\n- `source.product-brief` supports `synthesis.product-intent` (active)\n- `synthesis.feature-map` derived_from `source.product-brief` (active)\n- `question.recurring-tasks` challenges `synthesis.feature-map` (active)\n- `synthesis.feature-map` summarizes `concept.quick-add` (active)\n- `synthesis.feature-map` summarizes `concept.filtered-views` (active)\n- `synthesis.repository-map` derived_from `source.readme` (active)\n- `architecture.local-first-todo-app` derived_from `source.readme` (active)\n- `synthesis.stack-and-tooling` derived_from `source.package-json` (active)\n- `synthesis.conventions-quality` derived_from `source.product-brief` (active)\n- `workflow.local-development` documents `source.package-json` (active)\n- `workflow.post-task-verification` documents `source.package-json` (active)\n- `gotcha.completed-filter-counts` affects `concept.filtered-views` (active)\n- `concept.filtered-views` depends_on `fact.storage-localstorage` (active)\n- `question.recurring-tasks` related_to `synthesis.feature-map` (active)\n- `synthesis.agent-guidance` derived_from `source.agent-guidance` (active)\n- `constraint.offline-first` requires `fact.storage-localstorage` (active)\n",
         "role_coverage": {
           "roles": [
             {
@@ -3099,6 +3309,7 @@
                 "synthesis.product-intent"
               ],
               "relation_ids": [
+                "rel.source-product-brief-supports-synthesis-product-intent",
                 "rel.synthesis-product-intent-derived-from-source-product-brief"
               ],
               "gap": null
@@ -3119,6 +3330,7 @@
                 "rel.gotcha-completed-filter-counts-affects-concept-filtered-views",
                 "rel.project-todo-app-implements-concept-filtered-views",
                 "rel.project-todo-app-implements-concept-quick-add",
+                "rel.question-recurring-tasks-challenges-synthesis-feature-map",
                 "rel.question-recurring-tasks-related-to-synthesis-feature-map",
                 "rel.synthesis-feature-map-derived-from-source-product-brief",
                 "rel.synthesis-feature-map-summarizes-concept-filtered-views",
@@ -3238,6 +3450,7 @@
                 "question.recurring-tasks"
               ],
               "relation_ids": [
+                "rel.question-recurring-tasks-challenges-synthesis-feature-map",
                 "rel.question-recurring-tasks-related-to-synthesis-feature-map"
               ],
               "gap": null
@@ -3256,6 +3469,7 @@
               ],
               "relation_ids": [
                 "rel.architecture-local-first-derived-from-source-readme",
+                "rel.source-product-brief-supports-synthesis-product-intent",
                 "rel.synthesis-agent-guidance-derived-from-source-agent-guidance",
                 "rel.synthesis-conventions-quality-derived-from-source-product-brief",
                 "rel.synthesis-feature-map-derived-from-source-product-brief",
@@ -3329,7 +3543,9 @@
           "rel.gotcha-completed-filter-counts-affects-concept-filtered-views",
           "rel.project-todo-app-implements-concept-filtered-views",
           "rel.project-todo-app-implements-concept-quick-add",
+          "rel.question-recurring-tasks-challenges-synthesis-feature-map",
           "rel.question-recurring-tasks-related-to-synthesis-feature-map",
+          "rel.source-product-brief-supports-synthesis-product-intent",
           "rel.synthesis-agent-guidance-derived-from-source-agent-guidance",
           "rel.synthesis-conventions-quality-derived-from-source-product-brief",
           "rel.synthesis-feature-map-derived-from-source-product-brief",
@@ -3397,6 +3613,24 @@
             "json_path": ".aictx/relations/synthesis-product-intent-derived-from-source-product-brief.json"
           },
           {
+            "id": "rel.source-product-brief-supports-synthesis-product-intent",
+            "from": "source.product-brief",
+            "predicate": "supports",
+            "to": "synthesis.product-intent",
+            "status": "active",
+            "confidence": "high",
+            "evidence": [
+              {
+                "kind": "memory",
+                "id": "source.product-brief"
+              }
+            ],
+            "content_hash": null,
+            "created_at": "2026-05-12T09:00:00+02:00",
+            "updated_at": "2026-05-13T15:30:00+02:00",
+            "json_path": ".aictx/relations/source-product-brief-supports-synthesis-product-intent.json"
+          },
+          {
             "id": "rel.synthesis-feature-map-derived-from-source-product-brief",
             "from": "synthesis.feature-map",
             "predicate": "derived_from",
@@ -3413,6 +3647,24 @@
             "created_at": "2026-05-12T09:00:00+02:00",
             "updated_at": "2026-05-13T15:30:00+02:00",
             "json_path": ".aictx/relations/synthesis-feature-map-derived-from-source-product-brief.json"
+          },
+          {
+            "id": "rel.question-recurring-tasks-challenges-synthesis-feature-map",
+            "from": "question.recurring-tasks",
+            "predicate": "challenges",
+            "to": "synthesis.feature-map",
+            "status": "active",
+            "confidence": "high",
+            "evidence": [
+              {
+                "kind": "memory",
+                "id": "question.recurring-tasks"
+              }
+            ],
+            "content_hash": null,
+            "created_at": "2026-05-12T09:00:00+02:00",
+            "updated_at": "2026-05-13T15:30:00+02:00",
+            "json_path": ".aictx/relations/question-recurring-tasks-challenges-synthesis-feature-map.json"
           },
           {
             "id": "rel.synthesis-feature-map-summarizes-concept-quick-add",

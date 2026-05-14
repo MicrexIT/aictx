@@ -7,11 +7,12 @@ import type {
   Evidence,
   Scope,
   Sha256Hash,
-  Source
+  Source,
+  SourceOrigin
 } from "../core/types.js";
 
 export interface AictxConfig {
-  version: 1 | 2 | 3;
+  version: 1 | 2 | 3 | 4;
   project: {
     id: string;
     name: string;
@@ -37,6 +38,7 @@ export interface MemoryObjectSidecar {
   facets?: ObjectFacets;
   evidence?: Evidence[];
   source?: Source;
+  origin?: SourceOrigin;
   superseded_by?: ObjectId | null;
   content_hash: Sha256Hash;
   created_at: IsoDateTime;
@@ -60,7 +62,10 @@ export function isAictxConfig(value: unknown): value is AictxConfig {
   const git = value.git;
 
   return (
-    (value.version === 1 || value.version === 2 || value.version === 3) &&
+    (value.version === 1 ||
+      value.version === 2 ||
+      value.version === 3 ||
+      value.version === 4) &&
     isRecord(project) &&
     typeof project.id === "string" &&
     typeof project.name === "string" &&

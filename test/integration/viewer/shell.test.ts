@@ -13,7 +13,8 @@ import type {
   ObjectStatus,
   ObjectType,
   Predicate,
-  RelationStatus
+  RelationStatus,
+  SourceOrigin
 } from "../../../src/core/types.js";
 import {
   computeObjectContentHash,
@@ -42,6 +43,7 @@ interface MemoryFixture {
   tags: string[];
   facets?: ObjectFacets;
   evidence?: Evidence[];
+  origin?: SourceOrigin;
   updatedAt?: string;
 }
 
@@ -105,7 +107,7 @@ describe("read-only viewer shell", () => {
       await page.locator('[data-testid="nav-graph"]').click();
       await expectText(page, '[data-testid="graph-view"]', "Graph");
       await expectText(page, '[data-testid="graph-node-count"]', "11");
-      await expectText(page, '[data-testid="graph-relation-count"]', "4");
+      await expectText(page, '[data-testid="graph-relation-count"]', "6");
       await expectCount(page, '[data-testid="relation-graph"]', 1);
       await expectText(page, '[data-testid="graph-inspector"]', "Viewer Markdown Safety");
       await expectText(page, '[data-testid="graph-inspector"]', "Viewer Shell Layout");
@@ -168,8 +170,14 @@ describe("read-only viewer shell", () => {
       await assertSelectedObject(page, "Agent Guidance Synthesis", "synthesis.agent-guidance");
       await expectText(page, '[data-testid="selected-object"]', "Source: docs/agent-integration.md");
       await expectText(page, '[data-testid="selected-object"]', "derived_from");
+      await expectText(page, '[data-testid="selected-object"]', "supports");
+      await expectText(page, '[data-testid="selected-object"]', "challenges");
+      await expectText(page, '[data-testid="selected-object"]', "Webhook Duplicates");
       await page.getByRole("button", { name: "Source: docs/agent-integration.md" }).first().click();
       await assertSelectedObject(page, "Source: docs/agent-integration.md", "source.agent-integration");
+      await expectText(page, '[data-testid="selected-object"]', "file");
+      await expectText(page, '[data-testid="selected-object"]', "docs/agent-integration.md");
+      await expectText(page, '[data-testid="selected-object"]', "text/markdown");
       await page.locator('[data-testid="object-row-source.agent-integration"]').click();
       await expectText(page, '[data-testid="memory-list-view"]', "Agent Guidance Synthesis");
 
@@ -510,6 +518,12 @@ async function writeViewerFixtures(projectRoot: string): Promise<void> {
       load_modes: ["onboarding"]
     },
     evidence: [{ kind: "file", id: "docs/agent-integration.md" }],
+    origin: {
+      kind: "file",
+      locator: "docs/agent-integration.md",
+      captured_at: FIXED_TIMESTAMP,
+      media_type: "text/markdown"
+    },
     updatedAt: FIXED_TIMESTAMP
   });
   await writeMemoryObject(projectRoot, {
@@ -570,6 +584,20 @@ async function writeViewerFixtures(projectRoot: string): Promise<void> {
     to: "source.agent-integration",
     status: "active"
   });
+  await writeRelation(projectRoot, {
+    id: "rel.source-agent-integration-supports-synthesis-agent-guidance",
+    from: "source.agent-integration",
+    predicate: "supports",
+    to: "synthesis.agent-guidance",
+    status: "active"
+  });
+  await writeRelation(projectRoot, {
+    id: "rel.gotcha-webhook-duplicates-challenges-synthesis-agent-guidance",
+    from: "gotcha.webhook-duplicates",
+    predicate: "challenges",
+    to: "synthesis.agent-guidance",
+    status: "active"
+  });
 }
 
 async function writeMemoryObject(projectRoot: string, fixture: MemoryFixture): Promise<void> {
@@ -590,6 +618,7 @@ async function writeMemoryObject(projectRoot: string, fixture: MemoryFixture): P
     tags: fixture.tags,
     ...(fixture.facets === undefined ? {} : { facets: fixture.facets }),
     ...(fixture.evidence === undefined ? {} : { evidence: fixture.evidence }),
+    ...(fixture.origin === undefined ? {} : { origin: fixture.origin }),
     source: {
       kind: "agent"
     },

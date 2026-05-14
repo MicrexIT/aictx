@@ -20,15 +20,18 @@ describe("CLI main", () => {
     expect(remember?.description()).toContain("workflows/how-tos");
   });
 
-  it("registers lens and handoff commands", () => {
+  it("registers lens, handoff, and wiki commands", () => {
     const program = createCliProgram();
 
     expect(program.commands.map((command) => command.name())).toEqual(
-      expect.arrayContaining(["lens", "handoff"])
+      expect.arrayContaining(["lens", "handoff", "wiki"])
     );
     expect(
       program.commands.find((command) => command.name() === "handoff")?.commands.map((command) => command.name())
     ).toEqual(expect.arrayContaining(["show", "update", "close"]));
+    expect(
+      program.commands.find((command) => command.name() === "wiki")?.commands.map((command) => command.name())
+    ).toEqual(expect.arrayContaining(["ingest", "file", "lint", "log"]));
   });
 
   it("documents setup dry-run as non-initializing and non-writing", () => {

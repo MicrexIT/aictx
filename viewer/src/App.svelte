@@ -16,6 +16,8 @@
     | "depends_on"
     | "supersedes"
     | "conflicts_with"
+    | "supports"
+    | "challenges"
     | "derived_from"
     | "summarizes"
     | "documents"
@@ -34,6 +36,14 @@
     kind: "agent" | "user" | "cli" | "mcp" | "system";
     task?: string;
     commit?: string;
+  }
+
+  interface SourceOrigin {
+    kind: "file" | "url" | "user" | "external";
+    locator: string;
+    captured_at?: string;
+    digest?: string;
+    media_type?: string;
   }
 
   interface Evidence {
@@ -59,6 +69,7 @@
     facets: ObjectFacets | null;
     evidence: Evidence[];
     source: Source | null;
+    origin: SourceOrigin | null;
     superseded_by: string | null;
     created_at: string;
     updated_at: string;
@@ -846,6 +857,15 @@
       object.tags.join(" "),
       object.facets?.category ?? "",
       object.evidence.map((evidence) => `${evidence.kind} ${evidence.id}`).join(" "),
+      object.origin === null
+        ? ""
+        : [
+            object.origin.kind,
+            object.origin.locator,
+            object.origin.captured_at ?? "",
+            object.origin.digest ?? "",
+            object.origin.media_type ?? ""
+          ].join(" "),
       object.body
     ].join(" ")).includes(query);
   }
@@ -1206,8 +1226,10 @@
         return "#5b6f95";
       case "supersedes":
       case "conflicts_with":
+      case "challenges":
         return "#a14a3d";
       case "derived_from":
+      case "supports":
       case "summarizes":
       case "documents":
         return "#6b637d";
@@ -1542,6 +1564,7 @@
       facets: object.facets,
       evidence: object.evidence,
       source: object.source,
+      origin: object.origin,
       superseded_by: object.superseded_by,
       created_at: object.created_at,
       updated_at: object.updated_at
@@ -2187,6 +2210,7 @@
                             <div><dt>Facet</dt><dd>{facetCategoryLabel(selectedObject)}</dd></div>
                             <div><dt>Status</dt><dd>{selectedObject.status}</dd></div>
                             <div><dt>Scope</dt><dd>{scopeLabel(selectedObject.scope)}</dd></div>
+                            <div><dt>Origin</dt><dd>{selectedObject.origin?.kind ?? "none"}</dd></div>
                             <div><dt>Evidence</dt><dd>{selectedObject.evidence.length}</dd></div>
                             <div><dt>Relations</dt><dd>{directRelations.length}</dd></div>
                             <div><dt>Updated</dt><dd>{selectedObject.updated_at}</dd></div>
@@ -2251,6 +2275,30 @@
                             <details class="notion-toggle" open data-testid="provenance-links">
                               <summary>Provenance</summary>
                               <ul class="relation-list">
+                                {#if selectedObject.origin !== null}
+                                  <li>
+                                    <span class="pill">{selectedObject.origin.kind}</span>
+                                    <code>{selectedObject.origin.locator}</code>
+                                  </li>
+                                  {#if selectedObject.origin.digest !== undefined}
+                                    <li>
+                                      <span class="pill">digest</span>
+                                      <code>{selectedObject.origin.digest}</code>
+                                    </li>
+                                  {/if}
+                                  {#if selectedObject.origin.media_type !== undefined}
+                                    <li>
+                                      <span class="pill">media</span>
+                                      <code>{selectedObject.origin.media_type}</code>
+                                    </li>
+                                  {/if}
+                                  {#if selectedObject.origin.captured_at !== undefined}
+                                    <li>
+                                      <span class="pill">captured</span>
+                                      <code>{selectedObject.origin.captured_at}</code>
+                                    </li>
+                                  {/if}
+                                {/if}
                                 {#each selectedObject.evidence as evidence (`${evidence.kind}-${evidence.id}`)}
                                   <li>
                                     <span class="pill">{evidence.kind}</span>
@@ -2265,7 +2313,7 @@
                                 {:else}
                                   <li class="empty-copy">No evidence links.</li>
                                 {/each}
-                                {#each directRelations.filter((relation) => ["derived_from", "summarizes", "documents"].includes(relation.predicate)) as relation (relation.id)}
+                                {#each directRelations.filter((relation) => ["derived_from", "supports", "summarizes", "documents"].includes(relation.predicate)) as relation (relation.id)}
                                   <li>
                                     <span class="pill">{relation.predicate}</span>
                                     <button type="button" onclick={() => selectRelated(relationCounterpart(relation, selectedObject.id))}>

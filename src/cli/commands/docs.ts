@@ -103,6 +103,14 @@ const DOC_TOPICS = [
     aliases: ["demand-driven", "memory-quality", "context-engine"]
   },
   {
+    topic: "wiki-workflow",
+    title: "Wiki workflow",
+    description: "Maintain source-backed wiki-style memory through CLI-only ingest, file, lint, and log commands.",
+    file: "wiki-workflow.md",
+    path: "/wiki-workflow/",
+    aliases: ["wiki", "ingest", "source-origin", "llm-wiki"]
+  },
+  {
     topic: "cli",
     title: "CLI guide",
     description: "Use setup, routine memory, inspection, recovery, export, viewer, and docs commands.",

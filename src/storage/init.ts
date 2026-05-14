@@ -69,6 +69,8 @@ const AGENT_GUIDANCE_BLOCK = `${[
   "",
   "Use `aictx save --stdin` or `save_memory_patch({ patch })` only for advanced structured patch writes. Saved memory is active immediately after Aictx validates and writes it.",
   "",
+  "Use `aictx wiki ingest --stdin` for source-backed syntheses with raw-source `origin` metadata, `aictx wiki file --stdin` for useful query results, `aictx wiki lint` for wiki-language audit findings, and `aictx wiki log` for chronological event history. These wiki workflows are CLI-only in v1.",
+  "",
   "Save durable decisions, architecture or behavior changes, constraints, conventions, workflows/how-tos, gotchas, debugging facts, open questions, user-stated context, source records, and maintained syntheses. Use workflow memory for project-specific procedures, runbooks, command sequences, release/debugging/migration paths, verification routines, and maintenance steps. Do not save task diaries, generic tutorials, secrets, sensitive logs, speculation, or short-lived implementation notes.",
   "",
   "Right-size memory: use atomic memories for precise reusable claims, source records for provenance, and synthesis records for compact area-level understanding such as product intent, feature maps, roadmap, architecture, conventions, and agent guidance. Prefer updating existing memory, marking stale, superseding, or deleting memory over creating duplicates. Save nothing when there is no durable future value.",
@@ -574,7 +576,7 @@ async function writeConfig(
 
 function buildInitialConfig(projectId: string, projectName: string): AictxConfig {
   return {
-    version: 3,
+    version: 4,
     project: {
       id: projectId,
       name: projectName
@@ -1160,6 +1162,20 @@ function objectSidecarToJson(sidecar: MemoryObjectSidecar): JsonValue {
       kind: item.kind,
       id: item.id
     }));
+  }
+
+  if (sidecar.origin !== undefined) {
+    json.origin = {
+      kind: sidecar.origin.kind,
+      locator: sidecar.origin.locator,
+      ...(sidecar.origin.captured_at === undefined
+        ? {}
+        : { captured_at: sidecar.origin.captured_at }),
+      ...(sidecar.origin.digest === undefined ? {} : { digest: sidecar.origin.digest }),
+      ...(sidecar.origin.media_type === undefined
+        ? {}
+        : { media_type: sidecar.origin.media_type })
+    };
   }
 
   return json;

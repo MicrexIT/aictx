@@ -1,6 +1,6 @@
 {
   "body_path": "memory/sources/package-json.md",
-  "content_hash": "sha256:541550cdb0441c1a5cbaf2b7dd949d22a5f29bf54bc630ffc8290fb90f0d6fc9",
+  "content_hash": "sha256:82c9d9143a87162d33785242c56a6fd508439c97029bb7f8926968420abe1721",
   "created_at": "2026-05-12T17:53:06+02:00",
   "evidence": [
     {
@@ -19,6 +19,13 @@
     ]
   },
   "id": "source.package-json",
+  "origin": {
+    "captured_at": "2026-05-12T17:53:06+02:00",
+    "digest": "sha256:20b38bff17afbcdc58c11bdd1c19d00d95bae699b1b24712d2f5a2f6a90d9dd1",
+    "kind": "file",
+    "locator": "package.json",
+    "media_type": "application/json"
+  },
   "scope": {
     "branch": null,
     "kind": "project",

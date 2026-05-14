@@ -124,7 +124,7 @@ const cliOnlyCapabilities = [
     capability: "Upgrade storage schema",
     mcp: "none",
     cli: "`aictx upgrade`",
-    notes: "Migration remains CLI-only for storage v3."
+    notes: "Migration remains CLI-only for storage v4."
   },
   {
     capability: "Show memory history",
@@ -203,6 +203,12 @@ const cliOnlyCapabilities = [
     mcp: "none",
     cli: "`aictx audit`",
     notes: "Deterministic hygiene audit remains CLI-only in v1."
+  },
+  {
+    capability: "Wiki source workflow",
+    mcp: "none",
+    cli: "`aictx wiki`",
+    notes: "Source-backed ingest, filing, lint, and logs remain CLI-only in v1."
   }
 ] as const;
 
@@ -234,7 +240,8 @@ const exactCliOnlyCommands = [
   "`aictx view`",
   "`aictx docs`",
   "`aictx suggest`",
-  "`aictx audit`"
+  "`aictx audit`",
+  "`aictx wiki`"
 ] as const;
 
 const exactCliOnlyGuidanceCommands = [
@@ -257,7 +264,8 @@ const exactCliOnlyGuidanceCommands = [
   "`aictx view`",
   "`aictx docs`",
   "`aictx suggest`",
-  "`aictx audit`"
+  "`aictx audit`",
+  "`aictx wiki`"
 ] as const;
 
 const guidanceTargets = [
@@ -533,7 +541,7 @@ describe("agent capability map guardrail", () => {
         "* MCP + CLI capabilities: load, search, inspect object, remember memory, save patch, diff."
       );
       expect(content).toContain(
-        "* CLI-only capabilities in v1: init, setup, lens, handoff, patch review, check, rebuild, reset, upgrade, history, restore, rewind, stale, export obsidian, projects, view, docs, suggest, audit."
+        "* CLI-only capabilities in v1: init, setup, lens, handoff, patch review, check, rebuild, reset, upgrade, history, restore, rewind, stale, export obsidian, projects, view, docs, suggest, audit, wiki."
       );
       expect(content).toContain(
         "* Graph inspection is available in the CLI and local viewer, but remains outside MCP."
@@ -590,7 +598,7 @@ describe("agent capability map guardrail", () => {
 
       const cliFirstIndex = guidance.indexOf("Use the CLI by default");
       const cliOnlyIndex = guidance.search(
-        /Setup,\s+lenses,\s+(?:branch\s+)?handoff,\s+maintenance,\s+recovery,\s+export,\s+registry,\s+viewer,\s+docs,\s+suggest,\s+audit/i
+        /Setup,\s+lenses,\s+(?:branch\s+)?handoff,\s+maintenance,\s+recovery,\s+export,\s+registry,\s+viewer,\s+docs,\s+suggest,\s+audit,\s+wiki/i
       );
 
       expect(cliFirstIndex).toBeGreaterThanOrEqual(0);
@@ -661,7 +669,7 @@ describe("agent capability map guardrail", () => {
     }
 
     expect(prd).toContain(
-      "CLI-only capabilities in v1: init, setup, lens, handoff, patch review, check, rebuild, reset, upgrade, history, restore, rewind, stale, export obsidian, projects, view, docs, suggest, audit."
+      "CLI-only capabilities in v1: init, setup, lens, handoff, patch review, check, rebuild, reset, upgrade, history, restore, rewind, stale, export obsidian, projects, view, docs, suggest, audit, wiki."
     );
     expect(prd).toContain(
       "Graph inspection is available in the CLI and local viewer, but remains outside MCP."

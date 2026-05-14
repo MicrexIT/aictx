@@ -34,7 +34,7 @@ const tempRoots: string[] = [];
 const hash = `sha256:${"0".repeat(64)}`;
 
 const validConfig = {
-  version: 3,
+  version: 4,
   project: {
     id: "project.billing-api",
     name: "Billing API"
@@ -81,6 +81,13 @@ const validObject = {
     kind: "agent",
     task: "Fix Stripe webhook retries",
     commit: "abc123"
+  },
+  origin: {
+    kind: "file",
+    locator: "docs/billing-retries.md",
+    captured_at: "2026-04-25T14:00:00+02:00",
+    digest: hash,
+    media_type: "text/markdown"
   },
   superseded_by: null,
   content_hash: hash,
@@ -276,7 +283,7 @@ describe("schema validators", () => {
     expect(validatePatch(validators, createObjectPatch).valid).toBe(true);
   });
 
-  it("accepts legacy config while supporting storage v3 object facets and evidence", async () => {
+  it("accepts legacy config while supporting storage v4 object facets, evidence, and origin", async () => {
     const validators = await compileFixtureProject();
 
     expect(validateConfig(validators, { ...validConfig, version: 1 }).valid).toBe(true);
@@ -295,6 +302,40 @@ describe("schema validators", () => {
         ".aictx/memory/decisions/billing-retries.json"
       ).valid
     ).toBe(true);
+  });
+
+  it("accepts v4 relation predicates and rejects malformed origin", async () => {
+    const validators = await compileFixtureProject();
+
+    expect(
+      validateRelation(
+        validators,
+        { ...validRelation, predicate: "supports" },
+        ".aictx/relations/supports.json"
+      ).valid
+    ).toBe(true);
+    expect(
+      validateRelation(
+        validators,
+        { ...validRelation, predicate: "challenges" },
+        ".aictx/relations/challenges.json"
+      ).valid
+    ).toBe(true);
+    expect(
+      issueCodes(
+        validateObject(
+          validators,
+          {
+            ...validObject,
+            origin: {
+              kind: "file",
+              digest: "not-a-digest"
+            }
+          },
+          ".aictx/memory/decisions/billing-retries.json"
+        )
+      )
+    ).toContain("SchemaRequired");
   });
 
   it("rejects invalid object facets and evidence", async () => {

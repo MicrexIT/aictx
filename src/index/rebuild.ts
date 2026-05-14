@@ -286,6 +286,7 @@ function insertObjects(db: SqliteDatabase, storage: CanonicalStorageSnapshot): v
       applies_to_json,
       evidence_json,
       source_json,
+      origin_json,
       superseded_by,
       created_at,
       updated_at
@@ -309,6 +310,7 @@ function insertObjects(db: SqliteDatabase, storage: CanonicalStorageSnapshot): v
       @applies_to_json,
       @evidence_json,
       @source_json,
+      @origin_json,
       @superseded_by,
       @created_at,
       @updated_at
@@ -355,6 +357,7 @@ function insertObjects(db: SqliteDatabase, storage: CanonicalStorageSnapshot): v
       applies_to_json: jsonOrNull(sidecar.facets?.applies_to),
       evidence_json: jsonOrNull(sidecar.evidence),
       source_json: jsonOrNull(sidecar.source),
+      origin_json: jsonOrNull(sidecar.origin),
       superseded_by: sidecar.superseded_by ?? null,
       created_at: sidecar.created_at,
       updated_at: sidecar.updated_at
@@ -366,7 +369,7 @@ function insertObjects(db: SqliteDatabase, storage: CanonicalStorageSnapshot): v
       body: object.body,
       tags: tags.join(" "),
       facets: facetSearchText(sidecar.facets),
-      evidence: evidenceSearchText(sidecar.evidence)
+      evidence: [evidenceSearchText(sidecar.evidence), originSearchText(sidecar.origin)].join(" ")
     });
     insertObjectLinks({
       object,
@@ -447,6 +450,10 @@ function insertObjectLinks(options: {
     options.addCommitLink(options.object.sidecar.source.commit, "source.commit");
   }
 
+  if (options.object.sidecar.origin?.kind === "file") {
+    options.addFileLink(options.object.sidecar.origin.locator, "origin.file");
+  }
+
   for (const filePath of extractProjectFileReferences(options.object.body)) {
     options.addFileLink(filePath, "body.reference");
   }
@@ -462,6 +469,20 @@ function facetSearchText(facets: StoredMemoryObject["sidecar"]["facets"]): strin
 
 function evidenceSearchText(evidence: StoredMemoryObject["sidecar"]["evidence"]): string {
   return (evidence ?? []).map((item) => `${item.kind} ${item.id}`).join(" ");
+}
+
+function originSearchText(origin: StoredMemoryObject["sidecar"]["origin"]): string {
+  if (origin === undefined) {
+    return "";
+  }
+
+  return [
+    origin.kind,
+    origin.locator,
+    origin.captured_at ?? "",
+    origin.digest ?? "",
+    origin.media_type ?? ""
+  ].join(" ");
 }
 
 function insertRelations(db: SqliteDatabase, storage: CanonicalStorageSnapshot): void {

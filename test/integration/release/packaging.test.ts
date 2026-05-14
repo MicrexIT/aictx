@@ -287,6 +287,7 @@ const requiredPackedPaths = [
   "docs/src/content/docs/specializing-aictx.md",
   "docs/src/content/docs/troubleshooting.md",
   "docs/src/content/docs/viewer.md",
+  "docs/src/content/docs/wiki-workflow.md",
   "integrations/templates/agent-guidance.md",
   "integrations/codex/aictx/SKILL.md",
   "integrations/claude/aictx/SKILL.md",
@@ -337,7 +338,8 @@ const publicMcpContractPaths = [
   "docs/src/content/docs/reference.md",
   "docs/src/content/docs/specializing-aictx.md",
   "docs/src/content/docs/troubleshooting.md",
-  "docs/src/content/docs/viewer.md"
+  "docs/src/content/docs/viewer.md",
+  "docs/src/content/docs/wiki-workflow.md"
 ] as const;
 
 const generatedGuidancePaths = [
@@ -550,7 +552,7 @@ async function expectInstalledMemoryDisciplineDocs(installRoot: string): Promise
 function expectMcpBoundaryContent(content: string): void {
   expect(content).toMatch(/MCP\s+exposes\s+exactly/i);
   expect(content).toMatch(
-    /setup,\s+lenses,\s+(?:branch\s+)?handoff,\s+maintenance,\s+recovery,\s+export,\s+registry,\s+viewer,\s+docs,\s+suggest,\s+audit,\s+and stale/i
+    /setup,\s+lenses,\s+(?:branch\s+)?handoff,\s+maintenance,\s+recovery,\s+export,\s+registry,\s+viewer,\s+docs,\s+suggest,\s+audit,\s+wiki,\s+and stale/i
   );
   expect(content).toMatch(
     /graph inspection[\s\S]{0,120}(?:CLI|local viewer)[\s\S]{0,120}outside local MCP|graph inspection[\s\S]{0,120}outside MCP/i
@@ -591,7 +593,7 @@ function expectGeneratedGuidanceContent(content: string): void {
   expect(content).toContain("`gotcha`");
   expect(content).toContain("`workflow`");
   expect(content).toMatch(
-    /setup,\s+lenses,\s+(?:branch\s+)?handoff,\s+maintenance,\s+recovery,\s+export,\s+registry,\s+viewer,\s+docs,\s+suggest,\s+audit,\s+and stale/i
+    /setup,\s+lenses,\s+(?:branch\s+)?handoff,\s+maintenance,\s+recovery,\s+export,\s+registry,\s+viewer,\s+docs,\s+suggest,\s+audit,\s+wiki,\s+and stale/i
   );
   expect(content).toMatch(
     /graph inspection[\s\S]{0,120}(?:CLI|local viewer)[\s\S]{0,120}outside local MCP|graph inspection[\s\S]{0,120}outside MCP/i

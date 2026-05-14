@@ -9,7 +9,7 @@ import {
   computeObjectContentHash,
   computeRelationContentHash
 } from "../../../src/storage/hashes.js";
-import { upgradeStorageToV3 } from "../../../src/storage/upgrade.js";
+import { upgradeStorageToV4 } from "../../../src/storage/upgrade.js";
 import { readCanonicalStorage } from "../../../src/storage/read.js";
 import { SCHEMA_FILES } from "../../../src/validation/schemas.js";
 
@@ -23,7 +23,7 @@ afterEach(async () => {
 describe("storage upgrade", () => {
   it("backfills v1 objects with conservative facets and empty object evidence", async () => {
     const projectRoot = await createV1Project();
-    const upgraded = await upgradeStorageToV3({
+    const upgraded = await upgradeStorageToV4({
       projectRoot,
       clock: createFixedTestClock("2026-04-25T14:00:00+02:00")
     });
@@ -36,7 +36,7 @@ describe("storage upgrade", () => {
     expect(upgraded.data).toMatchObject({
       upgraded: true,
       from_version: 1,
-      to_version: 3,
+      to_version: 4,
       objects_upgraded: ["decision.billing-retries"]
     });
 
@@ -52,16 +52,16 @@ describe("storage upgrade", () => {
     };
     const storage = await readCanonicalStorage(projectRoot);
 
-    expect(config.version).toBe(3);
+    expect(config.version).toBe(4);
     expect(sidecar.facets).toEqual({ category: "decision-rationale" });
     expect(sidecar.evidence).toEqual([]);
     expect(sidecar.content_hash).toMatch(/^sha256:/);
     expect(storage.ok).toBe(true);
   });
 
-  it("is a no-op when storage is already v3 and objects have facets and evidence", async () => {
+  it("is a no-op when storage is already v4 and objects have facets and evidence", async () => {
     const projectRoot = await createV1Project();
-    const first = await upgradeStorageToV3({
+    const first = await upgradeStorageToV4({
       projectRoot,
       clock: createFixedTestClock("2026-04-25T14:00:00+02:00")
     });
@@ -71,7 +71,7 @@ describe("storage upgrade", () => {
       return;
     }
 
-    const second = await upgradeStorageToV3({
+    const second = await upgradeStorageToV4({
       projectRoot,
       clock: createFixedTestClock("2026-04-25T15:00:00+02:00")
     });
@@ -80,8 +80,8 @@ describe("storage upgrade", () => {
       ok: true,
       data: {
         upgraded: false,
-        from_version: 3,
-        to_version: 3,
+        from_version: 4,
+        to_version: 4,
         files_changed: [],
         objects_upgraded: [],
         objects_deleted: [],
@@ -91,9 +91,9 @@ describe("storage upgrade", () => {
     });
   });
 
-  it("repairs outdated bundled schema files even when config is already v3", async () => {
+  it("repairs outdated bundled schema files even when config is already v4", async () => {
     const projectRoot = await createV1Project();
-    const first = await upgradeStorageToV3({
+    const first = await upgradeStorageToV4({
       projectRoot,
       clock: createFixedTestClock("2026-04-25T14:00:00+02:00")
     });
@@ -109,7 +109,7 @@ describe("storage upgrade", () => {
       "utf8"
     );
 
-    const repaired = await upgradeStorageToV3({
+    const repaired = await upgradeStorageToV4({
       projectRoot,
       clock: createFixedTestClock("2026-04-25T15:00:00+02:00")
     });
@@ -121,16 +121,51 @@ describe("storage upgrade", () => {
 
     expect(repaired.data).toMatchObject({
       upgraded: true,
-      from_version: 3,
-      to_version: 3,
+      from_version: 4,
+      to_version: 4,
       files_changed: [".aictx/schema/object.schema.json"],
       objects_upgraded: []
     });
   });
 
-  it("migrates legacy v2 statuses into the v3 lifecycle", async () => {
+  it("backfills deterministic file origin for legacy source objects", async () => {
+    const projectRoot = await createV3SourceProject();
+    const upgraded = await upgradeStorageToV4({
+      projectRoot,
+      clock: createFixedTestClock("2026-04-25T15:00:00+02:00")
+    });
+
+    expect(upgraded.ok).toBe(true);
+    if (!upgraded.ok) {
+      return;
+    }
+
+    expect(upgraded.data).toMatchObject({
+      upgraded: true,
+      from_version: 3,
+      to_version: 4,
+      objects_upgraded: ["source.readme"]
+    });
+
+    const storage = await readCanonicalStorage(projectRoot);
+    expect(storage.ok).toBe(true);
+    if (!storage.ok) {
+      return;
+    }
+
+    const source = storage.data.objects.find((object) => object.sidecar.id === "source.readme");
+    expect(source?.sidecar.origin).toMatchObject({
+      kind: "file",
+      locator: "README.md",
+      captured_at: "2026-04-25T13:00:00+02:00",
+      media_type: "text/markdown"
+    });
+    expect(source?.sidecar.origin?.digest).toMatch(/^sha256:/);
+  });
+
+  it("migrates legacy v2 statuses into the v4 lifecycle", async () => {
     const projectRoot = await createLegacyV2LifecycleProject();
-    const upgraded = await upgradeStorageToV3({
+    const upgraded = await upgradeStorageToV4({
       projectRoot,
       clock: createFixedTestClock("2026-04-25T16:00:00+02:00")
     });
@@ -143,7 +178,7 @@ describe("storage upgrade", () => {
     expect(upgraded.data).toMatchObject({
       upgraded: true,
       from_version: 2,
-      to_version: 3,
+      to_version: 4,
       files_changed: expect.arrayContaining([".aictx/events.jsonl"]),
       objects_upgraded: expect.arrayContaining([
         "decision.legacy-draft",
@@ -354,6 +389,68 @@ async function createLegacyV2LifecycleProject(): Promise<string> {
       {
         ...relationWithoutHash,
         content_hash: computeRelationContentHash(relationWithoutHash)
+      },
+      null,
+      2
+    )}\n`,
+    "utf8"
+  );
+
+  return projectRoot;
+}
+
+async function createV3SourceProject(): Promise<string> {
+  const projectRoot = await mkdtemp(join(tmpdir(), "aictx-upgrade-source-"));
+  tempRoots.push(projectRoot);
+  await mkdir(join(projectRoot, ".aictx/memory/sources"), { recursive: true });
+  await mkdir(join(projectRoot, ".aictx/relations"), { recursive: true });
+  await mkdir(join(projectRoot, ".aictx/schema"), { recursive: true });
+
+  for (const file of Object.values(SCHEMA_FILES)) {
+    await copyFile(join(root, "src/schemas", file), join(projectRoot, ".aictx/schema", file));
+  }
+
+  await writeFile(
+    join(projectRoot, ".aictx/config.json"),
+    `${JSON.stringify({
+      version: 3,
+      project: { id: "project.source-demo", name: "Source Demo" },
+      memory: { defaultTokenBudget: 6000, autoIndex: true, saveContextPacks: false },
+      git: { trackContextPacks: false }
+    }, null, 2)}\n`,
+    "utf8"
+  );
+  await writeFile(join(projectRoot, ".aictx/events.jsonl"), "", "utf8");
+  await writeFile(join(projectRoot, "README.md"), "# Demo\n\nSource file.\n", "utf8");
+
+  const body = "# Source: README.md\n\nThe README documents the demo.\n";
+  const sidecarWithoutHash = {
+    id: "source.readme",
+    type: "source",
+    status: "active",
+    title: "Source: README.md",
+    body_path: "memory/sources/readme.md",
+    scope: {
+      kind: "project",
+      project: "project.source-demo",
+      branch: null,
+      task: null
+    },
+    tags: ["source"],
+    facets: { category: "source", applies_to: ["README.md"] },
+    evidence: [{ kind: "file", id: "README.md" }],
+    source: { kind: "agent" },
+    created_at: "2026-04-25T13:00:00+02:00",
+    updated_at: "2026-04-25T13:00:00+02:00"
+  };
+
+  await writeFile(join(projectRoot, ".aictx/memory/sources/readme.md"), body, "utf8");
+  await writeFile(
+    join(projectRoot, ".aictx/memory/sources/readme.json"),
+    `${JSON.stringify(
+      {
+        ...sidecarWithoutHash,
+        content_hash: computeObjectContentHash(sidecarWithoutHash, body)
       },
       null,
       2

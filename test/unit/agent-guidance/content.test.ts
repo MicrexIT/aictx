@@ -85,7 +85,8 @@ const cliOnlyCommands = [
   "`aictx docs`",
   "`aictx suggest`",
   "`aictx patch review`",
-  "`aictx audit`"
+  "`aictx audit`",
+  "`aictx wiki`"
 ] as const;
 
 const forbiddenMcpToolNames = [
@@ -102,7 +103,7 @@ const forbiddenMcpToolNames = [
 ] as const;
 
 const cliOnlyCategoryBoundary =
-  /setup,\s+lenses,\s+(?:branch\s+)?handoff,\s+maintenance,\s+recovery,\s+export,\s+registry,\s+viewer,\s+docs,\s+suggest,\s+audit,\s+and stale/i;
+  /setup,\s+lenses,\s+(?:branch\s+)?handoff,\s+maintenance,\s+recovery,\s+export,\s+registry,\s+viewer,\s+docs,\s+suggest,\s+audit,\s+wiki,\s+and stale/i;
 
 const objectTypes = [
   "`project`",

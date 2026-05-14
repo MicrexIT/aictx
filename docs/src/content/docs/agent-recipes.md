@@ -175,7 +175,7 @@ diff_memory({})
 ```
 
 Setup, lenses, handoff, maintenance, recovery, export, registry, viewer, docs,
-suggest, audit, and stale workflows remain CLI-only in v1. Graph inspection is
+suggest, audit, wiki, and stale workflows remain CLI-only in v1. Graph inspection is
 available in the CLI and local viewer, but remains outside MCP.
 
 ## CLI and MCP boundary
@@ -185,7 +185,7 @@ MCP exposes exactly `load_memory`, `search_memory`, `inspect_memory`,
 already exposes Aictx MCP tools.
 
 Setup, lenses, handoff, maintenance, recovery, export, registry, viewer, docs,
-suggest, audit, and stale workflows are CLI-only in v1. Graph inspection is
+suggest, audit, wiki, and stale workflows are CLI-only in v1. Graph inspection is
 available in the CLI and local viewer, but remains outside MCP. These non-MCP
 surfaces are part of the v1 integration model rather than MCP parity gaps.
 

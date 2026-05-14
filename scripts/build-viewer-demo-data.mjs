@@ -227,7 +227,9 @@ const RELATION_FIXTURES = [
   relation("rel.project-todo-app-implements-concept-quick-add", "project.todo-app", "implements", "concept.quick-add"),
   relation("rel.project-todo-app-implements-concept-filtered-views", "project.todo-app", "implements", "concept.filtered-views"),
   relation("rel.synthesis-product-intent-derived-from-source-product-brief", "synthesis.product-intent", "derived_from", "source.product-brief"),
+  relation("rel.source-product-brief-supports-synthesis-product-intent", "source.product-brief", "supports", "synthesis.product-intent"),
   relation("rel.synthesis-feature-map-derived-from-source-product-brief", "synthesis.feature-map", "derived_from", "source.product-brief"),
+  relation("rel.question-recurring-tasks-challenges-synthesis-feature-map", "question.recurring-tasks", "challenges", "synthesis.feature-map"),
   relation("rel.synthesis-feature-map-summarizes-concept-quick-add", "synthesis.feature-map", "summarizes", "concept.quick-add"),
   relation("rel.synthesis-feature-map-summarizes-concept-filtered-views", "synthesis.feature-map", "summarizes", "concept.filtered-views"),
   relation("rel.synthesis-repository-map-derived-from-source-readme", "synthesis.repository-map", "derived_from", "source.readme"),
@@ -400,6 +402,12 @@ function buildDemoData() {
 }
 
 function object(id, type, status, title, bodyPath, lines, options = {}) {
+  const origin =
+    options.origin ??
+    (type === "source"
+      ? sourceOriginFromEvidence(options.evidence ?? [])
+      : null);
+
   return {
     id,
     type,
@@ -409,8 +417,45 @@ function object(id, type, status, title, bodyPath, lines, options = {}) {
     tags: options.tags ?? [],
     facets: options.facets ?? null,
     evidence: options.evidence ?? [],
+    origin,
     body: `${lines.join("\n").trim()}\n`
   };
+}
+
+function sourceOriginFromEvidence(evidence) {
+  const fileEvidence = evidence.find((item) => item.kind === "file");
+
+  if (fileEvidence === undefined) {
+    return null;
+  }
+
+  const mediaType = mediaTypeForPath(fileEvidence.id);
+
+  return {
+    kind: "file",
+    locator: fileEvidence.id,
+    captured_at: CREATED_AT,
+    ...(mediaType === undefined ? {} : { media_type: mediaType })
+  };
+}
+
+function mediaTypeForPath(path) {
+  const lower = path.toLowerCase();
+
+  if (lower.endsWith(".md") || lower.endsWith(".markdown")) {
+    return "text/markdown";
+  }
+  if (lower.endsWith(".txt")) {
+    return "text/plain";
+  }
+  if (lower.endsWith(".json")) {
+    return "application/json";
+  }
+  if (lower.endsWith(".html") || lower.endsWith(".htm")) {
+    return "text/html";
+  }
+
+  return undefined;
 }
 
 function relation(id, from, predicate, to) {
@@ -465,6 +510,7 @@ function summarizeObject(fixture) {
       kind: "system",
       task: "Curated public Todo App demo seed"
     },
+    origin: fixture.origin,
     superseded_by: null,
     created_at: CREATED_AT,
     updated_at: UPDATED_AT,
@@ -496,7 +542,7 @@ function buildRoleCoverage(relations) {
           definition.memoryIds.includes(relation.from) ||
           definition.memoryIds.includes(relation.to) ||
           (definition.key === "sources-provenance" &&
-            ["derived_from", "summarizes", "documents"].includes(relation.predicate))
+            ["derived_from", "supports", "summarizes", "documents"].includes(relation.predicate))
       )
       .map((relation) => relation.id)
       .sort();

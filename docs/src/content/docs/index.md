@@ -95,6 +95,8 @@ aictx diff
 - [Mental model](/mental-model/) explains canonical memory, generated state,
   object types, retrieval, and why Aictx is different from `AGENTS.md` alone,
   vector DB/RAG systems, long context, or plain local files.
+- [Wiki workflow](/wiki-workflow/) covers source-backed `aictx wiki ingest`,
+  `wiki file`, `wiki lint`, and `wiki log` for maintained synthesis.
 - [Specializing Aictx](/specializing-aictx/) shows how to tailor memory to your
   repo's product intent, workflows, and agent guidance.
 - [Agent integration](/agent-integration/) gives agents the concrete workflow
@@ -111,7 +113,7 @@ the agent client has launched and connected to `aictx-mcp`.
 MCP exposes exactly `load_memory`, `search_memory`, `inspect_memory`,
 `remember_memory`, `save_memory_patch`, and `diff_memory`. Setup, lenses,
 handoff, maintenance, recovery, export, registry, viewer, docs, suggest, audit,
-and stale workflows are CLI-only in v1. Graph inspection is available in the
+wiki, and stale workflows are CLI-only in v1. Graph inspection is available in the
 CLI and local viewer, but remains outside MCP. These non-MCP surfaces are part
 of the v1 integration model rather than MCP parity gaps.
 

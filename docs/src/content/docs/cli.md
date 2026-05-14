@@ -77,6 +77,23 @@ use `recommended_actions` as the primary advisory save/no-save aid; fill in
 semantic `title`, `body`, and `reason` fields yourself because Aictx does not
 infer durable project meaning from diffs.
 
+## Wiki-style source workflows
+
+```bash
+aictx wiki ingest --stdin
+aictx wiki ingest --stdin --dry-run --json
+aictx wiki file --stdin
+aictx wiki lint --json
+aictx wiki log --limit 20
+```
+
+`wiki ingest` creates or updates a source record with `origin` and files
+agent-supplied syntheses in the same atomic patch. `wiki file` saves a useful
+query result or synthesis through the existing intent-first remember path.
+`wiki lint` uses audit semantics with wiki wording, and `wiki log` renders a
+chronological view from canonical events. Aictx does not fetch sources or call an
+LLM; the agent supplies the synthesized content through stdin.
+
 Commands that support structured output accept `--json`:
 
 ```bash
@@ -152,7 +169,7 @@ MCP is available when the agent client has launched and connected to
 MCP exposes exactly `load_memory`, `search_memory`, `inspect_memory`,
 `remember_memory`, `save_memory_patch`, and `diff_memory`. Setup, lenses,
 handoff, maintenance, recovery, export, registry, viewer, docs, suggest, audit,
-and stale workflows are CLI-only in v1. Graph inspection is available in the
+wiki, and stale workflows are CLI-only in v1. Graph inspection is available in the
 CLI and local viewer, but remains outside MCP. These non-MCP surfaces are part
 of the v1 integration model rather than MCP parity gaps.
 

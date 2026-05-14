@@ -91,7 +91,7 @@ When one global MCP server serves multiple projects, include `project_root` on
 routine tool calls so reads and writes target the intended `.aictx/` directory.
 
 Setup, lenses, branch handoff, maintenance, recovery, export, registry, viewer,
-docs, suggest, audit, and stale workflows are CLI-only in v1. Graph inspection
+docs, suggest, audit, wiki, and stale workflows are CLI-only in v1. Graph inspection
 is available in the CLI and local viewer, but remains outside MCP. Non-MCP
 capabilities are not MCP parity gaps. `aictx init` does not start MCP; MCP
 clients must launch `aictx-mcp`.
@@ -103,6 +103,13 @@ without initializing storage or writing repo files. `aictx setup --force
 --dry-run` previews reset/setup behavior without deleting anything. `aictx
 audit` includes role coverage gaps, but missing roles are not `aictx check`
 failures.
+
+Use `aictx wiki ingest --stdin` when a source-backed synthesis should be filed
+with a `source` record and raw-source `origin` metadata in one atomic patch.
+Use `aictx wiki file --stdin` for useful query results that should persist,
+`aictx wiki lint` for wiki-language audit findings, and `aictx wiki log` for
+the generated chronological event log. Aictx does not fetch sources or call an
+LLM; the agent supplies synthesized content.
 
 Use `aictx lens project-map` for a readable project overview and
 `aictx lens current-work` to inspect current branch continuity. Use
@@ -121,7 +128,7 @@ Save durable project knowledge future agents would otherwise rediscover:
   verification procedures.
 - Gotchas, known failure modes, abandoned approaches, and debugging facts.
 - Open questions or unresolved conflicts that affect future work.
-- Source records when provenance matters.
+- Source records with `origin` when provenance matters.
 
 Right-size memory:
 

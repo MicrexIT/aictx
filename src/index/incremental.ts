@@ -279,6 +279,7 @@ function upsertTouchedObjects(
       applies_to_json,
       evidence_json,
       source_json,
+      origin_json,
       superseded_by,
       created_at,
       updated_at
@@ -302,6 +303,7 @@ function upsertTouchedObjects(
       @applies_to_json,
       @evidence_json,
       @source_json,
+      @origin_json,
       @superseded_by,
       @created_at,
       @updated_at
@@ -325,6 +327,7 @@ function upsertTouchedObjects(
       applies_to_json = excluded.applies_to_json,
       evidence_json = excluded.evidence_json,
       source_json = excluded.source_json,
+      origin_json = excluded.origin_json,
       superseded_by = excluded.superseded_by,
       created_at = excluded.created_at,
       updated_at = excluded.updated_at
@@ -385,6 +388,7 @@ function upsertTouchedObjects(
       applies_to_json: jsonOrNull(object.sidecar.facets?.applies_to),
       evidence_json: jsonOrNull(object.sidecar.evidence),
       source_json: jsonOrNull(object.sidecar.source),
+      origin_json: jsonOrNull(object.sidecar.origin),
       superseded_by: object.sidecar.superseded_by ?? null,
       created_at: object.sidecar.created_at,
       updated_at: object.sidecar.updated_at
@@ -396,7 +400,10 @@ function upsertTouchedObjects(
       body: object.body,
       tags: tags.join(" "),
       facets: facetSearchText(object.sidecar.facets),
-      evidence: evidenceSearchText(object.sidecar.evidence)
+      evidence: [
+        evidenceSearchText(object.sidecar.evidence),
+        originSearchText(object.sidecar.origin)
+      ].join(" ")
     });
     data.objects_updated += 1;
   }
@@ -607,6 +614,15 @@ function rebuildMemoryLinks(
       );
     }
 
+    if (object.sidecar.origin?.kind === "file") {
+      insertFileLinkIfValid(
+        insertFileLink,
+        memoryId,
+        object.sidecar.origin.locator,
+        "origin.file"
+      );
+    }
+
     for (const filePath of extractProjectFileReferences(object.body)) {
       insertFileLinkIfValid(insertFileLink, memoryId, filePath, "body.reference");
     }
@@ -723,6 +739,20 @@ function facetSearchText(facets: StoredMemoryObject["sidecar"]["facets"]): strin
 
 function evidenceSearchText(evidence: StoredMemoryObject["sidecar"]["evidence"]): string {
   return (evidence ?? []).map((item) => `${item.kind} ${item.id}`).join(" ");
+}
+
+function originSearchText(origin: StoredMemoryObject["sidecar"]["origin"]): string {
+  if (origin === undefined) {
+    return "";
+  }
+
+  return [
+    origin.kind,
+    origin.locator,
+    origin.captured_at ?? "",
+    origin.digest ?? "",
+    origin.media_type ?? ""
+  ].join(" ");
 }
 
 function insertFileLinkIfValid(

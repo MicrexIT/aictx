@@ -1,12 +1,13 @@
 # Agent guidance
 
+Load Aictx memory before non-trivial coding, architecture, debugging, dependency, or configuration work. Prefer the CLI by default; use MCP only when the client has already launched a current `aictx-mcp` server.
+
+Use `aictx remember --stdin` for normal durable memory writes. Use `aictx save --stdin` or `save_memory_patch({ patch })` only for advanced structured patch writes. Use `aictx wiki ingest --stdin` when filing source-backed synthesis with raw-source `origin` metadata, `aictx wiki file --stdin` for useful query results, `aictx wiki lint` for wiki-language audit findings, and `aictx wiki log` for event history. Wiki workflows remain CLI-only in v1.
 
 Verification workflows:
-- pnpm run typecheck: package.json script `typecheck`: `tsc --noEmit && svelte-check --tsconfig viewer/tsconfig.json`
-- pnpm run test:local: package.json script `test:local`: `pnpm typecheck && pnpm test:package`
-- pnpm run test:watch: package.json script `test:watch`: `vitest`
-- pnpm run test: package.json script `test`: `vitest run`
-- pnpm run test:package: package.json script `test:package`: `vitest run test/integration/release/packaging.test.ts`
-- pnpm run build: package.json script `build`: `pnpm build:guidance && pnpm build:version && pnpm build:code && pnpm build:schemas && pnpm build:viewer`
+- `pnpm run typecheck`: TypeScript plus Svelte validation for the viewer.
+- `pnpm exec vitest run <targeted suites>`: focused regression coverage for changed areas.
+- `pnpm run test:local`: package/release verification plus typecheck.
+- `pnpm run build`: regenerated guidance/version/code/schemas/viewer bundle.
 
-Update this synthesis when agent instructions, conventions, or verification workflows change.
+Update this synthesis when agent instructions, CLI/MCP boundaries, wiki workflows, or verification commands change.

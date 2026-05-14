@@ -27,7 +27,8 @@ export default defineConfig({
             "capabilities",
             "mental-model",
             "specializing-aictx",
-            "demand-driven-memory"
+            "demand-driven-memory",
+            "wiki-workflow"
           ]
         },
         {

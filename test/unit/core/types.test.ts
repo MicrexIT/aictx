@@ -5,6 +5,7 @@ import {
   EVENT_TYPES,
   FACET_CATEGORIES,
   OBJECT_TYPES,
+  ORIGIN_KINDS,
   PATCH_OPERATIONS,
   PREDICATES,
   SCOPE_KINDS
@@ -64,6 +65,8 @@ describe("core domain type constants", () => {
       "depends_on",
       "supersedes",
       "conflicts_with",
+      "supports",
+      "challenges",
       "derived_from",
       "summarizes",
       "documents",
@@ -91,6 +94,7 @@ describe("core domain type constants", () => {
   it("exports actors and scope kinds from the specs", () => {
     expect(ACTORS).toEqual(["agent", "user", "cli", "mcp", "system"]);
     expect(SCOPE_KINDS).toEqual(["project", "branch", "task"]);
+    expect(ORIGIN_KINDS).toEqual(["file", "url", "user", "external"]);
   });
 
   it("exports patch operations from the API spec", () => {
