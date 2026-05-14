@@ -32,7 +32,7 @@ describe("site landing page", () => {
     expect(landing).toContain("Remind me: are we still avoiding dashboard-style UI here?");
     expect(landing).toContain("aictx load \"improve viewer search UI\"");
     expect(landing).toContain("Loaded 6 relevant memories before editing");
-    expect(landing).toContain("Viewer memory page follows a document-style handbook layout.");
+    expect(landing).toContain("Viewer memory page shows canonical types, facets, scopes, and relations first.");
     expect(landing).not.toContain("Inspect the memory agents will use.");
     expect(landing).toContain("How it works");
     expect(landing).toContain("Aictx keeps the everyday loop small");
@@ -69,11 +69,12 @@ describe("site landing page", () => {
     expect(layout).toContain("Local, reviewable project memory for AI coding tools.");
   });
 
-  it("frames the demo as human inspection of future project memory", async () => {
+  it("frames the demo as a generic Todo App memory inspection surface", async () => {
     const landing = await readFile(resolve(repoRoot, "site/src/pages/index.astro"), "utf8");
 
-    expect(landing).toContain("See the memory future work will use.");
-    expect(landing).toContain("Inspect the local project memory your AI tools load before work.");
+    expect(landing).toContain("Inspect a real Todo App memory seed.");
+    expect(landing).toContain("Browse a generic Todo App project with canonical object types");
+    expect(landing).toContain("Todo App memory schema");
     expect(landing).not.toContain("Browse the local handbook");
   });
 });

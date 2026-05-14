@@ -13,12 +13,17 @@ const scriptPath = join(repoRoot, "scripts", "build-viewer-demo-data.mjs");
 const committedSeedPath = join(repoRoot, "src", "viewer", "demo-data.generated.json");
 const tempRoots: string[] = [];
 const expectedMemoryIds = [
-  "architecture.current",
-  "constraint.node-engine",
-  "constraint.package-manager",
-  "project.aictx",
-  "source.docs-src-content-docs-agent-integration",
+  "architecture.local-first-todo-app",
+  "concept.filtered-views",
+  "concept.quick-add",
+  "constraint.offline-first",
+  "fact.storage-localstorage",
+  "gotcha.completed-filter-counts",
+  "project.todo-app",
+  "question.recurring-tasks",
+  "source.agent-guidance",
   "source.package-json",
+  "source.product-brief",
   "source.readme",
   "synthesis.agent-guidance",
   "synthesis.conventions-quality",
@@ -26,7 +31,7 @@ const expectedMemoryIds = [
   "synthesis.product-intent",
   "synthesis.repository-map",
   "synthesis.stack-and-tooling",
-  "workflow.package-scripts",
+  "workflow.local-development",
   "workflow.post-task-verification"
 ];
 
@@ -54,11 +59,14 @@ describe("viewer demo data seed", () => {
     const second = await readFile(outFile, "utf8");
     const data = JSON.parse(second) as {
       meta: { project_root: string; aictx_root: string };
-      seed: { memory_ids: string[] };
+      seed: { memory_ids: string[]; source: string };
       projects: { projects: Array<{ registry_id: string; project_root: string }> };
       bootstrap: {
-        objects: Array<{ id: string }>;
+        project: { id: string; name: string };
+        objects: Array<{ id: string; type: string; facets: { category: string } | null }>;
         relations: Array<{ from: string; to: string }>;
+        role_coverage: { roles: unknown[]; counts: { populated: number } };
+        lenses: Array<{ name: string; included_memory_ids: string[] }>;
       };
     };
     const serialized = JSON.stringify(data);
@@ -70,14 +78,36 @@ describe("viewer demo data seed", () => {
     expect(second).toBe(first);
     expect(second).toBe(committed);
     expect([...data.seed.memory_ids].sort()).toEqual(expectedMemoryIds);
+    expect(data.seed.source).toBe("synthetic-todo-app-memory");
+    expect(data.bootstrap.project).toEqual({
+      id: "project.todo-app",
+      name: "Todo App"
+    });
     expect(objectIds).toEqual(expectedMemoryIds);
-    expect(data.meta.project_root).toBe("demo://aictx");
-    expect(data.meta.aictx_root).toBe("demo://aictx/.aictx");
+    expect(data.bootstrap.objects.find((object) => object.id === "project.todo-app")).toMatchObject({
+      type: "project",
+      facets: { category: "project-description" }
+    });
+    expect(data.bootstrap.objects.some((object) => object.id === "project.aictx")).toBe(false);
+    expect(data.meta.project_root).toBe("demo://todo-app");
+    expect(data.meta.aictx_root).toBe("demo://todo-app/.aictx");
     expect(data.projects.projects).toHaveLength(1);
     expect(data.projects.projects[0]).toMatchObject({
       registry_id: "demo",
-      project_root: "demo://aictx"
+      project_root: "demo://todo-app"
     });
+    expect(data.bootstrap.role_coverage.roles.length).toBeGreaterThan(0);
+    expect(data.bootstrap.role_coverage.counts.populated).toBeGreaterThan(0);
+    expect(data.bootstrap.lenses.map((lens) => lens.name)).toEqual([
+      "project-map",
+      "current-work",
+      "review-risk",
+      "provenance",
+      "maintenance"
+    ]);
+    for (const lens of data.bootstrap.lenses) {
+      expect(lens.included_memory_ids.length).toBeGreaterThan(0);
+    }
     expect(data.bootstrap.relations.length).toBeGreaterThan(0);
     for (const id of relationEndpointIds) {
       expect(objectIds).toContain(id);

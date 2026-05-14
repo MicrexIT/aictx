@@ -4,67 +4,72 @@
   "registry_id": "demo",
   "seed": {
     "memory_ids": [
-      "project.aictx",
-      "architecture.current",
-      "constraint.node-engine",
-      "constraint.package-manager",
-      "source.docs-src-content-docs-agent-integration",
+      "project.todo-app",
+      "synthesis.product-intent",
+      "synthesis.feature-map",
+      "synthesis.repository-map",
+      "architecture.local-first-todo-app",
+      "synthesis.stack-and-tooling",
+      "synthesis.conventions-quality",
+      "constraint.offline-first",
+      "concept.quick-add",
+      "concept.filtered-views",
+      "fact.storage-localstorage",
+      "workflow.local-development",
+      "workflow.post-task-verification",
+      "gotcha.completed-filter-counts",
+      "question.recurring-tasks",
+      "synthesis.agent-guidance",
+      "source.product-brief",
       "source.package-json",
       "source.readme",
-      "synthesis.agent-guidance",
-      "synthesis.conventions-quality",
-      "synthesis.feature-map",
-      "synthesis.product-intent",
-      "synthesis.repository-map",
-      "synthesis.stack-and-tooling",
-      "workflow.package-scripts",
-      "workflow.post-task-verification"
+      "source.agent-guidance"
     ],
-    "source": "curated-aictx-project-memory"
+    "source": "synthetic-todo-app-memory"
   },
   "defaults": {
     "token_budget": 6000,
     "mode": "coding"
   },
   "meta": {
-    "project_root": "demo://aictx",
-    "aictx_root": "demo://aictx/.aictx",
+    "project_root": "demo://todo-app",
+    "aictx_root": "demo://todo-app/.aictx",
     "git": {
       "available": true,
       "branch": "main",
-      "commit": "demo-seed",
+      "commit": "todo-demo-seed",
       "dirty": false
     }
   },
   "projects": {
-    "registry_path": "demo://aictx/projects.json",
+    "registry_path": "demo://todo-app/projects.json",
     "projects": [
       {
         "registry_id": "demo",
         "project": {
-          "id": "project.aictx",
-          "name": "Aictx"
+          "id": "project.todo-app",
+          "name": "Todo App"
         },
-        "project_root": "demo://aictx",
-        "aictx_root": "demo://aictx/.aictx",
+        "project_root": "demo://todo-app",
+        "aictx_root": "demo://todo-app/.aictx",
         "source": "manual",
-        "registered_at": "2026-05-12T17:53:06+02:00",
-        "last_seen_at": "2026-05-13T18:23:33+02:00",
+        "registered_at": "2026-05-12T09:00:00+02:00",
+        "last_seen_at": "2026-05-13T15:30:00+02:00",
         "current": true,
         "available": true,
         "counts": {
-          "objects": 15,
-          "relations": 8,
+          "objects": 20,
+          "relations": 17,
           "stale_objects": 0,
           "superseded_objects": 0,
-          "source_objects": 3,
+          "source_objects": 4,
           "synthesis_objects": 6,
-          "active_relations": 8
+          "active_relations": 17
         },
         "git": {
           "available": true,
           "branch": "main",
-          "commit": "demo-seed",
+          "commit": "todo-demo-seed",
           "dirty": false
         },
         "warnings": []
@@ -79,110 +84,26 @@
   },
   "bootstrap": {
     "project": {
-      "id": "project.aictx",
-      "name": "Aictx"
+      "id": "project.todo-app",
+      "name": "Todo App"
     },
     "objects": [
       {
-        "id": "architecture.current",
-        "type": "architecture",
-        "status": "active",
-        "title": "Current Architecture",
-        "body_path": ".aictx/memory/architecture.md",
-        "json_path": ".aictx/memory/architecture.json",
-        "scope": {
-          "kind": "project",
-          "project": "project.aictx",
-          "branch": null,
-          "task": null
-        },
-        "tags": [
-          "architecture"
-        ],
-        "facets": {
-          "category": "architecture"
-        },
-        "evidence": [],
-        "source": {
-          "kind": "system",
-          "task": "Curated public demo seed"
-        },
-        "superseded_by": null,
-        "created_at": "2026-05-12T17:53:06+02:00",
-        "updated_at": "2026-05-12T17:53:06+02:00",
-        "body": "# Current Architecture\n\n- Primary source files are under `src/`.\n- The codebase uses TypeScript.\n- The package is configured as an ESM package with `type: module`.\n- Vitest is the configured test runner.\n"
-      },
-      {
-        "id": "constraint.node-engine",
-        "type": "constraint",
-        "status": "active",
-        "title": "Node engine requirement",
-        "body_path": ".aictx/memory/constraints/node-engine.md",
-        "json_path": ".aictx/memory/constraints/node-engine.json",
-        "scope": {
-          "kind": "project",
-          "project": "project.aictx",
-          "branch": null,
-          "task": null
-        },
-        "tags": [
-          "node",
-          "runtime"
-        ],
-        "facets": null,
-        "evidence": [],
-        "source": {
-          "kind": "system",
-          "task": "Curated public demo seed"
-        },
-        "superseded_by": null,
-        "created_at": "2026-05-12T17:53:06+02:00",
-        "updated_at": "2026-05-12T17:53:06+02:00",
-        "body": "# Node engine requirement\n\nThe package declares Node.js `>=22` in `package.json` engines.\n"
-      },
-      {
-        "id": "constraint.package-manager",
-        "type": "constraint",
-        "status": "active",
-        "title": "Package manager",
-        "body_path": ".aictx/memory/constraints/package-manager.md",
-        "json_path": ".aictx/memory/constraints/package-manager.json",
-        "scope": {
-          "kind": "project",
-          "project": "project.aictx",
-          "branch": null,
-          "task": null
-        },
-        "tags": [
-          "dependencies",
-          "pnpm"
-        ],
-        "facets": null,
-        "evidence": [],
-        "source": {
-          "kind": "system",
-          "task": "Curated public demo seed"
-        },
-        "superseded_by": null,
-        "created_at": "2026-05-12T17:53:06+02:00",
-        "updated_at": "2026-05-12T17:53:06+02:00",
-        "body": "# Package manager\n\nUse `pnpm@10.11.0` for dependency workflows; this is declared in `package.json`.\n"
-      },
-      {
-        "id": "project.aictx",
+        "id": "project.todo-app",
         "type": "project",
         "status": "active",
-        "title": "Aictx",
+        "title": "Todo App",
         "body_path": ".aictx/memory/project.md",
         "json_path": ".aictx/memory/project.json",
         "scope": {
           "kind": "project",
-          "project": "project.aictx",
+          "project": "project.todo-app",
           "branch": null,
           "task": null
         },
         "tags": [
-          "project"
+          "project",
+          "todo"
         ],
         "facets": {
           "category": "project-description"
@@ -190,267 +111,12 @@
         "evidence": [],
         "source": {
           "kind": "system",
-          "task": "Curated public demo seed"
+          "task": "Curated public Todo App demo seed"
         },
         "superseded_by": null,
-        "created_at": "2026-05-12T17:53:06+02:00",
-        "updated_at": "2026-05-12T17:53:06+02:00",
-        "body": "# Aictx\n\nLocal-first project memory for AI coding agents.\n\nPackage: `@aictx/memory`.\n"
-      },
-      {
-        "id": "source.docs-src-content-docs-agent-integration",
-        "type": "source",
-        "status": "active",
-        "title": "Source: docs/src/content/docs/agent-integration.md",
-        "body_path": ".aictx/memory/sources/docs-src-content-docs-agent-integration.md",
-        "json_path": ".aictx/memory/sources/docs-src-content-docs-agent-integration.json",
-        "scope": {
-          "kind": "project",
-          "project": "project.aictx",
-          "branch": null,
-          "task": null
-        },
-        "tags": [
-          "source"
-        ],
-        "facets": {
-          "applies_to": [
-            "docs/src/content/docs/agent-integration.md"
-          ],
-          "category": "source",
-          "load_modes": [
-            "onboarding",
-            "architecture"
-          ]
-        },
-        "evidence": [
-          {
-            "kind": "file",
-            "id": "docs/src/content/docs/agent-integration.md"
-          }
-        ],
-        "source": {
-          "kind": "system",
-          "task": "Curated public demo seed"
-        },
-        "superseded_by": null,
-        "created_at": "2026-05-12T17:53:06+02:00",
-        "updated_at": "2026-05-12T17:53:06+02:00",
-        "body": "# Source: docs/src/content/docs/agent-integration.md\n\nThis source records that durable Aictx memory can be derived from `docs/src/content/docs/agent-integration.md`.\n"
-      },
-      {
-        "id": "source.package-json",
-        "type": "source",
-        "status": "active",
-        "title": "Source: package.json",
-        "body_path": ".aictx/memory/sources/package-json.md",
-        "json_path": ".aictx/memory/sources/package-json.json",
-        "scope": {
-          "kind": "project",
-          "project": "project.aictx",
-          "branch": null,
-          "task": null
-        },
-        "tags": [
-          "source"
-        ],
-        "facets": {
-          "applies_to": [
-            "package.json"
-          ],
-          "category": "source",
-          "load_modes": [
-            "onboarding",
-            "architecture"
-          ]
-        },
-        "evidence": [
-          {
-            "kind": "file",
-            "id": "package.json"
-          }
-        ],
-        "source": {
-          "kind": "system",
-          "task": "Curated public demo seed"
-        },
-        "superseded_by": null,
-        "created_at": "2026-05-12T17:53:06+02:00",
-        "updated_at": "2026-05-12T17:53:06+02:00",
-        "body": "# Source: package.json\n\nThis source records that durable Aictx memory can be derived from `package.json`.\n\nCaptured signals:\n- Package name: @aictx/memory\n- Package description: Local-first project memory for AI coding agents.\n"
-      },
-      {
-        "id": "source.readme",
-        "type": "source",
-        "status": "active",
-        "title": "Source: README.md",
-        "body_path": ".aictx/memory/sources/readme.md",
-        "json_path": ".aictx/memory/sources/readme.json",
-        "scope": {
-          "kind": "project",
-          "project": "project.aictx",
-          "branch": null,
-          "task": null
-        },
-        "tags": [
-          "source"
-        ],
-        "facets": {
-          "applies_to": [
-            "README.md"
-          ],
-          "category": "source",
-          "load_modes": [
-            "onboarding",
-            "architecture"
-          ]
-        },
-        "evidence": [
-          {
-            "kind": "file",
-            "id": "README.md"
-          }
-        ],
-        "source": {
-          "kind": "system",
-          "task": "Curated public demo seed"
-        },
-        "superseded_by": null,
-        "created_at": "2026-05-12T17:53:06+02:00",
-        "updated_at": "2026-05-12T17:53:06+02:00",
-        "body": "# Source: README.md\n\nThis source records that durable Aictx memory can be derived from `README.md`.\n\nCaptured signals:\n- README title: Aictx\n- README summary: ![CI](https://github.com/MicrexIT/aictx/actions/workflows/ci.yml) ![CodeQL](https://github.com/MicrexIT/aictx/actions/workflows/codeql.yml) ![npm](https://www.npmjs.com/package/@aictx/memory) ![License: MIT](LICENSE)\n"
-      },
-      {
-        "id": "synthesis.agent-guidance",
-        "type": "synthesis",
-        "status": "active",
-        "title": "Agent guidance",
-        "body_path": ".aictx/memory/syntheses/agent-guidance.md",
-        "json_path": ".aictx/memory/syntheses/agent-guidance.json",
-        "scope": {
-          "kind": "project",
-          "project": "project.aictx",
-          "branch": null,
-          "task": null
-        },
-        "tags": [
-          "agents",
-          "guidance",
-          "synthesis"
-        ],
-        "facets": {
-          "applies_to": [],
-          "category": "agent-guidance",
-          "load_modes": [
-            "coding",
-            "review",
-            "onboarding"
-          ]
-        },
-        "evidence": [],
-        "source": {
-          "kind": "system",
-          "task": "Curated public demo seed"
-        },
-        "superseded_by": null,
-        "created_at": "2026-05-12T17:53:06+02:00",
-        "updated_at": "2026-05-12T17:53:06+02:00",
-        "body": "# Agent guidance\n\n\nVerification workflows:\n- pnpm run typecheck: package.json script `typecheck`: `tsc --noEmit && svelte-check --tsconfig viewer/tsconfig.json`\n- pnpm run test:local: package.json script `test:local`: `pnpm typecheck && pnpm test:package`\n- pnpm run test:watch: package.json script `test:watch`: `vitest`\n- pnpm run test: package.json script `test`: `vitest run`\n- pnpm run test:package: package.json script `test:package`: `vitest run test/integration/release/packaging.test.ts`\n- pnpm run build: package.json script `build`: `pnpm build:guidance && pnpm build:version && pnpm build:code && pnpm build:schemas && pnpm build:viewer`\n\nUpdate this synthesis when agent instructions, conventions, or verification workflows change.\n"
-      },
-      {
-        "id": "synthesis.conventions-quality",
-        "type": "synthesis",
-        "status": "active",
-        "title": "Conventions and quality bar",
-        "body_path": ".aictx/memory/syntheses/conventions-quality.md",
-        "json_path": ".aictx/memory/syntheses/conventions-quality.json",
-        "scope": {
-          "kind": "project",
-          "project": "project.aictx",
-          "branch": null,
-          "task": null
-        },
-        "tags": [
-          "convention",
-          "quality",
-          "synthesis"
-        ],
-        "facets": {
-          "applies_to": [
-            "package.json"
-          ],
-          "category": "convention",
-          "load_modes": [
-            "coding",
-            "review",
-            "onboarding"
-          ]
-        },
-        "evidence": [
-          {
-            "kind": "file",
-            "id": "package.json"
-          },
-          {
-            "kind": "source",
-            "id": "source.package-json"
-          }
-        ],
-        "source": {
-          "kind": "system",
-          "task": "Curated public demo seed"
-        },
-        "superseded_by": null,
-        "created_at": "2026-05-12T17:53:06+02:00",
-        "updated_at": "2026-05-12T17:53:06+02:00",
-        "body": "# Conventions and quality bar\n\nVerification expectations:\n- pnpm run typecheck: package.json script `typecheck`: `tsc --noEmit && svelte-check --tsconfig viewer/tsconfig.json`\n- pnpm run test:local: package.json script `test:local`: `pnpm typecheck && pnpm test:package`\n- pnpm run test:watch: package.json script `test:watch`: `vitest`\n- pnpm run test: package.json script `test`: `vitest run`\n- pnpm run test:package: package.json script `test:package`: `vitest run test/integration/release/packaging.test.ts`\n- pnpm run build: package.json script `build`: `pnpm build:guidance && pnpm build:version && pnpm build:code && pnpm build:schemas && pnpm build:viewer`\n\nUpdate this synthesis when explicit repo conventions, review expectations, or completion checks change.\n"
-      },
-      {
-        "id": "synthesis.feature-map",
-        "type": "synthesis",
-        "status": "active",
-        "title": "Feature map",
-        "body_path": ".aictx/memory/syntheses/feature-map.md",
-        "json_path": ".aictx/memory/syntheses/feature-map.json",
-        "scope": {
-          "kind": "project",
-          "project": "project.aictx",
-          "branch": null,
-          "task": null
-        },
-        "tags": [
-          "features",
-          "synthesis"
-        ],
-        "facets": {
-          "applies_to": [
-            "package.json",
-            "src/cli/commands/audit.ts",
-            "src/cli/commands/check.ts",
-            "src/cli/commands/diff.ts",
-            "src/cli/commands/docs.ts",
-            "src/cli/commands/export.ts"
-          ],
-          "category": "feature-map",
-          "load_modes": [
-            "coding",
-            "onboarding"
-          ]
-        },
-        "evidence": [
-          {
-            "kind": "source",
-            "id": "source.package-json"
-          }
-        ],
-        "source": {
-          "kind": "system",
-          "task": "Curated public demo seed"
-        },
-        "superseded_by": null,
-        "created_at": "2026-05-12T17:53:06+02:00",
-        "updated_at": "2026-05-12T17:53:06+02:00",
-        "body": "# Feature map\n\nCurrent product capabilities inferred from durable repository evidence:\n- CLI binary aictx: The `aictx` executable is published by `package.json` and points to `dist/cli/main.js`.\n- CLI binary aictx-mcp: The `aictx-mcp` executable is published by `package.json` and points to `dist/mcp/server.js`.\n- CLI command audit: The `audit` CLI command report deterministic Aictx memory hygiene findings.\n- CLI command check: The `check` CLI command validate Aictx canonical storage and generated index health.\n- CLI command diff: The `diff` CLI command show Aictx memory changes, including untracked memory files.\n- CLI command docs: The `docs` CLI command read bundled public Aictx docs or open the hosted docs site.\n- CLI command export: The `export` CLI command export generated Aictx projections.\n- CLI command obsidian: The `obsidian` CLI command export a generated Obsidian-compatible projection.\n\nUpdate this synthesis when features are added, removed, renamed, or replaced.\n"
+        "created_at": "2026-05-12T09:00:00+02:00",
+        "updated_at": "2026-05-13T15:30:00+02:00",
+        "body": "# Todo App\n\nA small personal productivity app for capturing tasks quickly, organizing them by status, and reviewing what needs attention today.\n\nThe project should stay understandable to any developer opening the public demo.\n"
       },
       {
         "id": "synthesis.product-intent",
@@ -461,7 +127,7 @@
         "json_path": ".aictx/memory/syntheses/product-intent.json",
         "scope": {
           "kind": "project",
-          "project": "project.aictx",
+          "project": "project.todo-app",
           "branch": null,
           "task": null
         },
@@ -470,31 +136,57 @@
           "synthesis"
         ],
         "facets": {
-          "category": "product-intent",
-          "load_modes": [
-            "coding",
-            "architecture",
-            "onboarding"
-          ]
+          "category": "product-intent"
         },
         "evidence": [
           {
             "kind": "source",
-            "id": "source.package-json"
-          },
-          {
-            "kind": "source",
-            "id": "source.readme"
+            "id": "source.product-brief"
           }
         ],
         "source": {
           "kind": "system",
-          "task": "Curated public demo seed"
+          "task": "Curated public Todo App demo seed"
         },
         "superseded_by": null,
-        "created_at": "2026-05-12T17:53:06+02:00",
-        "updated_at": "2026-05-12T17:53:06+02:00",
-        "body": "# Product intent\n\nLocal-first project memory for AI coding agents.\n\nMaintain this synthesis when the project's purpose, user promise, or product direction changes.\n"
+        "created_at": "2026-05-12T09:00:00+02:00",
+        "updated_at": "2026-05-13T15:30:00+02:00",
+        "body": "# Product intent\n\nThe Todo App helps a single user keep a trustworthy short list of work without account setup or network dependency.\n\nUseful output means fast capture, clear completion state, and no surprise data loss after refresh.\n"
+      },
+      {
+        "id": "synthesis.feature-map",
+        "type": "synthesis",
+        "status": "active",
+        "title": "Feature map",
+        "body_path": ".aictx/memory/syntheses/feature-map.md",
+        "json_path": ".aictx/memory/syntheses/feature-map.json",
+        "scope": {
+          "kind": "project",
+          "project": "project.todo-app",
+          "branch": null,
+          "task": null
+        },
+        "tags": [
+          "features",
+          "synthesis"
+        ],
+        "facets": {
+          "category": "feature-map"
+        },
+        "evidence": [
+          {
+            "kind": "source",
+            "id": "source.product-brief"
+          }
+        ],
+        "source": {
+          "kind": "system",
+          "task": "Curated public Todo App demo seed"
+        },
+        "superseded_by": null,
+        "created_at": "2026-05-12T09:00:00+02:00",
+        "updated_at": "2026-05-13T15:30:00+02:00",
+        "body": "# Feature map\n\n- Quick add creates a task from a single text input.\n- Filtered views separate all, active, completed, and overdue tasks.\n- Local persistence keeps tasks available after reload.\n- Empty states explain the current filter without sending the user to documentation.\n"
       },
       {
         "id": "synthesis.repository-map",
@@ -505,7 +197,7 @@
         "json_path": ".aictx/memory/syntheses/repository-map.json",
         "scope": {
           "kind": "project",
-          "project": "project.aictx",
+          "project": "project.todo-app",
           "branch": null,
           "task": null
         },
@@ -514,87 +206,15 @@
           "synthesis"
         ],
         "facets": {
-          "applies_to": [
-            "docs/src/content/docs/agent-integration.md",
-            "docs/src/content/docs/agent-recipes.md",
-            "docs/src/content/docs/capabilities.md",
-            "docs/src/content/docs/cli.md",
-            "docs/src/content/docs/demand-driven-memory.md",
-            "docs/src/content/docs/getting-started.md",
-            "docs/src/content/docs/index.md",
-            "docs/src/content/docs/mcp.md",
-            "package.json",
-            "src/app/operations.ts",
-            "src/cli/commands/audit.ts",
-            "src/cli/commands/check.ts",
-            "src/cli/commands/diff.ts",
-            "src/cli/commands/docs.ts",
-            "src/cli/commands/export.ts",
-            "src/cli/commands/graph.ts",
-            "src/cli/commands/handoff.ts",
-            "tsconfig.json",
-            "vitest.config.ts"
-          ],
           "category": "file-layout",
-          "load_modes": [
-            "coding",
-            "architecture",
-            "onboarding"
+          "applies_to": [
+            "src/",
+            "src/components/",
+            "src/storage/",
+            "test/"
           ]
         },
         "evidence": [
-          {
-            "kind": "file",
-            "id": "docs/src/content/docs/agent-integration.md"
-          },
-          {
-            "kind": "file",
-            "id": "docs/src/content/docs/agent-recipes.md"
-          },
-          {
-            "kind": "file",
-            "id": "docs/src/content/docs/capabilities.md"
-          },
-          {
-            "kind": "file",
-            "id": "docs/src/content/docs/cli.md"
-          },
-          {
-            "kind": "file",
-            "id": "docs/src/content/docs/demand-driven-memory.md"
-          },
-          {
-            "kind": "file",
-            "id": "docs/src/content/docs/getting-started.md"
-          },
-          {
-            "kind": "file",
-            "id": "docs/src/content/docs/index.md"
-          },
-          {
-            "kind": "file",
-            "id": "docs/src/content/docs/mcp.md"
-          },
-          {
-            "kind": "file",
-            "id": "package.json"
-          },
-          {
-            "kind": "file",
-            "id": "src/app/operations.ts"
-          },
-          {
-            "kind": "file",
-            "id": "src/cli/commands/audit.ts"
-          },
-          {
-            "kind": "file",
-            "id": "src/cli/commands/check.ts"
-          },
-          {
-            "kind": "source",
-            "id": "source.package-json"
-          },
           {
             "kind": "source",
             "id": "source.readme"
@@ -602,12 +222,51 @@
         ],
         "source": {
           "kind": "system",
-          "task": "Curated public demo seed"
+          "task": "Curated public Todo App demo seed"
         },
         "superseded_by": null,
-        "created_at": "2026-05-12T17:53:06+02:00",
-        "updated_at": "2026-05-12T17:53:06+02:00",
-        "body": "# Repository map\n\nImportant repository areas inferred from durable files:\n- Source: Primary implementation code.\n- Documentation: Human and agent-facing project documentation.\n- Manifests and config: `package.json`, `tsconfig.json`, `vitest.config.ts`\n\nUpdate this synthesis when major directories, packages, generated assets, or entrypoints move.\n"
+        "created_at": "2026-05-12T09:00:00+02:00",
+        "updated_at": "2026-05-13T15:30:00+02:00",
+        "body": "# Repository map\n\nApplication code lives under `src/`, reusable UI pieces live under `src/components/`, and persistence helpers live under `src/storage/`.\n\nTests mirror those areas under `test/` with browser coverage for task creation and filtering.\n"
+      },
+      {
+        "id": "architecture.local-first-todo-app",
+        "type": "architecture",
+        "status": "active",
+        "title": "Local-first todo architecture",
+        "body_path": ".aictx/memory/architecture/local-first-todo-app.md",
+        "json_path": ".aictx/memory/architecture/local-first-todo-app.json",
+        "scope": {
+          "kind": "project",
+          "project": "project.todo-app",
+          "branch": null,
+          "task": null
+        },
+        "tags": [
+          "architecture",
+          "local-first"
+        ],
+        "facets": {
+          "category": "architecture",
+          "applies_to": [
+            "src/storage/",
+            "src/App.tsx"
+          ]
+        },
+        "evidence": [
+          {
+            "kind": "source",
+            "id": "source.readme"
+          }
+        ],
+        "source": {
+          "kind": "system",
+          "task": "Curated public Todo App demo seed"
+        },
+        "superseded_by": null,
+        "created_at": "2026-05-12T09:00:00+02:00",
+        "updated_at": "2026-05-13T15:30:00+02:00",
+        "body": "# Local-first todo architecture\n\nThe app keeps task state in a small client-side store and persists a normalized task list to localStorage.\n\nRendering code reads from the store; persistence code only serializes and validates task records.\n"
       },
       {
         "id": "synthesis.stack-and-tooling",
@@ -618,7 +277,7 @@
         "json_path": ".aictx/memory/syntheses/stack-and-tooling.json",
         "scope": {
           "kind": "project",
-          "project": "project.aictx",
+          "project": "project.todo-app",
           "branch": null,
           "task": null
         },
@@ -628,33 +287,14 @@
           "tooling"
         ],
         "facets": {
+          "category": "stack",
           "applies_to": [
             "package.json",
-            "tsconfig.json",
+            "vite.config.ts",
             "vitest.config.ts"
-          ],
-          "category": "stack",
-          "load_modes": [
-            "coding",
-            "debugging",
-            "review",
-            "architecture",
-            "onboarding"
           ]
         },
         "evidence": [
-          {
-            "kind": "file",
-            "id": "package.json"
-          },
-          {
-            "kind": "file",
-            "id": "tsconfig.json"
-          },
-          {
-            "kind": "file",
-            "id": "vitest.config.ts"
-          },
           {
             "kind": "source",
             "id": "source.package-json"
@@ -662,60 +302,232 @@
         ],
         "source": {
           "kind": "system",
-          "task": "Curated public demo seed"
+          "task": "Curated public Todo App demo seed"
         },
         "superseded_by": null,
-        "created_at": "2026-05-12T17:53:06+02:00",
-        "updated_at": "2026-05-12T17:53:06+02:00",
-        "body": "# Stack and tooling\n\nTooling and runtime signals inferred from manifests and config:\n- Commander is used for CLI command handling.\n- Node.js engine constraint: `>=22`.\n- Package manager is declared as `pnpm@10.11.0`.\n- Package name: `@aictx/memory`.\n- Svelte tooling is present.\n- The package is configured as an ESM package with `type: module`.\n- TypeScript configuration is present.\n- Useful package scripts include `typecheck`, `test:local`, `test:watch`, `test`, `test:package`, `build`, `build:code`, `build:docs`.\n- Vite tooling is present.\n- Vitest is available for tests.\n\nUpdate this synthesis when the language stack, runtime constraints, package manager, or verification tooling changes.\n"
+        "created_at": "2026-05-12T09:00:00+02:00",
+        "updated_at": "2026-05-13T15:30:00+02:00",
+        "body": "# Stack and tooling\n\nThe demo Todo App uses TypeScript, Vite, and Vitest. Browser behavior is covered with Playwright-style flow tests.\n\nPackage scripts are the preferred interface for build, test, and lint checks.\n"
       },
       {
-        "id": "workflow.package-scripts",
-        "type": "workflow",
+        "id": "synthesis.conventions-quality",
+        "type": "synthesis",
         "status": "active",
-        "title": "Package scripts",
-        "body_path": ".aictx/memory/workflows/package-scripts.md",
-        "json_path": ".aictx/memory/workflows/package-scripts.json",
+        "title": "Conventions and quality bar",
+        "body_path": ".aictx/memory/syntheses/conventions-quality.md",
+        "json_path": ".aictx/memory/syntheses/conventions-quality.json",
         "scope": {
           "kind": "project",
-          "project": "project.aictx",
+          "project": "project.todo-app",
           "branch": null,
           "task": null
         },
         "tags": [
-          "package",
-          "workflow"
+          "convention",
+          "quality",
+          "synthesis"
         ],
         "facets": {
+          "category": "convention",
           "applies_to": [
-            "package.json",
-            "wrangler.demo.jsonc",
-            "scripts/build-viewer-demo-data.mjs"
-          ],
-          "category": "workflow"
+            "src/components/",
+            "test/"
+          ]
         },
         "evidence": [
           {
-            "kind": "file",
-            "id": "package.json"
-          },
-          {
-            "kind": "file",
-            "id": "scripts/build-viewer-demo-data.mjs"
-          },
-          {
-            "kind": "file",
-            "id": "wrangler.demo.jsonc"
+            "kind": "source",
+            "id": "source.product-brief"
           }
         ],
         "source": {
           "kind": "system",
-          "task": "Curated public demo seed"
+          "task": "Curated public Todo App demo seed"
         },
         "superseded_by": null,
-        "created_at": "2026-05-12T17:53:06+02:00",
-        "updated_at": "2026-05-13T18:23:33+02:00",
-        "body": "# Package scripts\n\nUse the package scripts in `package.json` for repeated project workflows:\n- `build`: `pnpm build:guidance && pnpm build:version && pnpm build:code && pnpm build:schemas && pnpm build:viewer`\n- `build:code`: `tsup`\n- `build:docs`: `astro build --root docs`\n- `build:guidance`: `node scripts/generate-agent-guidance.mjs`\n- `build:schemas`: `node scripts/copy-schemas.mjs`\n- `build:site`: `astro build --root site`\n- `build:version`: `node scripts/generate-version.mjs`\n- `build:viewer`: `vite build --config viewer/vite.config.ts`\n- `build:demo-viewer`: `pnpm build:viewer && node scripts/build-viewer-demo-data.mjs && tsc --noEmit`\n- `deploy:site:cloudflare`: `wrangler deploy`\n- `deploy:demo:cloudflare`: `wrangler deploy --config wrangler.demo.jsonc`"
+        "created_at": "2026-05-12T09:00:00+02:00",
+        "updated_at": "2026-05-13T15:30:00+02:00",
+        "body": "# Conventions and quality bar\n\nKeep task mutations explicit, preserve keyboard access for every task action, and keep empty states tied to the active filter.\n\nAvoid adding accounts, sync, or collaboration features unless the product scope changes.\n"
+      },
+      {
+        "id": "constraint.offline-first",
+        "type": "constraint",
+        "status": "active",
+        "title": "Stay offline first",
+        "body_path": ".aictx/memory/constraints/offline-first.md",
+        "json_path": ".aictx/memory/constraints/offline-first.json",
+        "scope": {
+          "kind": "project",
+          "project": "project.todo-app",
+          "branch": null,
+          "task": null
+        },
+        "tags": [
+          "business-rule",
+          "offline"
+        ],
+        "facets": {
+          "category": "business-rule",
+          "applies_to": [
+            "src/storage/"
+          ]
+        },
+        "evidence": [
+          {
+            "kind": "source",
+            "id": "source.product-brief"
+          }
+        ],
+        "source": {
+          "kind": "system",
+          "task": "Curated public Todo App demo seed"
+        },
+        "superseded_by": null,
+        "created_at": "2026-05-12T09:00:00+02:00",
+        "updated_at": "2026-05-13T15:30:00+02:00",
+        "body": "# Stay offline first\n\nTask creation, completion, filtering, and persistence must work without a backend service.\n\nDo not add a hosted database or login flow to satisfy demo requirements.\n"
+      },
+      {
+        "id": "concept.quick-add",
+        "type": "concept",
+        "status": "active",
+        "title": "Quick add",
+        "body_path": ".aictx/memory/concepts/quick-add.md",
+        "json_path": ".aictx/memory/concepts/quick-add.json",
+        "scope": {
+          "kind": "project",
+          "project": "project.todo-app",
+          "branch": null,
+          "task": null
+        },
+        "tags": [
+          "feature",
+          "tasks"
+        ],
+        "facets": {
+          "category": "product-feature",
+          "applies_to": [
+            "src/components/TaskComposer.tsx"
+          ]
+        },
+        "evidence": [],
+        "source": {
+          "kind": "system",
+          "task": "Curated public Todo App demo seed"
+        },
+        "superseded_by": null,
+        "created_at": "2026-05-12T09:00:00+02:00",
+        "updated_at": "2026-05-13T15:30:00+02:00",
+        "body": "# Quick add\n\nQuick add accepts a non-empty task title, trims whitespace, creates an active task, and clears the input after save.\n"
+      },
+      {
+        "id": "concept.filtered-views",
+        "type": "concept",
+        "status": "active",
+        "title": "Filtered task views",
+        "body_path": ".aictx/memory/concepts/filtered-views.md",
+        "json_path": ".aictx/memory/concepts/filtered-views.json",
+        "scope": {
+          "kind": "project",
+          "project": "project.todo-app",
+          "branch": null,
+          "task": null
+        },
+        "tags": [
+          "feature",
+          "filters"
+        ],
+        "facets": {
+          "category": "product-feature",
+          "applies_to": [
+            "src/components/TaskFilters.tsx"
+          ]
+        },
+        "evidence": [],
+        "source": {
+          "kind": "system",
+          "task": "Curated public Todo App demo seed"
+        },
+        "superseded_by": null,
+        "created_at": "2026-05-12T09:00:00+02:00",
+        "updated_at": "2026-05-13T15:30:00+02:00",
+        "body": "# Filtered task views\n\nThe list supports all, active, completed, and overdue views. Counts must match the same predicate used to render each view.\n"
+      },
+      {
+        "id": "fact.storage-localstorage",
+        "type": "fact",
+        "status": "active",
+        "title": "LocalStorage persistence",
+        "body_path": ".aictx/memory/facts/storage-localstorage.md",
+        "json_path": ".aictx/memory/facts/storage-localstorage.json",
+        "scope": {
+          "kind": "project",
+          "project": "project.todo-app",
+          "branch": null,
+          "task": null
+        },
+        "tags": [
+          "debugging",
+          "storage"
+        ],
+        "facets": {
+          "category": "debugging-fact",
+          "applies_to": [
+            "src/storage/tasks.ts"
+          ],
+          "load_modes": [
+            "debugging",
+            "review"
+          ]
+        },
+        "evidence": [],
+        "source": {
+          "kind": "system",
+          "task": "Curated public Todo App demo seed"
+        },
+        "superseded_by": null,
+        "created_at": "2026-05-12T09:00:00+02:00",
+        "updated_at": "2026-05-13T15:30:00+02:00",
+        "body": "# LocalStorage persistence\n\nThe task store writes a JSON array of task records to localStorage and ignores malformed saved records on load.\n"
+      },
+      {
+        "id": "workflow.local-development",
+        "type": "workflow",
+        "status": "active",
+        "title": "Local development workflow",
+        "body_path": ".aictx/memory/workflows/local-development.md",
+        "json_path": ".aictx/memory/workflows/local-development.json",
+        "scope": {
+          "kind": "project",
+          "project": "project.todo-app",
+          "branch": null,
+          "task": null
+        },
+        "tags": [
+          "development",
+          "workflow"
+        ],
+        "facets": {
+          "category": "workflow",
+          "load_modes": [
+            "onboarding",
+            "coding"
+          ]
+        },
+        "evidence": [
+          {
+            "kind": "source",
+            "id": "source.package-json"
+          }
+        ],
+        "source": {
+          "kind": "system",
+          "task": "Curated public Todo App demo seed"
+        },
+        "superseded_by": null,
+        "created_at": "2026-05-12T09:00:00+02:00",
+        "updated_at": "2026-05-13T15:30:00+02:00",
+        "body": "# Local development workflow\n\nRun `pnpm install`, `pnpm dev`, and then open the Vite URL. Use the browser flow before changing persistence behavior.\n"
       },
       {
         "id": "workflow.post-task-verification",
@@ -726,7 +538,7 @@
         "json_path": ".aictx/memory/workflows/post-task-verification.json",
         "scope": {
           "kind": "project",
-          "project": "project.aictx",
+          "project": "project.todo-app",
           "branch": null,
           "task": null
         },
@@ -736,14 +548,196 @@
           "workflow"
         ],
         "facets": {
-          "applies_to": [
-            "package.json"
-          ],
           "category": "testing",
+          "applies_to": [
+            "test/",
+            "src/storage/tasks.ts"
+          ],
           "load_modes": [
             "coding",
+            "review"
+          ]
+        },
+        "evidence": [
+          {
+            "kind": "source",
+            "id": "source.package-json"
+          }
+        ],
+        "source": {
+          "kind": "system",
+          "task": "Curated public Todo App demo seed"
+        },
+        "superseded_by": null,
+        "created_at": "2026-05-12T09:00:00+02:00",
+        "updated_at": "2026-05-13T15:30:00+02:00",
+        "body": "# Post-task verification\n\nBefore finishing Todo App work, run `pnpm test`, `pnpm run typecheck`, and a browser check for add, complete, filter, and reload behavior.\n"
+      },
+      {
+        "id": "gotcha.completed-filter-counts",
+        "type": "gotcha",
+        "status": "active",
+        "title": "Completed filter counts can drift",
+        "body_path": ".aictx/memory/gotchas/completed-filter-counts.md",
+        "json_path": ".aictx/memory/gotchas/completed-filter-counts.json",
+        "scope": {
+          "kind": "project",
+          "project": "project.todo-app",
+          "branch": null,
+          "task": null
+        },
+        "tags": [
+          "filters",
+          "gotcha"
+        ],
+        "facets": {
+          "category": "gotcha",
+          "applies_to": [
+            "src/components/TaskFilters.tsx"
+          ],
+          "load_modes": [
             "debugging",
             "review"
+          ]
+        },
+        "evidence": [],
+        "source": {
+          "kind": "system",
+          "task": "Curated public Todo App demo seed"
+        },
+        "superseded_by": null,
+        "created_at": "2026-05-12T09:00:00+02:00",
+        "updated_at": "2026-05-13T15:30:00+02:00",
+        "body": "# Completed filter counts can drift\n\nDo not compute filter badges with a different predicate than the rendered list. This caused completed tasks to appear in the active count before.\n"
+      },
+      {
+        "id": "question.recurring-tasks",
+        "type": "question",
+        "status": "open",
+        "title": "Recurring task scope",
+        "body_path": ".aictx/memory/questions/recurring-tasks.md",
+        "json_path": ".aictx/memory/questions/recurring-tasks.json",
+        "scope": {
+          "kind": "project",
+          "project": "project.todo-app",
+          "branch": null,
+          "task": null
+        },
+        "tags": [
+          "question",
+          "scope"
+        ],
+        "facets": {
+          "category": "open-question"
+        },
+        "evidence": [],
+        "source": {
+          "kind": "system",
+          "task": "Curated public Todo App demo seed"
+        },
+        "superseded_by": null,
+        "created_at": "2026-05-12T09:00:00+02:00",
+        "updated_at": "2026-05-13T15:30:00+02:00",
+        "body": "# Recurring task scope\n\nShould recurring tasks be part of the Todo App, or should the app stay focused on one-off personal tasks for the first release?\n"
+      },
+      {
+        "id": "synthesis.agent-guidance",
+        "type": "synthesis",
+        "status": "active",
+        "title": "Agent guidance",
+        "body_path": ".aictx/memory/syntheses/agent-guidance.md",
+        "json_path": ".aictx/memory/syntheses/agent-guidance.json",
+        "scope": {
+          "kind": "project",
+          "project": "project.todo-app",
+          "branch": null,
+          "task": null
+        },
+        "tags": [
+          "agents",
+          "guidance",
+          "synthesis"
+        ],
+        "facets": {
+          "category": "agent-guidance",
+          "applies_to": [
+            "AGENTS.md"
+          ]
+        },
+        "evidence": [
+          {
+            "kind": "source",
+            "id": "source.agent-guidance"
+          }
+        ],
+        "source": {
+          "kind": "system",
+          "task": "Curated public Todo App demo seed"
+        },
+        "superseded_by": null,
+        "created_at": "2026-05-12T09:00:00+02:00",
+        "updated_at": "2026-05-13T15:30:00+02:00",
+        "body": "# Agent guidance\n\nLoad Aictx memory before non-trivial Todo App work. Preserve the offline-first scope, keep UI behavior keyboard accessible, and verify persistence after reload.\n"
+      },
+      {
+        "id": "source.product-brief",
+        "type": "source",
+        "status": "active",
+        "title": "Source: docs/product-brief.md",
+        "body_path": ".aictx/memory/sources/product-brief.md",
+        "json_path": ".aictx/memory/sources/product-brief.json",
+        "scope": {
+          "kind": "project",
+          "project": "project.todo-app",
+          "branch": null,
+          "task": null
+        },
+        "tags": [
+          "product",
+          "source"
+        ],
+        "facets": {
+          "category": "source",
+          "applies_to": [
+            "docs/product-brief.md"
+          ]
+        },
+        "evidence": [
+          {
+            "kind": "file",
+            "id": "docs/product-brief.md"
+          }
+        ],
+        "source": {
+          "kind": "system",
+          "task": "Curated public Todo App demo seed"
+        },
+        "superseded_by": null,
+        "created_at": "2026-05-12T09:00:00+02:00",
+        "updated_at": "2026-05-13T15:30:00+02:00",
+        "body": "# Source: docs/product-brief.md\n\nThe product brief describes a local-first Todo App for quick capture, filtering, and dependable reload behavior.\n"
+      },
+      {
+        "id": "source.package-json",
+        "type": "source",
+        "status": "active",
+        "title": "Source: package.json",
+        "body_path": ".aictx/memory/sources/package-json.md",
+        "json_path": ".aictx/memory/sources/package-json.json",
+        "scope": {
+          "kind": "project",
+          "project": "project.todo-app",
+          "branch": null,
+          "task": null
+        },
+        "tags": [
+          "package",
+          "source"
+        ],
+        "facets": {
+          "category": "source",
+          "applies_to": [
+            "package.json"
           ]
         },
         "evidence": [
@@ -754,126 +748,198 @@
         ],
         "source": {
           "kind": "system",
-          "task": "Curated public demo seed"
+          "task": "Curated public Todo App demo seed"
         },
         "superseded_by": null,
-        "created_at": "2026-05-12T17:53:06+02:00",
-        "updated_at": "2026-05-12T17:53:06+02:00",
-        "body": "# Post-task verification\n\nAfter meaningful code changes, prefer these repo verification commands when relevant:\n- `pnpm run typecheck`: package.json script `typecheck`: `tsc --noEmit && svelte-check --tsconfig viewer/tsconfig.json`\n- `pnpm run test:local`: package.json script `test:local`: `pnpm typecheck && pnpm test:package`\n- `pnpm run test:watch`: package.json script `test:watch`: `vitest`\n- `pnpm run test`: package.json script `test`: `vitest run`\n- `pnpm run test:package`: package.json script `test:package`: `vitest run test/integration/release/packaging.test.ts`\n- `pnpm run build`: package.json script `build`: `pnpm build:guidance && pnpm build:version && pnpm build:code && pnpm build:schemas && pnpm build:viewer`\n"
+        "created_at": "2026-05-12T09:00:00+02:00",
+        "updated_at": "2026-05-13T15:30:00+02:00",
+        "body": "# Source: package.json\n\nThe package manifest records TypeScript, Vite, Vitest, and the package scripts used for local development and verification.\n"
+      },
+      {
+        "id": "source.readme",
+        "type": "source",
+        "status": "active",
+        "title": "Source: README.md",
+        "body_path": ".aictx/memory/sources/readme.md",
+        "json_path": ".aictx/memory/sources/readme.json",
+        "scope": {
+          "kind": "project",
+          "project": "project.todo-app",
+          "branch": null,
+          "task": null
+        },
+        "tags": [
+          "readme",
+          "source"
+        ],
+        "facets": {
+          "category": "source",
+          "applies_to": [
+            "README.md"
+          ]
+        },
+        "evidence": [
+          {
+            "kind": "file",
+            "id": "README.md"
+          }
+        ],
+        "source": {
+          "kind": "system",
+          "task": "Curated public Todo App demo seed"
+        },
+        "superseded_by": null,
+        "created_at": "2026-05-12T09:00:00+02:00",
+        "updated_at": "2026-05-13T15:30:00+02:00",
+        "body": "# Source: README.md\n\nThe README explains the Todo App repository layout, local development path, and browser behavior users should expect.\n"
+      },
+      {
+        "id": "source.agent-guidance",
+        "type": "source",
+        "status": "active",
+        "title": "Source: AGENTS.md",
+        "body_path": ".aictx/memory/sources/agent-guidance.md",
+        "json_path": ".aictx/memory/sources/agent-guidance.json",
+        "scope": {
+          "kind": "project",
+          "project": "project.todo-app",
+          "branch": null,
+          "task": null
+        },
+        "tags": [
+          "agents",
+          "source"
+        ],
+        "facets": {
+          "category": "source",
+          "applies_to": [
+            "AGENTS.md"
+          ]
+        },
+        "evidence": [
+          {
+            "kind": "file",
+            "id": "AGENTS.md"
+          }
+        ],
+        "source": {
+          "kind": "system",
+          "task": "Curated public Todo App demo seed"
+        },
+        "superseded_by": null,
+        "created_at": "2026-05-12T09:00:00+02:00",
+        "updated_at": "2026-05-13T15:30:00+02:00",
+        "body": "# Source: AGENTS.md\n\nAgent instructions require loading memory before substantial Todo App changes and saving only durable project knowledge.\n"
       }
     ],
     "relations": [
       {
-        "id": "rel.project-aictx-related-to-architecture-current",
-        "from": "project.aictx",
-        "predicate": "related_to",
-        "to": "architecture.current",
+        "id": "rel.project-todo-app-implements-concept-quick-add",
+        "from": "project.todo-app",
+        "predicate": "implements",
+        "to": "concept.quick-add",
         "status": "active",
         "confidence": "high",
         "evidence": [
           {
             "kind": "memory",
-            "id": "architecture.current"
-          },
-          {
-            "kind": "memory",
-            "id": "project.aictx"
+            "id": "project.todo-app"
           }
         ],
-        "content_hash": "sha256:6f773e225926211ce055ed98af5cc1707ccd304a83b68f797d3a7eaac3b51f09",
-        "created_at": "2026-05-12T17:53:06+02:00",
-        "updated_at": "2026-05-12T17:53:06+02:00",
-        "json_path": ".aictx/relations/project-aictx-related-to-architecture-current.json"
+        "content_hash": null,
+        "created_at": "2026-05-12T09:00:00+02:00",
+        "updated_at": "2026-05-13T15:30:00+02:00",
+        "json_path": ".aictx/relations/project-todo-app-implements-concept-quick-add.json"
       },
       {
-        "id": "rel.synthesis-conventions-quality-derived-from-source-package-json",
-        "from": "synthesis.conventions-quality",
+        "id": "rel.project-todo-app-implements-concept-filtered-views",
+        "from": "project.todo-app",
+        "predicate": "implements",
+        "to": "concept.filtered-views",
+        "status": "active",
+        "confidence": "high",
+        "evidence": [
+          {
+            "kind": "memory",
+            "id": "project.todo-app"
+          }
+        ],
+        "content_hash": null,
+        "created_at": "2026-05-12T09:00:00+02:00",
+        "updated_at": "2026-05-13T15:30:00+02:00",
+        "json_path": ".aictx/relations/project-todo-app-implements-concept-filtered-views.json"
+      },
+      {
+        "id": "rel.synthesis-product-intent-derived-from-source-product-brief",
+        "from": "synthesis.product-intent",
         "predicate": "derived_from",
-        "to": "source.package-json",
+        "to": "source.product-brief",
         "status": "active",
         "confidence": "high",
         "evidence": [
           {
-            "kind": "source",
-            "id": "source.package-json"
+            "kind": "memory",
+            "id": "synthesis.product-intent"
           }
         ],
-        "content_hash": "sha256:eb3eeb0eb3bf19d8287d6c404174cf0af62259b83dc06fe3ef7032b0a7ae2b2d",
-        "created_at": "2026-05-12T17:53:06+02:00",
-        "updated_at": "2026-05-12T17:53:06+02:00",
-        "json_path": ".aictx/relations/synthesis-conventions-quality-derived-from-source-package-json.json"
+        "content_hash": null,
+        "created_at": "2026-05-12T09:00:00+02:00",
+        "updated_at": "2026-05-13T15:30:00+02:00",
+        "json_path": ".aictx/relations/synthesis-product-intent-derived-from-source-product-brief.json"
       },
       {
-        "id": "rel.synthesis-feature-map-derived-from-source-package-json",
+        "id": "rel.synthesis-feature-map-derived-from-source-product-brief",
         "from": "synthesis.feature-map",
         "predicate": "derived_from",
-        "to": "source.package-json",
+        "to": "source.product-brief",
         "status": "active",
         "confidence": "high",
         "evidence": [
           {
-            "kind": "source",
-            "id": "source.package-json"
+            "kind": "memory",
+            "id": "synthesis.feature-map"
           }
         ],
-        "content_hash": "sha256:e8da2f7eccbe130b7014a3fcc9dbb464ec441cec76b8ae9ac6427edc93778712",
-        "created_at": "2026-05-12T17:53:06+02:00",
-        "updated_at": "2026-05-12T17:53:06+02:00",
-        "json_path": ".aictx/relations/synthesis-feature-map-derived-from-source-package-json.json"
+        "content_hash": null,
+        "created_at": "2026-05-12T09:00:00+02:00",
+        "updated_at": "2026-05-13T15:30:00+02:00",
+        "json_path": ".aictx/relations/synthesis-feature-map-derived-from-source-product-brief.json"
       },
       {
-        "id": "rel.synthesis-product-intent-derived-from-source-package-json",
-        "from": "synthesis.product-intent",
-        "predicate": "derived_from",
-        "to": "source.package-json",
+        "id": "rel.synthesis-feature-map-summarizes-concept-quick-add",
+        "from": "synthesis.feature-map",
+        "predicate": "summarizes",
+        "to": "concept.quick-add",
         "status": "active",
         "confidence": "high",
         "evidence": [
           {
-            "kind": "source",
-            "id": "source.package-json"
+            "kind": "memory",
+            "id": "synthesis.feature-map"
           }
         ],
-        "content_hash": "sha256:1bfe4acb619e6c9885d74d34e91c60dd3704eb93bb3094543163898dde7e3287",
-        "created_at": "2026-05-12T17:53:06+02:00",
-        "updated_at": "2026-05-12T17:53:06+02:00",
-        "json_path": ".aictx/relations/synthesis-product-intent-derived-from-source-package-json.json"
+        "content_hash": null,
+        "created_at": "2026-05-12T09:00:00+02:00",
+        "updated_at": "2026-05-13T15:30:00+02:00",
+        "json_path": ".aictx/relations/synthesis-feature-map-summarizes-concept-quick-add.json"
       },
       {
-        "id": "rel.synthesis-product-intent-derived-from-source-readme",
-        "from": "synthesis.product-intent",
-        "predicate": "derived_from",
-        "to": "source.readme",
+        "id": "rel.synthesis-feature-map-summarizes-concept-filtered-views",
+        "from": "synthesis.feature-map",
+        "predicate": "summarizes",
+        "to": "concept.filtered-views",
         "status": "active",
         "confidence": "high",
         "evidence": [
           {
-            "kind": "source",
-            "id": "source.readme"
+            "kind": "memory",
+            "id": "synthesis.feature-map"
           }
         ],
-        "content_hash": "sha256:079478a73513dd727c66dbfa8aae331d546d8b8092201527325c783f4f832b96",
-        "created_at": "2026-05-12T17:53:06+02:00",
-        "updated_at": "2026-05-12T17:53:06+02:00",
-        "json_path": ".aictx/relations/synthesis-product-intent-derived-from-source-readme.json"
-      },
-      {
-        "id": "rel.synthesis-repository-map-derived-from-source-package-json",
-        "from": "synthesis.repository-map",
-        "predicate": "derived_from",
-        "to": "source.package-json",
-        "status": "active",
-        "confidence": "high",
-        "evidence": [
-          {
-            "kind": "source",
-            "id": "source.package-json"
-          }
-        ],
-        "content_hash": "sha256:30187fc3b8066bb6cf0e569d851e6f74e4d71aa917e5a7dc223e626c9ddbe801",
-        "created_at": "2026-05-12T17:53:06+02:00",
-        "updated_at": "2026-05-12T17:53:06+02:00",
-        "json_path": ".aictx/relations/synthesis-repository-map-derived-from-source-package-json.json"
+        "content_hash": null,
+        "created_at": "2026-05-12T09:00:00+02:00",
+        "updated_at": "2026-05-13T15:30:00+02:00",
+        "json_path": ".aictx/relations/synthesis-feature-map-summarizes-concept-filtered-views.json"
       },
       {
         "id": "rel.synthesis-repository-map-derived-from-source-readme",
@@ -884,14 +950,32 @@
         "confidence": "high",
         "evidence": [
           {
-            "kind": "source",
-            "id": "source.readme"
+            "kind": "memory",
+            "id": "synthesis.repository-map"
           }
         ],
-        "content_hash": "sha256:57063f3777ca8fa82b0b5cfc63b736e60eec96d22388e90e53e31f38e4afd9f7",
-        "created_at": "2026-05-12T17:53:06+02:00",
-        "updated_at": "2026-05-12T17:53:06+02:00",
+        "content_hash": null,
+        "created_at": "2026-05-12T09:00:00+02:00",
+        "updated_at": "2026-05-13T15:30:00+02:00",
         "json_path": ".aictx/relations/synthesis-repository-map-derived-from-source-readme.json"
+      },
+      {
+        "id": "rel.architecture-local-first-derived-from-source-readme",
+        "from": "architecture.local-first-todo-app",
+        "predicate": "derived_from",
+        "to": "source.readme",
+        "status": "active",
+        "confidence": "high",
+        "evidence": [
+          {
+            "kind": "memory",
+            "id": "architecture.local-first-todo-app"
+          }
+        ],
+        "content_hash": null,
+        "created_at": "2026-05-12T09:00:00+02:00",
+        "updated_at": "2026-05-13T15:30:00+02:00",
+        "json_path": ".aictx/relations/architecture-local-first-derived-from-source-readme.json"
       },
       {
         "id": "rel.synthesis-stack-and-tooling-derived-from-source-package-json",
@@ -902,36 +986,2672 @@
         "confidence": "high",
         "evidence": [
           {
-            "kind": "source",
-            "id": "source.package-json"
+            "kind": "memory",
+            "id": "synthesis.stack-and-tooling"
           }
         ],
-        "content_hash": "sha256:20ed529f9f39d3ee557fc90588e7b002b9d8d0a495e37b44a420735c41efcd6b",
-        "created_at": "2026-05-12T17:53:06+02:00",
-        "updated_at": "2026-05-12T17:53:06+02:00",
+        "content_hash": null,
+        "created_at": "2026-05-12T09:00:00+02:00",
+        "updated_at": "2026-05-13T15:30:00+02:00",
         "json_path": ".aictx/relations/synthesis-stack-and-tooling-derived-from-source-package-json.json"
+      },
+      {
+        "id": "rel.synthesis-conventions-quality-derived-from-source-product-brief",
+        "from": "synthesis.conventions-quality",
+        "predicate": "derived_from",
+        "to": "source.product-brief",
+        "status": "active",
+        "confidence": "high",
+        "evidence": [
+          {
+            "kind": "memory",
+            "id": "synthesis.conventions-quality"
+          }
+        ],
+        "content_hash": null,
+        "created_at": "2026-05-12T09:00:00+02:00",
+        "updated_at": "2026-05-13T15:30:00+02:00",
+        "json_path": ".aictx/relations/synthesis-conventions-quality-derived-from-source-product-brief.json"
+      },
+      {
+        "id": "rel.workflow-local-development-documents-source-package-json",
+        "from": "workflow.local-development",
+        "predicate": "documents",
+        "to": "source.package-json",
+        "status": "active",
+        "confidence": "high",
+        "evidence": [
+          {
+            "kind": "memory",
+            "id": "workflow.local-development"
+          }
+        ],
+        "content_hash": null,
+        "created_at": "2026-05-12T09:00:00+02:00",
+        "updated_at": "2026-05-13T15:30:00+02:00",
+        "json_path": ".aictx/relations/workflow-local-development-documents-source-package-json.json"
+      },
+      {
+        "id": "rel.workflow-post-task-verification-documents-source-package-json",
+        "from": "workflow.post-task-verification",
+        "predicate": "documents",
+        "to": "source.package-json",
+        "status": "active",
+        "confidence": "high",
+        "evidence": [
+          {
+            "kind": "memory",
+            "id": "workflow.post-task-verification"
+          }
+        ],
+        "content_hash": null,
+        "created_at": "2026-05-12T09:00:00+02:00",
+        "updated_at": "2026-05-13T15:30:00+02:00",
+        "json_path": ".aictx/relations/workflow-post-task-verification-documents-source-package-json.json"
+      },
+      {
+        "id": "rel.gotcha-completed-filter-counts-affects-concept-filtered-views",
+        "from": "gotcha.completed-filter-counts",
+        "predicate": "affects",
+        "to": "concept.filtered-views",
+        "status": "active",
+        "confidence": "high",
+        "evidence": [
+          {
+            "kind": "memory",
+            "id": "gotcha.completed-filter-counts"
+          }
+        ],
+        "content_hash": null,
+        "created_at": "2026-05-12T09:00:00+02:00",
+        "updated_at": "2026-05-13T15:30:00+02:00",
+        "json_path": ".aictx/relations/gotcha-completed-filter-counts-affects-concept-filtered-views.json"
+      },
+      {
+        "id": "rel.concept-filtered-views-depends-on-fact-storage-localstorage",
+        "from": "concept.filtered-views",
+        "predicate": "depends_on",
+        "to": "fact.storage-localstorage",
+        "status": "active",
+        "confidence": "high",
+        "evidence": [
+          {
+            "kind": "memory",
+            "id": "concept.filtered-views"
+          }
+        ],
+        "content_hash": null,
+        "created_at": "2026-05-12T09:00:00+02:00",
+        "updated_at": "2026-05-13T15:30:00+02:00",
+        "json_path": ".aictx/relations/concept-filtered-views-depends-on-fact-storage-localstorage.json"
+      },
+      {
+        "id": "rel.question-recurring-tasks-related-to-synthesis-feature-map",
+        "from": "question.recurring-tasks",
+        "predicate": "related_to",
+        "to": "synthesis.feature-map",
+        "status": "active",
+        "confidence": "high",
+        "evidence": [
+          {
+            "kind": "memory",
+            "id": "question.recurring-tasks"
+          }
+        ],
+        "content_hash": null,
+        "created_at": "2026-05-12T09:00:00+02:00",
+        "updated_at": "2026-05-13T15:30:00+02:00",
+        "json_path": ".aictx/relations/question-recurring-tasks-related-to-synthesis-feature-map.json"
+      },
+      {
+        "id": "rel.synthesis-agent-guidance-derived-from-source-agent-guidance",
+        "from": "synthesis.agent-guidance",
+        "predicate": "derived_from",
+        "to": "source.agent-guidance",
+        "status": "active",
+        "confidence": "high",
+        "evidence": [
+          {
+            "kind": "memory",
+            "id": "synthesis.agent-guidance"
+          }
+        ],
+        "content_hash": null,
+        "created_at": "2026-05-12T09:00:00+02:00",
+        "updated_at": "2026-05-13T15:30:00+02:00",
+        "json_path": ".aictx/relations/synthesis-agent-guidance-derived-from-source-agent-guidance.json"
+      },
+      {
+        "id": "rel.constraint-offline-first-requires-fact-storage-localstorage",
+        "from": "constraint.offline-first",
+        "predicate": "requires",
+        "to": "fact.storage-localstorage",
+        "status": "active",
+        "confidence": "high",
+        "evidence": [
+          {
+            "kind": "memory",
+            "id": "constraint.offline-first"
+          }
+        ],
+        "content_hash": null,
+        "created_at": "2026-05-12T09:00:00+02:00",
+        "updated_at": "2026-05-13T15:30:00+02:00",
+        "json_path": ".aictx/relations/constraint-offline-first-requires-fact-storage-localstorage.json"
       }
     ],
     "counts": {
-      "objects": 15,
-      "relations": 8,
+      "objects": 20,
+      "relations": 17,
       "stale_objects": 0,
       "superseded_objects": 0,
-      "source_objects": 3,
+      "source_objects": 4,
       "synthesis_objects": 6,
-      "active_relations": 8
+      "active_relations": 17
     },
     "role_coverage": {
-      "roles": [],
+      "roles": [
+        {
+          "key": "product-intent",
+          "label": "Product Intent",
+          "description": "What this project is for and what useful output means.",
+          "status": "populated",
+          "optional": false,
+          "memory_ids": [
+            "synthesis.product-intent"
+          ],
+          "relation_ids": [
+            "rel.synthesis-product-intent-derived-from-source-product-brief"
+          ],
+          "gap": null
+        },
+        {
+          "key": "capability-map",
+          "label": "Capability Map",
+          "description": "Features, outputs, commands, APIs, or generation capabilities.",
+          "status": "populated",
+          "optional": false,
+          "memory_ids": [
+            "concept.filtered-views",
+            "concept.quick-add",
+            "synthesis.feature-map"
+          ],
+          "relation_ids": [
+            "rel.concept-filtered-views-depends-on-fact-storage-localstorage",
+            "rel.gotcha-completed-filter-counts-affects-concept-filtered-views",
+            "rel.project-todo-app-implements-concept-filtered-views",
+            "rel.project-todo-app-implements-concept-quick-add",
+            "rel.question-recurring-tasks-related-to-synthesis-feature-map",
+            "rel.synthesis-feature-map-derived-from-source-product-brief",
+            "rel.synthesis-feature-map-summarizes-concept-filtered-views",
+            "rel.synthesis-feature-map-summarizes-concept-quick-add"
+          ],
+          "gap": null
+        },
+        {
+          "key": "repository-map",
+          "label": "Repository Map",
+          "description": "Where important code, docs, tests, assets, and configs live.",
+          "status": "populated",
+          "optional": false,
+          "memory_ids": [
+            "synthesis.repository-map"
+          ],
+          "relation_ids": [
+            "rel.synthesis-repository-map-derived-from-source-readme"
+          ],
+          "gap": null
+        },
+        {
+          "key": "architecture-patterns",
+          "label": "Architecture / Patterns",
+          "description": "How the project is organized and which design patterns matter.",
+          "status": "populated",
+          "optional": false,
+          "memory_ids": [
+            "architecture.local-first-todo-app"
+          ],
+          "relation_ids": [
+            "rel.architecture-local-first-derived-from-source-readme"
+          ],
+          "gap": null
+        },
+        {
+          "key": "stack-tooling",
+          "label": "Stack / Tooling",
+          "description": "Languages, frameworks, package managers, build tools, and runtime constraints.",
+          "status": "populated",
+          "optional": false,
+          "memory_ids": [
+            "synthesis.stack-and-tooling"
+          ],
+          "relation_ids": [
+            "rel.synthesis-stack-and-tooling-derived-from-source-package-json"
+          ],
+          "gap": null
+        },
+        {
+          "key": "conventions-quality",
+          "label": "Conventions / Quality Bar",
+          "description": "Project-specific coding, design, review, and quality expectations.",
+          "status": "populated",
+          "optional": false,
+          "memory_ids": [
+            "constraint.offline-first",
+            "synthesis.conventions-quality"
+          ],
+          "relation_ids": [
+            "rel.constraint-offline-first-requires-fact-storage-localstorage",
+            "rel.synthesis-conventions-quality-derived-from-source-product-brief"
+          ],
+          "gap": null
+        },
+        {
+          "key": "workflows-howtos",
+          "label": "Workflows / How-tos",
+          "description": "Reusable setup, release, debugging, migration, generation, or maintenance procedures.",
+          "status": "populated",
+          "optional": false,
+          "memory_ids": [
+            "workflow.local-development",
+            "workflow.post-task-verification"
+          ],
+          "relation_ids": [
+            "rel.workflow-local-development-documents-source-package-json",
+            "rel.workflow-post-task-verification-documents-source-package-json"
+          ],
+          "gap": null
+        },
+        {
+          "key": "verification",
+          "label": "Verification",
+          "description": "Commands and checks agents should run before claiming work is done.",
+          "status": "populated",
+          "optional": false,
+          "memory_ids": [
+            "workflow.post-task-verification"
+          ],
+          "relation_ids": [
+            "rel.workflow-post-task-verification-documents-source-package-json"
+          ],
+          "gap": null
+        },
+        {
+          "key": "gotchas-risks",
+          "label": "Gotchas / Risks",
+          "description": "Known traps, fragile areas, abandoned approaches, or recurring failure modes.",
+          "status": "populated",
+          "optional": false,
+          "memory_ids": [
+            "gotcha.completed-filter-counts"
+          ],
+          "relation_ids": [
+            "rel.gotcha-completed-filter-counts-affects-concept-filtered-views"
+          ],
+          "gap": null
+        },
+        {
+          "key": "open-questions",
+          "label": "Open Questions",
+          "description": "Important unknowns agents should not guess.",
+          "status": "populated",
+          "optional": false,
+          "memory_ids": [
+            "question.recurring-tasks"
+          ],
+          "relation_ids": [
+            "rel.question-recurring-tasks-related-to-synthesis-feature-map"
+          ],
+          "gap": null
+        },
+        {
+          "key": "sources-provenance",
+          "label": "Sources / Provenance",
+          "description": "Source records and provenance relations backing durable memory.",
+          "status": "populated",
+          "optional": false,
+          "memory_ids": [
+            "source.agent-guidance",
+            "source.package-json",
+            "source.product-brief",
+            "source.readme"
+          ],
+          "relation_ids": [
+            "rel.architecture-local-first-derived-from-source-readme",
+            "rel.synthesis-agent-guidance-derived-from-source-agent-guidance",
+            "rel.synthesis-conventions-quality-derived-from-source-product-brief",
+            "rel.synthesis-feature-map-derived-from-source-product-brief",
+            "rel.synthesis-feature-map-summarizes-concept-filtered-views",
+            "rel.synthesis-feature-map-summarizes-concept-quick-add",
+            "rel.synthesis-product-intent-derived-from-source-product-brief",
+            "rel.synthesis-repository-map-derived-from-source-readme",
+            "rel.synthesis-stack-and-tooling-derived-from-source-package-json",
+            "rel.workflow-local-development-documents-source-package-json",
+            "rel.workflow-post-task-verification-documents-source-package-json"
+          ],
+          "gap": null
+        },
+        {
+          "key": "agent-guidance",
+          "label": "Agent Guidance",
+          "description": "Project-specific operating rules for AI coding agents.",
+          "status": "populated",
+          "optional": false,
+          "memory_ids": [
+            "synthesis.agent-guidance"
+          ],
+          "relation_ids": [
+            "rel.synthesis-agent-guidance-derived-from-source-agent-guidance"
+          ],
+          "gap": null
+        },
+        {
+          "key": "branch-handoff",
+          "label": "Branch Handoff",
+          "description": "Current branch continuity for unfinished work.",
+          "status": "missing",
+          "optional": true,
+          "memory_ids": [],
+          "relation_ids": [],
+          "gap": null
+        }
+      ],
       "counts": {
-        "populated": 0,
+        "populated": 12,
         "thin": 0,
-        "missing": 0,
+        "missing": 1,
         "stale": 0,
         "conflicted": 0
       }
     },
-    "lenses": [],
+    "lenses": [
+      {
+        "name": "project-map",
+        "title": "Project Map",
+        "markdown": "# Project Map\n\nDefault overview for purpose, capabilities, layout, stack, and operating norms.\n\n## Role coverage\n\n- Product Intent: populated\n- Capability Map: populated\n- Repository Map: populated\n- Architecture / Patterns: populated\n- Stack / Tooling: populated\n- Conventions / Quality Bar: populated\n- Workflows / How-tos: populated\n- Verification: populated\n- Gotchas / Risks: populated\n- Open Questions: populated\n- Agent Guidance: populated\n\n## Local-first todo architecture\n\nMemory: `architecture.local-first-todo-app` (architecture, active)\n\nThe app keeps task state in a small client-side store and persists a normalized task list to localStorage.\n\nRendering code reads from the store; persistence code only serializes and validates task records.\n\n## Filtered task views\n\nMemory: `concept.filtered-views` (concept, active)\n\nThe list supports all, active, completed, and overdue views. Counts must match the same predicate used to render each view.\n\n## Quick add\n\nMemory: `concept.quick-add` (concept, active)\n\nQuick add accepts a non-empty task title, trims whitespace, creates an active task, and clears the input after save.\n\n## Stay offline first\n\nMemory: `constraint.offline-first` (constraint, active)\n\nTask creation, completion, filtering, and persistence must work without a backend service.\n\nDo not add a hosted database or login flow to satisfy demo requirements.\n\n## Completed filter counts can drift\n\nMemory: `gotcha.completed-filter-counts` (gotcha, active)\n\nDo not compute filter badges with a different predicate than the rendered list. This caused completed tasks to appear in the active count before.\n\n## Recurring task scope\n\nMemory: `question.recurring-tasks` (question, open)\n\nShould recurring tasks be part of the Todo App, or should the app stay focused on one-off personal tasks for the first release?\n\n## Agent guidance\n\nMemory: `synthesis.agent-guidance` (synthesis, active)\n\nLoad Aictx memory before non-trivial Todo App work. Preserve the offline-first scope, keep UI behavior keyboard accessible, and verify persistence after reload.\n\n## Conventions and quality bar\n\nMemory: `synthesis.conventions-quality` (synthesis, active)\n\nKeep task mutations explicit, preserve keyboard access for every task action, and keep empty states tied to the active filter.\n\nAvoid adding accounts, sync, or collaboration features unless the product scope changes.\n\n## Feature map\n\nMemory: `synthesis.feature-map` (synthesis, active)\n\n- Quick add creates a task from a single text input.\n- Filtered views separate all, active, completed, and overdue tasks.\n- Local persistence keeps tasks available after reload.\n- Empty states explain the current filter without sending the user to documentation.\n\n## Product intent\n\nMemory: `synthesis.product-intent` (synthesis, active)\n\nThe Todo App helps a single user keep a trustworthy short list of work without account setup or network dependency.\n\nUseful output means fast capture, clear completion state, and no surprise data loss after refresh.\n\n## Repository map\n\nMemory: `synthesis.repository-map` (synthesis, active)\n\nApplication code lives under `src/`, reusable UI pieces live under `src/components/`, and persistence helpers live under `src/storage/`.\n\nTests mirror those areas under `test/` with browser coverage for task creation and filtering.\n\n## Stack and tooling\n\nMemory: `synthesis.stack-and-tooling` (synthesis, active)\n\nThe demo Todo App uses TypeScript, Vite, and Vitest. Browser behavior is covered with Playwright-style flow tests.\n\nPackage scripts are the preferred interface for build, test, and lint checks.\n\n## Local development workflow\n\nMemory: `workflow.local-development` (workflow, active)\n\nRun `pnpm install`, `pnpm dev`, and then open the Vite URL. Use the browser flow before changing persistence behavior.\n\n## Post-task verification\n\nMemory: `workflow.post-task-verification` (workflow, active)\n\nBefore finishing Todo App work, run `pnpm test`, `pnpm run typecheck`, and a browser check for add, complete, filter, and reload behavior.\n\n## Relation context\n\n- `project.todo-app` implements `concept.quick-add` (active)\n- `project.todo-app` implements `concept.filtered-views` (active)\n- `synthesis.product-intent` derived_from `source.product-brief` (active)\n- `synthesis.feature-map` derived_from `source.product-brief` (active)\n- `synthesis.feature-map` summarizes `concept.quick-add` (active)\n- `synthesis.feature-map` summarizes `concept.filtered-views` (active)\n- `synthesis.repository-map` derived_from `source.readme` (active)\n- `architecture.local-first-todo-app` derived_from `source.readme` (active)\n- `synthesis.stack-and-tooling` derived_from `source.package-json` (active)\n- `synthesis.conventions-quality` derived_from `source.product-brief` (active)\n- `workflow.local-development` documents `source.package-json` (active)\n- `workflow.post-task-verification` documents `source.package-json` (active)\n- `gotcha.completed-filter-counts` affects `concept.filtered-views` (active)\n- `concept.filtered-views` depends_on `fact.storage-localstorage` (active)\n- `question.recurring-tasks` related_to `synthesis.feature-map` (active)\n- `synthesis.agent-guidance` derived_from `source.agent-guidance` (active)\n- `constraint.offline-first` requires `fact.storage-localstorage` (active)\n",
+        "role_coverage": {
+          "roles": [
+            {
+              "key": "product-intent",
+              "label": "Product Intent",
+              "description": "What this project is for and what useful output means.",
+              "status": "populated",
+              "optional": false,
+              "memory_ids": [
+                "synthesis.product-intent"
+              ],
+              "relation_ids": [
+                "rel.synthesis-product-intent-derived-from-source-product-brief"
+              ],
+              "gap": null
+            },
+            {
+              "key": "capability-map",
+              "label": "Capability Map",
+              "description": "Features, outputs, commands, APIs, or generation capabilities.",
+              "status": "populated",
+              "optional": false,
+              "memory_ids": [
+                "concept.filtered-views",
+                "concept.quick-add",
+                "synthesis.feature-map"
+              ],
+              "relation_ids": [
+                "rel.concept-filtered-views-depends-on-fact-storage-localstorage",
+                "rel.gotcha-completed-filter-counts-affects-concept-filtered-views",
+                "rel.project-todo-app-implements-concept-filtered-views",
+                "rel.project-todo-app-implements-concept-quick-add",
+                "rel.question-recurring-tasks-related-to-synthesis-feature-map",
+                "rel.synthesis-feature-map-derived-from-source-product-brief",
+                "rel.synthesis-feature-map-summarizes-concept-filtered-views",
+                "rel.synthesis-feature-map-summarizes-concept-quick-add"
+              ],
+              "gap": null
+            },
+            {
+              "key": "repository-map",
+              "label": "Repository Map",
+              "description": "Where important code, docs, tests, assets, and configs live.",
+              "status": "populated",
+              "optional": false,
+              "memory_ids": [
+                "synthesis.repository-map"
+              ],
+              "relation_ids": [
+                "rel.synthesis-repository-map-derived-from-source-readme"
+              ],
+              "gap": null
+            },
+            {
+              "key": "architecture-patterns",
+              "label": "Architecture / Patterns",
+              "description": "How the project is organized and which design patterns matter.",
+              "status": "populated",
+              "optional": false,
+              "memory_ids": [
+                "architecture.local-first-todo-app"
+              ],
+              "relation_ids": [
+                "rel.architecture-local-first-derived-from-source-readme"
+              ],
+              "gap": null
+            },
+            {
+              "key": "stack-tooling",
+              "label": "Stack / Tooling",
+              "description": "Languages, frameworks, package managers, build tools, and runtime constraints.",
+              "status": "populated",
+              "optional": false,
+              "memory_ids": [
+                "synthesis.stack-and-tooling"
+              ],
+              "relation_ids": [
+                "rel.synthesis-stack-and-tooling-derived-from-source-package-json"
+              ],
+              "gap": null
+            },
+            {
+              "key": "conventions-quality",
+              "label": "Conventions / Quality Bar",
+              "description": "Project-specific coding, design, review, and quality expectations.",
+              "status": "populated",
+              "optional": false,
+              "memory_ids": [
+                "constraint.offline-first",
+                "synthesis.conventions-quality"
+              ],
+              "relation_ids": [
+                "rel.constraint-offline-first-requires-fact-storage-localstorage",
+                "rel.synthesis-conventions-quality-derived-from-source-product-brief"
+              ],
+              "gap": null
+            },
+            {
+              "key": "workflows-howtos",
+              "label": "Workflows / How-tos",
+              "description": "Reusable setup, release, debugging, migration, generation, or maintenance procedures.",
+              "status": "populated",
+              "optional": false,
+              "memory_ids": [
+                "workflow.local-development",
+                "workflow.post-task-verification"
+              ],
+              "relation_ids": [
+                "rel.workflow-local-development-documents-source-package-json",
+                "rel.workflow-post-task-verification-documents-source-package-json"
+              ],
+              "gap": null
+            },
+            {
+              "key": "verification",
+              "label": "Verification",
+              "description": "Commands and checks agents should run before claiming work is done.",
+              "status": "populated",
+              "optional": false,
+              "memory_ids": [
+                "workflow.post-task-verification"
+              ],
+              "relation_ids": [
+                "rel.workflow-post-task-verification-documents-source-package-json"
+              ],
+              "gap": null
+            },
+            {
+              "key": "gotchas-risks",
+              "label": "Gotchas / Risks",
+              "description": "Known traps, fragile areas, abandoned approaches, or recurring failure modes.",
+              "status": "populated",
+              "optional": false,
+              "memory_ids": [
+                "gotcha.completed-filter-counts"
+              ],
+              "relation_ids": [
+                "rel.gotcha-completed-filter-counts-affects-concept-filtered-views"
+              ],
+              "gap": null
+            },
+            {
+              "key": "open-questions",
+              "label": "Open Questions",
+              "description": "Important unknowns agents should not guess.",
+              "status": "populated",
+              "optional": false,
+              "memory_ids": [
+                "question.recurring-tasks"
+              ],
+              "relation_ids": [
+                "rel.question-recurring-tasks-related-to-synthesis-feature-map"
+              ],
+              "gap": null
+            },
+            {
+              "key": "sources-provenance",
+              "label": "Sources / Provenance",
+              "description": "Source records and provenance relations backing durable memory.",
+              "status": "populated",
+              "optional": false,
+              "memory_ids": [
+                "source.agent-guidance",
+                "source.package-json",
+                "source.product-brief",
+                "source.readme"
+              ],
+              "relation_ids": [
+                "rel.architecture-local-first-derived-from-source-readme",
+                "rel.synthesis-agent-guidance-derived-from-source-agent-guidance",
+                "rel.synthesis-conventions-quality-derived-from-source-product-brief",
+                "rel.synthesis-feature-map-derived-from-source-product-brief",
+                "rel.synthesis-feature-map-summarizes-concept-filtered-views",
+                "rel.synthesis-feature-map-summarizes-concept-quick-add",
+                "rel.synthesis-product-intent-derived-from-source-product-brief",
+                "rel.synthesis-repository-map-derived-from-source-readme",
+                "rel.synthesis-stack-and-tooling-derived-from-source-package-json",
+                "rel.workflow-local-development-documents-source-package-json",
+                "rel.workflow-post-task-verification-documents-source-package-json"
+              ],
+              "gap": null
+            },
+            {
+              "key": "agent-guidance",
+              "label": "Agent Guidance",
+              "description": "Project-specific operating rules for AI coding agents.",
+              "status": "populated",
+              "optional": false,
+              "memory_ids": [
+                "synthesis.agent-guidance"
+              ],
+              "relation_ids": [
+                "rel.synthesis-agent-guidance-derived-from-source-agent-guidance"
+              ],
+              "gap": null
+            },
+            {
+              "key": "branch-handoff",
+              "label": "Branch Handoff",
+              "description": "Current branch continuity for unfinished work.",
+              "status": "missing",
+              "optional": true,
+              "memory_ids": [],
+              "relation_ids": [],
+              "gap": null
+            }
+          ],
+          "counts": {
+            "populated": 12,
+            "thin": 0,
+            "missing": 1,
+            "stale": 0,
+            "conflicted": 0
+          }
+        },
+        "included_memory_ids": [
+          "architecture.local-first-todo-app",
+          "concept.filtered-views",
+          "concept.quick-add",
+          "constraint.offline-first",
+          "gotcha.completed-filter-counts",
+          "question.recurring-tasks",
+          "synthesis.agent-guidance",
+          "synthesis.conventions-quality",
+          "synthesis.feature-map",
+          "synthesis.product-intent",
+          "synthesis.repository-map",
+          "synthesis.stack-and-tooling",
+          "workflow.local-development",
+          "workflow.post-task-verification"
+        ],
+        "relation_ids": [
+          "rel.architecture-local-first-derived-from-source-readme",
+          "rel.concept-filtered-views-depends-on-fact-storage-localstorage",
+          "rel.constraint-offline-first-requires-fact-storage-localstorage",
+          "rel.gotcha-completed-filter-counts-affects-concept-filtered-views",
+          "rel.project-todo-app-implements-concept-filtered-views",
+          "rel.project-todo-app-implements-concept-quick-add",
+          "rel.question-recurring-tasks-related-to-synthesis-feature-map",
+          "rel.synthesis-agent-guidance-derived-from-source-agent-guidance",
+          "rel.synthesis-conventions-quality-derived-from-source-product-brief",
+          "rel.synthesis-feature-map-derived-from-source-product-brief",
+          "rel.synthesis-feature-map-summarizes-concept-filtered-views",
+          "rel.synthesis-feature-map-summarizes-concept-quick-add",
+          "rel.synthesis-product-intent-derived-from-source-product-brief",
+          "rel.synthesis-repository-map-derived-from-source-readme",
+          "rel.synthesis-stack-and-tooling-derived-from-source-package-json",
+          "rel.workflow-local-development-documents-source-package-json",
+          "rel.workflow-post-task-verification-documents-source-package-json"
+        ],
+        "relations": [
+          {
+            "id": "rel.project-todo-app-implements-concept-quick-add",
+            "from": "project.todo-app",
+            "predicate": "implements",
+            "to": "concept.quick-add",
+            "status": "active",
+            "confidence": "high",
+            "evidence": [
+              {
+                "kind": "memory",
+                "id": "project.todo-app"
+              }
+            ],
+            "content_hash": null,
+            "created_at": "2026-05-12T09:00:00+02:00",
+            "updated_at": "2026-05-13T15:30:00+02:00",
+            "json_path": ".aictx/relations/project-todo-app-implements-concept-quick-add.json"
+          },
+          {
+            "id": "rel.project-todo-app-implements-concept-filtered-views",
+            "from": "project.todo-app",
+            "predicate": "implements",
+            "to": "concept.filtered-views",
+            "status": "active",
+            "confidence": "high",
+            "evidence": [
+              {
+                "kind": "memory",
+                "id": "project.todo-app"
+              }
+            ],
+            "content_hash": null,
+            "created_at": "2026-05-12T09:00:00+02:00",
+            "updated_at": "2026-05-13T15:30:00+02:00",
+            "json_path": ".aictx/relations/project-todo-app-implements-concept-filtered-views.json"
+          },
+          {
+            "id": "rel.synthesis-product-intent-derived-from-source-product-brief",
+            "from": "synthesis.product-intent",
+            "predicate": "derived_from",
+            "to": "source.product-brief",
+            "status": "active",
+            "confidence": "high",
+            "evidence": [
+              {
+                "kind": "memory",
+                "id": "synthesis.product-intent"
+              }
+            ],
+            "content_hash": null,
+            "created_at": "2026-05-12T09:00:00+02:00",
+            "updated_at": "2026-05-13T15:30:00+02:00",
+            "json_path": ".aictx/relations/synthesis-product-intent-derived-from-source-product-brief.json"
+          },
+          {
+            "id": "rel.synthesis-feature-map-derived-from-source-product-brief",
+            "from": "synthesis.feature-map",
+            "predicate": "derived_from",
+            "to": "source.product-brief",
+            "status": "active",
+            "confidence": "high",
+            "evidence": [
+              {
+                "kind": "memory",
+                "id": "synthesis.feature-map"
+              }
+            ],
+            "content_hash": null,
+            "created_at": "2026-05-12T09:00:00+02:00",
+            "updated_at": "2026-05-13T15:30:00+02:00",
+            "json_path": ".aictx/relations/synthesis-feature-map-derived-from-source-product-brief.json"
+          },
+          {
+            "id": "rel.synthesis-feature-map-summarizes-concept-quick-add",
+            "from": "synthesis.feature-map",
+            "predicate": "summarizes",
+            "to": "concept.quick-add",
+            "status": "active",
+            "confidence": "high",
+            "evidence": [
+              {
+                "kind": "memory",
+                "id": "synthesis.feature-map"
+              }
+            ],
+            "content_hash": null,
+            "created_at": "2026-05-12T09:00:00+02:00",
+            "updated_at": "2026-05-13T15:30:00+02:00",
+            "json_path": ".aictx/relations/synthesis-feature-map-summarizes-concept-quick-add.json"
+          },
+          {
+            "id": "rel.synthesis-feature-map-summarizes-concept-filtered-views",
+            "from": "synthesis.feature-map",
+            "predicate": "summarizes",
+            "to": "concept.filtered-views",
+            "status": "active",
+            "confidence": "high",
+            "evidence": [
+              {
+                "kind": "memory",
+                "id": "synthesis.feature-map"
+              }
+            ],
+            "content_hash": null,
+            "created_at": "2026-05-12T09:00:00+02:00",
+            "updated_at": "2026-05-13T15:30:00+02:00",
+            "json_path": ".aictx/relations/synthesis-feature-map-summarizes-concept-filtered-views.json"
+          },
+          {
+            "id": "rel.synthesis-repository-map-derived-from-source-readme",
+            "from": "synthesis.repository-map",
+            "predicate": "derived_from",
+            "to": "source.readme",
+            "status": "active",
+            "confidence": "high",
+            "evidence": [
+              {
+                "kind": "memory",
+                "id": "synthesis.repository-map"
+              }
+            ],
+            "content_hash": null,
+            "created_at": "2026-05-12T09:00:00+02:00",
+            "updated_at": "2026-05-13T15:30:00+02:00",
+            "json_path": ".aictx/relations/synthesis-repository-map-derived-from-source-readme.json"
+          },
+          {
+            "id": "rel.architecture-local-first-derived-from-source-readme",
+            "from": "architecture.local-first-todo-app",
+            "predicate": "derived_from",
+            "to": "source.readme",
+            "status": "active",
+            "confidence": "high",
+            "evidence": [
+              {
+                "kind": "memory",
+                "id": "architecture.local-first-todo-app"
+              }
+            ],
+            "content_hash": null,
+            "created_at": "2026-05-12T09:00:00+02:00",
+            "updated_at": "2026-05-13T15:30:00+02:00",
+            "json_path": ".aictx/relations/architecture-local-first-derived-from-source-readme.json"
+          },
+          {
+            "id": "rel.synthesis-stack-and-tooling-derived-from-source-package-json",
+            "from": "synthesis.stack-and-tooling",
+            "predicate": "derived_from",
+            "to": "source.package-json",
+            "status": "active",
+            "confidence": "high",
+            "evidence": [
+              {
+                "kind": "memory",
+                "id": "synthesis.stack-and-tooling"
+              }
+            ],
+            "content_hash": null,
+            "created_at": "2026-05-12T09:00:00+02:00",
+            "updated_at": "2026-05-13T15:30:00+02:00",
+            "json_path": ".aictx/relations/synthesis-stack-and-tooling-derived-from-source-package-json.json"
+          },
+          {
+            "id": "rel.synthesis-conventions-quality-derived-from-source-product-brief",
+            "from": "synthesis.conventions-quality",
+            "predicate": "derived_from",
+            "to": "source.product-brief",
+            "status": "active",
+            "confidence": "high",
+            "evidence": [
+              {
+                "kind": "memory",
+                "id": "synthesis.conventions-quality"
+              }
+            ],
+            "content_hash": null,
+            "created_at": "2026-05-12T09:00:00+02:00",
+            "updated_at": "2026-05-13T15:30:00+02:00",
+            "json_path": ".aictx/relations/synthesis-conventions-quality-derived-from-source-product-brief.json"
+          },
+          {
+            "id": "rel.workflow-local-development-documents-source-package-json",
+            "from": "workflow.local-development",
+            "predicate": "documents",
+            "to": "source.package-json",
+            "status": "active",
+            "confidence": "high",
+            "evidence": [
+              {
+                "kind": "memory",
+                "id": "workflow.local-development"
+              }
+            ],
+            "content_hash": null,
+            "created_at": "2026-05-12T09:00:00+02:00",
+            "updated_at": "2026-05-13T15:30:00+02:00",
+            "json_path": ".aictx/relations/workflow-local-development-documents-source-package-json.json"
+          },
+          {
+            "id": "rel.workflow-post-task-verification-documents-source-package-json",
+            "from": "workflow.post-task-verification",
+            "predicate": "documents",
+            "to": "source.package-json",
+            "status": "active",
+            "confidence": "high",
+            "evidence": [
+              {
+                "kind": "memory",
+                "id": "workflow.post-task-verification"
+              }
+            ],
+            "content_hash": null,
+            "created_at": "2026-05-12T09:00:00+02:00",
+            "updated_at": "2026-05-13T15:30:00+02:00",
+            "json_path": ".aictx/relations/workflow-post-task-verification-documents-source-package-json.json"
+          },
+          {
+            "id": "rel.gotcha-completed-filter-counts-affects-concept-filtered-views",
+            "from": "gotcha.completed-filter-counts",
+            "predicate": "affects",
+            "to": "concept.filtered-views",
+            "status": "active",
+            "confidence": "high",
+            "evidence": [
+              {
+                "kind": "memory",
+                "id": "gotcha.completed-filter-counts"
+              }
+            ],
+            "content_hash": null,
+            "created_at": "2026-05-12T09:00:00+02:00",
+            "updated_at": "2026-05-13T15:30:00+02:00",
+            "json_path": ".aictx/relations/gotcha-completed-filter-counts-affects-concept-filtered-views.json"
+          },
+          {
+            "id": "rel.concept-filtered-views-depends-on-fact-storage-localstorage",
+            "from": "concept.filtered-views",
+            "predicate": "depends_on",
+            "to": "fact.storage-localstorage",
+            "status": "active",
+            "confidence": "high",
+            "evidence": [
+              {
+                "kind": "memory",
+                "id": "concept.filtered-views"
+              }
+            ],
+            "content_hash": null,
+            "created_at": "2026-05-12T09:00:00+02:00",
+            "updated_at": "2026-05-13T15:30:00+02:00",
+            "json_path": ".aictx/relations/concept-filtered-views-depends-on-fact-storage-localstorage.json"
+          },
+          {
+            "id": "rel.question-recurring-tasks-related-to-synthesis-feature-map",
+            "from": "question.recurring-tasks",
+            "predicate": "related_to",
+            "to": "synthesis.feature-map",
+            "status": "active",
+            "confidence": "high",
+            "evidence": [
+              {
+                "kind": "memory",
+                "id": "question.recurring-tasks"
+              }
+            ],
+            "content_hash": null,
+            "created_at": "2026-05-12T09:00:00+02:00",
+            "updated_at": "2026-05-13T15:30:00+02:00",
+            "json_path": ".aictx/relations/question-recurring-tasks-related-to-synthesis-feature-map.json"
+          },
+          {
+            "id": "rel.synthesis-agent-guidance-derived-from-source-agent-guidance",
+            "from": "synthesis.agent-guidance",
+            "predicate": "derived_from",
+            "to": "source.agent-guidance",
+            "status": "active",
+            "confidence": "high",
+            "evidence": [
+              {
+                "kind": "memory",
+                "id": "synthesis.agent-guidance"
+              }
+            ],
+            "content_hash": null,
+            "created_at": "2026-05-12T09:00:00+02:00",
+            "updated_at": "2026-05-13T15:30:00+02:00",
+            "json_path": ".aictx/relations/synthesis-agent-guidance-derived-from-source-agent-guidance.json"
+          },
+          {
+            "id": "rel.constraint-offline-first-requires-fact-storage-localstorage",
+            "from": "constraint.offline-first",
+            "predicate": "requires",
+            "to": "fact.storage-localstorage",
+            "status": "active",
+            "confidence": "high",
+            "evidence": [
+              {
+                "kind": "memory",
+                "id": "constraint.offline-first"
+              }
+            ],
+            "content_hash": null,
+            "created_at": "2026-05-12T09:00:00+02:00",
+            "updated_at": "2026-05-13T15:30:00+02:00",
+            "json_path": ".aictx/relations/constraint-offline-first-requires-fact-storage-localstorage.json"
+          }
+        ],
+        "generated_gaps": []
+      },
+      {
+        "name": "current-work",
+        "title": "Current Work",
+        "markdown": "# Current Work\n\nOpen scope questions and verification context for the next Todo App change.\n\n## Role coverage\n\n- Open Questions: populated\n- Verification: populated\n- Gotchas / Risks: populated\n\n## Completed filter counts can drift\n\nMemory: `gotcha.completed-filter-counts` (gotcha, active)\n\nDo not compute filter badges with a different predicate than the rendered list. This caused completed tasks to appear in the active count before.\n\n## Recurring task scope\n\nMemory: `question.recurring-tasks` (question, open)\n\nShould recurring tasks be part of the Todo App, or should the app stay focused on one-off personal tasks for the first release?\n\n## Post-task verification\n\nMemory: `workflow.post-task-verification` (workflow, active)\n\nBefore finishing Todo App work, run `pnpm test`, `pnpm run typecheck`, and a browser check for add, complete, filter, and reload behavior.\n\n## Relation context\n\n- `workflow.post-task-verification` documents `source.package-json` (active)\n- `gotcha.completed-filter-counts` affects `concept.filtered-views` (active)\n- `question.recurring-tasks` related_to `synthesis.feature-map` (active)\n",
+        "role_coverage": {
+          "roles": [
+            {
+              "key": "product-intent",
+              "label": "Product Intent",
+              "description": "What this project is for and what useful output means.",
+              "status": "populated",
+              "optional": false,
+              "memory_ids": [
+                "synthesis.product-intent"
+              ],
+              "relation_ids": [
+                "rel.synthesis-product-intent-derived-from-source-product-brief"
+              ],
+              "gap": null
+            },
+            {
+              "key": "capability-map",
+              "label": "Capability Map",
+              "description": "Features, outputs, commands, APIs, or generation capabilities.",
+              "status": "populated",
+              "optional": false,
+              "memory_ids": [
+                "concept.filtered-views",
+                "concept.quick-add",
+                "synthesis.feature-map"
+              ],
+              "relation_ids": [
+                "rel.concept-filtered-views-depends-on-fact-storage-localstorage",
+                "rel.gotcha-completed-filter-counts-affects-concept-filtered-views",
+                "rel.project-todo-app-implements-concept-filtered-views",
+                "rel.project-todo-app-implements-concept-quick-add",
+                "rel.question-recurring-tasks-related-to-synthesis-feature-map",
+                "rel.synthesis-feature-map-derived-from-source-product-brief",
+                "rel.synthesis-feature-map-summarizes-concept-filtered-views",
+                "rel.synthesis-feature-map-summarizes-concept-quick-add"
+              ],
+              "gap": null
+            },
+            {
+              "key": "repository-map",
+              "label": "Repository Map",
+              "description": "Where important code, docs, tests, assets, and configs live.",
+              "status": "populated",
+              "optional": false,
+              "memory_ids": [
+                "synthesis.repository-map"
+              ],
+              "relation_ids": [
+                "rel.synthesis-repository-map-derived-from-source-readme"
+              ],
+              "gap": null
+            },
+            {
+              "key": "architecture-patterns",
+              "label": "Architecture / Patterns",
+              "description": "How the project is organized and which design patterns matter.",
+              "status": "populated",
+              "optional": false,
+              "memory_ids": [
+                "architecture.local-first-todo-app"
+              ],
+              "relation_ids": [
+                "rel.architecture-local-first-derived-from-source-readme"
+              ],
+              "gap": null
+            },
+            {
+              "key": "stack-tooling",
+              "label": "Stack / Tooling",
+              "description": "Languages, frameworks, package managers, build tools, and runtime constraints.",
+              "status": "populated",
+              "optional": false,
+              "memory_ids": [
+                "synthesis.stack-and-tooling"
+              ],
+              "relation_ids": [
+                "rel.synthesis-stack-and-tooling-derived-from-source-package-json"
+              ],
+              "gap": null
+            },
+            {
+              "key": "conventions-quality",
+              "label": "Conventions / Quality Bar",
+              "description": "Project-specific coding, design, review, and quality expectations.",
+              "status": "populated",
+              "optional": false,
+              "memory_ids": [
+                "constraint.offline-first",
+                "synthesis.conventions-quality"
+              ],
+              "relation_ids": [
+                "rel.constraint-offline-first-requires-fact-storage-localstorage",
+                "rel.synthesis-conventions-quality-derived-from-source-product-brief"
+              ],
+              "gap": null
+            },
+            {
+              "key": "workflows-howtos",
+              "label": "Workflows / How-tos",
+              "description": "Reusable setup, release, debugging, migration, generation, or maintenance procedures.",
+              "status": "populated",
+              "optional": false,
+              "memory_ids": [
+                "workflow.local-development",
+                "workflow.post-task-verification"
+              ],
+              "relation_ids": [
+                "rel.workflow-local-development-documents-source-package-json",
+                "rel.workflow-post-task-verification-documents-source-package-json"
+              ],
+              "gap": null
+            },
+            {
+              "key": "verification",
+              "label": "Verification",
+              "description": "Commands and checks agents should run before claiming work is done.",
+              "status": "populated",
+              "optional": false,
+              "memory_ids": [
+                "workflow.post-task-verification"
+              ],
+              "relation_ids": [
+                "rel.workflow-post-task-verification-documents-source-package-json"
+              ],
+              "gap": null
+            },
+            {
+              "key": "gotchas-risks",
+              "label": "Gotchas / Risks",
+              "description": "Known traps, fragile areas, abandoned approaches, or recurring failure modes.",
+              "status": "populated",
+              "optional": false,
+              "memory_ids": [
+                "gotcha.completed-filter-counts"
+              ],
+              "relation_ids": [
+                "rel.gotcha-completed-filter-counts-affects-concept-filtered-views"
+              ],
+              "gap": null
+            },
+            {
+              "key": "open-questions",
+              "label": "Open Questions",
+              "description": "Important unknowns agents should not guess.",
+              "status": "populated",
+              "optional": false,
+              "memory_ids": [
+                "question.recurring-tasks"
+              ],
+              "relation_ids": [
+                "rel.question-recurring-tasks-related-to-synthesis-feature-map"
+              ],
+              "gap": null
+            },
+            {
+              "key": "sources-provenance",
+              "label": "Sources / Provenance",
+              "description": "Source records and provenance relations backing durable memory.",
+              "status": "populated",
+              "optional": false,
+              "memory_ids": [
+                "source.agent-guidance",
+                "source.package-json",
+                "source.product-brief",
+                "source.readme"
+              ],
+              "relation_ids": [
+                "rel.architecture-local-first-derived-from-source-readme",
+                "rel.synthesis-agent-guidance-derived-from-source-agent-guidance",
+                "rel.synthesis-conventions-quality-derived-from-source-product-brief",
+                "rel.synthesis-feature-map-derived-from-source-product-brief",
+                "rel.synthesis-feature-map-summarizes-concept-filtered-views",
+                "rel.synthesis-feature-map-summarizes-concept-quick-add",
+                "rel.synthesis-product-intent-derived-from-source-product-brief",
+                "rel.synthesis-repository-map-derived-from-source-readme",
+                "rel.synthesis-stack-and-tooling-derived-from-source-package-json",
+                "rel.workflow-local-development-documents-source-package-json",
+                "rel.workflow-post-task-verification-documents-source-package-json"
+              ],
+              "gap": null
+            },
+            {
+              "key": "agent-guidance",
+              "label": "Agent Guidance",
+              "description": "Project-specific operating rules for AI coding agents.",
+              "status": "populated",
+              "optional": false,
+              "memory_ids": [
+                "synthesis.agent-guidance"
+              ],
+              "relation_ids": [
+                "rel.synthesis-agent-guidance-derived-from-source-agent-guidance"
+              ],
+              "gap": null
+            },
+            {
+              "key": "branch-handoff",
+              "label": "Branch Handoff",
+              "description": "Current branch continuity for unfinished work.",
+              "status": "missing",
+              "optional": true,
+              "memory_ids": [],
+              "relation_ids": [],
+              "gap": null
+            }
+          ],
+          "counts": {
+            "populated": 12,
+            "thin": 0,
+            "missing": 1,
+            "stale": 0,
+            "conflicted": 0
+          }
+        },
+        "included_memory_ids": [
+          "gotcha.completed-filter-counts",
+          "question.recurring-tasks",
+          "workflow.post-task-verification"
+        ],
+        "relation_ids": [
+          "rel.gotcha-completed-filter-counts-affects-concept-filtered-views",
+          "rel.question-recurring-tasks-related-to-synthesis-feature-map",
+          "rel.workflow-post-task-verification-documents-source-package-json"
+        ],
+        "relations": [
+          {
+            "id": "rel.workflow-post-task-verification-documents-source-package-json",
+            "from": "workflow.post-task-verification",
+            "predicate": "documents",
+            "to": "source.package-json",
+            "status": "active",
+            "confidence": "high",
+            "evidence": [
+              {
+                "kind": "memory",
+                "id": "workflow.post-task-verification"
+              }
+            ],
+            "content_hash": null,
+            "created_at": "2026-05-12T09:00:00+02:00",
+            "updated_at": "2026-05-13T15:30:00+02:00",
+            "json_path": ".aictx/relations/workflow-post-task-verification-documents-source-package-json.json"
+          },
+          {
+            "id": "rel.gotcha-completed-filter-counts-affects-concept-filtered-views",
+            "from": "gotcha.completed-filter-counts",
+            "predicate": "affects",
+            "to": "concept.filtered-views",
+            "status": "active",
+            "confidence": "high",
+            "evidence": [
+              {
+                "kind": "memory",
+                "id": "gotcha.completed-filter-counts"
+              }
+            ],
+            "content_hash": null,
+            "created_at": "2026-05-12T09:00:00+02:00",
+            "updated_at": "2026-05-13T15:30:00+02:00",
+            "json_path": ".aictx/relations/gotcha-completed-filter-counts-affects-concept-filtered-views.json"
+          },
+          {
+            "id": "rel.question-recurring-tasks-related-to-synthesis-feature-map",
+            "from": "question.recurring-tasks",
+            "predicate": "related_to",
+            "to": "synthesis.feature-map",
+            "status": "active",
+            "confidence": "high",
+            "evidence": [
+              {
+                "kind": "memory",
+                "id": "question.recurring-tasks"
+              }
+            ],
+            "content_hash": null,
+            "created_at": "2026-05-12T09:00:00+02:00",
+            "updated_at": "2026-05-13T15:30:00+02:00",
+            "json_path": ".aictx/relations/question-recurring-tasks-related-to-synthesis-feature-map.json"
+          }
+        ],
+        "generated_gaps": []
+      },
+      {
+        "name": "review-risk",
+        "title": "Review / Risk",
+        "markdown": "# Review / Risk\n\nQuality expectations, verification, risks, and unresolved questions.\n\n## Role coverage\n\n- Conventions / Quality Bar: populated\n- Verification: populated\n- Gotchas / Risks: populated\n- Open Questions: populated\n\n## Stay offline first\n\nMemory: `constraint.offline-first` (constraint, active)\n\nTask creation, completion, filtering, and persistence must work without a backend service.\n\nDo not add a hosted database or login flow to satisfy demo requirements.\n\n## Completed filter counts can drift\n\nMemory: `gotcha.completed-filter-counts` (gotcha, active)\n\nDo not compute filter badges with a different predicate than the rendered list. This caused completed tasks to appear in the active count before.\n\n## Recurring task scope\n\nMemory: `question.recurring-tasks` (question, open)\n\nShould recurring tasks be part of the Todo App, or should the app stay focused on one-off personal tasks for the first release?\n\n## Conventions and quality bar\n\nMemory: `synthesis.conventions-quality` (synthesis, active)\n\nKeep task mutations explicit, preserve keyboard access for every task action, and keep empty states tied to the active filter.\n\nAvoid adding accounts, sync, or collaboration features unless the product scope changes.\n\n## Post-task verification\n\nMemory: `workflow.post-task-verification` (workflow, active)\n\nBefore finishing Todo App work, run `pnpm test`, `pnpm run typecheck`, and a browser check for add, complete, filter, and reload behavior.\n\n## Relation context\n\n- `synthesis.conventions-quality` derived_from `source.product-brief` (active)\n- `workflow.post-task-verification` documents `source.package-json` (active)\n- `gotcha.completed-filter-counts` affects `concept.filtered-views` (active)\n- `question.recurring-tasks` related_to `synthesis.feature-map` (active)\n- `constraint.offline-first` requires `fact.storage-localstorage` (active)\n",
+        "role_coverage": {
+          "roles": [
+            {
+              "key": "product-intent",
+              "label": "Product Intent",
+              "description": "What this project is for and what useful output means.",
+              "status": "populated",
+              "optional": false,
+              "memory_ids": [
+                "synthesis.product-intent"
+              ],
+              "relation_ids": [
+                "rel.synthesis-product-intent-derived-from-source-product-brief"
+              ],
+              "gap": null
+            },
+            {
+              "key": "capability-map",
+              "label": "Capability Map",
+              "description": "Features, outputs, commands, APIs, or generation capabilities.",
+              "status": "populated",
+              "optional": false,
+              "memory_ids": [
+                "concept.filtered-views",
+                "concept.quick-add",
+                "synthesis.feature-map"
+              ],
+              "relation_ids": [
+                "rel.concept-filtered-views-depends-on-fact-storage-localstorage",
+                "rel.gotcha-completed-filter-counts-affects-concept-filtered-views",
+                "rel.project-todo-app-implements-concept-filtered-views",
+                "rel.project-todo-app-implements-concept-quick-add",
+                "rel.question-recurring-tasks-related-to-synthesis-feature-map",
+                "rel.synthesis-feature-map-derived-from-source-product-brief",
+                "rel.synthesis-feature-map-summarizes-concept-filtered-views",
+                "rel.synthesis-feature-map-summarizes-concept-quick-add"
+              ],
+              "gap": null
+            },
+            {
+              "key": "repository-map",
+              "label": "Repository Map",
+              "description": "Where important code, docs, tests, assets, and configs live.",
+              "status": "populated",
+              "optional": false,
+              "memory_ids": [
+                "synthesis.repository-map"
+              ],
+              "relation_ids": [
+                "rel.synthesis-repository-map-derived-from-source-readme"
+              ],
+              "gap": null
+            },
+            {
+              "key": "architecture-patterns",
+              "label": "Architecture / Patterns",
+              "description": "How the project is organized and which design patterns matter.",
+              "status": "populated",
+              "optional": false,
+              "memory_ids": [
+                "architecture.local-first-todo-app"
+              ],
+              "relation_ids": [
+                "rel.architecture-local-first-derived-from-source-readme"
+              ],
+              "gap": null
+            },
+            {
+              "key": "stack-tooling",
+              "label": "Stack / Tooling",
+              "description": "Languages, frameworks, package managers, build tools, and runtime constraints.",
+              "status": "populated",
+              "optional": false,
+              "memory_ids": [
+                "synthesis.stack-and-tooling"
+              ],
+              "relation_ids": [
+                "rel.synthesis-stack-and-tooling-derived-from-source-package-json"
+              ],
+              "gap": null
+            },
+            {
+              "key": "conventions-quality",
+              "label": "Conventions / Quality Bar",
+              "description": "Project-specific coding, design, review, and quality expectations.",
+              "status": "populated",
+              "optional": false,
+              "memory_ids": [
+                "constraint.offline-first",
+                "synthesis.conventions-quality"
+              ],
+              "relation_ids": [
+                "rel.constraint-offline-first-requires-fact-storage-localstorage",
+                "rel.synthesis-conventions-quality-derived-from-source-product-brief"
+              ],
+              "gap": null
+            },
+            {
+              "key": "workflows-howtos",
+              "label": "Workflows / How-tos",
+              "description": "Reusable setup, release, debugging, migration, generation, or maintenance procedures.",
+              "status": "populated",
+              "optional": false,
+              "memory_ids": [
+                "workflow.local-development",
+                "workflow.post-task-verification"
+              ],
+              "relation_ids": [
+                "rel.workflow-local-development-documents-source-package-json",
+                "rel.workflow-post-task-verification-documents-source-package-json"
+              ],
+              "gap": null
+            },
+            {
+              "key": "verification",
+              "label": "Verification",
+              "description": "Commands and checks agents should run before claiming work is done.",
+              "status": "populated",
+              "optional": false,
+              "memory_ids": [
+                "workflow.post-task-verification"
+              ],
+              "relation_ids": [
+                "rel.workflow-post-task-verification-documents-source-package-json"
+              ],
+              "gap": null
+            },
+            {
+              "key": "gotchas-risks",
+              "label": "Gotchas / Risks",
+              "description": "Known traps, fragile areas, abandoned approaches, or recurring failure modes.",
+              "status": "populated",
+              "optional": false,
+              "memory_ids": [
+                "gotcha.completed-filter-counts"
+              ],
+              "relation_ids": [
+                "rel.gotcha-completed-filter-counts-affects-concept-filtered-views"
+              ],
+              "gap": null
+            },
+            {
+              "key": "open-questions",
+              "label": "Open Questions",
+              "description": "Important unknowns agents should not guess.",
+              "status": "populated",
+              "optional": false,
+              "memory_ids": [
+                "question.recurring-tasks"
+              ],
+              "relation_ids": [
+                "rel.question-recurring-tasks-related-to-synthesis-feature-map"
+              ],
+              "gap": null
+            },
+            {
+              "key": "sources-provenance",
+              "label": "Sources / Provenance",
+              "description": "Source records and provenance relations backing durable memory.",
+              "status": "populated",
+              "optional": false,
+              "memory_ids": [
+                "source.agent-guidance",
+                "source.package-json",
+                "source.product-brief",
+                "source.readme"
+              ],
+              "relation_ids": [
+                "rel.architecture-local-first-derived-from-source-readme",
+                "rel.synthesis-agent-guidance-derived-from-source-agent-guidance",
+                "rel.synthesis-conventions-quality-derived-from-source-product-brief",
+                "rel.synthesis-feature-map-derived-from-source-product-brief",
+                "rel.synthesis-feature-map-summarizes-concept-filtered-views",
+                "rel.synthesis-feature-map-summarizes-concept-quick-add",
+                "rel.synthesis-product-intent-derived-from-source-product-brief",
+                "rel.synthesis-repository-map-derived-from-source-readme",
+                "rel.synthesis-stack-and-tooling-derived-from-source-package-json",
+                "rel.workflow-local-development-documents-source-package-json",
+                "rel.workflow-post-task-verification-documents-source-package-json"
+              ],
+              "gap": null
+            },
+            {
+              "key": "agent-guidance",
+              "label": "Agent Guidance",
+              "description": "Project-specific operating rules for AI coding agents.",
+              "status": "populated",
+              "optional": false,
+              "memory_ids": [
+                "synthesis.agent-guidance"
+              ],
+              "relation_ids": [
+                "rel.synthesis-agent-guidance-derived-from-source-agent-guidance"
+              ],
+              "gap": null
+            },
+            {
+              "key": "branch-handoff",
+              "label": "Branch Handoff",
+              "description": "Current branch continuity for unfinished work.",
+              "status": "missing",
+              "optional": true,
+              "memory_ids": [],
+              "relation_ids": [],
+              "gap": null
+            }
+          ],
+          "counts": {
+            "populated": 12,
+            "thin": 0,
+            "missing": 1,
+            "stale": 0,
+            "conflicted": 0
+          }
+        },
+        "included_memory_ids": [
+          "constraint.offline-first",
+          "gotcha.completed-filter-counts",
+          "question.recurring-tasks",
+          "synthesis.conventions-quality",
+          "workflow.post-task-verification"
+        ],
+        "relation_ids": [
+          "rel.constraint-offline-first-requires-fact-storage-localstorage",
+          "rel.gotcha-completed-filter-counts-affects-concept-filtered-views",
+          "rel.question-recurring-tasks-related-to-synthesis-feature-map",
+          "rel.synthesis-conventions-quality-derived-from-source-product-brief",
+          "rel.workflow-post-task-verification-documents-source-package-json"
+        ],
+        "relations": [
+          {
+            "id": "rel.synthesis-conventions-quality-derived-from-source-product-brief",
+            "from": "synthesis.conventions-quality",
+            "predicate": "derived_from",
+            "to": "source.product-brief",
+            "status": "active",
+            "confidence": "high",
+            "evidence": [
+              {
+                "kind": "memory",
+                "id": "synthesis.conventions-quality"
+              }
+            ],
+            "content_hash": null,
+            "created_at": "2026-05-12T09:00:00+02:00",
+            "updated_at": "2026-05-13T15:30:00+02:00",
+            "json_path": ".aictx/relations/synthesis-conventions-quality-derived-from-source-product-brief.json"
+          },
+          {
+            "id": "rel.workflow-post-task-verification-documents-source-package-json",
+            "from": "workflow.post-task-verification",
+            "predicate": "documents",
+            "to": "source.package-json",
+            "status": "active",
+            "confidence": "high",
+            "evidence": [
+              {
+                "kind": "memory",
+                "id": "workflow.post-task-verification"
+              }
+            ],
+            "content_hash": null,
+            "created_at": "2026-05-12T09:00:00+02:00",
+            "updated_at": "2026-05-13T15:30:00+02:00",
+            "json_path": ".aictx/relations/workflow-post-task-verification-documents-source-package-json.json"
+          },
+          {
+            "id": "rel.gotcha-completed-filter-counts-affects-concept-filtered-views",
+            "from": "gotcha.completed-filter-counts",
+            "predicate": "affects",
+            "to": "concept.filtered-views",
+            "status": "active",
+            "confidence": "high",
+            "evidence": [
+              {
+                "kind": "memory",
+                "id": "gotcha.completed-filter-counts"
+              }
+            ],
+            "content_hash": null,
+            "created_at": "2026-05-12T09:00:00+02:00",
+            "updated_at": "2026-05-13T15:30:00+02:00",
+            "json_path": ".aictx/relations/gotcha-completed-filter-counts-affects-concept-filtered-views.json"
+          },
+          {
+            "id": "rel.question-recurring-tasks-related-to-synthesis-feature-map",
+            "from": "question.recurring-tasks",
+            "predicate": "related_to",
+            "to": "synthesis.feature-map",
+            "status": "active",
+            "confidence": "high",
+            "evidence": [
+              {
+                "kind": "memory",
+                "id": "question.recurring-tasks"
+              }
+            ],
+            "content_hash": null,
+            "created_at": "2026-05-12T09:00:00+02:00",
+            "updated_at": "2026-05-13T15:30:00+02:00",
+            "json_path": ".aictx/relations/question-recurring-tasks-related-to-synthesis-feature-map.json"
+          },
+          {
+            "id": "rel.constraint-offline-first-requires-fact-storage-localstorage",
+            "from": "constraint.offline-first",
+            "predicate": "requires",
+            "to": "fact.storage-localstorage",
+            "status": "active",
+            "confidence": "high",
+            "evidence": [
+              {
+                "kind": "memory",
+                "id": "constraint.offline-first"
+              }
+            ],
+            "content_hash": null,
+            "created_at": "2026-05-12T09:00:00+02:00",
+            "updated_at": "2026-05-13T15:30:00+02:00",
+            "json_path": ".aictx/relations/constraint-offline-first-requires-fact-storage-localstorage.json"
+          }
+        ],
+        "generated_gaps": []
+      },
+      {
+        "name": "provenance",
+        "title": "Provenance",
+        "markdown": "# Provenance\n\nSource records and relation chains that explain where durable memory came from.\n\n## Role coverage\n\n- Sources / Provenance: populated\n- Product Intent: populated\n- Capability Map: populated\n- Architecture / Patterns: populated\n\n## Local-first todo architecture\n\nMemory: `architecture.local-first-todo-app` (architecture, active)\n\nThe app keeps task state in a small client-side store and persists a normalized task list to localStorage.\n\nRendering code reads from the store; persistence code only serializes and validates task records.\n\n## Filtered task views\n\nMemory: `concept.filtered-views` (concept, active)\n\nThe list supports all, active, completed, and overdue views. Counts must match the same predicate used to render each view.\n\n## Quick add\n\nMemory: `concept.quick-add` (concept, active)\n\nQuick add accepts a non-empty task title, trims whitespace, creates an active task, and clears the input after save.\n\n## Source: AGENTS.md\n\nMemory: `source.agent-guidance` (source, active)\n\nAgent instructions require loading memory before substantial Todo App changes and saving only durable project knowledge.\n\n## Source: package.json\n\nMemory: `source.package-json` (source, active)\n\nThe package manifest records TypeScript, Vite, Vitest, and the package scripts used for local development and verification.\n\n## Source: docs/product-brief.md\n\nMemory: `source.product-brief` (source, active)\n\nThe product brief describes a local-first Todo App for quick capture, filtering, and dependable reload behavior.\n\n## Source: README.md\n\nMemory: `source.readme` (source, active)\n\nThe README explains the Todo App repository layout, local development path, and browser behavior users should expect.\n\n## Feature map\n\nMemory: `synthesis.feature-map` (synthesis, active)\n\n- Quick add creates a task from a single text input.\n- Filtered views separate all, active, completed, and overdue tasks.\n- Local persistence keeps tasks available after reload.\n- Empty states explain the current filter without sending the user to documentation.\n\n## Product intent\n\nMemory: `synthesis.product-intent` (synthesis, active)\n\nThe Todo App helps a single user keep a trustworthy short list of work without account setup or network dependency.\n\nUseful output means fast capture, clear completion state, and no surprise data loss after refresh.\n\n## Relation context\n\n- `project.todo-app` implements `concept.quick-add` (active)\n- `project.todo-app` implements `concept.filtered-views` (active)\n- `synthesis.product-intent` derived_from `source.product-brief` (active)\n- `synthesis.feature-map` derived_from `source.product-brief` (active)\n- `synthesis.feature-map` summarizes `concept.quick-add` (active)\n- `synthesis.feature-map` summarizes `concept.filtered-views` (active)\n- `synthesis.repository-map` derived_from `source.readme` (active)\n- `architecture.local-first-todo-app` derived_from `source.readme` (active)\n- `synthesis.stack-and-tooling` derived_from `source.package-json` (active)\n- `synthesis.conventions-quality` derived_from `source.product-brief` (active)\n- `workflow.local-development` documents `source.package-json` (active)\n- `workflow.post-task-verification` documents `source.package-json` (active)\n- `gotcha.completed-filter-counts` affects `concept.filtered-views` (active)\n- `concept.filtered-views` depends_on `fact.storage-localstorage` (active)\n- `question.recurring-tasks` related_to `synthesis.feature-map` (active)\n- `synthesis.agent-guidance` derived_from `source.agent-guidance` (active)\n",
+        "role_coverage": {
+          "roles": [
+            {
+              "key": "product-intent",
+              "label": "Product Intent",
+              "description": "What this project is for and what useful output means.",
+              "status": "populated",
+              "optional": false,
+              "memory_ids": [
+                "synthesis.product-intent"
+              ],
+              "relation_ids": [
+                "rel.synthesis-product-intent-derived-from-source-product-brief"
+              ],
+              "gap": null
+            },
+            {
+              "key": "capability-map",
+              "label": "Capability Map",
+              "description": "Features, outputs, commands, APIs, or generation capabilities.",
+              "status": "populated",
+              "optional": false,
+              "memory_ids": [
+                "concept.filtered-views",
+                "concept.quick-add",
+                "synthesis.feature-map"
+              ],
+              "relation_ids": [
+                "rel.concept-filtered-views-depends-on-fact-storage-localstorage",
+                "rel.gotcha-completed-filter-counts-affects-concept-filtered-views",
+                "rel.project-todo-app-implements-concept-filtered-views",
+                "rel.project-todo-app-implements-concept-quick-add",
+                "rel.question-recurring-tasks-related-to-synthesis-feature-map",
+                "rel.synthesis-feature-map-derived-from-source-product-brief",
+                "rel.synthesis-feature-map-summarizes-concept-filtered-views",
+                "rel.synthesis-feature-map-summarizes-concept-quick-add"
+              ],
+              "gap": null
+            },
+            {
+              "key": "repository-map",
+              "label": "Repository Map",
+              "description": "Where important code, docs, tests, assets, and configs live.",
+              "status": "populated",
+              "optional": false,
+              "memory_ids": [
+                "synthesis.repository-map"
+              ],
+              "relation_ids": [
+                "rel.synthesis-repository-map-derived-from-source-readme"
+              ],
+              "gap": null
+            },
+            {
+              "key": "architecture-patterns",
+              "label": "Architecture / Patterns",
+              "description": "How the project is organized and which design patterns matter.",
+              "status": "populated",
+              "optional": false,
+              "memory_ids": [
+                "architecture.local-first-todo-app"
+              ],
+              "relation_ids": [
+                "rel.architecture-local-first-derived-from-source-readme"
+              ],
+              "gap": null
+            },
+            {
+              "key": "stack-tooling",
+              "label": "Stack / Tooling",
+              "description": "Languages, frameworks, package managers, build tools, and runtime constraints.",
+              "status": "populated",
+              "optional": false,
+              "memory_ids": [
+                "synthesis.stack-and-tooling"
+              ],
+              "relation_ids": [
+                "rel.synthesis-stack-and-tooling-derived-from-source-package-json"
+              ],
+              "gap": null
+            },
+            {
+              "key": "conventions-quality",
+              "label": "Conventions / Quality Bar",
+              "description": "Project-specific coding, design, review, and quality expectations.",
+              "status": "populated",
+              "optional": false,
+              "memory_ids": [
+                "constraint.offline-first",
+                "synthesis.conventions-quality"
+              ],
+              "relation_ids": [
+                "rel.constraint-offline-first-requires-fact-storage-localstorage",
+                "rel.synthesis-conventions-quality-derived-from-source-product-brief"
+              ],
+              "gap": null
+            },
+            {
+              "key": "workflows-howtos",
+              "label": "Workflows / How-tos",
+              "description": "Reusable setup, release, debugging, migration, generation, or maintenance procedures.",
+              "status": "populated",
+              "optional": false,
+              "memory_ids": [
+                "workflow.local-development",
+                "workflow.post-task-verification"
+              ],
+              "relation_ids": [
+                "rel.workflow-local-development-documents-source-package-json",
+                "rel.workflow-post-task-verification-documents-source-package-json"
+              ],
+              "gap": null
+            },
+            {
+              "key": "verification",
+              "label": "Verification",
+              "description": "Commands and checks agents should run before claiming work is done.",
+              "status": "populated",
+              "optional": false,
+              "memory_ids": [
+                "workflow.post-task-verification"
+              ],
+              "relation_ids": [
+                "rel.workflow-post-task-verification-documents-source-package-json"
+              ],
+              "gap": null
+            },
+            {
+              "key": "gotchas-risks",
+              "label": "Gotchas / Risks",
+              "description": "Known traps, fragile areas, abandoned approaches, or recurring failure modes.",
+              "status": "populated",
+              "optional": false,
+              "memory_ids": [
+                "gotcha.completed-filter-counts"
+              ],
+              "relation_ids": [
+                "rel.gotcha-completed-filter-counts-affects-concept-filtered-views"
+              ],
+              "gap": null
+            },
+            {
+              "key": "open-questions",
+              "label": "Open Questions",
+              "description": "Important unknowns agents should not guess.",
+              "status": "populated",
+              "optional": false,
+              "memory_ids": [
+                "question.recurring-tasks"
+              ],
+              "relation_ids": [
+                "rel.question-recurring-tasks-related-to-synthesis-feature-map"
+              ],
+              "gap": null
+            },
+            {
+              "key": "sources-provenance",
+              "label": "Sources / Provenance",
+              "description": "Source records and provenance relations backing durable memory.",
+              "status": "populated",
+              "optional": false,
+              "memory_ids": [
+                "source.agent-guidance",
+                "source.package-json",
+                "source.product-brief",
+                "source.readme"
+              ],
+              "relation_ids": [
+                "rel.architecture-local-first-derived-from-source-readme",
+                "rel.synthesis-agent-guidance-derived-from-source-agent-guidance",
+                "rel.synthesis-conventions-quality-derived-from-source-product-brief",
+                "rel.synthesis-feature-map-derived-from-source-product-brief",
+                "rel.synthesis-feature-map-summarizes-concept-filtered-views",
+                "rel.synthesis-feature-map-summarizes-concept-quick-add",
+                "rel.synthesis-product-intent-derived-from-source-product-brief",
+                "rel.synthesis-repository-map-derived-from-source-readme",
+                "rel.synthesis-stack-and-tooling-derived-from-source-package-json",
+                "rel.workflow-local-development-documents-source-package-json",
+                "rel.workflow-post-task-verification-documents-source-package-json"
+              ],
+              "gap": null
+            },
+            {
+              "key": "agent-guidance",
+              "label": "Agent Guidance",
+              "description": "Project-specific operating rules for AI coding agents.",
+              "status": "populated",
+              "optional": false,
+              "memory_ids": [
+                "synthesis.agent-guidance"
+              ],
+              "relation_ids": [
+                "rel.synthesis-agent-guidance-derived-from-source-agent-guidance"
+              ],
+              "gap": null
+            },
+            {
+              "key": "branch-handoff",
+              "label": "Branch Handoff",
+              "description": "Current branch continuity for unfinished work.",
+              "status": "missing",
+              "optional": true,
+              "memory_ids": [],
+              "relation_ids": [],
+              "gap": null
+            }
+          ],
+          "counts": {
+            "populated": 12,
+            "thin": 0,
+            "missing": 1,
+            "stale": 0,
+            "conflicted": 0
+          }
+        },
+        "included_memory_ids": [
+          "architecture.local-first-todo-app",
+          "concept.filtered-views",
+          "concept.quick-add",
+          "source.agent-guidance",
+          "source.package-json",
+          "source.product-brief",
+          "source.readme",
+          "synthesis.feature-map",
+          "synthesis.product-intent"
+        ],
+        "relation_ids": [
+          "rel.architecture-local-first-derived-from-source-readme",
+          "rel.concept-filtered-views-depends-on-fact-storage-localstorage",
+          "rel.gotcha-completed-filter-counts-affects-concept-filtered-views",
+          "rel.project-todo-app-implements-concept-filtered-views",
+          "rel.project-todo-app-implements-concept-quick-add",
+          "rel.question-recurring-tasks-related-to-synthesis-feature-map",
+          "rel.synthesis-agent-guidance-derived-from-source-agent-guidance",
+          "rel.synthesis-conventions-quality-derived-from-source-product-brief",
+          "rel.synthesis-feature-map-derived-from-source-product-brief",
+          "rel.synthesis-feature-map-summarizes-concept-filtered-views",
+          "rel.synthesis-feature-map-summarizes-concept-quick-add",
+          "rel.synthesis-product-intent-derived-from-source-product-brief",
+          "rel.synthesis-repository-map-derived-from-source-readme",
+          "rel.synthesis-stack-and-tooling-derived-from-source-package-json",
+          "rel.workflow-local-development-documents-source-package-json",
+          "rel.workflow-post-task-verification-documents-source-package-json"
+        ],
+        "relations": [
+          {
+            "id": "rel.project-todo-app-implements-concept-quick-add",
+            "from": "project.todo-app",
+            "predicate": "implements",
+            "to": "concept.quick-add",
+            "status": "active",
+            "confidence": "high",
+            "evidence": [
+              {
+                "kind": "memory",
+                "id": "project.todo-app"
+              }
+            ],
+            "content_hash": null,
+            "created_at": "2026-05-12T09:00:00+02:00",
+            "updated_at": "2026-05-13T15:30:00+02:00",
+            "json_path": ".aictx/relations/project-todo-app-implements-concept-quick-add.json"
+          },
+          {
+            "id": "rel.project-todo-app-implements-concept-filtered-views",
+            "from": "project.todo-app",
+            "predicate": "implements",
+            "to": "concept.filtered-views",
+            "status": "active",
+            "confidence": "high",
+            "evidence": [
+              {
+                "kind": "memory",
+                "id": "project.todo-app"
+              }
+            ],
+            "content_hash": null,
+            "created_at": "2026-05-12T09:00:00+02:00",
+            "updated_at": "2026-05-13T15:30:00+02:00",
+            "json_path": ".aictx/relations/project-todo-app-implements-concept-filtered-views.json"
+          },
+          {
+            "id": "rel.synthesis-product-intent-derived-from-source-product-brief",
+            "from": "synthesis.product-intent",
+            "predicate": "derived_from",
+            "to": "source.product-brief",
+            "status": "active",
+            "confidence": "high",
+            "evidence": [
+              {
+                "kind": "memory",
+                "id": "synthesis.product-intent"
+              }
+            ],
+            "content_hash": null,
+            "created_at": "2026-05-12T09:00:00+02:00",
+            "updated_at": "2026-05-13T15:30:00+02:00",
+            "json_path": ".aictx/relations/synthesis-product-intent-derived-from-source-product-brief.json"
+          },
+          {
+            "id": "rel.synthesis-feature-map-derived-from-source-product-brief",
+            "from": "synthesis.feature-map",
+            "predicate": "derived_from",
+            "to": "source.product-brief",
+            "status": "active",
+            "confidence": "high",
+            "evidence": [
+              {
+                "kind": "memory",
+                "id": "synthesis.feature-map"
+              }
+            ],
+            "content_hash": null,
+            "created_at": "2026-05-12T09:00:00+02:00",
+            "updated_at": "2026-05-13T15:30:00+02:00",
+            "json_path": ".aictx/relations/synthesis-feature-map-derived-from-source-product-brief.json"
+          },
+          {
+            "id": "rel.synthesis-feature-map-summarizes-concept-quick-add",
+            "from": "synthesis.feature-map",
+            "predicate": "summarizes",
+            "to": "concept.quick-add",
+            "status": "active",
+            "confidence": "high",
+            "evidence": [
+              {
+                "kind": "memory",
+                "id": "synthesis.feature-map"
+              }
+            ],
+            "content_hash": null,
+            "created_at": "2026-05-12T09:00:00+02:00",
+            "updated_at": "2026-05-13T15:30:00+02:00",
+            "json_path": ".aictx/relations/synthesis-feature-map-summarizes-concept-quick-add.json"
+          },
+          {
+            "id": "rel.synthesis-feature-map-summarizes-concept-filtered-views",
+            "from": "synthesis.feature-map",
+            "predicate": "summarizes",
+            "to": "concept.filtered-views",
+            "status": "active",
+            "confidence": "high",
+            "evidence": [
+              {
+                "kind": "memory",
+                "id": "synthesis.feature-map"
+              }
+            ],
+            "content_hash": null,
+            "created_at": "2026-05-12T09:00:00+02:00",
+            "updated_at": "2026-05-13T15:30:00+02:00",
+            "json_path": ".aictx/relations/synthesis-feature-map-summarizes-concept-filtered-views.json"
+          },
+          {
+            "id": "rel.synthesis-repository-map-derived-from-source-readme",
+            "from": "synthesis.repository-map",
+            "predicate": "derived_from",
+            "to": "source.readme",
+            "status": "active",
+            "confidence": "high",
+            "evidence": [
+              {
+                "kind": "memory",
+                "id": "synthesis.repository-map"
+              }
+            ],
+            "content_hash": null,
+            "created_at": "2026-05-12T09:00:00+02:00",
+            "updated_at": "2026-05-13T15:30:00+02:00",
+            "json_path": ".aictx/relations/synthesis-repository-map-derived-from-source-readme.json"
+          },
+          {
+            "id": "rel.architecture-local-first-derived-from-source-readme",
+            "from": "architecture.local-first-todo-app",
+            "predicate": "derived_from",
+            "to": "source.readme",
+            "status": "active",
+            "confidence": "high",
+            "evidence": [
+              {
+                "kind": "memory",
+                "id": "architecture.local-first-todo-app"
+              }
+            ],
+            "content_hash": null,
+            "created_at": "2026-05-12T09:00:00+02:00",
+            "updated_at": "2026-05-13T15:30:00+02:00",
+            "json_path": ".aictx/relations/architecture-local-first-derived-from-source-readme.json"
+          },
+          {
+            "id": "rel.synthesis-stack-and-tooling-derived-from-source-package-json",
+            "from": "synthesis.stack-and-tooling",
+            "predicate": "derived_from",
+            "to": "source.package-json",
+            "status": "active",
+            "confidence": "high",
+            "evidence": [
+              {
+                "kind": "memory",
+                "id": "synthesis.stack-and-tooling"
+              }
+            ],
+            "content_hash": null,
+            "created_at": "2026-05-12T09:00:00+02:00",
+            "updated_at": "2026-05-13T15:30:00+02:00",
+            "json_path": ".aictx/relations/synthesis-stack-and-tooling-derived-from-source-package-json.json"
+          },
+          {
+            "id": "rel.synthesis-conventions-quality-derived-from-source-product-brief",
+            "from": "synthesis.conventions-quality",
+            "predicate": "derived_from",
+            "to": "source.product-brief",
+            "status": "active",
+            "confidence": "high",
+            "evidence": [
+              {
+                "kind": "memory",
+                "id": "synthesis.conventions-quality"
+              }
+            ],
+            "content_hash": null,
+            "created_at": "2026-05-12T09:00:00+02:00",
+            "updated_at": "2026-05-13T15:30:00+02:00",
+            "json_path": ".aictx/relations/synthesis-conventions-quality-derived-from-source-product-brief.json"
+          },
+          {
+            "id": "rel.workflow-local-development-documents-source-package-json",
+            "from": "workflow.local-development",
+            "predicate": "documents",
+            "to": "source.package-json",
+            "status": "active",
+            "confidence": "high",
+            "evidence": [
+              {
+                "kind": "memory",
+                "id": "workflow.local-development"
+              }
+            ],
+            "content_hash": null,
+            "created_at": "2026-05-12T09:00:00+02:00",
+            "updated_at": "2026-05-13T15:30:00+02:00",
+            "json_path": ".aictx/relations/workflow-local-development-documents-source-package-json.json"
+          },
+          {
+            "id": "rel.workflow-post-task-verification-documents-source-package-json",
+            "from": "workflow.post-task-verification",
+            "predicate": "documents",
+            "to": "source.package-json",
+            "status": "active",
+            "confidence": "high",
+            "evidence": [
+              {
+                "kind": "memory",
+                "id": "workflow.post-task-verification"
+              }
+            ],
+            "content_hash": null,
+            "created_at": "2026-05-12T09:00:00+02:00",
+            "updated_at": "2026-05-13T15:30:00+02:00",
+            "json_path": ".aictx/relations/workflow-post-task-verification-documents-source-package-json.json"
+          },
+          {
+            "id": "rel.gotcha-completed-filter-counts-affects-concept-filtered-views",
+            "from": "gotcha.completed-filter-counts",
+            "predicate": "affects",
+            "to": "concept.filtered-views",
+            "status": "active",
+            "confidence": "high",
+            "evidence": [
+              {
+                "kind": "memory",
+                "id": "gotcha.completed-filter-counts"
+              }
+            ],
+            "content_hash": null,
+            "created_at": "2026-05-12T09:00:00+02:00",
+            "updated_at": "2026-05-13T15:30:00+02:00",
+            "json_path": ".aictx/relations/gotcha-completed-filter-counts-affects-concept-filtered-views.json"
+          },
+          {
+            "id": "rel.concept-filtered-views-depends-on-fact-storage-localstorage",
+            "from": "concept.filtered-views",
+            "predicate": "depends_on",
+            "to": "fact.storage-localstorage",
+            "status": "active",
+            "confidence": "high",
+            "evidence": [
+              {
+                "kind": "memory",
+                "id": "concept.filtered-views"
+              }
+            ],
+            "content_hash": null,
+            "created_at": "2026-05-12T09:00:00+02:00",
+            "updated_at": "2026-05-13T15:30:00+02:00",
+            "json_path": ".aictx/relations/concept-filtered-views-depends-on-fact-storage-localstorage.json"
+          },
+          {
+            "id": "rel.question-recurring-tasks-related-to-synthesis-feature-map",
+            "from": "question.recurring-tasks",
+            "predicate": "related_to",
+            "to": "synthesis.feature-map",
+            "status": "active",
+            "confidence": "high",
+            "evidence": [
+              {
+                "kind": "memory",
+                "id": "question.recurring-tasks"
+              }
+            ],
+            "content_hash": null,
+            "created_at": "2026-05-12T09:00:00+02:00",
+            "updated_at": "2026-05-13T15:30:00+02:00",
+            "json_path": ".aictx/relations/question-recurring-tasks-related-to-synthesis-feature-map.json"
+          },
+          {
+            "id": "rel.synthesis-agent-guidance-derived-from-source-agent-guidance",
+            "from": "synthesis.agent-guidance",
+            "predicate": "derived_from",
+            "to": "source.agent-guidance",
+            "status": "active",
+            "confidence": "high",
+            "evidence": [
+              {
+                "kind": "memory",
+                "id": "synthesis.agent-guidance"
+              }
+            ],
+            "content_hash": null,
+            "created_at": "2026-05-12T09:00:00+02:00",
+            "updated_at": "2026-05-13T15:30:00+02:00",
+            "json_path": ".aictx/relations/synthesis-agent-guidance-derived-from-source-agent-guidance.json"
+          }
+        ],
+        "generated_gaps": []
+      },
+      {
+        "name": "maintenance",
+        "title": "Maintenance",
+        "markdown": "# Maintenance\n\nCoverage gaps, stale memory, supersessions, and conflicts that need cleanup.\n\n## Role coverage\n\n- Product Intent: populated\n- Capability Map: populated\n- Repository Map: populated\n- Architecture / Patterns: populated\n- Stack / Tooling: populated\n- Conventions / Quality Bar: populated\n- Workflows / How-tos: populated\n- Verification: populated\n- Gotchas / Risks: populated\n- Open Questions: populated\n- Sources / Provenance: populated\n- Agent Guidance: populated\n- Branch Handoff: missing (optional)\n\n## Local-first todo architecture\n\nMemory: `architecture.local-first-todo-app` (architecture, active)\n\nThe app keeps task state in a small client-side store and persists a normalized task list to localStorage.\n\nRendering code reads from the store; persistence code only serializes and validates task records.\n\n## Filtered task views\n\nMemory: `concept.filtered-views` (concept, active)\n\nThe list supports all, active, completed, and overdue views. Counts must match the same predicate used to render each view.\n\n## Quick add\n\nMemory: `concept.quick-add` (concept, active)\n\nQuick add accepts a non-empty task title, trims whitespace, creates an active task, and clears the input after save.\n\n## Stay offline first\n\nMemory: `constraint.offline-first` (constraint, active)\n\nTask creation, completion, filtering, and persistence must work without a backend service.\n\nDo not add a hosted database or login flow to satisfy demo requirements.\n\n## Completed filter counts can drift\n\nMemory: `gotcha.completed-filter-counts` (gotcha, active)\n\nDo not compute filter badges with a different predicate than the rendered list. This caused completed tasks to appear in the active count before.\n\n## Recurring task scope\n\nMemory: `question.recurring-tasks` (question, open)\n\nShould recurring tasks be part of the Todo App, or should the app stay focused on one-off personal tasks for the first release?\n\n## Source: AGENTS.md\n\nMemory: `source.agent-guidance` (source, active)\n\nAgent instructions require loading memory before substantial Todo App changes and saving only durable project knowledge.\n\n## Source: package.json\n\nMemory: `source.package-json` (source, active)\n\nThe package manifest records TypeScript, Vite, Vitest, and the package scripts used for local development and verification.\n\n## Source: docs/product-brief.md\n\nMemory: `source.product-brief` (source, active)\n\nThe product brief describes a local-first Todo App for quick capture, filtering, and dependable reload behavior.\n\n## Source: README.md\n\nMemory: `source.readme` (source, active)\n\nThe README explains the Todo App repository layout, local development path, and browser behavior users should expect.\n\n## Agent guidance\n\nMemory: `synthesis.agent-guidance` (synthesis, active)\n\nLoad Aictx memory before non-trivial Todo App work. Preserve the offline-first scope, keep UI behavior keyboard accessible, and verify persistence after reload.\n\n## Conventions and quality bar\n\nMemory: `synthesis.conventions-quality` (synthesis, active)\n\nKeep task mutations explicit, preserve keyboard access for every task action, and keep empty states tied to the active filter.\n\nAvoid adding accounts, sync, or collaboration features unless the product scope changes.\n\n## Feature map\n\nMemory: `synthesis.feature-map` (synthesis, active)\n\n- Quick add creates a task from a single text input.\n- Filtered views separate all, active, completed, and overdue tasks.\n- Local persistence keeps tasks available after reload.\n- Empty states explain the current filter without sending the user to documentation.\n\n## Product intent\n\nMemory: `synthesis.product-intent` (synthesis, active)\n\nThe Todo App helps a single user keep a trustworthy short list of work without account setup or network dependency.\n\nUseful output means fast capture, clear completion state, and no surprise data loss after refresh.\n\n## Repository map\n\nMemory: `synthesis.repository-map` (synthesis, active)\n\nApplication code lives under `src/`, reusable UI pieces live under `src/components/`, and persistence helpers live under `src/storage/`.\n\nTests mirror those areas under `test/` with browser coverage for task creation and filtering.\n\n## Stack and tooling\n\nMemory: `synthesis.stack-and-tooling` (synthesis, active)\n\nThe demo Todo App uses TypeScript, Vite, and Vitest. Browser behavior is covered with Playwright-style flow tests.\n\nPackage scripts are the preferred interface for build, test, and lint checks.\n\n## Local development workflow\n\nMemory: `workflow.local-development` (workflow, active)\n\nRun `pnpm install`, `pnpm dev`, and then open the Vite URL. Use the browser flow before changing persistence behavior.\n\n## Post-task verification\n\nMemory: `workflow.post-task-verification` (workflow, active)\n\nBefore finishing Todo App work, run `pnpm test`, `pnpm run typecheck`, and a browser check for add, complete, filter, and reload behavior.\n\n## Relation context\n\n- `project.todo-app` implements `concept.quick-add` (active)\n- `project.todo-app` implements `concept.filtered-views` (active)\n- `synthesis.product-intent` derived_from `source.product-brief` (active)\n- `synthesis.feature-map` derived_from `source.product-brief` (active)\n- `synthesis.feature-map` summarizes `concept.quick-add` (active)\n- `synthesis.feature-map` summarizes `concept.filtered-views` (active)\n- `synthesis.repository-map` derived_from `source.readme` (active)\n- `architecture.local-first-todo-app` derived_from `source.readme` (active)\n- `synthesis.stack-and-tooling` derived_from `source.package-json` (active)\n- `synthesis.conventions-quality` derived_from `source.product-brief` (active)\n- `workflow.local-development` documents `source.package-json` (active)\n- `workflow.post-task-verification` documents `source.package-json` (active)\n- `gotcha.completed-filter-counts` affects `concept.filtered-views` (active)\n- `concept.filtered-views` depends_on `fact.storage-localstorage` (active)\n- `question.recurring-tasks` related_to `synthesis.feature-map` (active)\n- `synthesis.agent-guidance` derived_from `source.agent-guidance` (active)\n- `constraint.offline-first` requires `fact.storage-localstorage` (active)\n",
+        "role_coverage": {
+          "roles": [
+            {
+              "key": "product-intent",
+              "label": "Product Intent",
+              "description": "What this project is for and what useful output means.",
+              "status": "populated",
+              "optional": false,
+              "memory_ids": [
+                "synthesis.product-intent"
+              ],
+              "relation_ids": [
+                "rel.synthesis-product-intent-derived-from-source-product-brief"
+              ],
+              "gap": null
+            },
+            {
+              "key": "capability-map",
+              "label": "Capability Map",
+              "description": "Features, outputs, commands, APIs, or generation capabilities.",
+              "status": "populated",
+              "optional": false,
+              "memory_ids": [
+                "concept.filtered-views",
+                "concept.quick-add",
+                "synthesis.feature-map"
+              ],
+              "relation_ids": [
+                "rel.concept-filtered-views-depends-on-fact-storage-localstorage",
+                "rel.gotcha-completed-filter-counts-affects-concept-filtered-views",
+                "rel.project-todo-app-implements-concept-filtered-views",
+                "rel.project-todo-app-implements-concept-quick-add",
+                "rel.question-recurring-tasks-related-to-synthesis-feature-map",
+                "rel.synthesis-feature-map-derived-from-source-product-brief",
+                "rel.synthesis-feature-map-summarizes-concept-filtered-views",
+                "rel.synthesis-feature-map-summarizes-concept-quick-add"
+              ],
+              "gap": null
+            },
+            {
+              "key": "repository-map",
+              "label": "Repository Map",
+              "description": "Where important code, docs, tests, assets, and configs live.",
+              "status": "populated",
+              "optional": false,
+              "memory_ids": [
+                "synthesis.repository-map"
+              ],
+              "relation_ids": [
+                "rel.synthesis-repository-map-derived-from-source-readme"
+              ],
+              "gap": null
+            },
+            {
+              "key": "architecture-patterns",
+              "label": "Architecture / Patterns",
+              "description": "How the project is organized and which design patterns matter.",
+              "status": "populated",
+              "optional": false,
+              "memory_ids": [
+                "architecture.local-first-todo-app"
+              ],
+              "relation_ids": [
+                "rel.architecture-local-first-derived-from-source-readme"
+              ],
+              "gap": null
+            },
+            {
+              "key": "stack-tooling",
+              "label": "Stack / Tooling",
+              "description": "Languages, frameworks, package managers, build tools, and runtime constraints.",
+              "status": "populated",
+              "optional": false,
+              "memory_ids": [
+                "synthesis.stack-and-tooling"
+              ],
+              "relation_ids": [
+                "rel.synthesis-stack-and-tooling-derived-from-source-package-json"
+              ],
+              "gap": null
+            },
+            {
+              "key": "conventions-quality",
+              "label": "Conventions / Quality Bar",
+              "description": "Project-specific coding, design, review, and quality expectations.",
+              "status": "populated",
+              "optional": false,
+              "memory_ids": [
+                "constraint.offline-first",
+                "synthesis.conventions-quality"
+              ],
+              "relation_ids": [
+                "rel.constraint-offline-first-requires-fact-storage-localstorage",
+                "rel.synthesis-conventions-quality-derived-from-source-product-brief"
+              ],
+              "gap": null
+            },
+            {
+              "key": "workflows-howtos",
+              "label": "Workflows / How-tos",
+              "description": "Reusable setup, release, debugging, migration, generation, or maintenance procedures.",
+              "status": "populated",
+              "optional": false,
+              "memory_ids": [
+                "workflow.local-development",
+                "workflow.post-task-verification"
+              ],
+              "relation_ids": [
+                "rel.workflow-local-development-documents-source-package-json",
+                "rel.workflow-post-task-verification-documents-source-package-json"
+              ],
+              "gap": null
+            },
+            {
+              "key": "verification",
+              "label": "Verification",
+              "description": "Commands and checks agents should run before claiming work is done.",
+              "status": "populated",
+              "optional": false,
+              "memory_ids": [
+                "workflow.post-task-verification"
+              ],
+              "relation_ids": [
+                "rel.workflow-post-task-verification-documents-source-package-json"
+              ],
+              "gap": null
+            },
+            {
+              "key": "gotchas-risks",
+              "label": "Gotchas / Risks",
+              "description": "Known traps, fragile areas, abandoned approaches, or recurring failure modes.",
+              "status": "populated",
+              "optional": false,
+              "memory_ids": [
+                "gotcha.completed-filter-counts"
+              ],
+              "relation_ids": [
+                "rel.gotcha-completed-filter-counts-affects-concept-filtered-views"
+              ],
+              "gap": null
+            },
+            {
+              "key": "open-questions",
+              "label": "Open Questions",
+              "description": "Important unknowns agents should not guess.",
+              "status": "populated",
+              "optional": false,
+              "memory_ids": [
+                "question.recurring-tasks"
+              ],
+              "relation_ids": [
+                "rel.question-recurring-tasks-related-to-synthesis-feature-map"
+              ],
+              "gap": null
+            },
+            {
+              "key": "sources-provenance",
+              "label": "Sources / Provenance",
+              "description": "Source records and provenance relations backing durable memory.",
+              "status": "populated",
+              "optional": false,
+              "memory_ids": [
+                "source.agent-guidance",
+                "source.package-json",
+                "source.product-brief",
+                "source.readme"
+              ],
+              "relation_ids": [
+                "rel.architecture-local-first-derived-from-source-readme",
+                "rel.synthesis-agent-guidance-derived-from-source-agent-guidance",
+                "rel.synthesis-conventions-quality-derived-from-source-product-brief",
+                "rel.synthesis-feature-map-derived-from-source-product-brief",
+                "rel.synthesis-feature-map-summarizes-concept-filtered-views",
+                "rel.synthesis-feature-map-summarizes-concept-quick-add",
+                "rel.synthesis-product-intent-derived-from-source-product-brief",
+                "rel.synthesis-repository-map-derived-from-source-readme",
+                "rel.synthesis-stack-and-tooling-derived-from-source-package-json",
+                "rel.workflow-local-development-documents-source-package-json",
+                "rel.workflow-post-task-verification-documents-source-package-json"
+              ],
+              "gap": null
+            },
+            {
+              "key": "agent-guidance",
+              "label": "Agent Guidance",
+              "description": "Project-specific operating rules for AI coding agents.",
+              "status": "populated",
+              "optional": false,
+              "memory_ids": [
+                "synthesis.agent-guidance"
+              ],
+              "relation_ids": [
+                "rel.synthesis-agent-guidance-derived-from-source-agent-guidance"
+              ],
+              "gap": null
+            },
+            {
+              "key": "branch-handoff",
+              "label": "Branch Handoff",
+              "description": "Current branch continuity for unfinished work.",
+              "status": "missing",
+              "optional": true,
+              "memory_ids": [],
+              "relation_ids": [],
+              "gap": null
+            }
+          ],
+          "counts": {
+            "populated": 12,
+            "thin": 0,
+            "missing": 1,
+            "stale": 0,
+            "conflicted": 0
+          }
+        },
+        "included_memory_ids": [
+          "architecture.local-first-todo-app",
+          "concept.filtered-views",
+          "concept.quick-add",
+          "constraint.offline-first",
+          "gotcha.completed-filter-counts",
+          "question.recurring-tasks",
+          "source.agent-guidance",
+          "source.package-json",
+          "source.product-brief",
+          "source.readme",
+          "synthesis.agent-guidance",
+          "synthesis.conventions-quality",
+          "synthesis.feature-map",
+          "synthesis.product-intent",
+          "synthesis.repository-map",
+          "synthesis.stack-and-tooling",
+          "workflow.local-development",
+          "workflow.post-task-verification"
+        ],
+        "relation_ids": [
+          "rel.architecture-local-first-derived-from-source-readme",
+          "rel.concept-filtered-views-depends-on-fact-storage-localstorage",
+          "rel.constraint-offline-first-requires-fact-storage-localstorage",
+          "rel.gotcha-completed-filter-counts-affects-concept-filtered-views",
+          "rel.project-todo-app-implements-concept-filtered-views",
+          "rel.project-todo-app-implements-concept-quick-add",
+          "rel.question-recurring-tasks-related-to-synthesis-feature-map",
+          "rel.synthesis-agent-guidance-derived-from-source-agent-guidance",
+          "rel.synthesis-conventions-quality-derived-from-source-product-brief",
+          "rel.synthesis-feature-map-derived-from-source-product-brief",
+          "rel.synthesis-feature-map-summarizes-concept-filtered-views",
+          "rel.synthesis-feature-map-summarizes-concept-quick-add",
+          "rel.synthesis-product-intent-derived-from-source-product-brief",
+          "rel.synthesis-repository-map-derived-from-source-readme",
+          "rel.synthesis-stack-and-tooling-derived-from-source-package-json",
+          "rel.workflow-local-development-documents-source-package-json",
+          "rel.workflow-post-task-verification-documents-source-package-json"
+        ],
+        "relations": [
+          {
+            "id": "rel.project-todo-app-implements-concept-quick-add",
+            "from": "project.todo-app",
+            "predicate": "implements",
+            "to": "concept.quick-add",
+            "status": "active",
+            "confidence": "high",
+            "evidence": [
+              {
+                "kind": "memory",
+                "id": "project.todo-app"
+              }
+            ],
+            "content_hash": null,
+            "created_at": "2026-05-12T09:00:00+02:00",
+            "updated_at": "2026-05-13T15:30:00+02:00",
+            "json_path": ".aictx/relations/project-todo-app-implements-concept-quick-add.json"
+          },
+          {
+            "id": "rel.project-todo-app-implements-concept-filtered-views",
+            "from": "project.todo-app",
+            "predicate": "implements",
+            "to": "concept.filtered-views",
+            "status": "active",
+            "confidence": "high",
+            "evidence": [
+              {
+                "kind": "memory",
+                "id": "project.todo-app"
+              }
+            ],
+            "content_hash": null,
+            "created_at": "2026-05-12T09:00:00+02:00",
+            "updated_at": "2026-05-13T15:30:00+02:00",
+            "json_path": ".aictx/relations/project-todo-app-implements-concept-filtered-views.json"
+          },
+          {
+            "id": "rel.synthesis-product-intent-derived-from-source-product-brief",
+            "from": "synthesis.product-intent",
+            "predicate": "derived_from",
+            "to": "source.product-brief",
+            "status": "active",
+            "confidence": "high",
+            "evidence": [
+              {
+                "kind": "memory",
+                "id": "synthesis.product-intent"
+              }
+            ],
+            "content_hash": null,
+            "created_at": "2026-05-12T09:00:00+02:00",
+            "updated_at": "2026-05-13T15:30:00+02:00",
+            "json_path": ".aictx/relations/synthesis-product-intent-derived-from-source-product-brief.json"
+          },
+          {
+            "id": "rel.synthesis-feature-map-derived-from-source-product-brief",
+            "from": "synthesis.feature-map",
+            "predicate": "derived_from",
+            "to": "source.product-brief",
+            "status": "active",
+            "confidence": "high",
+            "evidence": [
+              {
+                "kind": "memory",
+                "id": "synthesis.feature-map"
+              }
+            ],
+            "content_hash": null,
+            "created_at": "2026-05-12T09:00:00+02:00",
+            "updated_at": "2026-05-13T15:30:00+02:00",
+            "json_path": ".aictx/relations/synthesis-feature-map-derived-from-source-product-brief.json"
+          },
+          {
+            "id": "rel.synthesis-feature-map-summarizes-concept-quick-add",
+            "from": "synthesis.feature-map",
+            "predicate": "summarizes",
+            "to": "concept.quick-add",
+            "status": "active",
+            "confidence": "high",
+            "evidence": [
+              {
+                "kind": "memory",
+                "id": "synthesis.feature-map"
+              }
+            ],
+            "content_hash": null,
+            "created_at": "2026-05-12T09:00:00+02:00",
+            "updated_at": "2026-05-13T15:30:00+02:00",
+            "json_path": ".aictx/relations/synthesis-feature-map-summarizes-concept-quick-add.json"
+          },
+          {
+            "id": "rel.synthesis-feature-map-summarizes-concept-filtered-views",
+            "from": "synthesis.feature-map",
+            "predicate": "summarizes",
+            "to": "concept.filtered-views",
+            "status": "active",
+            "confidence": "high",
+            "evidence": [
+              {
+                "kind": "memory",
+                "id": "synthesis.feature-map"
+              }
+            ],
+            "content_hash": null,
+            "created_at": "2026-05-12T09:00:00+02:00",
+            "updated_at": "2026-05-13T15:30:00+02:00",
+            "json_path": ".aictx/relations/synthesis-feature-map-summarizes-concept-filtered-views.json"
+          },
+          {
+            "id": "rel.synthesis-repository-map-derived-from-source-readme",
+            "from": "synthesis.repository-map",
+            "predicate": "derived_from",
+            "to": "source.readme",
+            "status": "active",
+            "confidence": "high",
+            "evidence": [
+              {
+                "kind": "memory",
+                "id": "synthesis.repository-map"
+              }
+            ],
+            "content_hash": null,
+            "created_at": "2026-05-12T09:00:00+02:00",
+            "updated_at": "2026-05-13T15:30:00+02:00",
+            "json_path": ".aictx/relations/synthesis-repository-map-derived-from-source-readme.json"
+          },
+          {
+            "id": "rel.architecture-local-first-derived-from-source-readme",
+            "from": "architecture.local-first-todo-app",
+            "predicate": "derived_from",
+            "to": "source.readme",
+            "status": "active",
+            "confidence": "high",
+            "evidence": [
+              {
+                "kind": "memory",
+                "id": "architecture.local-first-todo-app"
+              }
+            ],
+            "content_hash": null,
+            "created_at": "2026-05-12T09:00:00+02:00",
+            "updated_at": "2026-05-13T15:30:00+02:00",
+            "json_path": ".aictx/relations/architecture-local-first-derived-from-source-readme.json"
+          },
+          {
+            "id": "rel.synthesis-stack-and-tooling-derived-from-source-package-json",
+            "from": "synthesis.stack-and-tooling",
+            "predicate": "derived_from",
+            "to": "source.package-json",
+            "status": "active",
+            "confidence": "high",
+            "evidence": [
+              {
+                "kind": "memory",
+                "id": "synthesis.stack-and-tooling"
+              }
+            ],
+            "content_hash": null,
+            "created_at": "2026-05-12T09:00:00+02:00",
+            "updated_at": "2026-05-13T15:30:00+02:00",
+            "json_path": ".aictx/relations/synthesis-stack-and-tooling-derived-from-source-package-json.json"
+          },
+          {
+            "id": "rel.synthesis-conventions-quality-derived-from-source-product-brief",
+            "from": "synthesis.conventions-quality",
+            "predicate": "derived_from",
+            "to": "source.product-brief",
+            "status": "active",
+            "confidence": "high",
+            "evidence": [
+              {
+                "kind": "memory",
+                "id": "synthesis.conventions-quality"
+              }
+            ],
+            "content_hash": null,
+            "created_at": "2026-05-12T09:00:00+02:00",
+            "updated_at": "2026-05-13T15:30:00+02:00",
+            "json_path": ".aictx/relations/synthesis-conventions-quality-derived-from-source-product-brief.json"
+          },
+          {
+            "id": "rel.workflow-local-development-documents-source-package-json",
+            "from": "workflow.local-development",
+            "predicate": "documents",
+            "to": "source.package-json",
+            "status": "active",
+            "confidence": "high",
+            "evidence": [
+              {
+                "kind": "memory",
+                "id": "workflow.local-development"
+              }
+            ],
+            "content_hash": null,
+            "created_at": "2026-05-12T09:00:00+02:00",
+            "updated_at": "2026-05-13T15:30:00+02:00",
+            "json_path": ".aictx/relations/workflow-local-development-documents-source-package-json.json"
+          },
+          {
+            "id": "rel.workflow-post-task-verification-documents-source-package-json",
+            "from": "workflow.post-task-verification",
+            "predicate": "documents",
+            "to": "source.package-json",
+            "status": "active",
+            "confidence": "high",
+            "evidence": [
+              {
+                "kind": "memory",
+                "id": "workflow.post-task-verification"
+              }
+            ],
+            "content_hash": null,
+            "created_at": "2026-05-12T09:00:00+02:00",
+            "updated_at": "2026-05-13T15:30:00+02:00",
+            "json_path": ".aictx/relations/workflow-post-task-verification-documents-source-package-json.json"
+          },
+          {
+            "id": "rel.gotcha-completed-filter-counts-affects-concept-filtered-views",
+            "from": "gotcha.completed-filter-counts",
+            "predicate": "affects",
+            "to": "concept.filtered-views",
+            "status": "active",
+            "confidence": "high",
+            "evidence": [
+              {
+                "kind": "memory",
+                "id": "gotcha.completed-filter-counts"
+              }
+            ],
+            "content_hash": null,
+            "created_at": "2026-05-12T09:00:00+02:00",
+            "updated_at": "2026-05-13T15:30:00+02:00",
+            "json_path": ".aictx/relations/gotcha-completed-filter-counts-affects-concept-filtered-views.json"
+          },
+          {
+            "id": "rel.concept-filtered-views-depends-on-fact-storage-localstorage",
+            "from": "concept.filtered-views",
+            "predicate": "depends_on",
+            "to": "fact.storage-localstorage",
+            "status": "active",
+            "confidence": "high",
+            "evidence": [
+              {
+                "kind": "memory",
+                "id": "concept.filtered-views"
+              }
+            ],
+            "content_hash": null,
+            "created_at": "2026-05-12T09:00:00+02:00",
+            "updated_at": "2026-05-13T15:30:00+02:00",
+            "json_path": ".aictx/relations/concept-filtered-views-depends-on-fact-storage-localstorage.json"
+          },
+          {
+            "id": "rel.question-recurring-tasks-related-to-synthesis-feature-map",
+            "from": "question.recurring-tasks",
+            "predicate": "related_to",
+            "to": "synthesis.feature-map",
+            "status": "active",
+            "confidence": "high",
+            "evidence": [
+              {
+                "kind": "memory",
+                "id": "question.recurring-tasks"
+              }
+            ],
+            "content_hash": null,
+            "created_at": "2026-05-12T09:00:00+02:00",
+            "updated_at": "2026-05-13T15:30:00+02:00",
+            "json_path": ".aictx/relations/question-recurring-tasks-related-to-synthesis-feature-map.json"
+          },
+          {
+            "id": "rel.synthesis-agent-guidance-derived-from-source-agent-guidance",
+            "from": "synthesis.agent-guidance",
+            "predicate": "derived_from",
+            "to": "source.agent-guidance",
+            "status": "active",
+            "confidence": "high",
+            "evidence": [
+              {
+                "kind": "memory",
+                "id": "synthesis.agent-guidance"
+              }
+            ],
+            "content_hash": null,
+            "created_at": "2026-05-12T09:00:00+02:00",
+            "updated_at": "2026-05-13T15:30:00+02:00",
+            "json_path": ".aictx/relations/synthesis-agent-guidance-derived-from-source-agent-guidance.json"
+          },
+          {
+            "id": "rel.constraint-offline-first-requires-fact-storage-localstorage",
+            "from": "constraint.offline-first",
+            "predicate": "requires",
+            "to": "fact.storage-localstorage",
+            "status": "active",
+            "confidence": "high",
+            "evidence": [
+              {
+                "kind": "memory",
+                "id": "constraint.offline-first"
+              }
+            ],
+            "content_hash": null,
+            "created_at": "2026-05-12T09:00:00+02:00",
+            "updated_at": "2026-05-13T15:30:00+02:00",
+            "json_path": ".aictx/relations/constraint-offline-first-requires-fact-storage-localstorage.json"
+          }
+        ],
+        "generated_gaps": []
+      }
+    ],
     "storage_warnings": []
   }
 }

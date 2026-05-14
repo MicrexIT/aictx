@@ -1,33 +1,19 @@
 #!/usr/bin/env node
 
-import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
-import { dirname, relative, resolve, sep } from "node:path";
+import { mkdir, writeFile } from "node:fs/promises";
+import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const DEFAULT_OUT_FILE = "src/viewer/demo-data.generated.json";
 const DEMO_REGISTRY_ID = "demo";
 const DEMO_TOKEN = "demo";
-const DEMO_PROJECT_ROOT = "demo://aictx";
-const DEMO_AICTX_ROOT = "demo://aictx/.aictx";
+const DEMO_PROJECT_ID = "project.todo-app";
+const DEMO_PROJECT_NAME = "Todo App";
+const DEMO_PROJECT_ROOT = "demo://todo-app";
+const DEMO_AICTX_ROOT = "demo://todo-app/.aictx";
 const DEFAULT_TOKEN_BUDGET = 6000;
-
-const DEMO_MEMORY_IDS = [
-  "project.aictx",
-  "architecture.current",
-  "constraint.node-engine",
-  "constraint.package-manager",
-  "source.docs-src-content-docs-agent-integration",
-  "source.package-json",
-  "source.readme",
-  "synthesis.agent-guidance",
-  "synthesis.conventions-quality",
-  "synthesis.feature-map",
-  "synthesis.product-intent",
-  "synthesis.repository-map",
-  "synthesis.stack-and-tooling",
-  "workflow.package-scripts",
-  "workflow.post-task-verification"
-];
+const CREATED_AT = "2026-05-12T09:00:00+02:00";
+const UPDATED_AT = "2026-05-13T15:30:00+02:00";
 
 const SECRET_PATTERNS = [
   /sk_(?:live|test)_[A-Za-z0-9]{16,}/,
@@ -43,72 +29,306 @@ const LOCAL_STATE_PATTERNS = [
   /\/home\/[^"'\s`)]+/
 ];
 
+const OBJECT_FIXTURES = [
+  object("project.todo-app", "project", "active", "Todo App", "memory/project.md", [
+    "# Todo App",
+    "",
+    "A small personal productivity app for capturing tasks quickly, organizing them by status, and reviewing what needs attention today.",
+    "",
+    "The project should stay understandable to any developer opening the public demo."
+  ], {
+    tags: ["project", "todo"],
+    facets: { category: "project-description" }
+  }),
+  object("synthesis.product-intent", "synthesis", "active", "Product intent", "memory/syntheses/product-intent.md", [
+    "# Product intent",
+    "",
+    "The Todo App helps a single user keep a trustworthy short list of work without account setup or network dependency.",
+    "",
+    "Useful output means fast capture, clear completion state, and no surprise data loss after refresh."
+  ], {
+    tags: ["product-intent", "synthesis"],
+    facets: { category: "product-intent" },
+    evidence: [{ kind: "source", id: "source.product-brief" }]
+  }),
+  object("synthesis.feature-map", "synthesis", "active", "Feature map", "memory/syntheses/feature-map.md", [
+    "# Feature map",
+    "",
+    "- Quick add creates a task from a single text input.",
+    "- Filtered views separate all, active, completed, and overdue tasks.",
+    "- Local persistence keeps tasks available after reload.",
+    "- Empty states explain the current filter without sending the user to documentation."
+  ], {
+    tags: ["features", "synthesis"],
+    facets: { category: "feature-map" },
+    evidence: [{ kind: "source", id: "source.product-brief" }]
+  }),
+  object("synthesis.repository-map", "synthesis", "active", "Repository map", "memory/syntheses/repository-map.md", [
+    "# Repository map",
+    "",
+    "Application code lives under `src/`, reusable UI pieces live under `src/components/`, and persistence helpers live under `src/storage/`.",
+    "",
+    "Tests mirror those areas under `test/` with browser coverage for task creation and filtering."
+  ], {
+    tags: ["repository-map", "synthesis"],
+    facets: { category: "file-layout", applies_to: ["src/", "src/components/", "src/storage/", "test/"] },
+    evidence: [{ kind: "source", id: "source.readme" }]
+  }),
+  object("architecture.local-first-todo-app", "architecture", "active", "Local-first todo architecture", "memory/architecture/local-first-todo-app.md", [
+    "# Local-first todo architecture",
+    "",
+    "The app keeps task state in a small client-side store and persists a normalized task list to localStorage.",
+    "",
+    "Rendering code reads from the store; persistence code only serializes and validates task records."
+  ], {
+    tags: ["architecture", "local-first"],
+    facets: { category: "architecture", applies_to: ["src/storage/", "src/App.tsx"] },
+    evidence: [{ kind: "source", id: "source.readme" }]
+  }),
+  object("synthesis.stack-and-tooling", "synthesis", "active", "Stack and tooling", "memory/syntheses/stack-and-tooling.md", [
+    "# Stack and tooling",
+    "",
+    "The demo Todo App uses TypeScript, Vite, and Vitest. Browser behavior is covered with Playwright-style flow tests.",
+    "",
+    "Package scripts are the preferred interface for build, test, and lint checks."
+  ], {
+    tags: ["stack", "tooling", "synthesis"],
+    facets: { category: "stack", applies_to: ["package.json", "vite.config.ts", "vitest.config.ts"] },
+    evidence: [{ kind: "source", id: "source.package-json" }]
+  }),
+  object("synthesis.conventions-quality", "synthesis", "active", "Conventions and quality bar", "memory/syntheses/conventions-quality.md", [
+    "# Conventions and quality bar",
+    "",
+    "Keep task mutations explicit, preserve keyboard access for every task action, and keep empty states tied to the active filter.",
+    "",
+    "Avoid adding accounts, sync, or collaboration features unless the product scope changes."
+  ], {
+    tags: ["convention", "quality", "synthesis"],
+    facets: { category: "convention", applies_to: ["src/components/", "test/"] },
+    evidence: [{ kind: "source", id: "source.product-brief" }]
+  }),
+  object("constraint.offline-first", "constraint", "active", "Stay offline first", "memory/constraints/offline-first.md", [
+    "# Stay offline first",
+    "",
+    "Task creation, completion, filtering, and persistence must work without a backend service.",
+    "",
+    "Do not add a hosted database or login flow to satisfy demo requirements."
+  ], {
+    tags: ["offline", "business-rule"],
+    facets: { category: "business-rule", applies_to: ["src/storage/"] },
+    evidence: [{ kind: "source", id: "source.product-brief" }]
+  }),
+  object("concept.quick-add", "concept", "active", "Quick add", "memory/concepts/quick-add.md", [
+    "# Quick add",
+    "",
+    "Quick add accepts a non-empty task title, trims whitespace, creates an active task, and clears the input after save."
+  ], {
+    tags: ["feature", "tasks"],
+    facets: { category: "product-feature", applies_to: ["src/components/TaskComposer.tsx"] }
+  }),
+  object("concept.filtered-views", "concept", "active", "Filtered task views", "memory/concepts/filtered-views.md", [
+    "# Filtered task views",
+    "",
+    "The list supports all, active, completed, and overdue views. Counts must match the same predicate used to render each view."
+  ], {
+    tags: ["feature", "filters"],
+    facets: { category: "product-feature", applies_to: ["src/components/TaskFilters.tsx"] }
+  }),
+  object("fact.storage-localstorage", "fact", "active", "LocalStorage persistence", "memory/facts/storage-localstorage.md", [
+    "# LocalStorage persistence",
+    "",
+    "The task store writes a JSON array of task records to localStorage and ignores malformed saved records on load."
+  ], {
+    tags: ["storage", "debugging"],
+    facets: { category: "debugging-fact", applies_to: ["src/storage/tasks.ts"], load_modes: ["debugging", "review"] }
+  }),
+  object("workflow.local-development", "workflow", "active", "Local development workflow", "memory/workflows/local-development.md", [
+    "# Local development workflow",
+    "",
+    "Run `pnpm install`, `pnpm dev`, and then open the Vite URL. Use the browser flow before changing persistence behavior."
+  ], {
+    tags: ["workflow", "development"],
+    facets: { category: "workflow", load_modes: ["onboarding", "coding"] },
+    evidence: [{ kind: "source", id: "source.package-json" }]
+  }),
+  object("workflow.post-task-verification", "workflow", "active", "Post-task verification", "memory/workflows/post-task-verification.md", [
+    "# Post-task verification",
+    "",
+    "Before finishing Todo App work, run `pnpm test`, `pnpm run typecheck`, and a browser check for add, complete, filter, and reload behavior."
+  ], {
+    tags: ["testing", "verification", "workflow"],
+    facets: { category: "testing", applies_to: ["test/", "src/storage/tasks.ts"], load_modes: ["coding", "review"] },
+    evidence: [{ kind: "source", id: "source.package-json" }]
+  }),
+  object("gotcha.completed-filter-counts", "gotcha", "active", "Completed filter counts can drift", "memory/gotchas/completed-filter-counts.md", [
+    "# Completed filter counts can drift",
+    "",
+    "Do not compute filter badges with a different predicate than the rendered list. This caused completed tasks to appear in the active count before."
+  ], {
+    tags: ["gotcha", "filters"],
+    facets: { category: "gotcha", applies_to: ["src/components/TaskFilters.tsx"], load_modes: ["debugging", "review"] }
+  }),
+  object("question.recurring-tasks", "question", "open", "Recurring task scope", "memory/questions/recurring-tasks.md", [
+    "# Recurring task scope",
+    "",
+    "Should recurring tasks be part of the Todo App, or should the app stay focused on one-off personal tasks for the first release?"
+  ], {
+    tags: ["question", "scope"],
+    facets: { category: "open-question" }
+  }),
+  object("synthesis.agent-guidance", "synthesis", "active", "Agent guidance", "memory/syntheses/agent-guidance.md", [
+    "# Agent guidance",
+    "",
+    "Load Aictx memory before non-trivial Todo App work. Preserve the offline-first scope, keep UI behavior keyboard accessible, and verify persistence after reload."
+  ], {
+    tags: ["agents", "guidance", "synthesis"],
+    facets: { category: "agent-guidance", applies_to: ["AGENTS.md"] },
+    evidence: [{ kind: "source", id: "source.agent-guidance" }]
+  }),
+  object("source.product-brief", "source", "active", "Source: docs/product-brief.md", "memory/sources/product-brief.md", [
+    "# Source: docs/product-brief.md",
+    "",
+    "The product brief describes a local-first Todo App for quick capture, filtering, and dependable reload behavior."
+  ], {
+    tags: ["source", "product"],
+    facets: { category: "source", applies_to: ["docs/product-brief.md"] },
+    evidence: [{ kind: "file", id: "docs/product-brief.md" }]
+  }),
+  object("source.package-json", "source", "active", "Source: package.json", "memory/sources/package-json.md", [
+    "# Source: package.json",
+    "",
+    "The package manifest records TypeScript, Vite, Vitest, and the package scripts used for local development and verification."
+  ], {
+    tags: ["source", "package"],
+    facets: { category: "source", applies_to: ["package.json"] },
+    evidence: [{ kind: "file", id: "package.json" }]
+  }),
+  object("source.readme", "source", "active", "Source: README.md", "memory/sources/readme.md", [
+    "# Source: README.md",
+    "",
+    "The README explains the Todo App repository layout, local development path, and browser behavior users should expect."
+  ], {
+    tags: ["source", "readme"],
+    facets: { category: "source", applies_to: ["README.md"] },
+    evidence: [{ kind: "file", id: "README.md" }]
+  }),
+  object("source.agent-guidance", "source", "active", "Source: AGENTS.md", "memory/sources/agent-guidance.md", [
+    "# Source: AGENTS.md",
+    "",
+    "Agent instructions require loading memory before substantial Todo App changes and saving only durable project knowledge."
+  ], {
+    tags: ["source", "agents"],
+    facets: { category: "source", applies_to: ["AGENTS.md"] },
+    evidence: [{ kind: "file", id: "AGENTS.md" }]
+  })
+];
+
+const RELATION_FIXTURES = [
+  relation("rel.project-todo-app-implements-concept-quick-add", "project.todo-app", "implements", "concept.quick-add"),
+  relation("rel.project-todo-app-implements-concept-filtered-views", "project.todo-app", "implements", "concept.filtered-views"),
+  relation("rel.synthesis-product-intent-derived-from-source-product-brief", "synthesis.product-intent", "derived_from", "source.product-brief"),
+  relation("rel.synthesis-feature-map-derived-from-source-product-brief", "synthesis.feature-map", "derived_from", "source.product-brief"),
+  relation("rel.synthesis-feature-map-summarizes-concept-quick-add", "synthesis.feature-map", "summarizes", "concept.quick-add"),
+  relation("rel.synthesis-feature-map-summarizes-concept-filtered-views", "synthesis.feature-map", "summarizes", "concept.filtered-views"),
+  relation("rel.synthesis-repository-map-derived-from-source-readme", "synthesis.repository-map", "derived_from", "source.readme"),
+  relation("rel.architecture-local-first-derived-from-source-readme", "architecture.local-first-todo-app", "derived_from", "source.readme"),
+  relation("rel.synthesis-stack-and-tooling-derived-from-source-package-json", "synthesis.stack-and-tooling", "derived_from", "source.package-json"),
+  relation("rel.synthesis-conventions-quality-derived-from-source-product-brief", "synthesis.conventions-quality", "derived_from", "source.product-brief"),
+  relation("rel.workflow-local-development-documents-source-package-json", "workflow.local-development", "documents", "source.package-json"),
+  relation("rel.workflow-post-task-verification-documents-source-package-json", "workflow.post-task-verification", "documents", "source.package-json"),
+  relation("rel.gotcha-completed-filter-counts-affects-concept-filtered-views", "gotcha.completed-filter-counts", "affects", "concept.filtered-views"),
+  relation("rel.concept-filtered-views-depends-on-fact-storage-localstorage", "concept.filtered-views", "depends_on", "fact.storage-localstorage"),
+  relation("rel.question-recurring-tasks-related-to-synthesis-feature-map", "question.recurring-tasks", "related_to", "synthesis.feature-map"),
+  relation("rel.synthesis-agent-guidance-derived-from-source-agent-guidance", "synthesis.agent-guidance", "derived_from", "source.agent-guidance"),
+  relation("rel.constraint-offline-first-requires-fact-storage-localstorage", "constraint.offline-first", "requires", "fact.storage-localstorage")
+];
+
+const ROLE_DEFINITIONS = [
+  role("product-intent", "Product Intent", "What this project is for and what useful output means.", ["synthesis.product-intent"]),
+  role("capability-map", "Capability Map", "Features, outputs, commands, APIs, or generation capabilities.", ["synthesis.feature-map", "concept.quick-add", "concept.filtered-views"]),
+  role("repository-map", "Repository Map", "Where important code, docs, tests, assets, and configs live.", ["synthesis.repository-map"]),
+  role("architecture-patterns", "Architecture / Patterns", "How the project is organized and which design patterns matter.", ["architecture.local-first-todo-app"]),
+  role("stack-tooling", "Stack / Tooling", "Languages, frameworks, package managers, build tools, and runtime constraints.", ["synthesis.stack-and-tooling"]),
+  role("conventions-quality", "Conventions / Quality Bar", "Project-specific coding, design, review, and quality expectations.", ["synthesis.conventions-quality", "constraint.offline-first"]),
+  role("workflows-howtos", "Workflows / How-tos", "Reusable setup, release, debugging, migration, generation, or maintenance procedures.", ["workflow.local-development", "workflow.post-task-verification"]),
+  role("verification", "Verification", "Commands and checks agents should run before claiming work is done.", ["workflow.post-task-verification"]),
+  role("gotchas-risks", "Gotchas / Risks", "Known traps, fragile areas, abandoned approaches, or recurring failure modes.", ["gotcha.completed-filter-counts"]),
+  role("open-questions", "Open Questions", "Important unknowns agents should not guess.", ["question.recurring-tasks"]),
+  role("sources-provenance", "Sources / Provenance", "Source records and provenance relations backing durable memory.", ["source.product-brief", "source.package-json", "source.readme", "source.agent-guidance"]),
+  role("agent-guidance", "Agent Guidance", "Project-specific operating rules for AI coding agents.", ["synthesis.agent-guidance"]),
+  role("branch-handoff", "Branch Handoff", "Current branch continuity for unfinished work.", [], { optional: true })
+];
+
+const LENS_DEFINITIONS = [
+  lens("project-map", "Project Map", "Default overview for purpose, capabilities, layout, stack, and operating norms.", [
+    "product-intent",
+    "capability-map",
+    "repository-map",
+    "architecture-patterns",
+    "stack-tooling",
+    "conventions-quality",
+    "workflows-howtos",
+    "verification",
+    "gotchas-risks",
+    "open-questions",
+    "agent-guidance"
+  ]),
+  lens("current-work", "Current Work", "Open scope questions and verification context for the next Todo App change.", [
+    "open-questions",
+    "verification",
+    "gotchas-risks"
+  ]),
+  lens("review-risk", "Review / Risk", "Quality expectations, verification, risks, and unresolved questions.", [
+    "conventions-quality",
+    "verification",
+    "gotchas-risks",
+    "open-questions"
+  ]),
+  lens("provenance", "Provenance", "Source records and relation chains that explain where durable memory came from.", [
+    "sources-provenance",
+    "product-intent",
+    "capability-map",
+    "architecture-patterns"
+  ]),
+  lens("maintenance", "Maintenance", "Coverage gaps, stale memory, supersessions, and conflicts that need cleanup.", [
+    "product-intent",
+    "capability-map",
+    "repository-map",
+    "architecture-patterns",
+    "stack-tooling",
+    "conventions-quality",
+    "workflows-howtos",
+    "verification",
+    "gotchas-risks",
+    "open-questions",
+    "sources-provenance",
+    "agent-guidance",
+    "branch-handoff"
+  ])
+];
+
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   const projectRoot = resolve(args.projectRoot ?? process.cwd());
   const outFile = resolve(projectRoot, args.out ?? DEFAULT_OUT_FILE);
-  const data = await buildDemoData({ projectRoot });
+  const data = buildDemoData();
 
   await assertDemoDataIsSafe(data, projectRoot);
   await mkdir(dirname(outFile), { recursive: true });
   await writeFile(outFile, `${JSON.stringify(data, null, 2)}\n`, "utf8");
 }
 
-async function buildDemoData({ projectRoot }) {
-  const aictxRoot = resolve(projectRoot, ".aictx");
-  const config = await readJson(resolve(aictxRoot, "config.json"));
-  const allowlist = new Set(DEMO_MEMORY_IDS);
-  const objectSidecarPaths = await collectJsonFiles(resolve(aictxRoot, "memory"));
-  const objects = [];
-
-  for (const sidecarPath of objectSidecarPaths) {
-    const sidecar = await readJson(sidecarPath);
-
-    if (!allowlist.has(sidecar.id)) {
-      continue;
-    }
-
-    const bodyPath = normalizeProjectPath(`.aictx/${sidecar.body_path}`);
-    const markdownPath = resolve(aictxRoot, sidecar.body_path);
-    const body = await readFile(markdownPath, "utf8");
-    const jsonPath = normalizeProjectPath(relative(projectRoot, sidecarPath));
-
-    objects.push(summarizeObject(sidecar, {
-      body: sanitizeText(body, projectRoot),
-      bodyPath,
-      jsonPath,
-      projectId: config.project.id
-    }));
-  }
-
-  const missingIds = DEMO_MEMORY_IDS.filter((id) => !objects.some((object) => object.id === id));
-
-  if (missingIds.length > 0) {
-    throw new Error(`Demo memory allowlist contains missing object ids: ${missingIds.join(", ")}`);
-  }
-
-  objects.sort(compareById);
-
+function buildDemoData() {
+  const objects = OBJECT_FIXTURES.map(summarizeObject);
   const objectIds = new Set(objects.map((object) => object.id));
-  const relationSidecarPaths = await collectJsonFiles(resolve(aictxRoot, "relations"));
-  const relations = [];
-
-  for (const relationPath of relationSidecarPaths) {
-    const relation = await readJson(relationPath);
-
-    if (!objectIds.has(relation.from) || !objectIds.has(relation.to)) {
-      continue;
-    }
-
-    relations.push(summarizeRelation(relation, normalizeProjectPath(relative(projectRoot, relationPath))));
-  }
-
-  relations.sort(compareById);
-
+  const relations = RELATION_FIXTURES.map(summarizeRelation).filter(
+    (relation) => objectIds.has(relation.from) && objectIds.has(relation.to)
+  );
+  const roleCoverage = buildRoleCoverage(relations);
   const bootstrap = {
     project: {
-      id: config.project.id,
-      name: config.project.name
+      id: DEMO_PROJECT_ID,
+      name: DEMO_PROJECT_NAME
     },
     objects,
     relations,
@@ -121,8 +341,8 @@ async function buildDemoData({ projectRoot }) {
       synthesis_objects: objects.filter((object) => object.type === "synthesis").length,
       active_relations: relations.filter((relation) => relation.status === "active").length
     },
-    role_coverage: emptyRoleCoverage(),
-    lenses: [],
+    role_coverage: roleCoverage,
+    lenses: buildLenses(objects, relations, roleCoverage),
     storage_warnings: []
   };
   const meta = {
@@ -131,12 +351,12 @@ async function buildDemoData({ projectRoot }) {
     git: {
       available: true,
       branch: "main",
-      commit: "demo-seed",
+      commit: "todo-demo-seed",
       dirty: false
     }
   };
   const projects = {
-    registry_path: "demo://aictx/projects.json",
+    registry_path: "demo://todo-app/projects.json",
     projects: [
       {
         registry_id: DEMO_REGISTRY_ID,
@@ -144,8 +364,8 @@ async function buildDemoData({ projectRoot }) {
         project_root: DEMO_PROJECT_ROOT,
         aictx_root: DEMO_AICTX_ROOT,
         source: "manual",
-        registered_at: earliestTimestamp(objects),
-        last_seen_at: latestTimestamp(objects),
+        registered_at: CREATED_AT,
+        last_seen_at: UPDATED_AT,
         current: true,
         available: true,
         counts: bootstrap.counts,
@@ -166,8 +386,8 @@ async function buildDemoData({ projectRoot }) {
     token: DEMO_TOKEN,
     registry_id: DEMO_REGISTRY_ID,
     seed: {
-      memory_ids: DEMO_MEMORY_IDS,
-      source: "curated-aictx-project-memory"
+      memory_ids: objects.map((item) => item.id),
+      source: "synthetic-todo-app-memory"
     },
     defaults: {
       token_budget: DEFAULT_TOKEN_BUDGET,
@@ -179,102 +399,217 @@ async function buildDemoData({ projectRoot }) {
   };
 }
 
-function summarizeObject(sidecar, { body, bodyPath, jsonPath, projectId }) {
+function object(id, type, status, title, bodyPath, lines, options = {}) {
   return {
-    id: sidecar.id,
-    type: sidecar.type,
-    status: sidecar.status,
-    title: sanitizeText(sidecar.title, ""),
+    id,
+    type,
+    status,
+    title,
     body_path: bodyPath,
-    json_path: jsonPath,
-    scope: sanitizeScope(sidecar.scope, projectId),
-    tags: Array.isArray(sidecar.tags) ? [...sidecar.tags].sort() : [],
-    facets: sanitizeJson(sidecar.facets ?? null),
-    evidence: sanitizeEvidence(sidecar.evidence ?? []),
+    tags: options.tags ?? [],
+    facets: options.facets ?? null,
+    evidence: options.evidence ?? [],
+    body: `${lines.join("\n").trim()}\n`
+  };
+}
+
+function relation(id, from, predicate, to) {
+  return {
+    id,
+    from,
+    predicate,
+    to,
+    status: "active",
+    confidence: "high",
+    evidence: [{ kind: "memory", id: from }]
+  };
+}
+
+function role(key, label, description, memoryIds, options = {}) {
+  return {
+    key,
+    label,
+    description,
+    memoryIds,
+    optional: options.optional === true
+  };
+}
+
+function lens(name, title, description, roleKeys) {
+  return {
+    name,
+    title,
+    description,
+    roleKeys
+  };
+}
+
+function summarizeObject(fixture) {
+  return {
+    id: fixture.id,
+    type: fixture.type,
+    status: fixture.status,
+    title: fixture.title,
+    body_path: `.aictx/${fixture.body_path}`,
+    json_path: `.aictx/${fixture.body_path.replace(/\.md$/u, ".json")}`,
+    scope: {
+      kind: "project",
+      project: DEMO_PROJECT_ID,
+      branch: null,
+      task: null
+    },
+    tags: [...fixture.tags].sort(),
+    facets: fixture.facets,
+    evidence: [...fixture.evidence].sort(compareEvidence),
     source: {
       kind: "system",
-      task: "Curated public demo seed"
+      task: "Curated public Todo App demo seed"
     },
-    superseded_by: sidecar.superseded_by ?? null,
-    created_at: sidecar.created_at,
-    updated_at: sidecar.updated_at,
-    body
+    superseded_by: null,
+    created_at: CREATED_AT,
+    updated_at: UPDATED_AT,
+    body: fixture.body
   };
 }
 
-function summarizeRelation(relation, jsonPath) {
+function summarizeRelation(fixture) {
   return {
-    id: relation.id,
-    from: relation.from,
-    predicate: relation.predicate,
-    to: relation.to,
-    status: relation.status,
-    confidence: relation.confidence ?? null,
-    evidence: sanitizeEvidence(relation.evidence ?? []),
-    content_hash: relation.content_hash ?? null,
-    created_at: relation.created_at,
-    updated_at: relation.updated_at,
-    json_path: jsonPath
+    id: fixture.id,
+    from: fixture.from,
+    predicate: fixture.predicate,
+    to: fixture.to,
+    status: fixture.status,
+    confidence: fixture.confidence,
+    evidence: [...fixture.evidence].sort(compareEvidence),
+    content_hash: null,
+    created_at: CREATED_AT,
+    updated_at: UPDATED_AT,
+    json_path: `.aictx/relations/${fixture.id.replace(/^rel\./u, "")}.json`
   };
 }
 
-function sanitizeScope(scope, projectId) {
+function buildRoleCoverage(relations) {
+  const roles = ROLE_DEFINITIONS.map((definition) => {
+    const relationIds = relations
+      .filter(
+        (relation) =>
+          definition.memoryIds.includes(relation.from) ||
+          definition.memoryIds.includes(relation.to) ||
+          (definition.key === "sources-provenance" &&
+            ["derived_from", "summarizes", "documents"].includes(relation.predicate))
+      )
+      .map((relation) => relation.id)
+      .sort();
+    const status = definition.memoryIds.length === 0 ? "missing" : "populated";
+
+    return {
+      key: definition.key,
+      label: definition.label,
+      description: definition.description,
+      status,
+      optional: definition.optional,
+      memory_ids: [...definition.memoryIds].sort(),
+      relation_ids: relationIds,
+      gap: definition.optional && status === "missing"
+        ? null
+        : status === "missing"
+          ? `${definition.label} is missing. Add source-backed memory when the project provides enough evidence.`
+          : null
+    };
+  });
+  const counts = {
+    populated: 0,
+    thin: 0,
+    missing: 0,
+    stale: 0,
+    conflicted: 0
+  };
+
+  for (const item of roles) {
+    counts[item.status] += 1;
+  }
+
   return {
-    kind: scope?.kind === "branch" || scope?.kind === "task" ? scope.kind : "project",
-    project: projectId,
-    branch: null,
-    task: null
+    roles,
+    counts
   };
 }
 
-function sanitizeEvidence(evidence) {
-  if (!Array.isArray(evidence)) {
-    return [];
-  }
+function buildLenses(objects, relations, roleCoverage) {
+  const objectsById = new Map(objects.map((item) => [item.id, item]));
+  const rolesByKey = new Map(roleCoverage.roles.map((item) => [item.key, item]));
 
-  return evidence
-    .filter((item) => item !== null && typeof item === "object")
-    .map((item) => ({
-      kind: String(item.kind),
-      id: sanitizeText(String(item.id), "")
-    }))
-    .sort((left, right) => `${left.kind}:${left.id}`.localeCompare(`${right.kind}:${right.id}`));
+  return LENS_DEFINITIONS.map((definition) => {
+    const lensRoles = definition.roleKeys.map((key) => rolesByKey.get(key)).filter(Boolean);
+    const includedIds = uniqueSorted(lensRoles.flatMap((item) => item.memory_ids));
+    const relationList = relations.filter(
+      (relation) => includedIds.includes(relation.from) || includedIds.includes(relation.to)
+    );
+    const generatedGaps = lensRoles.flatMap((item) => item.gap === null ? [] : [item.gap]);
+
+    return {
+      name: definition.name,
+      title: definition.title,
+      markdown: renderLensMarkdown({
+        definition,
+        roles: lensRoles,
+        objects: includedIds.map((id) => objectsById.get(id)).filter(Boolean),
+        relations: relationList,
+        generatedGaps
+      }),
+      role_coverage: roleCoverage,
+      included_memory_ids: includedIds,
+      relation_ids: relationList.map((relation) => relation.id).sort(),
+      relations: relationList,
+      generated_gaps: generatedGaps
+    };
+  });
 }
 
-function sanitizeJson(value) {
-  if (value === null || value === undefined) {
-    return null;
+function renderLensMarkdown({ definition, roles, objects, relations, generatedGaps }) {
+  const lines = [
+    `# ${definition.title}`,
+    "",
+    definition.description,
+    "",
+    "## Role coverage",
+    "",
+    ...roles.map((item) => `- ${item.label}: ${item.status}${item.optional ? " (optional)" : ""}`),
+    ""
+  ];
+
+  if (generatedGaps.length > 0) {
+    lines.push("## Generated gaps", "", ...generatedGaps.map((gap) => `- ${gap}`), "");
   }
 
-  if (Array.isArray(value)) {
-    return value.map((item) => sanitizeJson(item));
+  for (const item of objects) {
+    lines.push(`## ${item.title}`, "");
+    lines.push(`Memory: \`${item.id}\` (${item.type}, ${item.status})`);
+    lines.push("");
+    lines.push(excerptBody(item.body));
+    lines.push("");
   }
 
-  if (typeof value === "object") {
-    return Object.fromEntries(
-      Object.entries(value)
-        .sort(([left], [right]) => left.localeCompare(right))
-        .map(([key, item]) => [key, sanitizeJson(item)])
+  if (relations.length > 0) {
+    lines.push(
+      "## Relation context",
+      "",
+      ...relations.map((item) => `- \`${item.from}\` ${item.predicate} \`${item.to}\` (${item.status})`),
+      ""
     );
   }
 
-  if (typeof value === "string") {
-    return sanitizeText(value, "");
-  }
-
-  return value;
+  return `${trimTrailingBlankLines(lines).join("\n")}\n`;
 }
 
-function sanitizeText(value, projectRoot) {
-  let sanitized = value;
-
-  if (projectRoot !== "") {
-    sanitized = sanitized.split(projectRoot).join("<project-root>");
-  }
-
-  return sanitized
-    .replace(/\/Users\/[^"'\s`)]+/g, "<local-path>")
-    .replace(/\/home\/[^"'\s`)]+/g, "<local-path>");
+function excerptBody(body) {
+  return body
+    .replace(/\r\n?/g, "\n")
+    .split("\n")
+    .filter((line) => !line.trim().startsWith("#"))
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
 }
 
 async function assertDemoDataIsSafe(data, projectRoot) {
@@ -289,57 +624,6 @@ async function assertDemoDataIsSafe(data, projectRoot) {
       throw new Error(`Demo data failed safety check: ${pattern}`);
     }
   }
-}
-
-function emptyRoleCoverage() {
-  return {
-    roles: [],
-    counts: {
-      populated: 0,
-      thin: 0,
-      missing: 0,
-      stale: 0,
-      conflicted: 0
-    }
-  };
-}
-
-async function collectJsonFiles(root) {
-  const entries = await readdir(root, { withFileTypes: true });
-  const files = [];
-
-  for (const entry of entries) {
-    const absolutePath = resolve(root, entry.name);
-
-    if (entry.isDirectory()) {
-      const childFiles = await collectJsonFiles(absolutePath);
-      files.push(...childFiles);
-    } else if (entry.isFile() && entry.name.endsWith(".json")) {
-      files.push(absolutePath);
-    }
-  }
-
-  return files.sort();
-}
-
-async function readJson(path) {
-  return JSON.parse(await readFile(path, "utf8"));
-}
-
-function normalizeProjectPath(path) {
-  return path.split(sep).join("/");
-}
-
-function compareById(left, right) {
-  return left.id.localeCompare(right.id);
-}
-
-function earliestTimestamp(objects) {
-  return [...objects].map((object) => object.created_at).sort()[0] ?? "2026-05-12T17:53:06+02:00";
-}
-
-function latestTimestamp(objects) {
-  return [...objects].map((object) => object.updated_at).sort().at(-1) ?? "2026-05-12T17:53:06+02:00";
 }
 
 function parseArgs(args) {
@@ -370,6 +654,24 @@ function requiredValue(args, index, flag) {
   }
 
   return value;
+}
+
+function compareEvidence(left, right) {
+  return `${left.kind}:${left.id}`.localeCompare(`${right.kind}:${right.id}`);
+}
+
+function uniqueSorted(values) {
+  return [...new Set(values)].sort((left, right) => left.localeCompare(right));
+}
+
+function trimTrailingBlankLines(lines) {
+  const result = [...lines];
+
+  while (result.at(-1) === "") {
+    result.pop();
+  }
+
+  return result;
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {

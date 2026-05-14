@@ -14,7 +14,7 @@ describe("viewer demo Worker", () => {
     const body = await response.json() as {
       ok: true;
       data: {
-        projects: Array<{ registry_id: string; available: boolean }>;
+        projects: Array<{ registry_id: string; available: boolean; project: { id: string; name: string } }>;
         current_project_registry_id: string | null;
       };
     };
@@ -25,23 +25,42 @@ describe("viewer demo Worker", () => {
     expect(body.data.projects).toHaveLength(1);
     expect(body.data.projects[0]).toMatchObject({
       registry_id: "demo",
-      available: true
+      available: true,
+      project: {
+        id: "project.todo-app",
+        name: "Todo App"
+      }
     });
   });
 
-  it("serves seeded bootstrap data with objects and relations", async () => {
+  it("serves seeded Todo App bootstrap data with objects, facets, role coverage, and relations", async () => {
     const response = await worker.fetch(request("/api/projects/demo/bootstrap?token=demo"), env);
     const body = await response.json() as {
       ok: true;
       data: {
-        objects: Array<{ id: string }>;
+        project: { id: string; name: string };
+        objects: Array<{ id: string; type: string; facets: { category: string } | null }>;
         relations: Array<{ from: string; to: string }>;
+        role_coverage: { roles: unknown[] };
+        lenses: Array<{ name: string; included_memory_ids: string[] }>;
       };
     };
 
     expect(response.status).toBe(200);
     expect(body.ok).toBe(true);
-    expect(body.data.objects.map((object) => object.id)).toContain("synthesis.product-intent");
+    expect(body.data.project).toEqual({
+      id: "project.todo-app",
+      name: "Todo App"
+    });
+    expect(body.data.objects.map((object) => object.id)).toContain("concept.quick-add");
+    expect(body.data.objects.map((object) => object.id)).not.toContain("project.aictx");
+    expect(body.data.objects.find((object) => object.id === "workflow.post-task-verification")).toMatchObject({
+      type: "workflow",
+      facets: { category: "testing" }
+    });
+    expect(body.data.role_coverage.roles.length).toBeGreaterThan(0);
+    expect(body.data.lenses).toHaveLength(5);
+    expect(body.data.lenses.every((lens) => lens.included_memory_ids.length > 0)).toBe(true);
     expect(body.data.relations.length).toBeGreaterThan(0);
   });
 
@@ -74,7 +93,9 @@ describe("viewer demo Worker", () => {
     expect(body.data.mode).toBe("coding");
     expect(body.data.token_budget).toBe(1600);
     expect(body.data.context_pack).toContain("AI Context Pack");
-    expect(body.data.included_ids.length).toBeGreaterThan(0);
+    expect(body.data.context_pack).toContain("Todo App");
+    expect(body.data.context_pack).not.toContain("project.aictx");
+    expect(body.data.included_ids).toContain("project.todo-app");
   });
 
   it("requires the demo token for API routes", async () => {

@@ -1,22 +1,12 @@
 <svelte:options runes={true} />
 
 <script lang="ts">
+  import { FACET_CATEGORIES, OBJECT_TYPES } from "../../src/core/types.js";
   import { onMount } from "svelte";
 
+  type FacetCategory = (typeof FACET_CATEGORIES)[number];
   type ObjectStatus = "active" | "stale" | "superseded" | "open" | "closed";
-  type ObjectType =
-    | "project"
-    | "architecture"
-    | "source"
-    | "synthesis"
-    | "decision"
-    | "constraint"
-    | "question"
-    | "fact"
-    | "gotcha"
-    | "workflow"
-    | "note"
-    | "concept";
+  type ObjectType = (typeof OBJECT_TYPES)[number];
   type RelationStatus = "active" | "stale" | "rejected";
   type RelationConfidence = "low" | "medium" | "high";
   type Predicate =
@@ -51,7 +41,7 @@
   }
 
   interface ObjectFacets {
-    category: string;
+    category: FacetCategory;
     applies_to?: string[];
     load_modes?: string[];
   }
@@ -104,6 +94,8 @@
       synthesis_objects: number;
       active_relations: number;
     };
+    role_coverage: RoleCoverageData;
+    lenses: MemoryLensData[];
     storage_warnings: string[];
   }
 
@@ -184,8 +176,37 @@
   type ExportState = "idle" | "running" | "success" | "error";
   type PreviewState = "idle" | "running" | "success" | "error";
   type LayerFilter = "all" | "memories" | "syntheses" | "sources" | "inactive";
-  type PagePreset = "all" | "do-not-do" | "coding-workflows" | "architecture" | "security-notes" | "commands" | "source-memory";
+  type PagePreset = "all" | "atomic-memory" | "syntheses" | "sources" | "inactive";
   type LoadMemoryMode = "coding" | "debugging" | "review" | "architecture" | "onboarding";
+  type MemoryLensName = "project-map" | "current-work" | "review-risk" | "provenance" | "maintenance";
+  type RoleCoverageStatus = "populated" | "thin" | "missing" | "stale" | "conflicted";
+
+  interface RoleCoverageItem {
+    key: string;
+    label: string;
+    description: string;
+    status: RoleCoverageStatus;
+    optional: boolean;
+    memory_ids: string[];
+    relation_ids: string[];
+    gap: string | null;
+  }
+
+  interface RoleCoverageData {
+    roles: RoleCoverageItem[];
+    counts: Record<RoleCoverageStatus, number>;
+  }
+
+  interface MemoryLensData {
+    name: MemoryLensName;
+    title: string;
+    markdown: string;
+    role_coverage: RoleCoverageData;
+    included_memory_ids: string[];
+    relation_ids: string[];
+    relations: MemoryRelationSummary[];
+    generated_gaps: string[];
+  }
 
   interface MarkdownBlock {
     kind: "heading" | "paragraph" | "list" | "quote" | "code";
@@ -249,9 +270,11 @@
   let searchQuery = $state("");
   let layerFilter = $state<LayerFilter>("all");
   let typeFilter = $state("all");
+  let facetCategoryFilter = $state("all");
   let statusFilter = $state("all");
   let tagFilter = $state("all");
   let pagePreset = $state<PagePreset>("all");
+  let activeLensName = $state<MemoryLensName>("project-map");
   let mobileMenuOpen = $state(false);
   let exportOutDir = $state("");
   let exportState = $state<ExportState>("idle");
@@ -273,7 +296,7 @@
   const isDemoMode = token === "demo";
   const layerOptions: Array<{ value: LayerFilter; label: string }> = [
     { value: "all", label: "All" },
-    { value: "memories", label: "Core" },
+    { value: "memories", label: "Atomic" },
     { value: "syntheses", label: "Syntheses" },
     { value: "sources", label: "Sources" },
     { value: "inactive", label: "Inactive" }
@@ -319,6 +342,11 @@
       : directRelations.filter((relation) => relation.from === selectedObject.id)
   );
   const typeOptions = $derived(uniqueSorted(objects.map((object) => object.type)));
+  const facetCategoryOptions = $derived.by(() =>
+    FACET_CATEGORIES.filter((category) =>
+      objects.some((object) => object.facets?.category === category)
+    )
+  );
   const statusOptions = $derived(uniqueSorted(objects.map((object) => object.status)));
   const tagOptions = $derived(uniqueSorted(objects.flatMap((object) => object.tags)));
   const markdownBlocks = $derived(
@@ -327,6 +355,14 @@
   const previewMarkdownBlocks = $derived(
     previewData === null ? [] : parseMarkdownBlocks(previewData.context_pack)
   );
+  const guidedLenses = $derived(bootstrap?.lenses ?? []);
+  const activeGuidedLens = $derived.by(() =>
+    guidedLenses.find((lens) => lens.name === activeLensName) ?? guidedLenses[0] ?? null
+  );
+  const activeLensMarkdownBlocks = $derived(
+    activeGuidedLens === null ? [] : parseMarkdownBlocks(activeGuidedLens.markdown)
+  );
+  const roleCoverage = $derived(bootstrap?.role_coverage ?? emptyRoleCoverage());
   const selectedJson = $derived(
     selectedObject === null ? "" : JSON.stringify(sidecarJsonForObject(selectedObject), null, 2)
   );
@@ -338,7 +374,7 @@
   const hasStarterMemoryOnly = $derived.by(() => isStarterMemoryOnly(objects));
   const memorySnapshot = $derived.by(() => buildMemorySnapshot(objects, relations));
   const activeMemoryCount = $derived(objects.filter((object) => isCurrentStatus(object.status)).length);
-  const ruleCount = $derived(objects.filter((object) => object.type === "constraint" || object.type === "gotcha").length);
+  const facetCategoryCount = $derived(facetCategoryOptions.length);
   const staleMemoryCount = $derived(objects.filter((object) => object.status === "stale" || object.status === "superseded").length);
   const trustLabel = $derived.by(() => selectedProject === null ? "No project" : gitLabel(selectedProject));
   const trustDescription = $derived.by(() =>
@@ -571,9 +607,11 @@
     searchQuery = "";
     layerFilter = "all";
     typeFilter = allOption;
+    facetCategoryFilter = allOption;
     statusFilter = allOption;
     tagFilter = allOption;
     pagePreset = "all";
+    activeLensName = "project-map";
     exportState = "idle";
     previewState = "idle";
     previewData = null;
@@ -611,21 +649,6 @@
   }
 
   function rankedObjects(memoryObjects: MemoryObjectSummary[]): MemoryObjectSummary[] {
-    const priority: ObjectType[] = [
-      "project",
-      "architecture",
-      "synthesis",
-      "decision",
-      "constraint",
-      "workflow",
-      "gotcha",
-      "fact",
-      "source",
-      "question",
-      "concept",
-      "note"
-    ];
-
     return [...memoryObjects].sort((left, right) => {
       const leftStatus = isCurrentStatus(left.status) ? 0 : 1;
       const rightStatus = isCurrentStatus(right.status) ? 0 : 1;
@@ -633,8 +656,8 @@
         return leftStatus - rightStatus;
       }
 
-      const leftType = priority.indexOf(left.type);
-      const rightType = priority.indexOf(right.type);
+      const leftType = OBJECT_TYPES.indexOf(left.type);
+      const rightType = OBJECT_TYPES.indexOf(right.type);
       if (leftType !== rightType) {
         return leftType - rightType;
       }
@@ -648,6 +671,7 @@
       objectMatchesPagePreset(object, pagePreset) &&
       objectMatchesLayer(object, layerFilter) &&
       optionMatches(typeFilter, object.type) &&
+      optionMatches(facetCategoryFilter, object.facets?.category ?? "") &&
       optionMatches(statusFilter, object.status) &&
       (tagFilter === allOption || object.tags.includes(tagFilter)) &&
       objectMatchesSearch(object, searchQuery)
@@ -658,21 +682,14 @@
     switch (preset) {
       case "all":
         return true;
-      case "do-not-do":
-        return object.type === "gotcha" ||
-          object.type === "constraint" ||
-          object.status === "stale" ||
-          object.status === "superseded";
-      case "coding-workflows":
-        return object.type === "workflow";
-      case "architecture":
-        return object.type === "architecture";
-      case "security-notes":
-        return object.tags.includes("security") || object.type === "decision" || object.type === "synthesis";
-      case "commands":
-        return object.body.includes("aictx ") || object.body.includes("pnpm ") || object.type === "project";
-      case "source-memory":
+      case "atomic-memory":
+        return object.type !== "source" && object.type !== "synthesis" && isCurrentStatus(object.status);
+      case "syntheses":
+        return object.type === "synthesis";
+      case "sources":
         return object.type === "source";
+      case "inactive":
+        return object.status === "stale" || object.status === "superseded";
     }
   }
 
@@ -727,6 +744,7 @@
       searchQuery = "";
       layerFilter = "all";
       typeFilter = allOption;
+      facetCategoryFilter = allOption;
       statusFilter = allOption;
       tagFilter = allOption;
       selectedObjectId = id;
@@ -749,6 +767,7 @@
     mobileMenuOpen = false;
     searchQuery = "";
     typeFilter = allOption;
+    facetCategoryFilter = allOption;
     statusFilter = allOption;
     tagFilter = allOption;
     pagePreset = section as PagePreset;
@@ -758,19 +777,17 @@
         pagePreset = "all";
         layerFilter = "all";
         break;
-      case "do-not-do":
-        layerFilter = "all";
+      case "atomic-memory":
+        layerFilter = "memories";
         break;
-      case "coding-workflows":
-        layerFilter = "all";
-        typeFilter = "workflow";
+      case "syntheses":
+        layerFilter = "syntheses";
         break;
-      case "architecture":
-        layerFilter = "all";
-        typeFilter = "architecture";
-        break;
-      case "source-memory":
+      case "sources":
         layerFilter = "sources";
+        break;
+      case "inactive":
+        layerFilter = "inactive";
         break;
       default:
         pagePreset = "all";
@@ -779,73 +796,14 @@
   }
 
   function buildMemorySections(memoryObjects: MemoryObjectSummary[]): MemorySection[] {
-    const sections: MemorySection[] = [
-      {
-        id: "do-not-do",
-        title: "Do Not Do",
-        icon: "⛔",
-        objects: memoryObjects.filter((object) =>
-          object.type === "gotcha" || object.type === "constraint" || object.status !== "active"
-        )
-      },
-      {
-        id: "coding-workflows",
-        title: "Coding Workflows",
-        icon: "🛠",
-        objects: memoryObjects.filter((object) => object.type === "workflow")
-      },
-      {
-        id: "architecture",
-        title: "Architecture",
-        icon: "🏛",
-        objects: memoryObjects.filter((object) => object.type === "architecture")
-      },
-      {
-        id: "security-notes",
-        title: "Security Notes",
-        icon: "🔒",
-        objects: memoryObjects.filter((object) =>
-          object.tags.includes("security") || object.type === "decision" || object.type === "synthesis"
-        )
-      },
-      {
-        id: "commands",
-        title: "Commands",
-        icon: "⌘",
-        objects: memoryObjects.filter((object) =>
-          object.body.includes("aictx ") || object.body.includes("pnpm ") || object.type === "project"
-        )
-      },
-      {
-        id: "source-memory",
-        title: "Source Memory",
-        icon: "📄",
-        objects: memoryObjects.filter((object) => object.type === "source")
-      }
-    ];
-    const seen = new Set<string>();
-
-    for (const section of sections) {
-      section.objects = rankedObjects(section.objects).filter((object) => {
-        if (seen.has(object.id)) {
-          return false;
-        }
-        seen.add(object.id);
-        return true;
-      });
-    }
-
-    const ungrouped = rankedObjects(memoryObjects).filter((object) => !seen.has(object.id));
-    if (ungrouped.length > 0) {
-      sections.push({
-        id: "more-memory",
-        title: "More Memory",
-        icon: "◇",
-        objects: ungrouped
-      });
-    }
-
-    return sections.filter((section) => section.objects.length > 0);
+    return OBJECT_TYPES
+      .map((type) => ({
+        id: `type-${type}`,
+        title: objectTypeLabel(type),
+        icon: objectTypeGlyph(type),
+        objects: rankedObjects(memoryObjects.filter((object) => object.type === type))
+      }))
+      .filter((section) => section.objects.length > 0);
   }
 
   function buildMemorySnapshot(
@@ -855,25 +813,25 @@
     const reusableCount = memoryObjects.filter((object) =>
       object.type !== "source" && object.type !== "synthesis" && isCurrentStatus(object.status)
     ).length;
-    const workflowCount = memoryObjects.filter((object) =>
-      object.type === "workflow" && isCurrentStatus(object.status)
+    const memoryFacetCategoryCount = uniqueSorted(
+      memoryObjects.flatMap((object) => object.facets?.category === undefined ? [] : [object.facets.category])
     ).length;
     const sourceCount = memoryObjects.filter((object) => object.type === "source").length;
     const activeRelationCount = relationList.filter((relation) => relation.status === "active").length;
 
     return [
       {
-        label: "Reusable memory",
+        label: "Active objects",
         value: String(reusableCount),
-        detail: "active records agents can load before work"
+        detail: "canonical non-source records agents can load"
       },
       {
-        label: "Workflows",
-        value: String(workflowCount),
-        detail: "repo-specific procedures and command paths"
+        label: "Facet categories",
+        value: String(memoryFacetCategoryCount),
+        detail: "typed durable categories represented in storage"
       },
       {
-        label: "Review trail",
+        label: "Provenance trail",
         value: `${sourceCount}/${activeRelationCount}`,
         detail: "source records / active memory links"
       }
@@ -891,21 +849,75 @@
   }
 
   function objectIcon(object: MemoryObjectSummary): string {
-    switch (object.type) {
+    return objectTypeGlyph(object.type);
+  }
+
+  function objectTypeGlyph(type: ObjectType): string {
+    switch (type) {
       case "project":
-        return "•";
+        return "P";
       case "architecture":
-        return "⌂";
-      case "workflow":
-        return "↻";
-      case "gotcha":
+        return "A";
+      case "synthesis":
+        return "S";
+      case "decision":
+        return "D";
       case "constraint":
+        return "C";
+      case "question":
+        return "?";
+      case "fact":
+        return "F";
+      case "workflow":
+        return "W";
+      case "gotcha":
         return "!";
       case "source":
-        return "•";
+        return "R";
+      case "concept":
+        return "K";
+      case "note":
+        return "N";
       default:
         return "•";
     }
+  }
+
+  function objectTypeLabel(type: ObjectType): string {
+    return `${type} objects`;
+  }
+
+  function facetCategoryLabel(object: MemoryObjectSummary): string {
+    return object.facets?.category ?? "no facet category";
+  }
+
+  function scopeLabel(scope: Scope): string {
+    if (scope.kind === "branch") {
+      return `branch:${scope.branch ?? "unknown"}`;
+    }
+
+    if (scope.kind === "task") {
+      return `task:${scope.task ?? "unknown"}`;
+    }
+
+    return "project";
+  }
+
+  function emptyRoleCoverage(): RoleCoverageData {
+    return {
+      roles: [],
+      counts: {
+        populated: 0,
+        thin: 0,
+        missing: 0,
+        stale: 0,
+        conflicted: 0
+      }
+    };
+  }
+
+  function roleStatusClass(status: RoleCoverageStatus): string {
+    return `status-${status}`;
   }
 
   function relationCounterpart(relation: MemoryRelationSummary, objectId: string): string {
@@ -1192,7 +1204,7 @@
       <div class="brand">
         <div class="brand-row">
           <span class="book-icon" aria-hidden="true">A</span>
-          <h1 id="viewer-title">Coding Handbook</h1>
+          <h1 id="viewer-title">Memory Schema</h1>
           <button
             type="button"
             class="mobile-menu-toggle"
@@ -1210,16 +1222,16 @@
 
       <div id="viewer-mobile-menu" class="sidebar-menu" class:open={mobileMenuOpen}>
         {#if bootstrap !== null}
-          <dl class="sidebar-stats" aria-label="Memory document stats">
-            <div><dt>{activeMemoryCount}</dt><dd>memories</dd></div>
+          <dl class="sidebar-stats" aria-label="Memory schema stats">
+            <div><dt>{activeMemoryCount}</dt><dd>active</dd></div>
             <div><dt>{relations.length}</dt><dd>links</dd></div>
-            <div><dt>{ruleCount}</dt><dd>rules</dd></div>
+            <div><dt>{facetCategoryCount}</dt><dd>facets</dd></div>
             <div><dt>{staleMemoryCount}</dt><dd>stale</dd></div>
           </dl>
         {/if}
 
         <label class="sidebar-search">
-          <span>Search doc</span>
+          <span>Search storage</span>
           <input
             type="search"
             bind:value={searchQuery}
@@ -1229,7 +1241,7 @@
           />
         </label>
 
-        <nav class="nav-list" aria-label="Memory pages">
+        <nav class="nav-list" aria-label="Memory schema views">
           <section class="nav-section" aria-labelledby="workspace-pages-heading">
             <p class="nav-heading" id="workspace-pages-heading">Workspace</p>
             <button
@@ -1251,7 +1263,7 @@
               onclick={showMemories}
             >
               <span class="nav-row-icon" aria-hidden="true">#</span>
-              <span>Project Memory</span>
+              <span>Schema Browser</span>
             </button>
             {#if !isDemoMode}
               <button
@@ -1269,30 +1281,26 @@
           </section>
 
           <section class="nav-section" aria-labelledby="memory-views-heading">
-            <p class="nav-heading" id="memory-views-heading">Pages</p>
-            <button type="button" class:active={pagePreset === "do-not-do"} onclick={() => pageFilter("do-not-do")}>
-              <span class="nav-row-icon" aria-hidden="true">!</span>
-              <span>Do Not Do</span>
-            </button>
-            <button type="button" class:active={pagePreset === "coding-workflows"} onclick={() => pageFilter("coding-workflows")}>
-              <span class="nav-row-icon" aria-hidden="true">↳</span>
-              <span>Workflows</span>
-            </button>
-            <button type="button" class:active={pagePreset === "architecture"} onclick={() => pageFilter("architecture")}>
-              <span class="nav-row-icon" aria-hidden="true">▦</span>
-              <span>Architecture</span>
-            </button>
-            <button type="button" class:active={pagePreset === "security-notes"} onclick={() => pageFilter("security-notes")}>
-              <span class="nav-row-icon" aria-hidden="true">◇</span>
-              <span>Security Notes</span>
-            </button>
-            <button type="button" class:active={pagePreset === "commands"} onclick={() => pageFilter("commands")}>
-              <span class="nav-row-icon" aria-hidden="true">›</span>
-              <span>Commands</span>
-            </button>
-            <button type="button" class:active={pagePreset === "source-memory"} onclick={() => pageFilter("source-memory")}>
+            <p class="nav-heading" id="memory-views-heading">Schema views</p>
+            <button type="button" class:active={pagePreset === "all"} onclick={() => pageFilter("overview")}>
               <span class="nav-row-icon" aria-hidden="true">≡</span>
-              <span>Source Memory</span>
+              <span>All objects</span>
+            </button>
+            <button type="button" class:active={pagePreset === "atomic-memory"} onclick={() => pageFilter("atomic-memory")}>
+              <span class="nav-row-icon" aria-hidden="true">#</span>
+              <span>Atomic memory</span>
+            </button>
+            <button type="button" class:active={pagePreset === "syntheses"} onclick={() => pageFilter("syntheses")}>
+              <span class="nav-row-icon" aria-hidden="true">S</span>
+              <span>Syntheses</span>
+            </button>
+            <button type="button" class:active={pagePreset === "sources"} onclick={() => pageFilter("sources")}>
+              <span class="nav-row-icon" aria-hidden="true">R</span>
+              <span>Sources</span>
+            </button>
+            <button type="button" class:active={pagePreset === "inactive"} onclick={() => pageFilter("inactive")}>
+              <span class="nav-row-icon" aria-hidden="true">!</span>
+              <span>Inactive</span>
             </button>
           </section>
         </nav>
@@ -1453,21 +1461,21 @@
         <article class="memory-page" aria-labelledby="memory-list-title" data-testid="memory-list-view">
           <header class="doc-hero">
             <span class="doc-icon" aria-hidden="true">A</span>
-            <p class="eyebrow">Local Aictx memory</p>
-            <h2 id="memory-list-title">{bootstrap.project.name} Coding Handbook</h2>
+            <p class="eyebrow">Canonical Aictx storage</p>
+            <h2 id="memory-list-title">{bootstrap.project.name} Memory Schema</h2>
             <p>
-              A local operating manual generated from Aictx memory. It keeps coding rules, workflows,
-              architecture notes, and source facts above the raw storage model.
+              Browse the real object types, facet categories, statuses, scopes, evidence, and relations
+              saved in this project's local memory database.
             </p>
           </header>
 
           <section class="memory-summary" aria-label="Project memory summary">
             <div class="summary-check" aria-hidden="true">✓</div>
             <div class="summary-copy">
-              <strong>Handbook generated</strong>
+              <strong>Schema projection loaded</strong>
               <p>
-                {activeMemoryCount} memories are rendered as coding rules, workflows, architecture notes,
-                security facts, and raw source memory.
+                {objects.length} objects are grouped by canonical type with {facetCategoryCount} facet categories
+                and {relations.length} stored relation links.
               </p>
               <p class="trust-copy">
                 <span>{trustLabel}</span> {trustDescription}
@@ -1488,6 +1496,109 @@
               <p><strong>Starter memory only.</strong> Seed useful repo memory with a bootstrap patch, then refresh the viewer.</p>
               <code>aictx suggest --bootstrap --patch &gt; bootstrap-memory.json</code>
               <code>aictx save --file bootstrap-memory.json</code>
+            </section>
+          {/if}
+
+          {#if guidedLenses.length > 0 || roleCoverage.roles.length > 0}
+            <section class="guided-views-panel" aria-labelledby="guided-views-title" data-testid="guided-views-panel">
+              <div class="guided-heading">
+                <div>
+                  <p class="eyebrow">Guided views</p>
+                  <h3 id="guided-views-title">Connected context over the same storage.</h3>
+                  <p>Lenses and role coverage are generated from the objects and relations below.</p>
+                </div>
+                <dl class="role-coverage-counts" aria-label="Role coverage counts">
+                  <div><dt>Populated</dt><dd>{roleCoverage.counts.populated}</dd></div>
+                  <div><dt>Thin</dt><dd>{roleCoverage.counts.thin}</dd></div>
+                  <div><dt>Missing</dt><dd>{roleCoverage.counts.missing}</dd></div>
+                </dl>
+              </div>
+
+              {#if guidedLenses.length > 0}
+                <div class="lens-tabs" role="group" aria-label="Memory lenses">
+                  {#each guidedLenses as lens (lens.name)}
+                    <button
+                      type="button"
+                      class:active={activeGuidedLens?.name === lens.name}
+                      onclick={() => {
+                        activeLensName = lens.name;
+                      }}
+                      data-testid={`viewer-lens-${lens.name}`}
+                    >
+                      {lens.title}
+                    </button>
+                  {/each}
+                </div>
+              {/if}
+
+              {#if activeGuidedLens !== null}
+                <section class="lens-detail" aria-label={activeGuidedLens.title} data-testid="active-lens">
+                  <div class="lens-meta">
+                    <span>{activeGuidedLens.included_memory_ids.length} objects</span>
+                    <span>{activeGuidedLens.relation_ids.length} relations</span>
+                    <span>{activeGuidedLens.generated_gaps.length} gaps</span>
+                  </div>
+
+                  {#if activeGuidedLens.included_memory_ids.length > 0}
+                    <div class="included-memory-group">
+                      <p>Included storage IDs</p>
+                      <div class="included-memory-links" aria-label="Lens included memories" data-testid="lens-included-memory">
+                        {#each activeGuidedLens.included_memory_ids as id (id)}
+                          {#if objectById.has(id)}
+                            <button type="button" onclick={() => selectRelated(id)}>{id}</button>
+                          {:else}
+                            <span>{id}</span>
+                          {/if}
+                        {/each}
+                      </div>
+                    </div>
+                  {/if}
+
+                  <section class="markdown-view lens-markdown" aria-label="Lens Markdown" data-testid="lens-markdown">
+                    {#each activeLensMarkdownBlocks as block, index (`lens-${block.kind}-${index}`)}
+                      {#if block.kind === "heading"}
+                        {#if block.level === 1}
+                          <h3>{block.text}</h3>
+                        {:else if block.level === 2}
+                          <h4>{block.text}</h4>
+                        {:else}
+                          <h5>{block.text}</h5>
+                        {/if}
+                      {:else if block.kind === "list"}
+                        <ul>
+                          {#each block.items ?? [] as item, itemIndex (itemIndex)}
+                            <li>{item}</li>
+                          {/each}
+                        </ul>
+                      {:else if block.kind === "quote"}
+                        <blockquote>{block.text}</blockquote>
+                      {:else if block.kind === "code"}
+                        <pre><code>{block.text}</code></pre>
+                      {:else}
+                        <p>{block.text}</p>
+                      {/if}
+                    {/each}
+                  </section>
+                </section>
+              {/if}
+
+              {#if roleCoverage.roles.length > 0}
+                <details class="role-coverage-detail" data-testid="role-coverage-detail">
+                  <summary>Role coverage</summary>
+                  <ul class="role-list">
+                    {#each roleCoverage.roles as role (role.key)}
+                      <li>
+                        <span class={`role-status ${roleStatusClass(role.status)}`}>{role.status}</span>
+                        <strong>{role.label}</strong>
+                        <small>{role.description}</small>
+                        {#if role.memory_ids.length > 0}
+                          <span class="role-memory-ids">{role.memory_ids.join(", ")}</span>
+                        {/if}
+                      </li>
+                    {/each}
+                  </ul>
+                </details>
+              {/if}
             </section>
           {/if}
 
@@ -1651,7 +1762,7 @@
 
           <section class="list-controls" aria-label="Memory list controls">
             <div>
-              <strong>Memory library</strong>
+              <strong>Canonical objects</strong>
               <span>{filteredObjects.length} rows</span>
             </div>
             <div class="controls-row">
@@ -1671,9 +1782,15 @@
                 {/each}
               </div>
               <select bind:value={typeFilter} onchange={clearPagePreset} data-testid="viewer-type-filter" aria-label="Type">
-                <option value={allOption}>All memory</option>
+                <option value={allOption}>All types</option>
                 {#each typeOptions as type (type)}
                   <option value={type}>{type}</option>
+                {/each}
+              </select>
+              <select bind:value={facetCategoryFilter} onchange={clearPagePreset} data-testid="viewer-facet-filter" aria-label="Facet category">
+                <option value={allOption}>All facets</option>
+                {#each facetCategoryOptions as category (category)}
+                  <option value={category}>{category}</option>
                 {/each}
               </select>
               <select bind:value={statusFilter} onchange={clearPagePreset} data-testid="viewer-status-filter" aria-label="Status">
@@ -1708,6 +1825,12 @@
                         <span class="object-glyph">{objectIcon(object)}</span>
                         <span>
                           <strong>{object.title}</strong>
+                          <span class="object-meta" data-testid={`object-meta-${object.id}`}>
+                            <span>{object.type}</span>
+                            <span>{object.status}</span>
+                            <span>{facetCategoryLabel(object)}</span>
+                            <span>{scopeLabel(object.scope)}</span>
+                          </span>
                           <small>{bodyPreview(object)}</small>
                         </span>
                         <em aria-hidden="true">{selectedObject?.id === object.id ? "⌄" : "Open"}</em>
@@ -1718,7 +1841,11 @@
                             <div><dt>Name</dt><dd>{selectedObject.title}</dd></div>
                             <div><dt>ID</dt><dd class="mono">{selectedObject.id}</dd></div>
                             <div><dt>Type</dt><dd>{selectedObject.type}</dd></div>
+                            <div><dt>Facet</dt><dd>{facetCategoryLabel(selectedObject)}</dd></div>
                             <div><dt>Status</dt><dd>{selectedObject.status}</dd></div>
+                            <div><dt>Scope</dt><dd>{scopeLabel(selectedObject.scope)}</dd></div>
+                            <div><dt>Evidence</dt><dd>{selectedObject.evidence.length}</dd></div>
+                            <div><dt>Relations</dt><dd>{directRelations.length}</dd></div>
                             <div><dt>Updated</dt><dd>{selectedObject.updated_at}</dd></div>
                           </dl>
 
@@ -1764,6 +1891,19 @@
                                 </ul>
                               </details>
                             {/if}
+
+                            <details class="notion-toggle" open data-testid="facet-details">
+                              <summary>Facet category</summary>
+                              {#if selectedObject.facets === null}
+                                <p class="empty-copy">No facets saved on this object.</p>
+                              {:else}
+                                <dl class="facet-grid">
+                                  <div><dt>Category</dt><dd>{selectedObject.facets.category}</dd></div>
+                                  <div><dt>Applies to</dt><dd>{selectedObject.facets.applies_to?.join(", ") || "global"}</dd></div>
+                                  <div><dt>Load modes</dt><dd>{selectedObject.facets.load_modes?.join(", ") || "all modes"}</dd></div>
+                                </dl>
+                              {/if}
+                            </details>
 
                             <details class="notion-toggle" open data-testid="provenance-links">
                               <summary>Provenance</summary>
@@ -3434,6 +3574,7 @@
     font-weight: 820;
   }
 
+  .guided-views-panel,
   .context-preview-panel {
     display: grid;
     gap: 18px;
@@ -3444,6 +3585,7 @@
     box-shadow: 0 10px 28px rgb(16 24 40 / 5%);
   }
 
+  .guided-heading,
   .context-preview-heading {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
@@ -3451,6 +3593,7 @@
     align-items: start;
   }
 
+  .guided-heading h3,
   .context-preview-heading h3 {
     margin: 4px 0 0;
     color: #202020;
@@ -3459,6 +3602,7 @@
     font-weight: 850;
   }
 
+  .guided-heading p:not(.eyebrow),
   .context-preview-heading p:not(.eyebrow) {
     margin: 7px 0 0;
     max-width: 620px;
@@ -3466,6 +3610,7 @@
     line-height: 1.45;
   }
 
+  .role-coverage-counts,
   .preview-stats {
     display: grid;
     grid-template-columns: repeat(3, minmax(78px, 1fr));
@@ -3473,6 +3618,7 @@
     margin: 0;
   }
 
+  .role-coverage-counts div,
   .preview-stats div {
     border: 1px solid #e3dfd7;
     border-radius: 8px;
@@ -3480,6 +3626,7 @@
     background: #fbfaf7;
   }
 
+  .role-coverage-counts dt,
   .preview-stats dt {
     color: #8d897f;
     font-size: 0.7rem;
@@ -3487,11 +3634,140 @@
     text-transform: uppercase;
   }
 
+  .role-coverage-counts dd,
   .preview-stats dd {
     margin: 4px 0 0;
     color: #262522;
     font-size: 1.2rem;
     font-weight: 850;
+  }
+
+  .lens-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    border-top: 1px solid #ebe7de;
+    padding-top: 16px;
+  }
+
+  .lens-tabs button {
+    min-height: 36px;
+    border: 1px solid #dedbd3;
+    border-radius: 999px;
+    padding: 7px 12px;
+    color: #6d6a65;
+    background: #ffffff;
+    font-size: 0.86rem;
+    font-weight: 700;
+    box-shadow: 0 1px 2px rgb(16 24 40 / 4%);
+  }
+
+  .lens-tabs button.active {
+    border-color: #202020;
+    color: #ffffff;
+    background: #202020;
+  }
+
+  .lens-detail {
+    display: grid;
+    gap: 14px;
+    border-top: 1px solid #ebe7de;
+    padding-top: 16px;
+  }
+
+  .lens-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .lens-meta span {
+    border: 1px solid #ddd8ce;
+    border-radius: 999px;
+    padding: 3px 9px;
+    color: #68645d;
+    background: #fbfaf7;
+    font-size: 0.8rem;
+    font-weight: 760;
+  }
+
+  .lens-markdown {
+    max-height: 360px;
+    overflow: auto;
+    border-color: #e3dfd7;
+    border-radius: 8px;
+    background: #fffefa;
+  }
+
+  .role-coverage-detail {
+    border-top: 1px solid #ebe7de;
+    padding-top: 14px;
+    color: #716d66;
+  }
+
+  .role-coverage-detail summary {
+    cursor: pointer;
+    color: #37352f;
+    font-weight: 760;
+  }
+
+  .role-list {
+    display: grid;
+    gap: 9px;
+    margin: 12px 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .role-list li {
+    display: grid;
+    grid-template-columns: auto minmax(0, 0.5fr) minmax(0, 1fr);
+    gap: 8px 12px;
+    align-items: baseline;
+    border: 1px solid #e3dfd7;
+    border-radius: 8px;
+    padding: 10px 12px;
+    background: #fbfaf7;
+  }
+
+  .role-list strong {
+    color: #37352f;
+    font-size: 0.94rem;
+  }
+
+  .role-list small,
+  .role-memory-ids {
+    color: #746f68;
+    font-size: 0.84rem;
+    line-height: 1.35;
+  }
+
+  .role-memory-ids {
+    grid-column: 2 / -1;
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+    overflow-wrap: anywhere;
+  }
+
+  .role-status {
+    border-radius: 999px;
+    padding: 3px 8px;
+    color: #4e5a6b;
+    background: #f0f4f6;
+    font-size: 0.72rem;
+    font-weight: 850;
+    text-transform: uppercase;
+  }
+
+  .role-status.status-populated {
+    color: #2f5b44;
+    background: #eaf4ed;
+  }
+
+  .role-status.status-missing,
+  .role-status.status-stale,
+  .role-status.status-conflicted {
+    color: #7c2d12;
+    background: #fff1e7;
   }
 
   .context-preview-form {
@@ -3779,6 +4055,10 @@
     min-width: 180px;
   }
 
+  .list-controls [data-testid="viewer-facet-filter"] {
+    min-width: 210px;
+  }
+
   .sectioned-memory {
     display: grid;
     gap: 36px;
@@ -3875,8 +4155,26 @@
     font-weight: 800;
   }
 
+  .object-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 7px;
+  }
+
+  .object-meta span {
+    border: 1px solid #dedbd3;
+    border-radius: 999px;
+    padding: 2px 7px;
+    color: #605c55;
+    background: #fbfaf7;
+    font-size: 0.74rem;
+    font-weight: 760;
+  }
+
   .object-list small {
-    margin-top: 3px;
+    display: block;
+    margin-top: 7px;
     color: #77736d;
     font-size: 0.94rem;
     line-height: 1.35;
@@ -3929,6 +4227,29 @@
 
   .notion-toggle-list {
     gap: 12px;
+  }
+
+  .facet-grid {
+    display: grid;
+    gap: 8px;
+    margin: 0;
+  }
+
+  .facet-grid div {
+    display: grid;
+    grid-template-columns: 96px minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  .facet-grid dt {
+    color: #99958d;
+    font-weight: 760;
+  }
+
+  .facet-grid dd {
+    margin: 0;
+    color: #3e3d39;
+    overflow-wrap: anywhere;
   }
 
   .notion-toggle summary {
@@ -4057,9 +4378,18 @@
       margin: 0;
     }
 
+    .guided-heading,
     .context-preview-heading,
     .context-preview-form {
       grid-template-columns: 1fr;
+    }
+
+    .role-list li {
+      grid-template-columns: 1fr;
+    }
+
+    .role-memory-ids {
+      grid-column: auto;
     }
 
     .context-preview-form {

@@ -96,8 +96,11 @@ describe("read-only viewer shell", () => {
       await expectCount(page, '[data-testid="memory-list-view"]', 0);
       await page.getByRole("button", { name: "Open project" }).first().click();
       await expectText(page, '[data-testid="memory-list-view"]', "Aictx Viewer Shell Project");
-      await expectText(page, '[data-testid="memory-list-view"]', "Coding Handbook");
-      await expectText(page, '[data-testid="memory-list-view"]', "Memory library");
+      await expectText(page, '[data-testid="memory-list-view"]', "Memory Schema");
+      await expectText(page, '[data-testid="memory-list-view"]', "Canonical objects");
+      await expectText(page, '[data-testid="guided-views-panel"]', "Guided views");
+      await expectText(page, '[data-testid="active-lens"]', "Project Map");
+      await expectText(page, '[data-testid="role-coverage-detail"]', "Role coverage");
 
       await page.fill('[data-testid="context-preview-task"]', "viewer shell layout");
       await page.locator('[data-testid="context-preview-submit"]').click();
@@ -114,6 +117,13 @@ describe("read-only viewer shell", () => {
       await expectCount(page, '[data-testid="object-row-decision.viewer-shell"]', 1);
       await expectCount(page, '[data-testid="object-row-constraint.viewer-markdown"]', 0);
 
+      await page.selectOption('[data-testid="viewer-type-filter"]', "all");
+      await page.selectOption('[data-testid="viewer-facet-filter"]', "decision-rationale");
+      await expectCount(page, '[data-testid="object-row-decision.viewer-shell"]', 1);
+      await expectCount(page, '[data-testid="object-row-constraint.viewer-markdown"]', 0);
+      await expectText(page, '[data-testid="object-meta-decision.viewer-shell"]', "decision-rationale");
+      await page.selectOption('[data-testid="viewer-facet-filter"]', "all");
+
       await page.selectOption('[data-testid="viewer-type-filter"]', "gotcha");
       await expectCount(page, '[data-testid="object-row-gotcha.webhook-duplicates"]', 1);
       await page.selectOption('[data-testid="viewer-type-filter"]', "workflow");
@@ -126,16 +136,13 @@ describe("read-only viewer shell", () => {
 
       await page.selectOption('[data-testid="viewer-status-filter"]', "all");
 
-      await page.getByRole("button", { name: "Do Not Do" }).click();
-      await expectCount(page, '[data-testid="object-row-constraint.viewer-markdown"]', 1);
-      await expectCount(page, '[data-testid="object-row-gotcha.webhook-duplicates"]', 1);
+      await page.locator('[data-testid="viewer-layer-inactive"]').click();
       await expectCount(page, '[data-testid="object-row-fact.billing-context"]', 1);
+      await expectCount(page, '[data-testid="object-row-decision.viewer-shell"]', 0);
 
-      await page.getByRole("button", { name: "Security Notes" }).click();
-      await expectCount(page, '[data-testid="object-row-constraint.viewer-markdown"]', 1);
+      await page.locator('[data-testid="viewer-layer-memories"]').click();
       await expectCount(page, '[data-testid="object-row-decision.viewer-shell"]', 1);
-
-      await page.getByRole("button", { name: "Commands" }).click();
+      await expectCount(page, '[data-testid="object-row-synthesis.agent-guidance"]', 0);
       await expectCount(page, '[data-testid="object-row-workflow.release-checklist"]', 1);
 
       await page.locator('[data-testid="viewer-layer-sources"]').click();
@@ -160,6 +167,8 @@ describe("read-only viewer shell", () => {
       await page.fill('[data-testid="viewer-search"]', "markdown safety");
       await page.locator('[data-testid="object-row-constraint.viewer-markdown"]').click();
       await assertSelectedObject(page, "Viewer Markdown Safety", "constraint.viewer-markdown");
+      await expectText(page, '[data-testid="selected-object"]', "business-rule");
+      await expectText(page, '[data-testid="facet-details"]', "viewer/src/App.svelte");
       await assertMarkdownIsSafe(page);
 
       await page.locator('[data-testid="object-row-constraint.viewer-markdown"]').click();
@@ -332,8 +341,8 @@ describe("read-only viewer shell", () => {
       await expectText(page, '[data-testid="starter-memory-notice"]', "Starter memory only.");
       await expectText(page, '[data-testid="starter-memory-notice"]', "aictx suggest --bootstrap --patch > bootstrap-memory.json");
       await expectText(page, '[data-testid="starter-memory-notice"]', "aictx save --file bootstrap-memory.json");
-      await expectText(page, '[data-testid="memory-list-view"]', "Coding Handbook");
-      await expectText(page, '[data-testid="memory-list-view"]', "Memory library");
+      await expectText(page, '[data-testid="memory-list-view"]', "Memory Schema");
+      await expectText(page, '[data-testid="memory-list-view"]', "Canonical objects");
       await page.locator('[data-testid="object-row-architecture.current"]').click();
       await expectText(page, '[data-testid="incoming-relations"]', "related_to");
       await expectCount(page, '[data-testid="relation-graph"]', 0);
@@ -407,6 +416,11 @@ async function writeViewerFixtures(projectRoot: string): Promise<void> {
       ""
     ].join("\n"),
     tags: ["viewer", "security"],
+    facets: {
+      category: "business-rule",
+      applies_to: ["viewer/src/App.svelte"],
+      load_modes: ["review"]
+    },
     updatedAt: FIXED_TIMESTAMP_NEXT_MINUTE
   });
   await writeMemoryObject(projectRoot, {
@@ -417,6 +431,10 @@ async function writeViewerFixtures(projectRoot: string): Promise<void> {
     bodyPath: "memory/decisions/viewer-shell.md",
     body: "# Viewer Shell Layout\n\nThe shell shows a searchable object list and direct relation context.\n",
     tags: ["viewer", "ui"],
+    facets: {
+      category: "decision-rationale",
+      applies_to: ["viewer/src/App.svelte"]
+    },
     updatedAt: FIXED_TIMESTAMP_NEXT_MINUTE
   });
   await writeMemoryObject(projectRoot, {
@@ -427,6 +445,9 @@ async function writeViewerFixtures(projectRoot: string): Promise<void> {
     bodyPath: "memory/facts/billing-context.md",
     body: "# Billing Context\n\nThis fixture proves unrelated memory can be filtered away.\n",
     tags: ["billing"],
+    facets: {
+      category: "debugging-fact"
+    },
     updatedAt: FIXED_TIMESTAMP
   });
   await writeMemoryObject(projectRoot, {
@@ -447,6 +468,9 @@ async function writeViewerFixtures(projectRoot: string): Promise<void> {
     bodyPath: "memory/gotchas/webhook-duplicates.md",
     body: "# Webhook Duplicates\n\nNever assume webhook delivery is unique.\n",
     tags: ["viewer", "webhook"],
+    facets: {
+      category: "gotcha"
+    },
     updatedAt: FIXED_TIMESTAMP
   });
   await writeMemoryObject(projectRoot, {
@@ -457,6 +481,10 @@ async function writeViewerFixtures(projectRoot: string): Promise<void> {
     bodyPath: "memory/workflows/release-checklist.md",
     body: "# Release Checklist\n\nRun pnpm test before publishing.\n",
     tags: ["viewer", "release"],
+    facets: {
+      category: "workflow",
+      load_modes: ["coding", "review"]
+    },
     updatedAt: FIXED_TIMESTAMP
   });
   await writeMemoryObject(projectRoot, {

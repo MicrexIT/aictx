@@ -1,14 +1,14 @@
 {
   "body_path": "memory/workflows/demo-viewer-deployment.md",
-  "content_hash": "sha256:ad0f505e50bb951ba84c69d16e815a0d502e6df10f0446e5e942c7a3404950f7",
+  "content_hash": "sha256:35cfac49dc8f00ffe3ea8f098d6bb7964cd26ddf49d17095a7729259fb285019",
   "created_at": "2026-05-13T18:23:33+02:00",
   "evidence": [
     {
-      "id": ".github/workflows/deploy-demo.yml",
+      "id": "scripts/build-viewer-demo-data.mjs",
       "kind": "file"
     },
     {
-      "id": "scripts/build-viewer-demo-data.mjs",
+      "id": "src/viewer/demo-data.generated.json",
       "kind": "file"
     },
     {
@@ -20,11 +20,19 @@
       "kind": "file"
     },
     {
-      "id": "wrangler.demo.jsonc",
+      "id": "site/src/pages/index.astro",
       "kind": "file"
     },
     {
-      "id": "package.json",
+      "id": "test/unit/viewer/demo-data.test.ts",
+      "kind": "file"
+    },
+    {
+      "id": "test/unit/viewer/demo-worker.test.ts",
+      "kind": "file"
+    },
+    {
+      "id": "test/integration/viewer/shell.test.ts",
       "kind": "file"
     }
   ],
@@ -35,6 +43,8 @@
       "src/viewer/demo-data.generated.json",
       "src/viewer/demo-worker.ts",
       "viewer/src/App.svelte",
+      "site/src/pages/index.astro",
+      "site/public/assets/viewer-demo.png",
       "wrangler.demo.jsonc",
       "package.json"
     ],
@@ -60,5 +70,5 @@
   ],
   "title": "Demo viewer deployment",
   "type": "workflow",
-  "updated_at": "2026-05-13T18:51:45+02:00"
+  "updated_at": "2026-05-14T14:59:25+02:00"
 }
