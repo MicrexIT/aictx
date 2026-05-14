@@ -1,7 +1,13 @@
 # Aictx
 
-[![CI](https://github.com/MicrexIT/aictx/actions/workflows/ci.yml/badge.svg)](https://github.com/MicrexIT/aictx/actions/workflows/ci.yml)
-[![CodeQL](https://github.com/MicrexIT/aictx/actions/workflows/codeql.yml/badge.svg)](https://github.com/MicrexIT/aictx/actions/workflows/codeql.yml)
+<p align="center">
+  <a href="https://aictx.dev"><img alt="Website" src="https://img.shields.io/badge/website-aictx.dev-111214?style=for-the-badge"></a>
+  <a href="https://docs.aictx.dev"><img alt="Docs" src="https://img.shields.io/badge/docs-read-111214?style=for-the-badge"></a>
+  <a href="https://demo.aictx.dev/?token=demo"><img alt="Live demo" src="https://img.shields.io/badge/demo-viewer-111214?style=for-the-badge"></a>
+</p>
+
+[![CI](https://github.com/aictx/memory/actions/workflows/ci.yml/badge.svg)](https://github.com/aictx/memory/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/aictx/memory/actions/workflows/codeql.yml/badge.svg)](https://github.com/aictx/memory/actions/workflows/codeql.yml)
 [![npm](https://img.shields.io/npm/v/@aictx/memory)](https://www.npmjs.com/package/@aictx/memory)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
