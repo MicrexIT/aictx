@@ -50,10 +50,11 @@ drifts. A third has the same rule phrased differently. Agents start from
 slightly different context, and humans spend time maintaining duplicated
 instructions instead of improving the project.
 
-With Aictx, the durable project context has one normal home. `aictx init` can
-create or update marked Aictx sections in the instruction files, while `.aictx/`
-stores the evolving knowledge. Claude Code and Codex can both follow their
-native instruction file, but the project memory they load is the same.
+With Aictx, the durable project context has one normal home. `aictx setup` can
+initialize storage, create or update marked Aictx sections in the instruction
+files, and apply a conservative bootstrap memory patch, while `.aictx/` stores
+the evolving knowledge. Claude Code and Codex can both follow their native
+instruction file, but the project memory they load is the same.
 
 That gives you two practical benefits.
 
@@ -73,4 +74,3 @@ discipline. But it should stay small enough that a human can audit it quickly.
 The project itself deserves a richer memory than that. Aictx keeps that richer
 context local, typed, searchable, and reviewable, so agent-specific files can
 stay focused on behavior instead of becoming stale project encyclopedias.
-

@@ -56,6 +56,7 @@ Good starting points:
 - [Specializing Aictx](https://docs.aictx.dev/specializing-aictx/)
 - [Agent integration](https://docs.aictx.dev/agent-integration/)
 - [Agent recipes](https://docs.aictx.dev/agent-recipes/)
+- [Wiki workflow](https://docs.aictx.dev/wiki-workflow/)
 
 Bundled docs are also available from the CLI:
 
@@ -65,6 +66,7 @@ aictx docs getting-started
 aictx docs capabilities
 aictx docs agent-integration --open
 aictx docs agent-recipes
+aictx docs wiki-workflow
 ```
 
 ## Install
@@ -148,6 +150,20 @@ Save durable memory after meaningful work:
 aictx remember --stdin
 ```
 
+File source-backed wiki-style memory when an agent has already read and
+synthesized a source:
+
+```bash
+aictx wiki ingest --stdin
+aictx wiki file --stdin
+aictx wiki lint
+aictx wiki log
+```
+
+The wiki commands do not fetch URLs, call a model, or infer semantics. They
+write structured memory supplied by the agent, with source records carrying
+explicit raw-source `origin` metadata.
+
 Inspect memory asynchronously when needed:
 
 ```bash
@@ -167,9 +183,12 @@ and `events.jsonl` for semantic memory history. Generated state is rebuildable:
 the SQLite search index, context packs, and exports can be regenerated from
 canonical memory.
 
-Aictx storage uses a hybrid memory model:
+Aictx storage uses a v4 hybrid memory model:
 
-- `source` records preserve where context came from.
+- `source` records preserve where context came from. Their optional `origin`
+  block identifies the raw source, such as a file path, URL, digest, capture
+  timestamp, and media type. The object `source` field still means who wrote
+  the memory change.
 - Atomic memories capture precise reusable claims as `decision`, `constraint`,
   `question`, `fact`, `gotcha`, `workflow`, `note`, or `concept` objects.
 - `synthesis` records maintain compact summaries for product intent, feature
