@@ -27,6 +27,26 @@ indexes it locally, validates changes before writing, and never commits for you.
 This repository publishes the npm package `@aictx/memory`. It is unrelated to
 similarly named packages in other ecosystems.
 
+## Try it in 60 seconds
+
+Aictx requires Node.js `>=22`. Core commands run locally; no cloud account,
+model API, embeddings, or hosted sync are required.
+
+```bash
+npm install -g @aictx/memory
+cd path/to/your/repo
+aictx setup --no-view
+aictx load "understand this repo"
+aictx view
+```
+
+`setup --no-view` writes conservative starter memory without opening the
+viewer. `load` returns a task-focused context pack for an agent or human to
+inspect. `view` opens the local browser viewer when you want to audit what was
+saved. Preview the first write with `aictx setup --dry-run`.
+
+Aictx writes local files and never commits automatically.
+
 ## Inside Aictx
 
 Three surfaces ship today. Each one works locally and fits normal Git review.
@@ -150,7 +170,10 @@ Package-manager and local-binary fallbacks are version-sensitive. If a local
 install is stale, update it or use a current global/source binary before
 trusting schema errors.
 
-## Quickstart
+## Core commands
+
+The first-run path above is intentionally short. These are the commands you will
+use day to day.
 
 Set up useful first-run memory inside an existing project:
 
@@ -207,8 +230,6 @@ Inspect memory asynchronously when needed:
 aictx view
 aictx diff
 ```
-
-Aictx writes local files and never commits automatically.
 
 ## Visual memory
 
