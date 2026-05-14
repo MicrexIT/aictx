@@ -1,10 +1,10 @@
 {
   "body_path": "memory/syntheses/marketing-site-visual-direction.md",
-  "content_hash": "sha256:2d66aeae402cef91268055f39a0c80fda4621560d0e8e5ee295d974bceee17f0",
+  "content_hash": "sha256:d7e6dd6d0adc4e56a39b109d63fdffbbcf03645c57c89f5113f399166ac2275e",
   "created_at": "2026-05-14T19:42:24+01:00",
   "evidence": [
     {
-      "id": "site/src/pages/index.astro",
+      "id": "site/src/pages/use-cases/index.astro",
       "kind": "file"
     },
     {
@@ -36,5 +36,5 @@
   "tags": [],
   "title": "Marketing site visual direction",
   "type": "synthesis",
-  "updated_at": "2026-05-14T21:53:28+01:00"
+  "updated_at": "2026-05-14T22:16:49+01:00"
 }

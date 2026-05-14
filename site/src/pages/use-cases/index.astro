@@ -13,13 +13,15 @@ const posts = (await getCollection("blog")).sort(
   description="Practical use cases for Aictx and durable project memory for AI coding agents."
 >
   <main>
-    <section class="blog-hero" aria-labelledby="use-cases-title">
-      <p class="section-kicker">Use cases</p>
-      <h1 id="use-cases-title">Where durable context helps AI coding agents.</h1>
-      <p>
-        Practical notes on keeping product intent, repo conventions, and sharp edges available
-        across agent sessions.
-      </p>
+    <section class="blog-hero use-cases-hero" aria-labelledby="use-cases-title">
+      <div class="use-cases-hero-panel">
+        <p class="section-kicker">Use cases</p>
+        <h1 id="use-cases-title">Where durable context helps AI coding agents.</h1>
+        <p>
+          Practical notes on keeping product intent, repo conventions, and sharp edges available
+          across agent sessions.
+        </p>
+      </div>
     </section>
 
     <section class="blog-list-section" aria-label="Use case articles">

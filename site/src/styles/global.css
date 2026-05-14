@@ -1740,6 +1740,35 @@ h3 {
   line-height: 1.5;
 }
 
+.use-cases-hero {
+  display: flex;
+  justify-content: center;
+  padding: clamp(28px, 5vw, 64px) 20px;
+}
+
+.use-cases-hero-panel {
+  width: min(100%, 980px);
+  padding: clamp(34px, 5vw, 62px);
+  background: rgba(252, 252, 249, 0.94);
+  border: 1px solid rgba(17, 18, 20, 0.1);
+  border-radius: 8px;
+  box-shadow:
+    0 34px 96px rgba(37, 39, 36, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(10px);
+}
+
+.use-cases-hero-panel h1 {
+  max-width: 780px;
+}
+
+.use-cases-hero-panel p:not(.section-kicker) {
+  max-width: 720px;
+  font-size: clamp(17px, 1.65vw, 22px);
+  font-weight: 560;
+  line-height: 1.45;
+}
+
 .section-kicker {
   margin-bottom: 14px;
   color: var(--accent);
