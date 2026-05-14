@@ -1,12 +1,19 @@
 # Contributing to Aictx
 
 Thanks for helping improve Aictx. This project is the npm package
-`@aictx/memory`: a local-first project memory tool for AI coding agents.
+`@aictx/memory`: local-first, reviewable project memory for AI coding agents.
+
+Aictx is not a chat transcript archive, always-on capture server, hosted memory
+service, vector DB, or prompt template. Contributions should preserve that
+shape: typed memory in `.aictx/`, local indexing, explicit validation, and
+normal Git review.
 
 ## Ways to contribute
 
 - Report reproducible bugs with the bug report template.
 - Improve public docs under `docs/src/content/docs/`.
+- Improve the public site under `site/` or README positioning when the product
+  story changes.
 - Propose CLI, MCP, storage, retrieval, or viewer improvements through focused issues.
 - Send small pull requests that keep behavior, tests, and docs aligned.
 
@@ -38,8 +45,10 @@ pnpm dev:site
 ## Working with protected `main`
 
 The `main` branch is protected. Do not push directly to `main`, force-push
-`main`, or delete `main`; GitHub will reject normal collaborator attempts. Work
-from a branch and merge through a pull request.
+`main`, or delete `main`. Work from a branch and merge through a pull request.
+Repository administrators may have emergency bypass rights, but routine work,
+AI-agent work, and external contributions should still use pull requests so
+required checks and review stay visible.
 
 Recommended git flow:
 
@@ -115,8 +124,12 @@ preserve its commits.
 - Write the pull request description as a prompt another coding agent could use
   to reproduce, review, or continue the work.
 - Add or update tests for CLI, MCP, storage, packaging, and viewer behavior.
-- Update README or public docs when user-visible behavior changes.
+- Update README, public docs, or site copy when user-visible behavior,
+  positioning, or workflows change.
 - Run the verification commands that match the changed area.
+- For README or marketing-site visual changes, keep screenshots/assets current
+  with the implementation they depict and avoid fake interactive controls in
+  static images.
 - Keep generated guidance files in sync by running `pnpm build:guidance` when
   editing `integrations/templates/agent-guidance.md`; generated integration
   artifacts live under `integrations/`.
