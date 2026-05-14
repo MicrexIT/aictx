@@ -128,6 +128,7 @@ aliases over search/inspect behavior, not local MCP tool names.
 | Validate storage | none | `aictx check` |
 | Rebuild generated index | none | `aictx rebuild` |
 | Reset local storage | none | `aictx reset` |
+| Upgrade storage schema | none | `aictx upgrade` |
 | Show memory history | none | `aictx history` |
 | Restore memory | none | `aictx restore` |
 | Rewind memory | none | `aictx rewind` |

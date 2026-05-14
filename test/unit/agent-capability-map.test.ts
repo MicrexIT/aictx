@@ -6,18 +6,6 @@ import { describe, expect, it } from "vitest";
 const root = process.cwd();
 const generatedNotice = "<!-- Generated from integrations/templates/agent-guidance.md. Do not edit directly. -->";
 
-const mirroredSpecs = [
-  "aictx-data-access-spec.md",
-  "implementation-roadmap.md",
-  "indexing-and-context-compiler-spec.md",
-  "local-viewer-spec.md",
-  "mcp-and-cli-api-spec.md",
-  "prd.md",
-  "runtime-and-project-architecture-spec.md",
-  "schemas-and-validation-spec.md",
-  "storage-format-spec.md"
-] as const;
-
 const objectTypes = [
   "project",
   "architecture",
@@ -54,38 +42,32 @@ const mcpAndCliCapabilities = [
   {
     capability: "Load task context",
     mcp: "`load_memory`",
-    cli: "`aictx load`",
-    notes: "Default routine agent path is CLI; MCP equivalent is supported when configured."
+    cli: "`aictx load`"
   },
   {
     capability: "Search memory",
     mcp: "`search_memory`",
-    cli: "`aictx search`",
-    notes: "Default routine agent path is CLI; MCP equivalent is supported when configured."
+    cli: "`aictx search`"
   },
   {
     capability: "Inspect object",
     mcp: "`inspect_memory`",
-    cli: "`aictx inspect`",
-    notes: "Full-object local-agent read path with direct relation summaries."
+    cli: "`aictx inspect`"
   },
   {
-    capability: "Remember memory",
+    capability: "Remember durable context",
     mcp: "`remember_memory`",
-    cli: "`aictx remember`",
-    notes: "Intent-first routine write path compiles to a structured patch."
+    cli: "`aictx remember`"
   },
   {
     capability: "Save structured patch",
     mcp: "`save_memory_patch`",
-    cli: "`aictx save`",
-    notes: "Advanced structured patch write path."
+    cli: "`aictx save`"
   },
   {
     capability: "Show memory diff",
     mcp: "`diff_memory`",
-    cli: "`aictx diff`",
-    notes: "Git-backed async inspection and recovery path."
+    cli: "`aictx diff`"
   }
 ] as const;
 
@@ -93,122 +75,102 @@ const cliOnlyCapabilities = [
   {
     capability: "Initialize storage",
     mcp: "none",
-    cli: "`aictx init`, `aictx setup`",
-    notes: "Setup remains CLI-only in v1."
+    cli: "`aictx init`, `aictx setup`"
   },
   {
     capability: "Review patch file",
     mcp: "none",
-    cli: "`aictx patch review`",
-    notes: "Patch review remains CLI-only in v1."
+    cli: "`aictx patch review`"
   },
   {
     capability: "Validate storage",
     mcp: "none",
-    cli: "`aictx check`",
-    notes: "Maintenance remains CLI-only in v1."
+    cli: "`aictx check`"
   },
   {
     capability: "Rebuild generated index",
     mcp: "none",
-    cli: "`aictx rebuild`",
-    notes: "Maintenance remains CLI-only in v1."
+    cli: "`aictx rebuild`"
   },
   {
     capability: "Reset local storage",
     mcp: "none",
-    cli: "`aictx reset`",
-    notes: "Destructive maintenance remains CLI-only in v1."
+    cli: "`aictx reset`"
   },
   {
     capability: "Upgrade storage schema",
     mcp: "none",
-    cli: "`aictx upgrade`",
-    notes: "Migration remains CLI-only for storage v4."
+    cli: "`aictx upgrade`"
   },
   {
     capability: "Show memory history",
     mcp: "none",
-    cli: "`aictx history`",
-    notes: "Recovery remains CLI-only in v1."
+    cli: "`aictx history`"
   },
   {
     capability: "Restore memory",
     mcp: "none",
-    cli: "`aictx restore`",
-    notes: "Recovery remains CLI-only in v1."
+    cli: "`aictx restore`"
   },
   {
     capability: "Rewind memory",
     mcp: "none",
-    cli: "`aictx rewind`",
-    notes: "Recovery remains CLI-only in v1."
+    cli: "`aictx rewind`"
   },
   {
     capability: "List stale memory",
     mcp: "none",
-    cli: "`aictx stale`",
-    notes: "Debug list remains CLI-only in v1."
+    cli: "`aictx stale`"
   },
   {
     capability: "Show graph neighborhood",
     mcp: "none",
-    cli: "`aictx graph`, `aictx view` graph screen",
-    notes: "Graph map is available in the CLI and local viewer; it remains outside MCP."
+    cli: "`aictx graph`, `aictx view` graph screen"
   },
   {
     capability: "Show memory lens",
     mcp: "none",
-    cli: "`aictx lens`",
-    notes: "Readable project views remain CLI-only in v1."
+    cli: "`aictx lens`"
   },
   {
     capability: "Manage branch handoff",
     mcp: "none",
-    cli: "`aictx handoff`",
-    notes: "Branch-scoped continuity remains CLI-only in v1."
+    cli: "`aictx handoff`"
   },
   {
     capability: "Export Obsidian projection",
     mcp: "none",
-    cli: "`aictx export obsidian`",
-    notes: "Generated projection remains CLI-only in v1."
+    cli: "`aictx export obsidian`"
   },
   {
     capability: "Manage project registry",
     mcp: "none",
-    cli: "`aictx projects`",
-    notes: "Registry management remains CLI-only in v1."
+    cli: "`aictx projects`"
   },
   {
     capability: "View local memory",
     mcp: "none",
-    cli: "`aictx view`",
-    notes: "Local viewer remains CLI-only in v1."
-  },
-  {
-    capability: "Read public docs",
-    mcp: "none",
-    cli: "`aictx docs`",
-    notes: "Bundled public docs remain CLI-only in v1."
+    cli: "`aictx view`"
   },
   {
     capability: "Suggest memory decision packet",
     mcp: "none",
-    cli: "`aictx suggest`",
-    notes: "Agent assistance remains CLI-only in v1."
+    cli: "`aictx suggest`"
   },
   {
     capability: "Audit memory hygiene",
     mcp: "none",
-    cli: "`aictx audit`",
-    notes: "Deterministic hygiene audit remains CLI-only in v1."
+    cli: "`aictx audit`"
   },
   {
     capability: "Wiki source workflow",
     mcp: "none",
-    cli: "`aictx wiki`",
-    notes: "Source-backed ingest, filing, lint, and logs remain CLI-only in v1."
+    cli: "`aictx wiki`"
+  },
+  {
+    capability: "Read public docs",
+    mcp: "none",
+    cli: "`aictx docs`"
   }
 ] as const;
 
@@ -238,10 +200,10 @@ const exactCliOnlyCommands = [
   "`aictx export obsidian`",
   "`aictx projects`",
   "`aictx view`",
-  "`aictx docs`",
   "`aictx suggest`",
   "`aictx audit`",
-  "`aictx wiki`"
+  "`aictx wiki`",
+  "`aictx docs`"
 ] as const;
 
 const exactCliOnlyGuidanceCommands = [
@@ -293,17 +255,8 @@ const mcpPackageManagerFallbacks = [
 ] as const;
 
 const staleRoadmapDocs = [
-  "prd.md",
-  "specs/prd.md",
-  "mcp-and-cli-api-spec.md",
-  "specs/mcp-and-cli-api-spec.md",
-  "runtime-and-project-architecture-spec.md",
-  "specs/runtime-and-project-architecture-spec.md",
-  "aictx-data-access-spec.md",
-  "specs/aictx-data-access-spec.md",
-  "implementation-roadmap.md",
-  "specs/implementation-roadmap.md",
   "README.md",
+  "docs/src/content/docs/capabilities.md",
   "docs/src/content/docs/agent-integration.md",
   "docs/src/content/docs/mcp.md",
   "docs/src/content/docs/reference.md",
@@ -311,30 +264,16 @@ const staleRoadmapDocs = [
 ] as const;
 
 const localNowCloudLaterDocs = [
-  "prd.md",
-  "specs/prd.md",
-  "mcp-and-cli-api-spec.md",
-  "specs/mcp-and-cli-api-spec.md",
-  "aictx-data-access-spec.md",
-  "specs/aictx-data-access-spec.md",
-  "implementation-roadmap.md",
-  "specs/implementation-roadmap.md",
   "README.md",
+  "docs/src/content/docs/capabilities.md",
   "docs/src/content/docs/mcp.md",
   "docs/src/content/docs/agent-integration.md",
   "docs/src/content/docs/reference.md"
 ] as const;
 
 const futureAdapterMappingDocs = [
-  "prd.md",
-  "specs/prd.md",
-  "mcp-and-cli-api-spec.md",
-  "specs/mcp-and-cli-api-spec.md",
-  "aictx-data-access-spec.md",
-  "specs/aictx-data-access-spec.md",
-  "implementation-roadmap.md",
-  "specs/implementation-roadmap.md",
   "README.md",
+  "docs/src/content/docs/capabilities.md",
   "docs/src/content/docs/mcp.md",
   "docs/src/content/docs/agent-integration.md",
   "docs/src/content/docs/reference.md"
@@ -352,7 +291,6 @@ interface CapabilityRow {
   capability: string;
   mcp: string;
   cli: string;
-  notes: string;
 }
 
 async function readProjectFile(path: string): Promise<string> {
@@ -369,11 +307,11 @@ function expectMentioned(content: string, value: string): void {
 
 function parseCapabilityTable(markdown: string): CapabilityRow[] {
   const section = markdown.match(
-    /### 2\.1 Agent Capability Map\n(?<body>[\s\S]*?)\n## 3\. Runtime Preconditions/
+    /## Capability reference\n(?<body>[\s\S]*?)\n## Memory lifecycle/
   )?.groups?.body;
 
   if (section === undefined) {
-    throw new Error("Agent Capability Map section is missing.");
+    throw new Error("Capability reference section is missing.");
   }
 
   return section
@@ -387,12 +325,11 @@ function parseCapabilityTable(markdown: string): CapabilityRow[] {
         .slice(1, -1)
         .map((cell) => cell.trim());
 
-      if (cells.length !== 4) {
-        throw new Error(`Expected four capability table cells, got ${cells.length}.`);
+      if (cells.length !== 3) {
+        throw new Error(`Expected three capability table cells, got ${cells.length}.`);
       }
 
-      const [capability, mcp, cli, notes] = cells as [
-        string,
+      const [capability, mcp, cli] = cells as [
         string,
         string,
         string
@@ -401,27 +338,16 @@ function parseCapabilityTable(markdown: string): CapabilityRow[] {
       return {
         capability,
         mcp,
-        cli,
-        notes
+        cli
       };
     });
 }
 
 describe("agent capability map guardrail", () => {
-  it("keeps root spec mirrors in sync with internal spec copies", async () => {
-    for (const spec of mirroredSpecs) {
-      await expect(readProjectFile(spec)).resolves.toBe(
-        await readProjectFile(`specs/${spec}`)
-      );
-    }
-  });
-
-  it("locks the object taxonomy and exclusions in specs and agent docs", async () => {
+  it("locks the object taxonomy and exclusions in public and agent docs", async () => {
     const taxonomyDocs = [
-      "prd.md",
-      "storage-format-spec.md",
-      "schemas-and-validation-spec.md",
       "README.md",
+      "docs/src/content/docs/reference.md",
       "docs/src/content/docs/agent-integration.md"
     ] as const;
 
@@ -441,10 +367,8 @@ describe("agent capability map guardrail", () => {
     }
   });
 
-  it("locks memory discipline lifecycle rules in specs and guidance", async () => {
+  it("locks memory discipline lifecycle rules in public and agent docs", async () => {
     const lifecycleDocs = [
-      "prd.md",
-      "runtime-and-project-architecture-spec.md",
       "README.md",
       "docs/src/content/docs/agent-integration.md"
     ] as const;
@@ -484,13 +408,11 @@ describe("agent capability map guardrail", () => {
     }
   });
 
-  it("locks the load mode contract across specs and guidance", async () => {
+  it("locks the load mode contract across public docs and guidance", async () => {
     const modeDocs = [
-      "indexing-and-context-compiler-spec.md",
-      "mcp-and-cli-api-spec.md",
-      "runtime-and-project-architecture-spec.md",
       "README.md",
-      "docs/src/content/docs/agent-integration.md"
+      "docs/src/content/docs/agent-integration.md",
+      "docs/src/content/docs/mental-model.md"
     ] as const;
 
     for (const path of modeDocs) {
@@ -505,8 +427,8 @@ describe("agent capability map guardrail", () => {
   });
 
   it("locks the exact MCP and CLI-only capability map", async () => {
-    const apiSpec = await readProjectFile("mcp-and-cli-api-spec.md");
-    const rows = parseCapabilityTable(apiSpec);
+    const agentIntegration = await readProjectFile("docs/src/content/docs/agent-integration.md");
+    const rows = parseCapabilityTable(agentIntegration);
 
     expect(rows).toEqual([
       ...mcpAndCliCapabilities,
@@ -521,7 +443,7 @@ describe("agent capability map guardrail", () => {
     ]);
 
     for (const row of cliOnlyRows) {
-      expect(`${row.capability} ${row.cli} ${row.notes}`).not.toMatch(/\binspect\b/i);
+      expect(`${row.capability} ${row.cli}`).not.toMatch(/\binspect\b/i);
     }
   });
 
@@ -534,18 +456,18 @@ describe("agent capability map guardrail", () => {
       }
     }
 
-    for (const path of ["prd.md", "specs/prd.md"] as const) {
+    for (const path of ["README.md", "docs/src/content/docs/agent-integration.md"] as const) {
       const content = await readProjectFile(path);
 
-      expect(content).toContain(
-        "* MCP + CLI capabilities: load, search, inspect object, remember memory, save patch, diff."
-      );
-      expect(content).toContain(
-        "* CLI-only capabilities in v1: init, setup, lens, handoff, patch review, check, rebuild, reset, upgrade, history, restore, rewind, stale, export obsidian, projects, view, docs, suggest, audit, wiki."
-      );
-      expect(content).toContain(
-        "* Graph inspection is available in the CLI and local viewer, but remains outside MCP."
-      );
+      for (const tool of exactMcpTools) {
+        expect(content).toContain(tool);
+      }
+
+      for (const command of exactCliOnlyGuidanceCommands) {
+        expect(content).toContain(command);
+      }
+
+      expect(content).toMatch(/Graph inspection[\s\S]{0,120}outside (?:local )?MCP/i);
     }
   });
 
@@ -628,10 +550,6 @@ describe("agent capability map guardrail", () => {
 
   it("keeps docs explicit about MCP parity and direct-edit guardrails", async () => {
     const docsAndGuidance = [
-      "local-viewer-spec.md",
-      "mcp-and-cli-api-spec.md",
-      "prd.md",
-      "runtime-and-project-architecture-spec.md",
       "README.md",
       "docs/src/content/docs/agent-integration.md",
       "integrations/templates/agent-guidance.md"
@@ -659,22 +577,21 @@ describe("agent capability map guardrail", () => {
     }
   });
 
-  it("documents local viewing as CLI-only with JSON startup output", async () => {
-    const localViewerSpec = await readProjectFile("local-viewer-spec.md");
-    const prd = await readProjectFile("prd.md");
-    const apiSpec = await readProjectFile("mcp-and-cli-api-spec.md");
+  it("documents local viewing as CLI-only with the JSON startup flag", async () => {
+    const viewer = await readProjectFile("docs/src/content/docs/viewer.md");
+    const readme = await readProjectFile("README.md");
+    const agentIntegration = await readProjectFile("docs/src/content/docs/agent-integration.md");
 
-    for (const content of [localViewerSpec, prd, apiSpec]) {
+    for (const content of [viewer, readme]) {
       expect(content).toContain("aictx view [--port <number>] [--open] [--detach] [--json]");
     }
 
-    expect(prd).toContain(
-      "CLI-only capabilities in v1: init, setup, lens, handoff, patch review, check, rebuild, reset, upgrade, history, restore, rewind, stale, export obsidian, projects, view, docs, suggest, audit, wiki."
-    );
-    expect(prd).toContain(
-      "Graph inspection is available in the CLI and local viewer, but remains outside MCP."
-    );
-    expect(apiSpec).toContain("Do not expose an MCP tool for local viewing.");
-    expect(localViewerSpec).toContain("Do not add `aictx view`, `aictx lens`, or `aictx handoff` to MCP.");
+    for (const content of [viewer, readme, agentIntegration]) {
+      expect(content).toContain("`aictx view`");
+      expect(content).toMatch(/CLI-only|has no MCP equivalent|none \| `aictx view`/);
+    }
+
+    expect(readme).toMatch(/Graph inspection\s+is available in the CLI and local viewer, but remains outside local MCP\./);
+    expect(viewer).toContain("`aictx view` is CLI-only in v1 and has no MCP equivalent.");
   });
 });
