@@ -283,11 +283,20 @@ h1 {
 
 .hero-copy {
   max-width: 540px;
-  margin-bottom: 24px;
+  margin-bottom: 12px;
   color: var(--muted);
   font-size: 15px;
   font-weight: 500;
   line-height: 1.45;
+}
+
+.hero-note {
+  max-width: 520px;
+  margin: 0 auto 24px;
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 720;
+  line-height: 1.35;
 }
 
 .hero-actions {
@@ -1764,6 +1773,10 @@ h3 {
 
   .hero-copy {
     font-size: 17px;
+  }
+
+  .hero-note {
+    font-size: 16px;
   }
 
   .hero-actions {

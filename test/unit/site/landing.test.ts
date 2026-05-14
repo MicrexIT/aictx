@@ -14,12 +14,17 @@ describe("site landing page", () => {
     expect(landing).toContain(
       "Aictx stores your repo’s intent, architecture, conventions, setup, and known traps"
     );
+    expect(landing).toContain("Stop re-explaining your repo to AI agents.");
+    expect(landing).toContain("as reviewable repo memory.");
     expect(landing).toContain("Install Aictx");
     expect(landing).toContain("Browse demo");
     expect(landing).not.toContain("Join discussions");
     expect(landing).toContain("npm install -g @aictx/memory");
     expect(landing).toContain("Works with Codex, Claude Code, Cursor, and MCP-capable agents.");
     expect(landing).toContain("Aictx is not another chat UI or hosted memory service.");
+    expect(landing).toContain("Not capture-everything memory");
+    expect(landing).toContain("Keep decisions, constraints, workflows, and gotchas future agents should trust.");
+    expect(landing).not.toContain("Token-efficient context");
     expect(landing).not.toContain("No hosted dependency");
     expect(landing).not.toContain(
       "Core memory works without a cloud account, embeddings, hosted sync, or external model API."
