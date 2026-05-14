@@ -386,6 +386,12 @@ Public releases should have matching `vX.Y.Z` Git tags and npm provenance.
 The default branch is protected and requires pull requests plus CI/security
 checks before merge.
 
+## Inspired by
+
+Aictx's wiki workflow is partly inspired by
+[Andrej Karpathy's LLM Wiki pattern](https://gist.githubusercontent.com/karpathy/442a6bf555914893e9891c11519de94f/raw/ac46de1ad27f92b28ac95459c782c07f6b8c964a/llm-wiki.md):
+durable, human-editable project context that LLMs can read before work.
+
 ## AI-agent setup prompt
 
 Copy and paste this prompt into an AI coding agent to set up a repository:
