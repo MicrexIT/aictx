@@ -5,6 +5,8 @@
 [![npm](https://img.shields.io/npm/v/@aictx/memory)](https://www.npmjs.com/package/@aictx/memory)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
+![Stop re-explaining your repo to AI agents. Aictx saves durable project knowledge as reviewable repo memory.](site/public/assets/readme-value-header.png)
+
 Aictx gives AI coding agents a project memory they can come back to.
 
 Use it when you are tired of re-explaining the same product intent,
@@ -17,6 +19,8 @@ them compatible with Git workflows.
 ```text
 load relevant memory -> do work -> save durable memory
 ```
+
+![Aictx workflow: load relevant memory, do work, and remember durable knowledge.](site/public/assets/readme-how-it-works.png)
 
 Aictx does not require a cloud account, embeddings, hosted sync, an external
 model API, or network access for core memory commands. Saved memory is active
@@ -172,6 +176,13 @@ aictx diff
 ```
 
 Aictx writes local files and never commits automatically.
+
+## Visual memory
+
+`aictx view` opens a local viewer for inspecting project memory, source-backed
+records, role coverage, and graph relationships without leaving the repo.
+
+![Aictx visual memory viewer showing project memory sections and graph context.](site/public/assets/readme-visual-memory.png)
 
 ## Mental model
 
