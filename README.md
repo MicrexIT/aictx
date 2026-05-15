@@ -15,19 +15,28 @@
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-yellow.svg"></a>
 </p>
 
+Aictx is local-first project memory for AI coding agents, inspired by
+[Andrej Karpathy's LLM Wiki pattern](https://gist.githubusercontent.com/karpathy/442a6bf555914893e9891c11519de94f/raw/ac46de1ad27f92b28ac95459c782c07f6b8c964a/llm-wiki.md):
+durable, human-editable project knowledge that models can read before work.
+
 Stop re-explaining the same product intent, architecture decisions, repo
 conventions, setup steps, and known traps every time a new AI coding session
-starts. Aictx saves durable project knowledge as local, reviewable repo memory,
-then loads only the pieces that matter for the task in front of the agent.
+starts. Activate Aictx once in a repo: it saves durable knowledge as local,
+reviewable memory, wires short agent guidance into the project, and loads only
+the pieces that matter for the current task.
 
-Aictx is not a chat transcript archive, always-on capture server, hosted memory
-service, vector DB, or prompt template. It stores typed memory under `.aictx/`,
-indexes it locally, validates changes before writing, and never commits for you.
+Use it when you want:
+
+- New agents to understand the repo without a long briefing.
+- Durable decisions, workflows, gotchas, and source-backed summaries to survive
+  across sessions, branches, and reviews.
+- Local files and Git review instead of hosted memory, a vector database, or
+  another prompt you have to manually keep current.
 
 This repository publishes the npm package `@aictx/memory`. It is unrelated to
 similarly named packages in other ecosystems.
 
-## Try it in 60 seconds
+## Get Started Quickly
 
 Aictx requires Node.js `>=22`. Core commands run locally; no cloud account,
 model API, embeddings, or hosted sync are required.
@@ -35,39 +44,84 @@ model API, embeddings, or hosted sync are required.
 ```bash
 npm install -g @aictx/memory
 cd path/to/your/repo
-aictx setup --no-view
-aictx load "understand this repo"
+aictx setup
+aictx load "onboard to this repository"
 aictx view
 ```
 
-`setup --no-view` writes conservative starter memory without opening the
-viewer. `load` returns a task-focused context pack for an agent or human to
-inspect. `view` opens the local browser viewer when you want to audit what was
-saved. Preview the first write with `aictx setup --dry-run`.
+`aictx setup` activates Aictx in the current repo. It creates local `.aictx/`
+memory, updates the marked Aictx sections in `AGENTS.md` and `CLAUDE.md`, writes
+conservative first-run memory, runs checks, and starts the local viewer. Use
+`aictx setup --no-view` when you do not want the viewer to start, or
+`aictx setup --dry-run` to preview before writing.
 
 Aictx writes local files and never commits automatically.
 
-## Inside Aictx
+## Ask an Agent to Activate It
 
-Three surfaces ship today. Each one works locally and fits normal Git review.
+Paste this into Codex, Claude Code, OpenCode, Cursor, Cline, or another
+CLI-capable coding agent from the project root:
+
+```text
+Set up Aictx memory for this repository.
+
+Run:
+npm install -g @aictx/memory
+aictx setup
+aictx check
+aictx load "onboard to this repository"
+
+When this is done, report:
+- whether setup wrote memory
+- whether check passed
+- how I can inspect the result with `aictx view` or `aictx diff`
+```
+
+After setup, the normal agent loop is small:
+
+```bash
+aictx load "<task summary>"
+# do the work
+aictx remember --stdin
+aictx diff
+```
+
+Save only durable project knowledge. Aictx is meant to reduce repeated context
+work, not archive every task transcript.
+
+## What Activates
+
+Four surfaces ship today. Each one works locally and fits normal Git review.
 
 | Surface | What it gives agents and humans | Try |
 | --- | --- | --- |
+| One-time setup | Creates local memory and short repo guidance so future agents know when to load and save context. | `aictx setup` |
 | Task-focused loading | Pulls relevant project memory before coding, debugging, review, architecture, or onboarding work. | `aictx load "change auth routes"` |
 | Visual memory viewer | Opens a local browser for memory objects, facets, role coverage, provenance, and graph context. | `aictx view` |
 | Save discipline | Saves only durable facts, decisions, workflows, gotchas, source records, and syntheses. | `aictx remember --stdin` |
+
+## Works With Your Agent
+
+| Agent or client | Fastest path |
+| --- | --- |
+| Codex | `aictx setup` writes `AGENTS.md`; use the CLI loop by default. |
+| Claude Code | `aictx setup` writes `CLAUDE.md`; use the CLI loop by default. |
+| OpenCode | Uses the root `AGENTS.md` guidance created by setup. |
+| Cursor | Copy `integrations/cursor/aictx.mdc` into `.cursor/rules/aictx.mdc`, then run setup. |
+| Cline | Copy `integrations/cline/aictx.md` into `.clinerules/aictx.md`, then run setup. |
+| MCP-capable clients | Start with the CLI; configure `aictx-mcp` later when the client exposes MCP tools. |
 
 ## How it works
 
 ![Aictx workflow: load relevant memory, do work, and remember durable knowledge.](site/public/assets/readme-how-it-works.png)
 
 ```text
-load relevant memory -> do work -> save durable memory
+set up once -> agents load relevant reminders -> save durable discoveries
 ```
 
-The loop is deliberately small. Load before non-trivial work, use the current
-repo and tests as evidence, then save only knowledge that should survive future
-sessions, branches, and reviews.
+The loop is deliberately small after setup. Agents load memory before
+non-trivial work, use the current repo and tests as evidence, then save only
+knowledge that should survive future sessions, branches, and reviews.
 
 ## What gets stored
 
@@ -86,7 +140,7 @@ immediately after Aictx validates and writes it.
 ## Why Aictx?
 
 Aictx is for durable project context that should survive between agents,
-sessions, branches, and reviews.
+sessions, branches, and reviews without making you re-teach the repo each time.
 
 - Why not `AGENTS.md` only? Agent instruction files are good operating manuals,
   but they become too broad and static when they also try to hold product
@@ -101,30 +155,11 @@ sessions, branches, and reviews.
   foundation with validation, typed memory, a local index, task-focused loading,
   relation-aware inspection, and a save/no-save discipline.
 
-## Documentation
+## Go Deeper
 
-The landing page lives at [aictx.dev](https://aictx.dev). Public docs live at
-[docs.aictx.dev](https://docs.aictx.dev).
-
-Good starting points:
-
-- [Getting started](https://docs.aictx.dev/getting-started/)
-- [Capabilities](https://docs.aictx.dev/capabilities/)
-- [Specializing Aictx](https://docs.aictx.dev/specializing-aictx/)
-- [Agent integration](https://docs.aictx.dev/agent-integration/)
-- [Agent recipes](https://docs.aictx.dev/agent-recipes/)
-- [Wiki workflow](https://docs.aictx.dev/wiki-workflow/)
-
-Bundled docs are also available from the CLI:
-
-```bash
-aictx docs
-aictx docs getting-started
-aictx docs capabilities
-aictx docs agent-integration --open
-aictx docs agent-recipes
-aictx docs wiki-workflow
-```
+The README is the fast activation path. Setup details, agent recipes, CLI
+reference, MCP, and wiki workflows live in the core docs:
+[docs.aictx.dev](https://docs.aictx.dev/).
 
 ## Install
 
@@ -306,7 +341,7 @@ tenancy, billing, and ChatGPT App SDK UI remain future work. Future
 ChatGPT-compatible `search`/`fetch` names are adapter aliases over Aictx
 search/inspect behavior, not local MCP tool names.
 
-Setup, lenses, handoff, maintenance, recovery, export, registry, viewer, docs,
+Setup, lenses, handoff, maintenance, recovery, export, registry, viewer,
 suggest, audit, wiki, and stale workflows remain outside local MCP. Graph inspection
 is available in the CLI and local viewer, but remains outside local MCP.
 Non-MCP capabilities are not MCP parity gaps. Do not add or ask for MCP tools
@@ -333,7 +368,6 @@ a supported MCP tool or CLI command exists.
 | View local memory | none | `aictx view` |
 | Suggest or audit memory | none | `aictx suggest`, `aictx audit` |
 | Wiki source workflow | none | `aictx wiki` |
-| Read public docs | none | `aictx docs` |
 
 `aictx view [--port <number>] [--open] [--detach] [--json]` starts the local
 memory viewer. `aictx view` is CLI-only in v1.
@@ -406,32 +440,3 @@ pull request instead of pushing directly to `main`.
 Public releases should have matching `vX.Y.Z` Git tags and npm provenance.
 The default branch is protected and requires pull requests plus CI/security
 checks before merge.
-
-## Inspired by
-
-Aictx's wiki workflow is partly inspired by
-[Andrej Karpathy's LLM Wiki pattern](https://gist.githubusercontent.com/karpathy/442a6bf555914893e9891c11519de94f/raw/ac46de1ad27f92b28ac95459c782c07f6b8c964a/llm-wiki.md):
-durable, human-editable project context that LLMs can read before work.
-
-## AI-agent setup prompt
-
-Copy and paste this prompt into an AI coding agent to set up a repository:
-
-```text
-Set up fresh Aictx memory for this Aictx source repository.
-
-First reinstall the current Aictx package globally:
-npm install -g @aictx/memory@0.1.36
-
-Then back up and clear the local `.aictx/` state with the Aictx CLI:
-aictx reset
-
-Run the initial onboarding, apply the conservative bootstrap memory patch, and
-start the local viewer:
-aictx setup
-
-Finally, run:
-aictx check
-```
-
-Inspect the accepted memory later with `aictx view` or `aictx diff` when needed.
