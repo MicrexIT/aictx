@@ -1,7 +1,7 @@
 {
   "body_path": "memory/syntheses/product-intent.md",
-  "content_hash": "sha256:bf878ab7a72dde7b178695fd8227cba625c050cfc67d75e044ba2582438f7cdc",
-  "created_at": "2026-05-12T17:53:06+02:00",
+  "content_hash": "sha256:18b7d0e1126b42a6b4e9f1dbac21ca143737f5605b0e2ee8445d5b767512ebd1",
+  "created_at": "2026-05-15T15:03:08+02:00",
   "evidence": [
     {
       "id": "source.package-json",
@@ -10,18 +10,6 @@
     {
       "id": "source.readme",
       "kind": "source"
-    },
-    {
-      "id": "site/src/content/blog/watching-multiple-agent-built-projects-with-aictx.md",
-      "kind": "file"
-    },
-    {
-      "id": "site/src/content/blog/talking-to-chatgpt-about-a-project-without-handing-it-the-repo.md",
-      "kind": "file"
-    },
-    {
-      "id": "site/src/content/blog/keeping-agents-md-and-claude-md-small.md",
-      "kind": "file"
     }
   ],
   "facets": {
@@ -50,5 +38,5 @@
   ],
   "title": "Product intent",
   "type": "synthesis",
-  "updated_at": "2026-05-14T15:26:02+02:00"
+  "updated_at": "2026-05-15T15:03:08+02:00"
 }

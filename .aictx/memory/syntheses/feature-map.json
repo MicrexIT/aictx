@@ -1,35 +1,21 @@
 {
   "body_path": "memory/syntheses/feature-map.md",
-  "content_hash": "sha256:cc32754849c08dd56cbd7560f1e7d04b0b910255681ae1723b7c85349dd6447c",
-  "created_at": "2026-05-12T17:53:06+02:00",
+  "content_hash": "sha256:d758dccd5dec219a5ddbe68fbf80c527b6a27870b6f5a101e6b65f2b5e146bc5",
+  "created_at": "2026-05-15T15:03:08+02:00",
   "evidence": [
     {
-      "id": "scripts/build-viewer-demo-data.mjs",
-      "kind": "file"
-    },
-    {
-      "id": "viewer/src/App.svelte",
-      "kind": "file"
-    },
-    {
-      "id": "src/context/compile.ts",
-      "kind": "file"
-    },
-    {
-      "id": "src/context/rank.ts",
-      "kind": "file"
+      "id": "source.package-json",
+      "kind": "source"
     }
   ],
   "facets": {
     "applies_to": [
-      "scripts/build-viewer-demo-data.mjs",
-      "viewer/src/App.svelte",
-      "src/context/compile.ts",
-      "src/context/rank.ts",
-      "test/unit/viewer/demo-data.test.ts",
-      "test/integration/viewer/shell.test.ts",
-      "test/integration/context/load.test.ts",
-      "test/unit/context/rank.test.ts"
+      "package.json",
+      "src/cli/commands/audit.ts",
+      "src/cli/commands/check.ts",
+      "src/cli/commands/diff.ts",
+      "src/cli/commands/docs.ts",
+      "src/cli/commands/export.ts"
     ],
     "category": "feature-map",
     "load_modes": [
@@ -55,5 +41,5 @@
   ],
   "title": "Feature map",
   "type": "synthesis",
-  "updated_at": "2026-05-14T18:21:29+02:00"
+  "updated_at": "2026-05-15T15:03:08+02:00"
 }

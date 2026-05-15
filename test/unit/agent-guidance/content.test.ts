@@ -8,7 +8,10 @@ const root = process.cwd();
 const guideTargets = [
   "integrations/templates/agent-guidance.md",
   "integrations/codex/aictx/SKILL.md",
+  "integrations/codex/skills/aictx-memory/SKILL.md",
+  "integrations/codex/plugins/aictx-memory/skills/aictx-memory/SKILL.md",
   "integrations/claude/aictx/SKILL.md",
+  "integrations/claude/plugins/aictx-memory/skills/aictx-memory/SKILL.md",
   "integrations/claude/aictx.md",
   "integrations/cursor/aictx.mdc",
   "integrations/cline/aictx.md",
@@ -51,7 +54,10 @@ const futureAdapterMappingTargets = [
 const generatedGuidanceTargets = [
   "integrations/templates/agent-guidance.md",
   "integrations/codex/aictx/SKILL.md",
+  "integrations/codex/skills/aictx-memory/SKILL.md",
+  "integrations/codex/plugins/aictx-memory/skills/aictx-memory/SKILL.md",
   "integrations/claude/aictx/SKILL.md",
+  "integrations/claude/plugins/aictx-memory/skills/aictx-memory/SKILL.md",
   "integrations/claude/aictx.md",
   "integrations/cursor/aictx.mdc",
   "integrations/cline/aictx.md",

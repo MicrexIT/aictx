@@ -5,11 +5,10 @@ Tooling and runtime signals inferred from manifests and config:
 - Node.js engine constraint: `>=22`.
 - Package manager is declared as `pnpm@10.11.0`.
 - Package name: `@aictx/memory`.
-- Svelte tooling is present for the local viewer.
-- Cytoscape.js is a runtime dependency for the local viewer graph screen.
+- Svelte tooling is present.
 - The package is configured as an ESM package with `type: module`.
 - TypeScript configuration is present.
-- Useful package scripts include `typecheck`, `test:local`, `test:watch`, `test`, `test:package`, `build`, `build:code`, `build:docs`.
+- Useful package scripts include `typecheck`, `test:local`, `test:watch`, `test`, `test:package`, `build`, `build:code`, `build:demo-viewer`.
 - Vite tooling is present.
 - Vitest is available for tests.
 

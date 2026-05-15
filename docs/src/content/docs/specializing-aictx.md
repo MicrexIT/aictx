@@ -27,6 +27,13 @@ generic Markdown guidance file. OpenCode can use the root `AGENTS.md` that
 `aictx init` creates. See [Agent recipes](/agent-recipes/) for copyable setup
 prompts and exact target paths.
 
+The same generated guidance is also packaged as distribution artifacts under
+`integrations/`: a Codex standalone skill at
+`integrations/codex/skills/aictx-memory/`, a Codex plugin at
+`integrations/codex/plugins/aictx-memory/`, and a Claude Code plugin at
+`integrations/claude/plugins/aictx-memory/`. These are for external
+skill/plugin marketplace submission and review, not for `aictx setup`.
+
 :::tip
 Treat agent guidance as the operating manual, and `.aictx/` memory as the
 project knowledge the agent can retrieve. Keep both small enough that a human

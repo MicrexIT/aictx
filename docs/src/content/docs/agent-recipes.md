@@ -27,6 +27,21 @@ agent client has already launched and connected to `aictx-mcp`.
 | OpenCode | `AGENTS.md` | Use the root `AGENTS.md` created by `aictx init`. | CLI by default; MCP only when configured. |
 | Generic MCP-capable agent | Agent-specific instructions plus MCP config | Paste the setup prompt; configure MCP later if needed. | CLI first, MCP for routine equivalents when already exposed. |
 
+## Distribution artifacts
+
+The files below package the same generated Aictx guidance for external
+marketplace or catalog submission. They are not used by `aictx setup`, which
+continues to write the marked sections in `AGENTS.md` and `CLAUDE.md`.
+
+| Target | Path | Submission note |
+| --- | --- | --- |
+| Codex standalone skill | `integrations/codex/skills/aictx-memory/` | Copy into `openai/skills` when preparing a Codex skills catalog PR. |
+| Codex plugin | `integrations/codex/plugins/aictx-memory/` | Follows the `.codex-plugin/plugin.json` format and points at `./skills/`. |
+| Claude Code plugin | `integrations/claude/plugins/aictx-memory/` | Follows the `.claude-plugin/plugin.json` format; use Anthropic's plugin submission flow for official listing. |
+
+These artifacts stay CLI-first. They do not bundle `.mcp.json`; use Aictx MCP
+only when the current client has already launched and exposed `aictx-mcp`.
+
 ## Common setup prompt
 
 Paste this prompt into the agent from the project root:
@@ -73,6 +88,10 @@ aictx diff
 MCP note: keep using the CLI unless Codex already exposes Aictx MCP tools in
 the current session. `aictx init` does not start MCP.
 
+Distribution artifacts are available at `integrations/codex/skills/aictx-memory/`
+for the standalone skill catalog and `integrations/codex/plugins/aictx-memory/`
+for Codex plugin packaging.
+
 ## Claude Code
 
 Instruction file: `CLAUDE.md`
@@ -91,6 +110,10 @@ aictx diff
 
 Optional generated guidance is available at `integrations/claude/aictx.md` and
 `integrations/claude/aictx/SKILL.md`.
+
+The Claude Code plugin artifact is available at
+`integrations/claude/plugins/aictx-memory/` for marketplace review or official
+plugin submission.
 
 ## Cursor
 

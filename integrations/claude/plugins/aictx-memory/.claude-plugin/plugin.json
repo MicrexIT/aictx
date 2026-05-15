@@ -1,0 +1,12 @@
+{
+  "name": "aictx-memory",
+  "description": "Use Aictx local project memory in AI coding agents.",
+  "version": "0.1.36",
+  "author": {
+    "name": "MicrexIT",
+    "url": "https://github.com/MicrexIT/aictx"
+  },
+  "homepage": "https://aictx.dev",
+  "repository": "https://github.com/MicrexIT/aictx",
+  "license": "MIT"
+}

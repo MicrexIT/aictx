@@ -111,6 +111,13 @@ Four surfaces ship today. Each one works locally and fits normal Git review.
 | Cline | Copy `integrations/cline/aictx.md` into `.clinerules/aictx.md`, then run setup. |
 | MCP-capable clients | Start with the CLI; configure `aictx-mcp` later when the client exposes MCP tools. |
 
+The `integrations/` directory also includes PR-ready distribution artifacts for
+agent marketplaces. Use `integrations/codex/skills/aictx-memory/` for a Codex
+standalone skill, `integrations/codex/plugins/aictx-memory/` for the Codex
+plugin format, and `integrations/claude/plugins/aictx-memory/` for the Claude
+Code plugin format. These package the same CLI-first guidance as the setup aids;
+they do not add MCP configuration.
+
 ## How it works
 
 ![Aictx workflow: load relevant memory, do work, and remember durable knowledge.](site/public/assets/readme-how-it-works.png)
