@@ -1,7 +1,7 @@
 {
   "body_path": "memory/syntheses/conventions-quality.md",
-  "content_hash": "sha256:5b1eb0ae5f4a411cbd6468d469a1fd5a6093115519910cbb3f208e733b346b3c",
-  "created_at": "2026-05-12T17:53:06+02:00",
+  "content_hash": "sha256:5905a133c06dc63a18d6d7ca6ddce1a71ba998a5b40def20f7045784862c0541",
+  "created_at": "2026-05-15T15:03:08+02:00",
   "evidence": [
     {
       "id": "source.package-json",
@@ -42,5 +42,5 @@
   ],
   "title": "Conventions and quality bar",
   "type": "synthesis",
-  "updated_at": "2026-05-12T17:53:06+02:00"
+  "updated_at": "2026-05-15T15:03:08+02:00"
 }

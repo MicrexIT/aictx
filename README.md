@@ -155,6 +155,11 @@ Four surfaces ship today. Each one works locally and fits normal Git review.
 | Cline | Copy `integrations/cline/aictx.md` into `.clinerules/aictx.md`, then run setup. |
 | MCP-capable clients | Start with the CLI; configure `aictx-mcp` later when the client exposes MCP tools. |
 
+The `integrations/` directory also includes PR-ready distribution artifacts for
+agent marketplaces: Codex standalone skill, Codex plugin, and Claude Code
+plugin packages. They package the same CLI-first guidance as the setup aids and
+do not add MCP configuration.
+
 ## Documentation
 
 The README is the fast activation path. Core docs:
