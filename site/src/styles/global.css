@@ -900,21 +900,6 @@ h3 {
     left: 12px;
   }
 
-  .comparison-labels span:first-child,
-  .scene-layer.before,
-  .reveal-divider,
-  .reveal-scrubber,
-  .impact-visual-panel::after {
-    display: none;
-  }
-
-  .comparison-labels {
-    justify-content: flex-end;
-  }
-
-  .scene-layer.after {
-    clip-path: none;
-  }
 
   .comparison-labels span,
   .comparison-state {
@@ -963,6 +948,7 @@ h3 {
   margin: 0;
   opacity: 0;
   cursor: ew-resize;
+  touch-action: pan-y;
 }
 
 .impact-visual-panel:focus-within .reveal-divider::before {
