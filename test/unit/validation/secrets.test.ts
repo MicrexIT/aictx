@@ -102,6 +102,20 @@ describe("secret text detection", () => {
     });
   });
 
+  it("ignores OpenAI-looking substrings inside generated Aictx relation ids", () => {
+    const result = detectSecretsInText(
+      `"id": "rel.project-aictx-stress-236-jahosk-related-to-architecture-current"`,
+      ".aictx/relations/project-aictx-stress-236-jahosk-related-to-architecture-current.json"
+    );
+
+    expect(result).toEqual({
+      valid: true,
+      errors: [],
+      warnings: [],
+      findings: []
+    });
+  });
+
   it.each([
     ["SHA-256 hash", `content_hash: sha256:${"a".repeat(64)}`],
     ["URL", `Reference: https://example.com/${"aB3dE5fG7hI9jK0lM2nO4pQ6rS8tU1vW3xY5z".repeat(2)}`],
