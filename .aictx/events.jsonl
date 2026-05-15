@@ -22,3 +22,4 @@
 {"actor":"cli","event":"memory.created","id":"constraint.package-manager","timestamp":"2026-05-15T15:03:08+02:00"}
 {"actor":"agent","event":"memory.created","id":"fact.aictx-ships-generated-skill-and-plugin-distribution-artifacts","timestamp":"2026-05-15T15:24:09+02:00"}
 {"actor":"agent","event":"memory.updated","id":"fact.aictx-ships-generated-skill-and-plugin-distribution-artifacts","timestamp":"2026-05-15T15:51:49+02:00"}
+{"actor":"agent","event":"memory.created","id":"decision.schema-browser-keeps-navigation-fixed-above-object-scrolling","timestamp":"2026-05-15T22:14:27+02:00"}

@@ -574,6 +574,9 @@
   const showPreviewCommand = $derived(previewCommandTask.trim() !== "");
   const previewCommand = $derived.by(() => buildPreviewCommand(previewCommandTask, previewMode, previewTokenBudget));
   const docGraphOverview = $derived.by(() => buildDocGraphOverview(graphObjects, graphRelations));
+  const memoryScreenActive = $derived(
+    bootstrap !== null && (currentScreen === "memories" || currentScreen === "detail")
+  );
 
   onMount(() => {
     void loadProjects();
@@ -2134,7 +2137,10 @@
       </div>
     </aside>
 
-    <section class="main-stage" aria-label="Read-only memory browser">
+    <section
+      class={`main-stage ${memoryScreenActive ? "memory-stage" : ""}`}
+      aria-label="Read-only memory browser"
+    >
       {#if currentScreen === "projects"}
         <section class="projects-page" aria-labelledby="projects-title" data-testid="projects-view">
           <header class="page-header">
@@ -2401,6 +2407,61 @@
             </p>
           </header>
 
+          <section class="list-controls" aria-label="Memory list controls">
+            <div class="list-controls-heading">
+              <div>
+                <strong>Canonical objects</strong>
+                <span>
+                  {filteredObjects.length} rows · {objects.length} objects · {facetCategoryCount} facets · {relations.length} links
+                </span>
+              </div>
+              <p class="projection-status" role="status">
+                <span>{trustLabel}</span> {trustDescription}
+              </p>
+            </div>
+            <div class="controls-row">
+              <div class="layer-tabs" role="group" aria-label="Memory layers">
+                {#each layerOptions as option (option.value)}
+                  <button
+                    type="button"
+                    class:active={layerFilter === option.value}
+                    onclick={() => {
+                      clearPagePreset();
+                      layerFilter = option.value;
+                    }}
+                    data-testid={`viewer-layer-${option.value}`}
+                  >
+                    {option.label}
+                  </button>
+                {/each}
+              </div>
+              <select bind:value={typeFilter} onchange={clearPagePreset} data-testid="viewer-type-filter" aria-label="Type">
+                <option value={allOption}>All types</option>
+                {#each typeOptions as type (type)}
+                  <option value={type}>{type}</option>
+                {/each}
+              </select>
+              <select bind:value={facetCategoryFilter} onchange={clearPagePreset} data-testid="viewer-facet-filter" aria-label="Facet category">
+                <option value={allOption}>All facets</option>
+                {#each facetCategoryOptions as category (category)}
+                  <option value={category}>{category}</option>
+                {/each}
+              </select>
+              <select bind:value={statusFilter} onchange={clearPagePreset} data-testid="viewer-status-filter" aria-label="Status">
+                <option value={allOption}>All statuses</option>
+                {#each statusOptions as status (status)}
+                  <option value={status}>{status}</option>
+                {/each}
+              </select>
+              <select bind:value={tagFilter} onchange={clearPagePreset} data-testid="viewer-tag-filter" aria-label="Tag">
+                <option value={allOption}>All tags</option>
+                {#each tagOptions as tag (tag)}
+                  <option value={tag}>{tag}</option>
+                {/each}
+              </select>
+            </div>
+          </section>
+
           {#if docGraphOverview.hub !== null}
             <section class="doc-relation-overview" aria-labelledby="doc-relation-title" data-testid="doc-relation-overview">
               <div class="doc-relation-map" aria-label="Embedded relation overview">
@@ -2499,84 +2560,23 @@
             </div>
           {/if}
 
-          <section class="memory-summary" aria-label="Project memory summary">
-            <div class="summary-copy">
-              <strong>Schema projection loaded</strong>
-              <p>
-                {objects.length} objects are grouped by canonical type with {facetCategoryCount} facet categories
-                and {relations.length} stored relation links.
-              </p>
-              <p class="trust-copy">
-                <span>{trustLabel}</span> {trustDescription}
-              </p>
-            </div>
-          </section>
-
-          {#if visibleWarnings.length > 0}
-            <section class="warnings" aria-label="Storage warnings">
-              {#each visibleWarnings as warning (warning)}
-                <p>{warning}</p>
-              {/each}
-            </section>
-          {/if}
-
-          {#if hasStarterMemoryOnly}
-            <section class="onboarding-callout" aria-label="Starter memory notice" data-testid="starter-memory-notice">
-              <p><strong>Starter memory only.</strong> Seed useful repo memory with a bootstrap patch, then refresh the viewer.</p>
-              <code>aictx suggest --bootstrap --patch &gt; bootstrap-memory.json</code>
-              <code>aictx save --file bootstrap-memory.json</code>
-            </section>
-          {/if}
-
-          <section class="list-controls" aria-label="Memory list controls">
-            <div>
-              <strong>Canonical objects</strong>
-              <span>{filteredObjects.length} rows</span>
-            </div>
-            <div class="controls-row">
-              <div class="layer-tabs" role="group" aria-label="Memory layers">
-                {#each layerOptions as option (option.value)}
-                  <button
-                      type="button"
-                      class:active={layerFilter === option.value}
-                      onclick={() => {
-                      clearPagePreset();
-                      layerFilter = option.value;
-                    }}
-                    data-testid={`viewer-layer-${option.value}`}
-                  >
-                    {option.label}
-                  </button>
-                {/each}
-              </div>
-              <select bind:value={typeFilter} onchange={clearPagePreset} data-testid="viewer-type-filter" aria-label="Type">
-                <option value={allOption}>All types</option>
-                {#each typeOptions as type (type)}
-                  <option value={type}>{type}</option>
-                {/each}
-              </select>
-              <select bind:value={facetCategoryFilter} onchange={clearPagePreset} data-testid="viewer-facet-filter" aria-label="Facet category">
-                <option value={allOption}>All facets</option>
-                {#each facetCategoryOptions as category (category)}
-                  <option value={category}>{category}</option>
-                {/each}
-              </select>
-              <select bind:value={statusFilter} onchange={clearPagePreset} data-testid="viewer-status-filter" aria-label="Status">
-                <option value={allOption}>All statuses</option>
-                {#each statusOptions as status (status)}
-                  <option value={status}>{status}</option>
-                {/each}
-              </select>
-              <select bind:value={tagFilter} onchange={clearPagePreset} data-testid="viewer-tag-filter" aria-label="Tag">
-                <option value={allOption}>All tags</option>
-                {#each tagOptions as tag (tag)}
-                  <option value={tag}>{tag}</option>
-                {/each}
-              </select>
-            </div>
-          </section>
-
           <section class="memory-workspace" class:has-preview={selectedObject !== null}>
+            {#if visibleWarnings.length > 0}
+              <section class="warnings" aria-label="Storage warnings">
+                {#each visibleWarnings as warning (warning)}
+                  <p>{warning}</p>
+                {/each}
+              </section>
+            {/if}
+
+            {#if hasStarterMemoryOnly}
+              <section class="onboarding-callout" aria-label="Starter memory notice" data-testid="starter-memory-notice">
+                <p><strong>Starter memory only.</strong> Seed useful repo memory with a bootstrap patch, then refresh the viewer.</p>
+                <code>aictx suggest --bootstrap --patch &gt; bootstrap-memory.json</code>
+                <code>aictx save --file bootstrap-memory.json</code>
+              </section>
+            {/if}
+
             <section class="sectioned-memory" aria-label="Memory objects">
               {#each memorySections as section (section.id)}
                 <section id={section.id}>
@@ -3555,16 +3555,7 @@
     font-weight: 800;
   }
 
-  .memory-summary {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 18px;
-    border-bottom: 1px solid #e9e6e0;
-    padding-bottom: 18px;
-  }
-
-  .memory-summary p {
+  .projection-status {
     margin: 0;
     max-width: 640px;
     color: #666666;
@@ -3824,11 +3815,6 @@
     .doc-hero,
     .list-controls {
       grid-template-columns: 1fr;
-    }
-
-    .memory-summary {
-      align-items: flex-start;
-      flex-direction: column;
     }
 
     .memory-workspace.has-preview {
@@ -4572,40 +4558,14 @@
     line-height: 1.25;
   }
 
-  .memory-summary {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    gap: 16px;
-    max-width: none;
+  .projection-status {
     margin: 0;
-    border: 1px solid #e2ded5;
-    border-radius: 8px;
-    padding: 18px 20px;
-    background: #ffffff;
-    box-shadow: 0 10px 28px rgb(16 24 40 / 5%);
-  }
-
-  .summary-copy strong {
-    display: block;
-    color: #34332f;
-    font-size: 1.04rem;
-    font-weight: 820;
-  }
-
-  .summary-copy p {
-    margin: 4px 0 0;
-    color: #76736c;
-    font-size: 1rem;
+    color: #6f6b63;
+    font-size: 0.92rem;
     line-height: 1.45;
   }
 
-  .trust-copy {
-    margin-top: 10px !important;
-    color: #6f6b63 !important;
-    font-size: 0.92rem !important;
-  }
-
-  .trust-copy span {
+  .projection-status span {
     display: inline-flex;
     margin-right: 6px;
     border: 1px solid #d6d2ca;
@@ -5257,10 +5217,6 @@
       font-size: 2.45rem;
     }
 
-    .memory-summary {
-      margin: 0;
-    }
-
     .graph-workspace {
       grid-template-columns: 1fr;
     }
@@ -5319,8 +5275,37 @@
     padding-top: clamp(34px, 5vw, 60px);
   }
 
+  .main-stage.memory-stage {
+    height: 100vh;
+    overflow: hidden;
+    padding-bottom: 24px;
+  }
+
+  :global(body:has(.main-stage.memory-stage)) {
+    overflow: hidden;
+  }
+
   .memory-page {
     gap: 30px;
+  }
+
+  .memory-stage .memory-page {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+    gap: 18px;
+    overflow: hidden;
+  }
+
+  .memory-stage .doc-hero {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
 
   .memory-page,
@@ -5353,47 +5338,21 @@
     line-height: 1.62;
   }
 
-  .memory-summary {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 14px 18px;
-    border-color: #e7e0d4;
-    padding: 22px 24px 24px;
-    background: #fffdf9;
-    box-shadow:
-      0 1px 2px rgb(39 31 21 / 4%),
-      0 14px 36px rgb(39 31 21 / 6%);
-  }
-
-  .summary-copy strong {
-    color: #302e2a;
-    font-size: 1.05rem;
-    line-height: 1.28;
-    font-weight: 780;
-  }
-
-  .summary-copy p {
-    max-width: 74ch;
-    margin-top: 8px;
-    color: #6a655d;
-    font-size: 1rem;
-    line-height: 1.62;
-  }
-
-  .trust-copy {
+  .projection-status {
     display: flex;
     flex-wrap: nowrap;
     align-items: center;
     gap: 0;
     max-width: none;
-    color: #6c675f !important;
-    font-size: 0.95rem !important;
-    line-height: 1.62 !important;
+    color: #6c675f;
+    font-size: 0.9rem;
+    line-height: 1.45;
     white-space: nowrap;
   }
 
-  .trust-copy span {
+  .projection-status span {
     flex: 0 0 auto;
-    margin: 0 8px 4px 0;
+    margin: 0 8px 0 0;
     border-color: #d8d0c3;
     padding: 3px 10px;
     background: #faf7f1;
@@ -5401,9 +5360,25 @@
   }
 
   .list-controls {
+    position: sticky;
+    top: 0;
+    z-index: 4;
     gap: 12px;
     border-bottom-color: #ece6dc;
     padding: 2px 0 28px;
+    background: #fffefa;
+  }
+
+  .list-controls-heading {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px 18px;
+    min-width: 0;
+  }
+
+  .list-controls-heading > div {
+    min-width: 0;
   }
 
   .list-controls strong {
@@ -5417,6 +5392,13 @@
     margin-top: 2px;
     color: #858078;
     font-size: 0.93rem;
+  }
+
+  .list-controls .projection-status span {
+    display: inline-flex;
+    margin: 0 8px 0 0;
+    color: #37352f;
+    font-size: 0.78rem;
   }
 
   .controls-row {
@@ -5454,6 +5436,54 @@
 
   .sectioned-memory {
     gap: 42px;
+  }
+
+  .memory-stage .memory-workspace,
+  .memory-stage .sectioned-memory {
+    min-height: 0;
+  }
+
+  .memory-stage .doc-relation-overview {
+    max-height: 280px;
+    min-height: 0;
+    overflow: hidden;
+    padding: 14px 0 16px;
+  }
+
+  .memory-stage .doc-relation-map,
+  .memory-stage .doc-relation-map svg {
+    height: 220px;
+    min-height: 220px;
+  }
+
+  .memory-stage .doc-relation-copy {
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .memory-stage .doc-relation-list {
+    max-height: 116px;
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+
+  .memory-stage .memory-workspace {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 0;
+    gap: 18px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-right: 8px;
+    scrollbar-gutter: stable;
+  }
+
+  .memory-stage .sectioned-memory {
+    overflow: visible;
+  }
+
+  .memory-stage .sectioned-memory > section:last-child {
+    padding-bottom: 22px;
   }
 
   .sectioned-memory h3 {
@@ -5654,23 +5684,74 @@
       padding: 28px 14px 52px;
     }
 
+    .main-stage.memory-stage {
+      height: calc(100vh - 68px);
+      height: calc(100svh - 68px);
+      padding: 18px 14px 16px;
+    }
+
     .memory-page {
       gap: 22px;
     }
 
-    .memory-summary {
-      grid-template-columns: 1fr;
-      padding: 18px;
+    .memory-stage .memory-page {
+      gap: 14px;
     }
 
-    .trust-copy {
+    .memory-stage .doc-hero {
+      gap: 6px;
+    }
+
+    .memory-stage .doc-icon,
+    .memory-stage .doc-hero p:not(.eyebrow) {
+      display: none;
+    }
+
+    .memory-stage .doc-hero h2 {
+      font-size: 1.45rem;
+      line-height: 1.12;
+    }
+
+    .list-controls {
+      padding-bottom: 16px;
+    }
+
+    .list-controls-heading {
+      grid-template-columns: 1fr;
+      align-items: start;
+      gap: 8px;
+    }
+
+    .projection-status {
       align-items: flex-start;
       flex-wrap: wrap;
       white-space: normal;
     }
 
+    .memory-stage .doc-relation-overview {
+      gap: 12px;
+      padding: 12px 0 14px;
+    }
+
+    .memory-stage .doc-relation-map,
+    .memory-stage .doc-relation-map svg {
+      height: 172px;
+      min-height: 172px;
+    }
+
+    .memory-stage .doc-relation-list {
+      max-height: 118px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+
     .sectioned-memory {
       gap: 34px;
+    }
+
+    .memory-stage .memory-workspace {
+      padding-right: 0;
+      scrollbar-gutter: auto;
     }
 
     .sectioned-memory h3 {
