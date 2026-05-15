@@ -341,7 +341,7 @@ tenancy, billing, and ChatGPT App SDK UI remain future work. Future
 ChatGPT-compatible `search`/`fetch` names are adapter aliases over Aictx
 search/inspect behavior, not local MCP tool names.
 
-Setup, lenses, handoff, maintenance, recovery, export, registry, viewer,
+Setup, lenses, handoff, maintenance, recovery, export, registry, viewer, docs,
 suggest, audit, wiki, and stale workflows remain outside local MCP. Graph inspection
 is available in the CLI and local viewer, but remains outside local MCP.
 Non-MCP capabilities are not MCP parity gaps. Do not add or ask for MCP tools
@@ -366,6 +366,7 @@ a supported MCP tool or CLI command exists.
 | Export projections | none | `aictx export obsidian` |
 | Manage project registry | none | `aictx projects` |
 | View local memory | none | `aictx view` |
+| Read public docs | none | `aictx docs` |
 | Suggest or audit memory | none | `aictx suggest`, `aictx audit` |
 | Wiki source workflow | none | `aictx wiki` |
 
