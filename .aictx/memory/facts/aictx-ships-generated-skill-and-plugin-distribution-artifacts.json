@@ -1,10 +1,10 @@
 {
   "body_path": "memory/facts/aictx-ships-generated-skill-and-plugin-distribution-artifacts.md",
-  "content_hash": "sha256:2214808e418e7e92ce573ff2fb0cf23b7a50f7b39c7d03351b8eed693cbe1eb7",
+  "content_hash": "sha256:3866099eb44696a9402126e329ff94f1c63238716e17e478c0191b62b3b2d185",
   "created_at": "2026-05-15T15:24:09+02:00",
   "evidence": [
     {
-      "id": "scripts/generate-agent-guidance.mjs",
+      "id": "README.md",
       "kind": "file"
     },
     {
@@ -12,7 +12,7 @@
       "kind": "file"
     },
     {
-      "id": "docs/src/content/docs/specializing-aictx.md",
+      "id": "scripts/generate-agent-guidance.mjs",
       "kind": "file"
     }
   ],
@@ -22,9 +22,12 @@
       "scripts/generate-agent-guidance.mjs",
       "integrations/codex/skills/aictx-memory/SKILL.md",
       "integrations/codex/plugins/aictx-memory/.codex-plugin/plugin.json",
+      "integrations/codex/plugins/aictx-memory/README.md",
       "integrations/claude/plugins/aictx-memory/.claude-plugin/plugin.json",
+      "integrations/claude/plugins/aictx-memory/README.md",
       "docs/src/content/docs/agent-recipes.md",
-      "docs/src/content/docs/specializing-aictx.md"
+      "docs/src/content/docs/specializing-aictx.md",
+      "README.md"
     ],
     "category": "debugging-fact"
   },
@@ -49,5 +52,5 @@
   ],
   "title": "Aictx ships generated skill and plugin distribution artifacts",
   "type": "fact",
-  "updated_at": "2026-05-15T15:24:09+02:00"
+  "updated_at": "2026-05-15T15:51:49+02:00"
 }

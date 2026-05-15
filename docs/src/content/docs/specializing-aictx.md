@@ -34,6 +34,15 @@ The same generated guidance is also packaged as distribution artifacts under
 `integrations/claude/plugins/aictx-memory/`. These are for external
 skill/plugin marketplace submission and review, not for `aictx setup`.
 
+Marketplace install commands add marketplace catalogs, not raw plugin folders.
+After a catalog points at the generated Aictx plugin, Codex users add it with
+`codex plugin marketplace add owner/repo`; Claude Code users add it with
+`/plugin marketplace add owner/repo` or
+`claude plugin marketplace add owner/repo`, then install
+`aictx-memory@marketplace-name`. The Codex standalone skill remains a copied
+directory for an `openai/skills` PR, and official Claude listing should go
+through Anthropic's plugin submission flow.
+
 :::tip
 Treat agent guidance as the operating manual, and `.aictx/` memory as the
 project knowledge the agent can retrieve. Keep both small enough that a human
