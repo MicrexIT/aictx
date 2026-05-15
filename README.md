@@ -64,7 +64,7 @@ schema, objects, facets, relations, provenance, and graph context agents load.
   <a href="https://demo.aictx.dev/?token=demo">
     <img
       alt="Aictx viewer showing the memory schema graph with relation overview and canonical storage navigation."
-      src="site/public/assets/viewer-demo.png"
+      src="site/public/assets/readme-visual-memory.png"
       width="940"
     >
   </a>
