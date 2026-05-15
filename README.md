@@ -25,11 +25,23 @@ starts. Activate Aictx once in a repo: it saves durable knowledge as local,
 reviewable memory, wires short agent guidance into the project, and loads only
 the pieces that matter for the current task.
 
-[![Aictx viewer showing the memory schema graph with relation overview and canonical storage navigation.](site/public/assets/viewer-demo.png)](https://demo.aictx.dev/?token=demo)
+## Inspect the Memory
 
-The visual memory viewer is part of the product: humans can inspect the same
-schema, objects, facets, relations, provenance, and graph context agents load in
-one local review surface.
+Aictx is not just a hidden context file for agents. The visual memory viewer is
+part of the product: a local review surface where humans can inspect the same
+schema, objects, facets, relations, provenance, and graph context agents load.
+
+<p align="center">
+  <a href="https://demo.aictx.dev/?token=demo">
+    <img
+      alt="Aictx viewer showing the memory schema graph with relation overview and canonical storage navigation."
+      src="site/public/assets/viewer-demo.png"
+      width="940"
+    >
+  </a>
+  <br>
+  <sub>Schema, stored objects, relation provenance, and graph context in one inspectable local viewer.</sub>
+</p>
 
 Use it when you want:
 
