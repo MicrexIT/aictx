@@ -20,8 +20,8 @@ const demoUrl = "https://demo.aictx.dev/?token=demo";
           <span class="hero-title-mobile">your repo to AI agents.</span>
         </h1>
         <p class="hero-copy">
-          <span>Aictx saves durable project knowledge</span>
-          <span>as reviewable repo memory.</span>
+          <span>Set it up once. Your repo keeps the reminders.</span>
+          <span>Agents load the right context before work.</span>
         </p>
 
         <div class="hero-install" aria-label="Install Aictx">
@@ -40,20 +40,20 @@ const demoUrl = "https://demo.aictx.dev/?token=demo";
       <div class="section-heading">
         <h2 id="context-title">Durable memory beats bigger prompts.</h2>
         <p>
-          AGENTS.md and CLAUDE.md files can help, but loading them on every task adds noise.
-          Aictx is not a chat transcript archive or always-on capture server. It stores
-          project knowledge once, then loads the relevant pieces for the work in front of the model.
+          AGENTS.md and CLAUDE.md files can help, but they should stay small.
+          Aictx adds the durable memory behind them: set up the repo once, let agents
+          load only the relevant reminders, and save new decisions when they should last.
         </p>
       </div>
 
       <div class="comparison">
         <div>
-          <strong>Fewer repeated explanations</strong>
-          <p>Keep product intent, conventions, and sharp edges available across sessions.</p>
+          <strong>Set up once</strong>
+          <p>Write conservative starter memory and repo guidance in one first-run workflow.</p>
         </div>
         <div>
-          <strong>Not capture-everything memory</strong>
-          <p>Keep decisions, constraints, workflows, and gotchas future agents should trust.</p>
+          <strong>Quiet reminders</strong>
+          <p>Agents pull product intent, conventions, workflows, and gotchas when the task needs them.</p>
         </div>
         <div>
           <strong>Reviewable memory</strong>
@@ -154,28 +154,28 @@ const demoUrl = "https://demo.aictx.dev/?token=demo";
       <div class="section-heading">
         <h2 id="workflow-title">How it works</h2>
         <p>
-          Aictx keeps the everyday loop small: load relevant memory, do the work,
-          then save durable knowledge for later review.
+          Aictx keeps the everyday loop small after the first setup: agents load
+          relevant reminders, do the work, then save durable knowledge for later review.
         </p>
       </div>
 
       <div class="workflow-loop" aria-label="Aictx everyday loop">
-        <span>load relevant memory</span>
+        <span>set up once</span>
+        <span>load relevant reminders</span>
         <span>do the work</span>
-        <span>save what should last</span>
       </div>
 
       <div class="steps">
         <article>
           <span>01</span>
-          <p class="step-label">Before work</p>
-          <h3>Load the right project context.</h3>
-          <p>Aictx compiles a focused context pack instead of making every session rediscover broad setup notes.</p>
+          <p class="step-label">Once per repo</p>
+          <h3>Create the memory layer.</h3>
+          <p>Aictx writes starter memory and short agent guidance so the repo can remind future sessions what matters.</p>
         </article>
         <article>
           <span>02</span>
-          <p class="step-label">During work</p>
-          <h3>Do the work with that context.</h3>
+          <p class="step-label">Before work</p>
+          <h3>Load the right reminders.</h3>
           <p>The model starts with product intent, repo conventions, known traps, and the verification path already in view.</p>
         </article>
         <article>
@@ -189,7 +189,7 @@ const demoUrl = "https://demo.aictx.dev/?token=demo";
 
     <section class="demo-section" id="demo" aria-labelledby="demo-title">
       <div class="section-heading">
-        <h2 id="demo-title">Inspect a real Todo App memory seed.</h2>
+        <h2 id="demo-title">Inspect real Todo App memory bodies.</h2>
       </div>
 
       <div class="demo-art">
@@ -202,13 +202,13 @@ const demoUrl = "https://demo.aictx.dev/?token=demo";
           </span>
           <img
             src="/assets/viewer-demo.png"
-            alt="Aictx viewer showing a Todo App memory schema with type, facet, status, and relation filters."
+            alt="Aictx viewer showing a selected Todo App memory object with properties and Markdown body content open."
           />
         </a>
       </div>
 
       <div class="demo-footer">
-        <p>Browse a generic Todo App project with canonical object types, facet categories, lenses, and provenance links.</p>
+        <p>Browse a generic Todo App project with canonical object types, facet categories, inline Markdown bodies, relations, and provenance links.</p>
         <a class="text-link" href={demoUrl} rel="noreferrer">
           Open live demo
         </a>

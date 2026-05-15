@@ -230,7 +230,6 @@
   interface MemorySection {
     id: string;
     title: string;
-    icon: string;
     objects: MemoryObjectSummary[];
   }
 
@@ -238,6 +237,45 @@
     label: string;
     value: string;
     detail: string;
+  }
+
+  interface DocGraphNode {
+    id: string;
+    label: string;
+    type: ObjectType;
+    color: string;
+    borderColor: string;
+    x: number;
+    y: number;
+    radius: number;
+    hub: boolean;
+    muted: boolean;
+  }
+
+  interface DocGraphEdge {
+    id: string;
+    color: string;
+    x1: number;
+    y1: number;
+    x2: number;
+    y2: number;
+    muted: boolean;
+  }
+
+  interface DocGraphRelation {
+    id: string;
+    predicate: Predicate;
+    targetLabel: string;
+    status: RelationStatus;
+    confidence: RelationConfidence | null;
+  }
+
+  interface DocGraphOverview {
+    hub: MemoryObjectSummary | null;
+    nodes: DocGraphNode[];
+    edges: DocGraphEdge[];
+    relations: DocGraphRelation[];
+    hiddenRelationCount: number;
   }
 
   interface TokenTarget {
@@ -333,17 +371,19 @@
         "border-color": "data(borderColor)",
         "border-width": 2,
         color: "#37352f",
-        "font-size": 10,
+        "font-size": 9,
         "font-weight": 700,
         height: "data(size)",
         label: "data(label)",
-        "min-zoomed-font-size": 8,
+        "min-zoomed-font-size": 8.5,
         "overlay-opacity": 0,
         "text-background-color": "#fffefa",
-        "text-background-opacity": 0.86,
-        "text-background-padding": "3px",
-        "text-margin-y": 8,
-        "text-max-width": "126px",
+        "text-background-opacity": 0.9,
+        "text-background-padding": "2px",
+        "text-halign": "center",
+        "text-margin-y": 10,
+        "text-max-width": "74px",
+        "text-valign": "bottom",
         "text-wrap": "wrap",
         width: "data(size)"
       }
@@ -362,28 +402,67 @@
       }
     },
     {
-      selector: ".graph-selected",
+      selector: "node.graph-selected",
       style: {
         "border-color": "#111214",
         "border-width": 4,
-        "line-color": "#111214",
+        "font-size": 10.5,
+        height: "data(size)",
+        label: "data(fullLabel)",
+        "min-zoomed-font-size": 0,
         opacity: 1,
-        "target-arrow-color": "#111214",
-        width: 3,
+        "text-background-opacity": 0.96,
+        "text-max-width": "118px",
+        width: "data(size)",
         "z-index": 20
       }
     },
     {
-      selector: ".graph-neighbor",
+      selector: "edge.graph-selected",
+      style: {
+        "line-color": "#111214",
+        opacity: 1,
+        "target-arrow-color": "#111214",
+        width: 3.2,
+        "z-index": 20
+      }
+    },
+    {
+      selector: "node.graph-neighbor",
+      style: {
+        label: "data(label)",
+        "min-zoomed-font-size": 0,
+        opacity: 1,
+        "text-background-opacity": 0.92,
+        "text-opacity": 1,
+        "z-index": 12
+      }
+    },
+    {
+      selector: "edge.graph-neighbor",
       style: {
         opacity: 1,
         "z-index": 12
       }
     },
     {
-      selector: ".graph-faded",
+      selector: "node.graph-faded",
       style: {
-        opacity: 0.16
+        color: "#5f594f",
+        "font-size": 8.8,
+        label: "data(peekLabel)",
+        "min-zoomed-font-size": 6.8,
+        opacity: 0.52,
+        "text-background-opacity": 0.78,
+        "text-max-width": "80px",
+        "text-opacity": 1,
+        "z-index": 1
+      }
+    },
+    {
+      selector: "edge.graph-faded",
+      style: {
+        opacity: 0.14
       }
     }
   ];
@@ -494,6 +573,7 @@
   const previewCommandTask = $derived.by(() => previewTask.trim() || (previewData?.task ?? ""));
   const showPreviewCommand = $derived(previewCommandTask.trim() !== "");
   const previewCommand = $derived.by(() => buildPreviewCommand(previewCommandTask, previewMode, previewTokenBudget));
+  const docGraphOverview = $derived.by(() => buildDocGraphOverview(graphObjects, graphRelations));
 
   onMount(() => {
     void loadProjects();
@@ -1003,6 +1083,139 @@
       .sort(compareRelations);
   }
 
+  function buildDocGraphOverview(
+    memoryObjects: MemoryObjectSummary[],
+    relationList: MemoryRelationSummary[]
+  ): DocGraphOverview {
+    if (memoryObjects.length === 0) {
+      return {
+        hub: null,
+        nodes: [],
+        edges: [],
+        relations: [],
+        hiddenRelationCount: 0
+      };
+    }
+
+    const objectMap = new Map(memoryObjects.map((object) => [object.id, object]));
+    const hubId = preferredGraphObjectId() ?? memoryObjects[0]?.id ?? null;
+    const hub = hubId === null ? null : objectMap.get(hubId) ?? null;
+
+    if (hub === null) {
+      return {
+        hub: null,
+        nodes: [],
+        edges: [],
+        relations: [],
+        hiddenRelationCount: 0
+      };
+    }
+
+    const directRelations = relationList
+      .filter((relation) => relation.from === hub.id || relation.to === hub.id)
+      .sort((left, right) => {
+        const leftTarget = relationTargetLabel(left, hub.id);
+        const rightTarget = relationTargetLabel(right, hub.id);
+        const targetComparison = leftTarget.localeCompare(rightTarget);
+        return targetComparison === 0 ? left.predicate.localeCompare(right.predicate) : targetComparison;
+      });
+    const relatedObjects = uniqueById(
+      directRelations
+        .map((relation) => objectMap.get(relationCounterpart(relation, hub.id)) ?? null)
+        .filter((object): object is MemoryObjectSummary => object !== null)
+    ).slice(0, 6);
+    const fillerObjects = rankedObjects(memoryObjects)
+      .filter((object) => object.id !== hub.id && !relatedObjects.some((related) => related.id === object.id))
+      .slice(0, Math.max(0, 6 - relatedObjects.length));
+    const visibleObjects = [hub, ...relatedObjects, ...fillerObjects];
+    const positions = docGraphNodePositions(visibleObjects.length);
+    const nodePositionById = new Map<string, { x: number; y: number }>();
+    const directlyRelatedIds = new Set(relatedObjects.map((object) => object.id));
+    const nodes = visibleObjects.map((object, index) => {
+      const position = positions[index] ?? { x: 180, y: 100 };
+      nodePositionById.set(object.id, position);
+
+      return {
+        id: object.id,
+        label: graphObjectLabel(object),
+        type: object.type,
+        color: graphObjectColor(object),
+        borderColor: graphObjectBorderColor(object),
+        x: position.x,
+        y: position.y,
+        radius: object.id === hub.id ? 18 : 11,
+        hub: object.id === hub.id,
+        muted: object.id !== hub.id && !directlyRelatedIds.has(object.id)
+      };
+    });
+    const directEdges = directRelations.filter((relation) => {
+      const sourcePosition = nodePositionById.get(relation.from);
+      const targetPosition = nodePositionById.get(relation.to);
+      return sourcePosition !== undefined && targetPosition !== undefined;
+    });
+    const edges = directEdges.map((relation) => {
+      const sourcePosition = nodePositionById.get(relation.from) ?? { x: 180, y: 100 };
+      const targetPosition = nodePositionById.get(relation.to) ?? { x: 180, y: 100 };
+
+      return {
+        id: relation.id,
+        color: graphRelationColor(relation),
+        x1: sourcePosition.x,
+        y1: sourcePosition.y,
+        x2: targetPosition.x,
+        y2: targetPosition.y,
+        muted: false
+      };
+    });
+
+    return {
+      hub,
+      nodes,
+      edges,
+      relations: directRelations.slice(0, 4).map((relation) => ({
+        id: relation.id,
+        predicate: relation.predicate,
+        targetLabel: relationTargetLabel(relation, hub.id),
+        status: relation.status,
+        confidence: relation.confidence
+      })),
+      hiddenRelationCount: Math.max(0, directRelations.length - 4)
+    };
+  }
+
+  function docGraphNodePositions(count: number): Array<{ x: number; y: number }> {
+    const center = { x: 180, y: 100 };
+
+    if (count <= 1) {
+      return [center];
+    }
+
+    const slots = [
+      { x: 104, y: 62 },
+      { x: 256, y: 64 },
+      { x: 280, y: 134 },
+      { x: 174, y: 154 },
+      { x: 80, y: 130 },
+      { x: 182, y: 36 }
+    ];
+
+    return [center, ...slots.slice(0, count - 1)];
+  }
+
+  function uniqueById(memoryObjects: MemoryObjectSummary[]): MemoryObjectSummary[] {
+    const seen = new Set<string>();
+    const uniqueObjects: MemoryObjectSummary[] = [];
+
+    for (const object of memoryObjects) {
+      if (!seen.has(object.id)) {
+        uniqueObjects.push(object);
+        seen.add(object.id);
+      }
+    }
+
+    return uniqueObjects;
+  }
+
   function buildGraphElements(
     memoryObjects: MemoryObjectSummary[],
     relationList: MemoryRelationSummary[]
@@ -1019,7 +1232,9 @@
         group: "nodes" as const,
         data: {
           id: object.id,
-          label: object.title,
+          label: graphObjectLabel(object),
+          peekLabel: graphObjectPeekLabel(object),
+          fullLabel: graphObjectFullLabel(object),
           type: object.type,
           status: object.status,
           color: graphObjectColor(object),
@@ -1088,15 +1303,15 @@
     return {
       name: "cose",
       animate: false,
-      componentSpacing: 92,
-      edgeElasticity: 90,
+      componentSpacing: 132,
+      edgeElasticity: 140,
       fit,
-      gravity: 0.24,
-      idealEdgeLength: 92,
-      nodeOverlap: 18,
-      nodeRepulsion: 6200,
-      numIter: 900,
-      padding: 48,
+      gravity: 0.16,
+      idealEdgeLength: 138,
+      nodeOverlap: 36,
+      nodeRepulsion: 9800,
+      numIter: 1200,
+      padding: 72,
       randomize: true
     };
   }
@@ -1122,7 +1337,7 @@
       if (node.nonempty()) {
         const neighborhood = node.closedNeighborhood();
         node.addClass("graph-selected");
-        neighborhood.addClass("graph-neighbor");
+        neighborhood.difference(node).addClass("graph-neighbor");
         graphInstance.elements().difference(neighborhood).addClass("graph-faded");
       }
       return;
@@ -1134,7 +1349,7 @@
       if (edge.nonempty()) {
         const neighborhood = edge.connectedNodes().union(edge);
         edge.addClass("graph-selected");
-        neighborhood.addClass("graph-neighbor");
+        neighborhood.difference(edge).addClass("graph-neighbor");
         graphInstance.elements().difference(neighborhood).addClass("graph-faded");
       }
     }
@@ -1170,6 +1385,97 @@
         zoom: Math.max(graphInstance.zoom(), 1.04)
       });
     }
+  }
+
+  function graphObjectLabel(object: MemoryObjectSummary): string {
+    const concise = compactGraphTitle(object);
+    const words = concise.split(/\s+/).filter(Boolean);
+
+    if (words.length <= 1) {
+      return truncateGraphLabel(concise, 18);
+    }
+
+    const lines: string[] = [];
+    let line = "";
+
+    for (const word of words) {
+      const candidate = line === "" ? word : `${line} ${word}`;
+
+      if (candidate.length > 14 && line !== "") {
+        lines.push(line);
+        line = word;
+      } else {
+        line = candidate;
+      }
+
+      if (lines.length === 2) {
+        break;
+      }
+    }
+
+    if (line !== "" && lines.length < 2) {
+      lines.push(line);
+    }
+
+    const label = lines.slice(0, 2).join("\n");
+    return truncateGraphLabel(label, 30);
+  }
+
+  function graphObjectFullLabel(object: MemoryObjectSummary): string {
+    return truncateGraphLabel(object.title.replace(/^Source:\s*/i, ""), 46);
+  }
+
+  function graphObjectPeekLabel(object: MemoryObjectSummary): string {
+    return truncateGraphLabel(compactGraphTitle(object).replace(/\s+/g, " "), 22);
+  }
+
+  function compactGraphTitle(object: MemoryObjectSummary): string {
+    const title = object.title.replace(/^Source:\s*/i, "").trim();
+
+    if (object.type !== "source") {
+      return title;
+    }
+
+    if (!looksLikePathLabel(title)) {
+      return title;
+    }
+
+    const originLabel = graphOriginLabel(object.origin?.locator ?? title);
+    return originLabel === "" ? title : originLabel;
+  }
+
+  function looksLikePathLabel(label: string): boolean {
+    return /[\\/]/.test(label) || /\.[a-z0-9]{2,8}$/i.test(label);
+  }
+
+  function graphOriginLabel(locator: string): string {
+    if (/^https?:\/\//i.test(locator)) {
+      try {
+        const url = new URL(locator);
+        const filename = url.pathname.split("/").filter(Boolean).at(-1) ?? "";
+        return filename === "" ? url.hostname.replace(/^www\./, "") : filename;
+      } catch {
+        return locator.replace(/^https?:\/\//i, "").split("/")[0] ?? locator;
+      }
+    }
+
+    const withoutQuery = locator.split(/[?#]/)[0] ?? locator;
+    const segments = withoutQuery.split(/[\\/]/).filter(Boolean);
+    const filename = segments.at(-1) ?? withoutQuery.trim();
+
+    if (filename === "") {
+      return "";
+    }
+
+    return filename.replace(/\.(markdown|mdx?)$/i, ".md");
+  }
+
+  function truncateGraphLabel(label: string, maxLength: number): string {
+    if (label.length <= maxLength) {
+      return label;
+    }
+
+    return `${label.slice(0, Math.max(0, maxLength - 1)).trimEnd()}…`;
   }
 
   function graphObjectColor(object: MemoryObjectSummary): string {
@@ -1278,7 +1584,6 @@
       .map((type) => ({
         id: `type-${type}`,
         title: objectTypeLabel(type),
-        icon: objectTypeGlyph(type),
         objects: rankedObjects(memoryObjects.filter((object) => object.type === type))
       }))
       .filter((section) => section.objects.length > 0);
@@ -1362,7 +1667,7 @@
   }
 
   function objectTypeLabel(type: ObjectType): string {
-    return `${type} objects`;
+    return `${type.charAt(0).toUpperCase()}${type.slice(1)} objects`;
   }
 
   function facetCategoryLabel(object: MemoryObjectSummary): string {
@@ -1412,7 +1717,7 @@
     return related === null ? relationCounterpart(relation, objectId) : related.title;
   }
 
-  function relationStatusLabel(relation: MemoryRelationSummary): string {
+  function relationStatusLabel(relation: Pick<MemoryRelationSummary, "status" | "confidence">): string {
     return relation.confidence === null
       ? relation.status
       : `${relation.status} / ${relation.confidence} confidence`;
@@ -2096,8 +2401,105 @@
             </p>
           </header>
 
+          {#if docGraphOverview.hub !== null}
+            <section class="doc-relation-overview" aria-labelledby="doc-relation-title" data-testid="doc-relation-overview">
+              <div class="doc-relation-map" aria-label="Embedded relation overview">
+                <svg viewBox="0 0 360 200" role="img" aria-labelledby="doc-relation-title">
+                  <defs>
+                    <marker id="doc-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+                      <path d="M 0 0 L 10 5 L 0 10 z"></path>
+                    </marker>
+                  </defs>
+                  {#each docGraphOverview.edges as edge (edge.id)}
+                    <line
+                      x1={edge.x1}
+                      y1={edge.y1}
+                      x2={edge.x2}
+                      y2={edge.y2}
+                      stroke={edge.color}
+                      class:muted={edge.muted}
+                      marker-end="url(#doc-arrow)"
+                    />
+                  {/each}
+                  {#each docGraphOverview.nodes as node (node.id)}
+                    <g class:hub={node.hub} class:muted={node.muted}>
+                      <circle
+                        cx={node.x}
+                        cy={node.y}
+                        r={node.radius}
+                        fill={node.color}
+                        stroke={node.borderColor}
+                      />
+                      <text x={node.x} y={node.y + node.radius + 14}>
+                        {#each node.label.split("\n") as line, lineIndex (`${node.id}-${lineIndex}`)}
+                          <tspan x={node.x} dy={lineIndex === 0 ? 0 : 11}>{line}</tspan>
+                        {/each}
+                      </text>
+                    </g>
+                  {/each}
+                </svg>
+              </div>
+
+              <div class="doc-relation-copy">
+                <div class="doc-relation-heading">
+                  <div>
+                    <p class="eyebrow">Relation overview</p>
+                    <h3 id="doc-relation-title">{docGraphOverview.hub.title}</h3>
+                    <p>{docGraphOverview.hub.id}</p>
+                  </div>
+                  <button
+                    type="button"
+                    class="doc-graph-action"
+                    onclick={showGraph}
+                    data-testid="doc-hero-graph-link"
+                  >
+                    View full graph
+                  </button>
+                </div>
+
+                <dl class="doc-relation-stats" aria-label="Visible graph counts">
+                  <div><dt>Nodes</dt><dd>{graphObjects.length}</dd></div>
+                  <div><dt>Links</dt><dd>{graphRelations.length}</dd></div>
+                </dl>
+
+                <ul class="doc-relation-list" aria-label="Visible direct relations">
+                  {#each docGraphOverview.relations as relation (relation.id)}
+                    <li>
+                      <span class="pill">{relation.predicate}</span>
+                      <strong>
+                        {relation.targetLabel}
+                      </strong>
+                      <small>{relationStatusLabel(relation)}</small>
+                    </li>
+                  {:else}
+                    <li class="empty-copy">No direct relation links.</li>
+                  {/each}
+                  {#if docGraphOverview.hiddenRelationCount > 0}
+                    <li class="doc-relation-more">
+                      {docGraphOverview.hiddenRelationCount} more linked {docGraphOverview.hiddenRelationCount === 1 ? "object" : "objects"}
+                    </li>
+                  {/if}
+                </ul>
+              </div>
+            </section>
+          {:else}
+            <div class="doc-hero-actions">
+              <button
+                type="button"
+                class="doc-graph-link"
+                onclick={showGraph}
+                data-testid="doc-hero-graph-link"
+              >
+                <span class="doc-graph-icon" aria-hidden="true">◎</span>
+                <span>
+                  <strong>Open relation graph</strong>
+                  <small>{graphObjects.length} visible nodes, {graphRelations.length} links</small>
+                </span>
+              </button>
+            </div>
+          {/if}
+
           <section class="memory-summary" aria-label="Project memory summary">
-            <div class="summary-check" aria-hidden="true">✓</div>
             <div class="summary-copy">
               <strong>Schema projection loaded</strong>
               <p>
@@ -2178,7 +2580,7 @@
             <section class="sectioned-memory" aria-label="Memory objects">
               {#each memorySections as section (section.id)}
                 <section id={section.id}>
-                  <h3><span class="section-icon" aria-hidden="true">{section.icon}</span>{section.title}</h3>
+                  <h3>{section.title}</h3>
                   <p>{countLabel(section.objects.length, "matching memory", "matching memories")}</p>
                   <div class="object-list">
                     {#each section.objects as object (object.id)}
@@ -3914,9 +4316,265 @@
     line-height: 1.48;
   }
 
+  .doc-relation-overview {
+    display: grid;
+    grid-template-columns: minmax(0, 1.08fr) minmax(280px, 0.82fr);
+    gap: 22px;
+    align-items: stretch;
+    border-top: 1px solid #ebe7de;
+    border-bottom: 1px solid #ebe7de;
+    padding: 20px 0 22px;
+  }
+
+  .doc-relation-map {
+    min-height: 244px;
+    overflow: hidden;
+    border: 1px solid #e2ded5;
+    border-radius: 8px;
+    background:
+      linear-gradient(rgb(242 239 232 / 70%) 1px, transparent 1px),
+      linear-gradient(90deg, rgb(242 239 232 / 70%) 1px, transparent 1px),
+      #fffefa;
+    background-size: 24px 24px;
+  }
+
+  .doc-relation-map svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+    min-height: 244px;
+  }
+
+  .doc-relation-map marker path {
+    fill: #8e8981;
+  }
+
+  .doc-relation-map line {
+    stroke-width: 1.25;
+    stroke-linecap: round;
+    opacity: 0.62;
+  }
+
+  .doc-relation-map line.muted {
+    opacity: 0.24;
+  }
+
+  .doc-relation-map circle {
+    stroke-width: 2;
+  }
+
+  .doc-relation-map g.hub circle {
+    stroke-width: 4;
+  }
+
+  .doc-relation-map g.muted circle {
+    opacity: 0.32;
+  }
+
+  .doc-relation-map text {
+    fill: #37352f;
+    font-size: 7.8px;
+    font-weight: 800;
+    text-anchor: middle;
+  }
+
+  .doc-relation-map g.muted text {
+    opacity: 0;
+  }
+
+  .doc-relation-copy {
+    display: grid;
+    align-content: start;
+    gap: 14px;
+    min-width: 0;
+  }
+
+  .doc-relation-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 18px;
+  }
+
+  .doc-relation-heading h3 {
+    margin: 4px 0 0;
+    color: #242423;
+    font-size: 1.26rem;
+    line-height: 1.12;
+    font-weight: 850;
+  }
+
+  .doc-relation-heading p:not(.eyebrow) {
+    margin: 6px 0 0;
+    color: #667085;
+  }
+
+  .doc-relation-stats {
+    display: flex;
+    gap: 8px;
+    margin: 0;
+  }
+
+  .doc-relation-stats div {
+    min-width: 62px;
+    border: 1px solid #e2ded5;
+    border-radius: 8px;
+    padding: 8px 10px;
+    background: #ffffff;
+  }
+
+  .doc-relation-stats dt {
+    color: #9a968d;
+    font-size: 0.64rem;
+    font-weight: 850;
+    text-transform: uppercase;
+  }
+
+  .doc-relation-stats dd {
+    margin: 2px 0 0;
+    color: #262522;
+    font-size: 1.08rem;
+    font-weight: 880;
+  }
+
+  .doc-relation-list {
+    display: grid;
+    gap: 9px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .doc-relation-list li {
+    display: grid;
+    grid-template-columns: minmax(96px, auto) minmax(0, 1fr);
+    gap: 4px 10px;
+    align-items: center;
+    border-top: 1px solid #f0eee8;
+    padding-top: 9px;
+  }
+
+  .doc-relation-list li:first-child {
+    border-top: 0;
+    padding-top: 0;
+  }
+
+  .doc-relation-list .pill {
+    justify-self: start;
+  }
+
+  .doc-relation-list strong {
+    min-width: 0;
+    color: #242423;
+    font-size: 1rem;
+    font-weight: 850;
+    line-height: 1.18;
+  }
+
+  .doc-relation-list small {
+    grid-column: 2;
+    color: #667085;
+  }
+
+  .doc-relation-more {
+    display: block !important;
+    color: #8b8880;
+    font-size: 0.86rem;
+  }
+
+  .doc-graph-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    border: 1px solid #202020;
+    border-radius: 8px;
+    padding: 10px 15px;
+    color: #ffffff;
+    background: #202020;
+    font-size: 0.9rem;
+    font-weight: 850;
+    white-space: nowrap;
+    box-shadow: 0 10px 24px rgb(16 24 40 / 10%);
+  }
+
+  .doc-graph-action:hover {
+    border-color: #111214;
+    background: #111214;
+  }
+
+  .doc-graph-action:focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: 3px;
+  }
+
+  .doc-hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 2px;
+  }
+
+  .doc-graph-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 11px;
+    max-width: 100%;
+    min-height: 54px;
+    border: 1px solid #dedbd3;
+    border-radius: 8px;
+    padding: 9px 14px 9px 10px;
+    color: #2f2f2b;
+    background: #ffffff;
+    text-align: left;
+    box-shadow: 0 8px 24px rgb(16 24 40 / 5%);
+  }
+
+  .doc-graph-link:hover {
+    border-color: #cbc5ba;
+    background: #f7f6f2;
+  }
+
+  .doc-graph-link:focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: 3px;
+  }
+
+  .doc-graph-icon {
+    display: inline-grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    flex: 0 0 auto;
+    border-radius: 999px;
+    color: #faf9f5;
+    background: #111214;
+    font-size: 1rem;
+    font-weight: 900;
+  }
+
+  .doc-graph-link span:last-child {
+    display: grid;
+    min-width: 0;
+    gap: 2px;
+  }
+
+  .doc-graph-link strong {
+    color: #242423;
+    font-size: 0.96rem;
+    font-weight: 820;
+    line-height: 1.15;
+  }
+
+  .doc-graph-link small {
+    color: #77736d;
+    font-size: 0.82rem;
+    line-height: 1.25;
+  }
+
   .memory-summary {
     display: grid;
-    grid-template-columns: 30px minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr);
     gap: 16px;
     max-width: none;
     margin: 0;
@@ -3925,17 +4583,6 @@
     padding: 18px 20px;
     background: #ffffff;
     box-shadow: 0 10px 28px rgb(16 24 40 / 5%);
-  }
-
-  .summary-check {
-    display: inline-grid;
-    place-items: center;
-    width: 24px;
-    height: 24px;
-    border-radius: 6px;
-    color: #ffffff;
-    background: #2b2925;
-    font-weight: 900;
   }
 
   .summary-copy strong {
@@ -4198,14 +4845,23 @@
 
   .controls-row {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     align-items: center;
     gap: 8px;
     width: 100%;
+    overflow-x: auto;
+    padding-bottom: 2px;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .controls-row::-webkit-scrollbar {
+    display: none;
   }
 
   .layer-tabs {
-    flex-wrap: wrap;
+    flex: 0 0 auto;
+    flex-wrap: nowrap;
     justify-content: flex-start;
     margin: 0;
     gap: 8px;
@@ -4213,6 +4869,7 @@
 
   .layer-tabs button,
   .list-controls button {
+    flex: 0 0 auto;
     min-height: 36px;
     border: 1px solid #dedbd3;
     border-radius: 999px;
@@ -4221,6 +4878,7 @@
     background: #ffffff;
     font-size: 0.86rem;
     font-weight: 650;
+    white-space: nowrap;
     box-shadow: 0 1px 2px rgb(16 24 40 / 4%);
   }
 
@@ -4231,6 +4889,7 @@
   }
 
   .list-controls select {
+    flex: 0 0 auto;
     width: auto;
     min-width: 150px;
     min-height: 38px;
@@ -4239,6 +4898,7 @@
     background-color: #efede8;
     color: #504d48;
     font-size: 0.9rem;
+    white-space: nowrap;
   }
 
   .list-controls [data-testid="viewer-tag-filter"] {
@@ -4268,15 +4928,6 @@
     font-size: 2.05rem;
     line-height: 1.08;
     font-weight: 850;
-  }
-
-  .section-icon {
-    display: inline-grid;
-    place-items: center;
-    width: 1.1em;
-    color: #77736d;
-    font-size: 0.86em;
-    line-height: 1;
   }
 
   .sectioned-memory > section > p {
@@ -4560,6 +5211,48 @@
       margin: 0 0 18px;
     }
 
+    .doc-hero-actions,
+    .doc-graph-link {
+      width: 100%;
+    }
+
+    .doc-relation-overview {
+      grid-template-columns: 1fr;
+      gap: 16px;
+      padding: 16px 0 18px;
+    }
+
+    .doc-relation-map,
+    .doc-relation-map svg {
+      min-height: 220px;
+    }
+
+    .doc-relation-heading {
+      align-items: stretch;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .doc-relation-stats {
+      width: 100%;
+    }
+
+    .doc-relation-stats div {
+      flex: 1;
+    }
+
+    .doc-relation-list li {
+      grid-template-columns: 1fr;
+    }
+
+    .doc-relation-list small {
+      grid-column: 1;
+    }
+
+    .doc-graph-action {
+      width: 100%;
+    }
+
     .doc-hero h2 {
       font-size: 2.45rem;
     }
@@ -4604,12 +5297,425 @@
 
     .controls-row {
       display: flex;
-      flex-wrap: wrap;
-      align-items: stretch;
+      flex-wrap: nowrap;
+      align-items: center;
+      overflow-x: auto;
     }
 
     .memory-preview {
       padding: 20px 18px 24px;
+    }
+  }
+
+  /* Human readability polish. */
+  :global(body) {
+    color: #2d2b27;
+    font-kerning: normal;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  .main-stage {
+    padding-top: clamp(34px, 5vw, 60px);
+  }
+
+  .memory-page {
+    gap: 30px;
+  }
+
+  .memory-page,
+  .memory-workspace,
+  .sectioned-memory,
+  .sectioned-memory > section,
+  .object-list,
+  .object-list button,
+  .object-list button > span,
+  .memory-preview,
+  .notion-properties,
+  .notion-toggle,
+  .notion-toggle > :not(summary),
+  .markdown-view,
+  .json-view,
+  .facet-grid,
+  .relation-columns {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .doc-hero h2 {
+    font-size: clamp(2.35rem, 3.8vw, 3.25rem);
+    line-height: 1.04;
+    font-weight: 820;
+  }
+
+  .doc-hero p:not(.eyebrow) {
+    color: #68635c;
+    line-height: 1.62;
+  }
+
+  .memory-summary {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px 18px;
+    border-color: #e7e0d4;
+    padding: 22px 24px 24px;
+    background: #fffdf9;
+    box-shadow:
+      0 1px 2px rgb(39 31 21 / 4%),
+      0 14px 36px rgb(39 31 21 / 6%);
+  }
+
+  .summary-copy strong {
+    color: #302e2a;
+    font-size: 1.05rem;
+    line-height: 1.28;
+    font-weight: 780;
+  }
+
+  .summary-copy p {
+    max-width: 74ch;
+    margin-top: 8px;
+    color: #6a655d;
+    font-size: 1rem;
+    line-height: 1.62;
+  }
+
+  .trust-copy {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 0;
+    max-width: none;
+    color: #6c675f !important;
+    font-size: 0.95rem !important;
+    line-height: 1.62 !important;
+    white-space: nowrap;
+  }
+
+  .trust-copy span {
+    flex: 0 0 auto;
+    margin: 0 8px 4px 0;
+    border-color: #d8d0c3;
+    padding: 3px 10px;
+    background: #faf7f1;
+    font-weight: 760;
+  }
+
+  .list-controls {
+    gap: 12px;
+    border-bottom-color: #ece6dc;
+    padding: 2px 0 28px;
+  }
+
+  .list-controls strong {
+    color: #302e2a;
+    font-size: 1rem;
+    line-height: 1.2;
+    font-weight: 780;
+  }
+
+  .list-controls span {
+    margin-top: 2px;
+    color: #858078;
+    font-size: 0.93rem;
+  }
+
+  .controls-row {
+    gap: 10px;
+    min-width: 0;
+    padding-bottom: 6px;
+  }
+
+  .layer-tabs button,
+  .list-controls button {
+    min-height: 40px;
+    border-color: #dfd8cd;
+    padding: 8px 14px;
+    color: #5e5950;
+    background: #fffdf9;
+    font-size: 0.9rem;
+    font-weight: 680;
+  }
+
+  .layer-tabs button.active {
+    border-color: #262522;
+    background: #262522;
+  }
+
+  .list-controls select {
+    min-width: 168px;
+    min-height: 40px;
+    border-color: #dfd8cd;
+    padding-right: 38px;
+    padding-left: 14px;
+    background-color: #f4f1eb;
+    color: #45413b;
+    font-size: 0.92rem;
+  }
+
+  .sectioned-memory {
+    gap: 42px;
+  }
+
+  .sectioned-memory h3 {
+    color: #24231f;
+    font-size: clamp(1.58rem, 2.3vw, 1.95rem);
+    line-height: 1.12;
+    font-weight: 780;
+  }
+
+  .sectioned-memory > section > p {
+    margin: 7px 0 20px;
+    color: #817c74;
+    font-size: 1rem;
+    line-height: 1.45;
+  }
+
+  .object-list {
+    gap: 14px;
+  }
+
+  .object-list button {
+    grid-template-columns: 36px minmax(0, 1fr) auto;
+    align-items: start;
+    min-height: 0;
+    border-color: #e6dfd4;
+    padding: 18px 22px;
+    background: #fffdf9;
+    box-shadow:
+      0 1px 2px rgb(39 31 21 / 4%),
+      0 10px 24px rgb(39 31 21 / 4%);
+    transition:
+      background-color 140ms ease,
+      border-color 140ms ease,
+      box-shadow 140ms ease,
+      transform 140ms ease;
+  }
+
+  .object-list button:hover {
+    border-color: #d8cec0;
+    background: #fffaf1;
+    box-shadow:
+      0 2px 5px rgb(39 31 21 / 5%),
+      0 14px 30px rgb(39 31 21 / 7%);
+    transform: translateY(-1px);
+  }
+
+  .object-list button.selected {
+    border-color: #d8cec0;
+    border-bottom-color: transparent;
+    background: #f7f3ec;
+  }
+
+  .object-list .object-glyph {
+    width: 28px;
+    height: 28px;
+    margin-top: 2px;
+    border-radius: 7px;
+    background: #f3eee6;
+    color: #607a86;
+    font-size: 0.94rem;
+  }
+
+  .object-list strong {
+    color: #292825;
+    font-size: 1.08rem;
+    line-height: 1.32;
+    font-weight: 760;
+    overflow-wrap: anywhere;
+  }
+
+  .object-meta {
+    gap: 6px 7px;
+    margin-top: 8px;
+  }
+
+  .object-meta span,
+  .pill,
+  .tag-list li {
+    border-color: #ded6ca;
+    background: #f8f5ef;
+    color: #59544c;
+    font-size: 0.76rem;
+    line-height: 1.15;
+    font-weight: 680;
+    overflow-wrap: anywhere;
+  }
+
+  .object-list small {
+    max-width: 76ch;
+    margin-top: 9px;
+    color: #6f6a62;
+    font-size: 0.98rem;
+    line-height: 1.52;
+    overflow-wrap: anywhere;
+  }
+
+  .object-list em {
+    align-self: center;
+    min-width: 34px;
+    padding-left: 12px;
+    color: #8a847b;
+    font-size: 0.93rem;
+    font-weight: 650;
+  }
+
+  .memory-preview {
+    margin-top: -14px;
+    border-color: #d8cec0;
+    padding: 28px clamp(24px, 5vw, 64px) 34px;
+    background: #fffdf9;
+    box-shadow: 0 18px 34px rgb(39 31 21 / 6%);
+  }
+
+  .notion-properties {
+    gap: 2px;
+    padding-bottom: 18px;
+  }
+
+  .notion-properties div {
+    grid-template-columns: 112px minmax(0, 1fr);
+    min-height: 30px;
+  }
+
+  .notion-properties dt {
+    color: #8e887f;
+    font-size: 0.86rem;
+    font-weight: 700;
+  }
+
+  .notion-properties dd {
+    color: #3c3934;
+    font-size: 0.96rem;
+    line-height: 1.45;
+  }
+
+  .notion-toggle-list {
+    gap: 14px;
+  }
+
+  .notion-toggle summary {
+    min-height: 34px;
+    font-size: 1.01rem;
+    font-weight: 720;
+  }
+
+  .notion-toggle > :not(summary) {
+    padding: 10px 0 20px;
+  }
+
+  .memory-preview .markdown-view {
+    max-width: 78ch;
+    color: #2f3440;
+    font-size: 1.04rem;
+    line-height: 1.72;
+  }
+
+  .memory-preview .markdown-view p {
+    margin: 0 0 1rem;
+  }
+
+  .memory-preview .markdown-view h3 {
+    margin: 0 0 0.75rem;
+    color: #24231f;
+    font-size: 1.38rem;
+    line-height: 1.22;
+    font-weight: 780;
+  }
+
+  .memory-preview .markdown-view ul {
+    margin: 0 0 1rem;
+    padding-left: 1.2rem;
+  }
+
+  .memory-preview .markdown-view li + li {
+    margin-top: 0.38rem;
+  }
+
+  .relation-list {
+    gap: 11px;
+  }
+
+  .relation-list li {
+    gap: 6px;
+  }
+
+  .relation-list button {
+    line-height: 1.35;
+    font-weight: 760;
+  }
+
+  .relation-list small {
+    color: #777169;
+    line-height: 1.4;
+  }
+
+  @media (max-width: 900px) {
+    .main-stage {
+      padding: 28px 14px 52px;
+    }
+
+    .memory-page {
+      gap: 22px;
+    }
+
+    .memory-summary {
+      grid-template-columns: 1fr;
+      padding: 18px;
+    }
+
+    .trust-copy {
+      align-items: flex-start;
+      flex-wrap: wrap;
+      white-space: normal;
+    }
+
+    .sectioned-memory {
+      gap: 34px;
+    }
+
+    .sectioned-memory h3 {
+      font-size: 1.5rem;
+    }
+
+    .object-list button {
+      grid-template-columns: 32px minmax(0, 1fr);
+      padding: 16px;
+    }
+
+    .object-list em {
+      grid-column: 2;
+      justify-self: start;
+      padding-left: 0;
+    }
+
+    .memory-preview {
+      margin-top: -14px;
+      padding: 22px 18px 28px;
+    }
+
+    .notion-properties div,
+    .facet-grid div {
+      grid-template-columns: 1fr;
+      gap: 2px;
+    }
+
+    .relation-columns {
+      grid-template-columns: 1fr;
+      gap: 18px;
+    }
+  }
+
+  @media (max-width: 560px) {
+    .object-list button {
+      grid-template-columns: 1fr;
+    }
+
+    .object-list em {
+      grid-column: 1;
+    }
+
+    .memory-preview .markdown-view {
+      font-size: 1rem;
     }
   }
 </style>

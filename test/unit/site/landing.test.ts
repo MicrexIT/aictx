@@ -7,22 +7,25 @@ import { describe, expect, it } from "vitest";
 const repoRoot = resolve(fileURLToPath(new URL("../../..", import.meta.url)));
 
 describe("site landing page", () => {
-  it("states the sharpened value proposition and primary action", async () => {
+  it("states the sharpened value proposition and primary actions", async () => {
     const landing = await readFile(resolve(repoRoot, "site/src/pages/index.astro"), "utf8");
 
     expect(landing).toContain("Local-first and open source");
     expect(landing).toContain("Stop re&#8209;explaining your");
     expect(landing).toContain("repo to AI agents.");
-    expect(landing).toContain("Aictx saves durable project knowledge");
-    expect(landing).toContain("as reviewable repo memory.");
+    expect(landing).toContain("Set it up once. Your repo keeps the reminders.");
+    expect(landing).toContain("Agents load the right context before work.");
     expect(landing).toContain("Install Aictx");
     expect(landing).toContain("Open live demo");
     expect(landing).not.toContain("Join discussions");
     expect(landing).toContain("npm install -g @aictx/memory");
     expect(landing).toContain("Durable memory beats bigger prompts.");
-    expect(landing).toContain("Aictx is not a chat transcript archive or always-on capture server.");
-    expect(landing).toContain("Not capture-everything memory");
-    expect(landing).toContain("Keep decisions, constraints, workflows, and gotchas future agents should trust.");
+    expect(landing).toContain("Aictx adds the durable memory behind them");
+    expect(landing).toContain("Set up once");
+    expect(landing).toContain("Write conservative starter memory and repo guidance in one first-run workflow.");
+    expect(landing).toContain("Quiet reminders");
+    expect(landing).toContain("Agents pull product intent, conventions, workflows, and gotchas when the task needs them.");
+    expect(landing).toContain("Reviewable memory");
     expect(landing).not.toContain("Token-efficient context");
     expect(landing).not.toContain("No hosted dependency");
     expect(landing).not.toContain(
@@ -39,12 +42,12 @@ describe("site landing page", () => {
     expect(landing).toContain("Viewer memory page shows canonical types, facets, scopes, and relations first.");
     expect(landing).not.toContain("Inspect the memory agents will use.");
     expect(landing).toContain("How it works");
-    expect(landing).toContain("Aictx keeps the everyday loop small");
-    expect(landing).toContain("load relevant memory");
-    expect(landing).toContain("save what should last");
-    expect(landing).toContain("Load the right project context.");
-    expect(landing).toContain("Aictx compiles a focused context pack");
-    expect(landing).toContain("Do the work with that context.");
+    expect(landing).toContain("Aictx keeps the everyday loop small after the first setup");
+    expect(landing).toContain("set up once");
+    expect(landing).toContain("load relevant reminders");
+    expect(landing).toContain("Create the memory layer.");
+    expect(landing).toContain("starter memory and short agent guidance");
+    expect(landing).toContain("Load the right reminders.");
     expect(landing).toContain("known traps, and the verification path already in view");
     expect(landing).toContain("Save what future sessions should remember.");
     expect(landing).toContain("humans can inspect, diff, commit, or roll back");
@@ -76,9 +79,10 @@ describe("site landing page", () => {
   it("frames the demo as a generic Todo App memory inspection surface", async () => {
     const landing = await readFile(resolve(repoRoot, "site/src/pages/index.astro"), "utf8");
 
-    expect(landing).toContain("Inspect a real Todo App memory seed.");
+    expect(landing).toContain("Inspect real Todo App memory bodies.");
     expect(landing).toContain("Browse a generic Todo App project with canonical object types");
-    expect(landing).toContain("Todo App memory schema");
+    expect(landing).toContain("inline Markdown bodies");
+    expect(landing).toContain("Markdown body content open");
     expect(landing).not.toContain("Browse the local handbook");
   });
 });

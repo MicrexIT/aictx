@@ -141,8 +141,14 @@ Four surfaces ship today. Each one works locally and fits normal Git review.
 | --- | --- | --- |
 | One-time setup | Creates local memory and short repo guidance so future agents know when to load and save context. | `aictx setup` |
 | Task-focused loading | Pulls relevant project memory before coding, debugging, review, architecture, or onboarding work. | `aictx load "change auth routes"` |
-| Visual memory viewer | Opens a local browser for memory objects, facets, role coverage, provenance, and graph context. | `aictx view` |
+| Visual memory viewer | Opens a local browser for memory objects, rendered Markdown body content, facets, provenance, and graph context. | `aictx view` |
 | Save discipline | Saves only durable facts, decisions, workflows, gotchas, source records, and syntheses. | `aictx remember --stdin` |
+
+![Aictx viewer showing a selected Todo App memory object with its Markdown body content open.](site/public/assets/viewer-demo.png)
+
+The viewer keeps metadata, facets, relations, provenance, and the stored
+Markdown body in one inspection surface, so humans can review the same memory
+an agent would load.
 
 ## Works With Your Agent
 
@@ -154,11 +160,6 @@ Four surfaces ship today. Each one works locally and fits normal Git review.
 | Cursor | Copy `integrations/cursor/aictx.mdc` into `.cursor/rules/aictx.mdc`, then run setup. |
 | Cline | Copy `integrations/cline/aictx.md` into `.clinerules/aictx.md`, then run setup. |
 | MCP-capable clients | Start with the CLI; configure `aictx-mcp` later when the client exposes MCP tools. |
-
-The `integrations/` directory also includes PR-ready distribution artifacts for
-agent marketplaces: Codex standalone skill, Codex plugin, and Claude Code
-plugin packages. They package the same CLI-first guidance as the setup aids and
-do not add MCP configuration.
 
 ## Documentation
 
