@@ -7,21 +7,20 @@ import { describe, expect, it } from "vitest";
 const repoRoot = resolve(fileURLToPath(new URL("../../..", import.meta.url)));
 
 describe("site landing page", () => {
-  it("states the sharpened value proposition and primary actions", async () => {
+  it("states the sharpened value proposition and primary action", async () => {
     const landing = await readFile(resolve(repoRoot, "site/src/pages/index.astro"), "utf8");
 
-    expect(landing).toContain("Project memory<br />for AI Agents");
-    expect(landing).toContain(
-      "Aictx stores your repo’s intent, architecture, conventions, setup, and known traps"
-    );
-    expect(landing).toContain("Stop re-explaining your repo to AI agents.");
+    expect(landing).toContain("Local-first and open source");
+    expect(landing).toContain("Stop re&#8209;explaining your");
+    expect(landing).toContain("repo to AI agents.");
+    expect(landing).toContain("Aictx saves durable project knowledge");
     expect(landing).toContain("as reviewable repo memory.");
     expect(landing).toContain("Install Aictx");
-    expect(landing).toContain("Browse demo");
+    expect(landing).toContain("Open live demo");
     expect(landing).not.toContain("Join discussions");
     expect(landing).toContain("npm install -g @aictx/memory");
-    expect(landing).toContain("Works with Codex, Claude Code, Cursor, and MCP-capable agents.");
-    expect(landing).toContain("Aictx is not another chat UI or hosted memory service.");
+    expect(landing).toContain("Durable memory beats bigger prompts.");
+    expect(landing).toContain("Aictx is not a chat transcript archive or always-on capture server.");
     expect(landing).toContain("Not capture-everything memory");
     expect(landing).toContain("Keep decisions, constraints, workflows, and gotchas future agents should trust.");
     expect(landing).not.toContain("Token-efficient context");
