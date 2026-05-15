@@ -25,6 +25,12 @@ starts. Activate Aictx once in a repo: it saves durable knowledge as local,
 reviewable memory, wires short agent guidance into the project, and loads only
 the pieces that matter for the current task.
 
+[![Aictx viewer showing the memory schema graph with relation overview and canonical storage navigation.](site/public/assets/viewer-demo.png)](https://demo.aictx.dev/?token=demo)
+
+The visual memory viewer is part of the product: humans can inspect the same
+schema, objects, facets, relations, provenance, and graph context agents load in
+one local review surface.
+
 Use it when you want:
 
 - New agents to understand the repo without a long briefing.
@@ -141,14 +147,8 @@ Four surfaces ship today. Each one works locally and fits normal Git review.
 | --- | --- | --- |
 | One-time setup | Creates local memory and short repo guidance so future agents know when to load and save context. | `aictx setup` |
 | Task-focused loading | Pulls relevant project memory before coding, debugging, review, architecture, or onboarding work. | `aictx load "change auth routes"` |
-| Visual memory viewer | Opens a local browser for memory objects, rendered Markdown body content, facets, provenance, and graph context. | `aictx view` |
+| Visual memory viewer | Opens a local browser for the memory schema, canonical objects, facets, relation overview, provenance, and graph context. | `aictx view` |
 | Save discipline | Saves only durable facts, decisions, workflows, gotchas, source records, and syntheses. | `aictx remember --stdin` |
-
-![Aictx viewer showing a selected Todo App memory object with its Markdown body content open.](site/public/assets/viewer-demo.png)
-
-The viewer keeps metadata, facets, relations, provenance, and the stored
-Markdown body in one inspection surface, so humans can review the same memory
-an agent would load.
 
 ## Works With Your Agent
 

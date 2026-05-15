@@ -2171,9 +2171,7 @@ h3 {
   }
 
   .viewer-frame img {
-    aspect-ratio: 16 / 9;
-    object-fit: cover;
-    object-position: top left;
+    height: auto;
   }
 
   .demo-footer {

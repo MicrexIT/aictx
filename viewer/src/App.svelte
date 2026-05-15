@@ -4247,7 +4247,7 @@
 
   .main-stage {
     min-width: 0;
-    padding: 46px clamp(36px, 6vw, 104px) 88px;
+    padding: 46px clamp(34px, 4vw, 72px) 88px;
     background: #fffefa;
   }
 
@@ -4256,7 +4256,7 @@
   .graph-page,
   .export-page {
     width: min(1060px, 100%);
-    margin: 0 auto;
+    margin: 0;
   }
 
   .graph-page {

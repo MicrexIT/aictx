@@ -76,13 +76,13 @@ describe("site landing page", () => {
     expect(layout).toContain("Local, reviewable project memory for AI coding tools.");
   });
 
-  it("frames the demo as a generic Todo App memory inspection surface", async () => {
+  it("frames the demo as a schema and graph inspection surface", async () => {
     const landing = await readFile(resolve(repoRoot, "site/src/pages/index.astro"), "utf8");
 
-    expect(landing).toContain("Inspect real Todo App memory bodies.");
-    expect(landing).toContain("Browse a generic Todo App project with canonical object types");
-    expect(landing).toContain("inline Markdown bodies");
-    expect(landing).toContain("Markdown body content open");
+    expect(landing).toContain("Inspect the memory schema and graph.");
+    expect(landing).toContain("Browse a local memory database with canonical object types");
+    expect(landing).toContain("relation overviews");
+    expect(landing).toContain("memory schema graph with relation overview");
     expect(landing).not.toContain("Browse the local handbook");
   });
 });
