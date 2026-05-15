@@ -25,24 +25,6 @@ starts. Activate Aictx once in a repo: it saves durable knowledge as local,
 reviewable memory, wires short agent guidance into the project, and loads only
 the pieces that matter for the current task.
 
-## Inspect the Memory
-
-Aictx is not just a hidden context file for agents. The visual memory viewer is
-part of the product: a local review surface where humans can inspect the same
-schema, objects, facets, relations, provenance, and graph context agents load.
-
-<p align="center">
-  <a href="https://demo.aictx.dev/?token=demo">
-    <img
-      alt="Aictx viewer showing the memory schema graph with relation overview and canonical storage navigation."
-      src="site/public/assets/viewer-demo.png"
-      width="940"
-    >
-  </a>
-  <br>
-  <sub>Schema, stored objects, relation provenance, and graph context in one inspectable local viewer.</sub>
-</p>
-
 Use it when you want:
 
 - New agents to understand the repo without a long briefing.
@@ -71,6 +53,24 @@ sessions, branches, and reviews without making you re-teach the repo each time.
 - Why local files? Plain files are reviewable and portable. Aictx builds on that
   foundation with validation, typed memory, a local index, task-focused loading,
   relation-aware inspection, and a save/no-save discipline.
+
+### Inspect the Memory
+
+Aictx is not just a hidden context file for agents. The visual memory viewer is
+part of the product: a local review surface where humans can inspect the same
+schema, objects, facets, relations, provenance, and graph context agents load.
+
+<p align="center">
+  <a href="https://demo.aictx.dev/?token=demo">
+    <img
+      alt="Aictx viewer showing the memory schema graph with relation overview and canonical storage navigation."
+      src="site/public/assets/viewer-demo.png"
+      width="940"
+    >
+  </a>
+  <br>
+  <sub>Schema, stored objects, relation provenance, and graph context in one inspectable local viewer.</sub>
+</p>
 
 ## What Gets Stored
 
