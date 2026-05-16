@@ -122,11 +122,11 @@ describe("release package", () => {
     expect(packageJson.description).toBe("Local-first project memory for AI coding agents.");
     expect(packageJson.repository).toEqual({
       type: "git",
-      url: "git+https://github.com/MicrexIT/aictx.git"
+      url: "git+https://github.com/aictx/memory.git"
     });
     expect(packageJson.homepage).toBe("https://aictx.dev");
     expect(packageJson.bugs).toEqual({
-      url: "https://github.com/MicrexIT/aictx/issues"
+      url: "https://github.com/aictx/memory/issues"
     });
     expect(packageJson.keywords).toEqual(
       expect.arrayContaining(["coding-agents", "project-memory", "local-first", "mcp"])

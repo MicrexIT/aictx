@@ -3,11 +3,11 @@
   "version": "0.1.37",
   "description": "Use Aictx local project memory in AI coding agents.",
   "author": {
-    "name": "MicrexIT",
-    "url": "https://github.com/MicrexIT/aictx"
+    "name": "Aictx",
+    "url": "https://github.com/aictx/memory"
   },
   "homepage": "https://aictx.dev",
-  "repository": "https://github.com/MicrexIT/aictx",
+  "repository": "https://github.com/aictx/memory",
   "license": "MIT",
   "keywords": [
     "aictx",
@@ -20,7 +20,7 @@
     "displayName": "Aictx Memory",
     "shortDescription": "Load and save local project memory with Aictx.",
     "longDescription": "Packages the Aictx memory workflow as a Codex skill. Agents stay CLI-first, load task-relevant project memory before substantial work, and save only durable knowledge after meaningful changes.",
-    "developerName": "MicrexIT",
+    "developerName": "Aictx",
     "category": "Productivity",
     "websiteURL": "https://aictx.dev",
     "defaultPrompt": [

@@ -185,7 +185,7 @@ aids and do not add MCP configuration.
 Codex users can add this repo's marketplace with one command:
 
 ```bash
-codex plugin marketplace add MicrexIT/aictx
+codex plugin marketplace add aictx/memory
 ```
 
 Then open Codex Plugins and install **Aictx Memory**.
@@ -194,7 +194,7 @@ Claude Code users can add the marketplace and install the plugin from inside
 Claude Code:
 
 ```text
-/plugin marketplace add MicrexIT/aictx
+/plugin marketplace add aictx/memory
 /plugin install aictx-memory@aictx
 ```
 

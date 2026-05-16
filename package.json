@@ -8,10 +8,10 @@
   "homepage": "https://aictx.dev",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/MicrexIT/aictx.git"
+    "url": "git+https://github.com/aictx/memory.git"
   },
   "bugs": {
-    "url": "https://github.com/MicrexIT/aictx/issues"
+    "url": "https://github.com/aictx/memory/issues"
   },
   "keywords": [
     "ai",
@@ -25,7 +25,7 @@
     "agent-memory",
     "context"
   ],
-  "author": "MicrexIT",
+  "author": "Aictx",
   "publishConfig": {
     "access": "public"
   },

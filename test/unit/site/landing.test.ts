@@ -70,7 +70,7 @@ describe("site landing page", () => {
     expect(layout).toContain('href="/#demo">Demo</a>');
     expect(layout).not.toContain(">Viewer</a>");
     expect(layout).not.toContain("Discussions");
-    expect(layout).not.toContain("https://github.com/MicrexIT/aictx/discussions");
+    expect(layout).not.toContain("https://github.com/aictx/memory/discussions");
     expect(layout).toContain('<strong data-star-count="compact"></strong>');
     expect(layout).toContain("Footer navigation");
     expect(layout).toContain("Local, reviewable project memory for AI coding tools.");

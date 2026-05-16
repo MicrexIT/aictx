@@ -61,7 +61,7 @@ const [template, packageJsonRaw, licenseText] = await Promise.all([
 const normalizedTemplate = template.trimEnd();
 const packageJson = JSON.parse(packageJsonRaw);
 const repositoryUrl = normalizeRepositoryUrl(packageJson.repository);
-const authorName = typeof packageJson.author === "string" ? packageJson.author : "MicrexIT";
+const authorName = typeof packageJson.author === "string" ? packageJson.author : "Aictx";
 
 const codexPluginManifest = {
   name: publicName,
@@ -161,7 +161,7 @@ This directory follows the Codex plugin format. It intentionally does not includ
 Codex adds plugins through marketplace sources, not by adding this plugin directory directly. This repo exposes the plugin through its root marketplace catalog:
 
 \`\`\`bash
-codex plugin marketplace add MicrexIT/aictx
+codex plugin marketplace add aictx/memory
 \`\`\`
 
 Then open Codex Plugins, choose the Aictx marketplace, and install Aictx Memory.
@@ -189,7 +189,7 @@ This directory follows the Claude Code plugin format. Submit it through Anthropi
 Claude Code adds plugins through marketplace sources, not by adding this plugin directory directly. This repo exposes the plugin through its root marketplace catalog:
 
 \`\`\`text
-/plugin marketplace add MicrexIT/aictx
+/plugin marketplace add aictx/memory
 /plugin install aictx-memory@aictx
 \`\`\`
 

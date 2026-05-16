@@ -22,7 +22,7 @@ This repo includes marketplace catalogs for the generated plugins:
 Once the repo is public and pushed, Codex users can add the marketplace with:
 
 ```bash
-codex plugin marketplace add MicrexIT/aictx
+codex plugin marketplace add aictx/memory
 ```
 
 Then they open Codex Plugins, choose the **Aictx** marketplace, and install
@@ -31,7 +31,7 @@ Then they open Codex Plugins, choose the **Aictx** marketplace, and install
 Claude Code users can add the marketplace and install the plugin with:
 
 ```text
-/plugin marketplace add MicrexIT/aictx
+/plugin marketplace add aictx/memory
 /plugin install aictx-memory@aictx
 ```
 

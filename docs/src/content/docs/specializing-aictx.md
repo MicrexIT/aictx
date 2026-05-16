@@ -36,8 +36,8 @@ skill/plugin marketplace submission and review, not for `aictx setup`.
 
 Marketplace install commands add catalogs, not raw plugin folders. This repo
 ships self-hosted marketplace catalogs for Codex and Claude Code; Codex users
-add it with `codex plugin marketplace add MicrexIT/aictx`, and Claude Code users
-add and install it with `/plugin marketplace add MicrexIT/aictx` followed by
+add it with `codex plugin marketplace add aictx/memory`, and Claude Code users
+add and install it with `/plugin marketplace add aictx/memory` followed by
 `/plugin install aictx-memory@aictx`. For official listing paths, see
 [Publishing plugins](/plugin-publishing/).
 

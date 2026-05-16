@@ -126,12 +126,12 @@ describe("generated agent guidance files", () => {
     const codexReadme = await readProjectFile("integrations/codex/plugins/aictx-memory/README.md");
     const claudeReadme = await readProjectFile("integrations/claude/plugins/aictx-memory/README.md");
 
-    expect(codexReadme).toContain("codex plugin marketplace add MicrexIT/aictx");
+    expect(codexReadme).toContain("codex plugin marketplace add aictx/memory");
     expect(codexReadme).toContain("install Aictx Memory");
     expect(codexReadme).not.toContain("codex plugin marketplace upgrade");
     expect(codexReadme).toContain("Aictx MCP setup remains an optional client-level configuration");
 
-    expect(claudeReadme).toContain("/plugin marketplace add MicrexIT/aictx");
+    expect(claudeReadme).toContain("/plugin marketplace add aictx/memory");
     expect(claudeReadme).toContain("/plugin install aictx-memory@aictx");
     expect(claudeReadme).toContain("claude plugin validate integrations/claude/plugins/aictx-memory");
     expect(claudeReadme).not.toContain("claude plugin marketplace list --json");

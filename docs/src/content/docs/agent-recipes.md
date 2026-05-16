@@ -46,13 +46,13 @@ For the self-hosted marketplace in this repo, Codex users add the marketplace,
 then install **Aictx Memory** from Codex Plugins:
 
 ```bash
-codex plugin marketplace add MicrexIT/aictx
+codex plugin marketplace add aictx/memory
 ```
 
 Claude Code users can add the marketplace and install the plugin directly:
 
 ```text
-/plugin marketplace add MicrexIT/aictx
+/plugin marketplace add aictx/memory
 /plugin install aictx-memory@aictx
 ```
 
@@ -109,7 +109,7 @@ the current session. `aictx init` does not start MCP.
 Distribution artifacts are available at `integrations/codex/skills/aictx-memory/`
 for the standalone skill catalog and `integrations/codex/plugins/aictx-memory/`
 for Codex plugin packaging. The self-hosted Codex marketplace in this repo is
-added with `codex plugin marketplace add MicrexIT/aictx`.
+added with `codex plugin marketplace add aictx/memory`.
 
 ## Claude Code
 
@@ -133,7 +133,7 @@ Optional generated guidance is available at `integrations/claude/aictx.md` and
 The Claude Code plugin artifact is available at
 `integrations/claude/plugins/aictx-memory/` for marketplace review or official
 plugin submission. Add this repo's Claude marketplace with
-`/plugin marketplace add MicrexIT/aictx`, then install the plugin as
+`/plugin marketplace add aictx/memory`, then install the plugin as
 `aictx-memory@aictx`.
 
 ## Cursor

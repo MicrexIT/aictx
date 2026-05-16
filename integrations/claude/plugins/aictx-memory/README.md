@@ -18,7 +18,7 @@ This directory follows the Claude Code plugin format. Submit it through Anthropi
 Claude Code adds plugins through marketplace sources, not by adding this plugin directory directly. This repo exposes the plugin through its root marketplace catalog:
 
 ```text
-/plugin marketplace add MicrexIT/aictx
+/plugin marketplace add aictx/memory
 /plugin install aictx-memory@aictx
 ```
 
