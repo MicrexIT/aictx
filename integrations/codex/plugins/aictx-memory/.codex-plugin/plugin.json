@@ -1,6 +1,6 @@
 {
   "name": "aictx-memory",
-  "version": "0.1.37",
+  "version": "0.1.38",
   "description": "Use Aictx local project memory in AI coding agents.",
   "author": {
     "name": "Aictx",
