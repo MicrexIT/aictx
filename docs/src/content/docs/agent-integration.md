@@ -13,10 +13,9 @@ The v1 agent model is CLI-first and MCP-compatible. Use the CLI by default. Use
 MCP only when the agent client has already launched and connected to
 `aictx-mcp`.
 
-Aictx does not infer durable project meaning from diffs. The agent is
-responsible for semantic judgment: reading the task, loaded context, repository
-changes, tests, and conversation context, then deciding what future agents
-should remember.
+The agent still makes the judgment call. It reads the task, loaded memory, repo
+state, tests, and conversation, then decides what future agents should
+remember.
 
 ## Routine workflow
 
@@ -49,7 +48,7 @@ load_memory({
 Load modes are `coding`, `debugging`, `review`, `architecture`, and
 `onboarding`. Modes tune deterministic ranking and rendering only.
 
-After meaningful work, save durable knowledge that future agents should know:
+After meaningful work, save durable knowledge:
 
 ```bash
 aictx remember --stdin
@@ -62,13 +61,13 @@ remember_memory({ task, memories, updates, stale, supersede, relations })
 ```
 
 `remember` is the normal intent-first write path. It converts semantic agent
-input into the structured patch format internally. Use `aictx save --stdin` or
+input into a structured patch internally. Use `aictx save --stdin` or
 `save_memory_patch({ patch })` only for advanced patch-shaped writes.
 
-Saved memory is active immediately after Aictx validates and writes it. Dirty
-or untracked `.aictx/` files are not by themselves a reason to skip saving
-durable memory. When a save overwrites or deletes a dirty touched file, Aictx
-first backs it up under `.aictx/recovery/`.
+Saved memory is active after Aictx validates and writes it. Dirty or untracked
+`.aictx/` files are not by themselves a reason to skip saving durable memory.
+When a save overwrites or deletes a dirty touched file, Aictx first backs it up
+under `.aictx/recovery/`.
 
 Accepted memory can be inspected later:
 
@@ -80,8 +79,8 @@ aictx diff
 `aictx diff` includes tracked and untracked Aictx memory changes in Git
 projects. Aictx writes local files and never commits automatically.
 
-When `aictx` is not on `PATH`, the same commands can run through the project
-package manager or local binary:
+When `aictx` is not on `PATH`, run through the project package manager or local
+binary:
 
 ```bash
 pnpm exec aictx load "<task summary>"
@@ -100,20 +99,6 @@ reduce repeated context work, not record every step an agent took.
 :::
 
 ## Capability reference
-
-The v1 agent model is CLI-first and MCP-compatible.
-
-Local MCP exposes exactly `load_memory`, `search_memory`, `inspect_memory`,
-`remember_memory`, `save_memory_patch`, and `diff_memory`. Setup, lenses,
-handoff, maintenance, recovery, export, registry, viewer, docs, suggest, audit,
-wiki, and stale workflows are CLI-only in v1. Graph inspection is available in the
-CLI and local viewer, but remains outside MCP. Non-MCP capabilities are v1
-surfaces, not MCP parity gaps.
-
-Local MCP is the near-term integration path for local agent harnesses. Remote
-MCP, hosted sync, cloud auth, cloud hosting, and ChatGPT App SDK UI remain
-future work. Future ChatGPT-compatible `search`/`fetch` names are adapter
-aliases over search/inspect behavior, not local MCP tool names.
 
 | Capability | MCP | CLI |
 | --- | --- | --- |
@@ -144,11 +129,8 @@ aliases over search/inspect behavior, not local MCP tool names.
 | Wiki source workflow | none | `aictx wiki` |
 | Read public docs | none | `aictx docs` |
 
-For setup, lenses, handoff, maintenance, recovery, export, registry, viewer,
-docs, suggest, audit, wiki, and stale workflows, the CLI is the supported interface.
-Graph inspection is supported by both `aictx graph` and the local viewer. Supported
-CLI or MCP save paths should handle `.aictx/` changes; editing `.aictx/` files directly
-is reserved for exceptional manual recovery or explicit user requests.
+For MCP setup details, see the [MCP guide](/mcp/). For compact command and patch
+syntax, see [Reference](/reference/).
 
 ## Memory lifecycle
 
@@ -157,7 +139,7 @@ Good memory stays narrow, durable, and current:
 - Load narrowly before non-trivial work.
 - Save only durable knowledge directly as active memory.
 - Update existing memory before creating duplicates.
-- Stale or supersede wrong old memory when current evidence invalidates it.
+- Mark stale or supersede old memory when current evidence invalidates it.
 - Delete memory that should not persist.
 - Prefer current code and user requests over loaded memory when they conflict.
 - Report whether memory changed; async inspection is available through
@@ -195,9 +177,6 @@ Update-before-create behavior keeps memory from drifting into duplicates:
 Create a new object only when no existing memory should be updated, marked
 stale, or superseded.
 
-Save-nothing-is-valid policy: if the work produced no durable future value, do
-not invent a patch. Tell the user that no Aictx memory was saved.
-
 ## Object taxonomy
 
 Object types are `project`, `architecture`, `decision`, `constraint`,
@@ -212,38 +191,33 @@ facets.
 `gotcha` fits known failure modes and traps. `workflow` fits repeated
 project-specific how-tos: procedures, runbooks, command sequences,
 release/debugging/migration paths, verification routines, and maintenance
-steps. Organization facets such as `domain`, `bounded-context`,
-`capability`, `business-rule`, and `unresolved-conflict` are optional
-plain-language retrieval hints, not mandatory DDD terminology.
-
-Durable syntheses should usually have source evidence or active source
-provenance relations.
+steps. Organization facets such as `domain`, `bounded-context`, `capability`,
+`business-rule`, and `unresolved-conflict` are optional plain-language
+retrieval hints.
 
 ## Examples
 
 Good memory examples:
 
-- Good durable fact: a `fact` titled "Webhook retries run in the worker" with
-  one sentence naming the current retry location.
-- Good linked decision: `decision.billing-retries` plus a `requires` relation
-  to `constraint.webhook-idempotency` when the decision depends on that
-  constraint.
-- Good gotcha: `gotcha.viewer-export-overwrites-manifest-files` when a repeated
+- Durable fact: a `fact` titled "Webhook retries run in the worker" with one
+  sentence naming the current retry location.
+- Linked decision: `decision.billing-retries` plus a `requires` relation to
+  `constraint.webhook-idempotency` when the decision depends on that constraint.
+- Gotcha: `gotcha.viewer-export-overwrites-manifest-files` when a repeated
   failure mode affects future work.
-- Good workflow/how-to: `workflow.release-smoke-test` for a repeated release
-  verification procedure.
-- Good source-backed synthesis: `synthesis.product-intent` summarizes what the
+- Workflow/how-to: `workflow.release-smoke-test` for repeated release
+  verification.
+- Source-backed synthesis: `synthesis.product-intent` summarizes what the
   product is for and has `derived_from` relations to source records.
 
 Bad memory examples:
 
-- Duplicate creation: creating a second memory for the same durable claim
-  instead of updating, marking stale, or superseding the existing one.
-- Task diary: saving "I changed three files and ran tests" when Git history
-  already records the work.
-- Speculation: saving guesses that are not supported by current evidence.
-- No-value save: creating a memory patch only to say that nothing important
-  happened.
+- Creating a second memory for the same durable claim instead of updating,
+  marking stale, or superseding the existing one.
+- Saving "I changed three files and ran tests" when Git history records the
+  work.
+- Saving guesses that are not supported by current evidence.
+- Creating a memory patch only to say that nothing important happened.
 
 Secrets, tokens, credentials, private keys, sensitive raw logs, unsupported
 speculation, and unrelated user preferences should not be saved as memory.
@@ -254,19 +228,14 @@ requests, or safety rules.
 
 `aictx setup` provides guided first-run onboarding. It initializes storage if
 needed, writes conservative evidence-backed bootstrap memory by default, runs
-checks, prints soft role coverage, and starts the local viewer for
-inspection. Use `aictx setup --dry-run` to preview without initializing
-storage, writing repo files, running checks, or starting the viewer. Use
-`aictx setup --no-view` for scripts or agent runs that should skip viewer
-startup. `aictx setup --force --dry-run` previews reset/setup behavior without
-deleting anything.
+checks, prints role coverage, and starts the local viewer unless told not to.
 
 For the agent-led first-run path, use `aictx setup`, then run
 `aictx lens project-map` for a readable overview or
-`aictx load "onboard to this repository"` to verify the first task-focused
-memory pack. Use `aictx handoff update --stdin` only for unfinished branch
-continuity that should not become project truth yet. For client-specific
-instruction files and copyable setup prompts, see [Agent recipes](/agent-recipes/).
+`aictx load "onboard to this repository"` to verify retrieval.
+
+Use `aictx handoff update --stdin` only for unfinished branch continuity that
+should not become project truth yet.
 
 ```bash
 aictx suggest --bootstrap --json
@@ -283,11 +252,5 @@ semantic memory. Agents still fill in durable `title`, `body`, and `reason`
 fields from current evidence. `aictx audit --json` reports grouped, actionable
 memory hygiene issues and role coverage gaps. Missing roles are not `aictx
 check` failures.
-
-During setup, product features can use the `product-feature` facet. Durable
-project how-tos use the existing `workflow` object type and `workflow` facet.
-Source-backed syntheses are a good fit for product intent, feature maps,
-roadmap, architecture, conventions, agent guidance, and repeated workflows or
-how-to collections.
 
 For the full memory-quality loop, see [Demand-driven memory](/demand-driven-memory/).

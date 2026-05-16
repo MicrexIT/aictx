@@ -3,53 +3,52 @@ title: Aictx documentation
 description: Public documentation for local-first project memory for AI coding agents.
 ---
 
-Aictx gives AI coding agents a project memory they can come back to.
+Aictx gives coding agents a project memory they can return to.
 
-Use it when you are tired of re-explaining the same product intent,
-architecture decisions, repo conventions, setup steps, and known traps every
-time a new chat or agent session starts. Aictx stores that durable context as
-local, reviewable files under `.aictx/`, then compiles a focused context pack
-for the task in front of the agent.
+Use it when a new coding session should not need the same briefing again:
+product intent, architecture choices, repo conventions, setup steps, known
+traps, and useful source-backed summaries. Aictx stores that context as local,
+reviewable files under `.aictx/`, then builds a focused memory pack for the
+task in front of the agent.
 
-The everyday loop is small:
+The daily loop is small:
 
 ```text
 load relevant memory -> do the work -> save what future agents should remember
 ```
 
-Core memory commands do not require a cloud account, embeddings, hosted sync, an
-external model API, or network access.
+Core memory commands run locally. They do not require a cloud account,
+embeddings, hosted sync, external model API, or network access.
 
 This project is distributed as the npm package `@aictx/memory`. It is unrelated
 to similarly named packages in other ecosystems.
 
 ## What Aictx is for
 
-Aictx is local-first project memory for AI coding agents. It is not a chat UI,
-an Obsidian clone, or a hosted memory service.
+Aictx is for durable project context that should survive across agents,
+sessions, branches, and reviews.
 
 It helps a coding agent answer two questions:
 
-- Before work: what does this agent need to know for this task?
+- Before work: what matters for this task?
 - After work: what should future agents not have to rediscover?
 
-Memory can hold source records, decisions, constraints, facts, gotchas,
-workflows/how-tos, open questions, product concepts, and compact syntheses for
-areas such as product intent, feature maps, roadmap, architecture, conventions,
-and agent guidance.
+Good memory is useful on a later day. It can capture a decision, a workflow, a
+gotcha, an open question, a source record, or a compact synthesis of a larger
+area such as product intent, architecture, feature maps, conventions, roadmap,
+or agent guidance.
 
 :::tip
-A good first memory is not a diary of what changed. It is something future
-agents can use: "release smoke tests run with `pnpm test:local`", "billing
-webhooks retry in the worker", or "the viewer can inspect memory, export
-Obsidian projections, and explicitly delete project memory roots".
+A good first memory is something future agents can use: "release smoke tests run
+with `pnpm test:local`", "billing webhooks retry in the worker", or "the viewer
+can inspect memory and export Obsidian projections".
 :::
 
 ## How it works
 
-1. The agent loads the project context it needs.
-2. The agent does the work with that context.
-3. The agent saves what future agents should remember.
+1. The agent loads task-focused project memory.
+2. The agent does the work using the repo, tests, and conversation as evidence.
+3. The agent saves only durable context that should be active next time.
 
 Aictx keeps that memory local, explicit, and reviewable.
 
@@ -63,64 +62,43 @@ agent from the project root:
 ```text
 Set up fresh Aictx memory for this repository.
 
-First install the current Aictx package globally:
+Run:
 npm install -g @aictx/memory
-
-Then run first-run onboarding, apply the conservative bootstrap memory patch,
-and start the local viewer for inspection:
 aictx setup
-
-Validate memory:
 aictx check
-
-Load the first task-focused memory pack:
 aictx load "onboard to this repository"
 
-Inspect the readable project map:
-aictx lens project-map
-
-When this is done, tell the human to inspect the accepted memory with:
-aictx view
-
-Also tell them to review memory changes with:
-aictx diff
+When this is done, report:
+- whether setup wrote memory
+- whether check passed
+- how I can inspect the result with `aictx view` or `aictx diff`
 ```
 
 ## Start here
 
-- [Getting started](/getting-started/) gets a project initialized and walks
-  through the first load/save/diff loop.
-- [Capabilities](/capabilities/) maps the v1 features to the jobs users and
+- [Getting started](/getting-started/) installs Aictx, initializes a repo, and
+  walks through the first load/save/diff loop.
+- [Capabilities](/capabilities/) maps the main commands to the jobs users and
   agents actually need to do.
 - [Mental model](/mental-model/) explains canonical memory, generated state,
-  object types, retrieval, and why Aictx is different from `AGENTS.md` alone,
-  vector DB/RAG systems, long context, or plain local files.
-- [Wiki workflow](/wiki-workflow/) covers source-backed `aictx wiki ingest`,
-  `wiki file`, `wiki lint`, and `wiki log` for maintained synthesis.
-- [Specializing Aictx](/specializing-aictx/) shows how to tailor memory to your
-  repo's product intent, workflows, and agent guidance.
+  retrieval, and how Aictx fits beside agent instruction files.
+- [Wiki workflow](/wiki-workflow/) covers source-backed ingestion and maintained
+  syntheses.
+- [Specializing Aictx](/specializing-aictx/) shows how to shape memory for your
+  repo's product, workflows, and agent guidance.
 - [Agent integration](/agent-integration/) gives agents the concrete workflow
-  and guardrails.
-- [Agent recipes](/agent-recipes/) gives copyable setup and routine-loop
-  guidance for Codex, Claude Code, Cursor, Cline, OpenCode, and generic
-  MCP-capable agents.
+  and safety rules.
+- [Agent recipes](/agent-recipes/) gives copyable setup prompts for Codex,
+  Claude Code, Cursor, Cline, OpenCode, and MCP-capable clients.
 
 ## CLI and MCP
 
-The CLI is the default interface for routine memory work. MCP is available when
-the agent client has launched and connected to `aictx-mcp`.
+Use the CLI by default. Configure MCP when your agent client already supports
+tool servers and you want the routine load/search/inspect/save/diff actions
+inside the client.
 
-MCP exposes exactly `load_memory`, `search_memory`, `inspect_memory`,
-`remember_memory`, `save_memory_patch`, and `diff_memory`. Setup, lenses,
-handoff, maintenance, recovery, export, registry, viewer, docs, suggest, audit,
-wiki, and stale workflows are CLI-only in v1. Graph inspection is available in the
-CLI and local viewer, but remains outside MCP. These non-MCP surfaces are part
-of the v1 integration model rather than MCP parity gaps.
-
-Local MCP is the near-term integration path for local agent harnesses. Remote
-MCP, hosted sync, cloud auth, cloud hosting, and ChatGPT App SDK UI are future
-work. Future ChatGPT-compatible `search`/`fetch` names are adapter aliases over
-search and inspect behavior, not local MCP tool names.
+For exact tool names and boundaries, see the [MCP guide](/mcp/) and
+[Reference](/reference/).
 
 ## For agents
 

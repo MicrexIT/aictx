@@ -46,15 +46,13 @@ MCP exposes exactly:
 - `save_memory_patch`
 - `diff_memory`
 
-Setup, lenses, handoff, maintenance, recovery, export, registry, viewer, docs,
-suggest, audit, wiki, and stale workflows are CLI-only in v1. Graph inspection is
-available in the CLI and local viewer, but remains outside MCP. These non-MCP
-surfaces are part of the v1 integration model rather than MCP parity gaps.
+CLI-only workflows in v1 include setup, lenses, handoff, maintenance, recovery,
+export, registry, viewer, docs, suggest, audit, wiki, stale inspection, and
+graph inspection.
 
-Local MCP is the near-term integration path for local agent harnesses. Remote
-MCP, hosted sync, cloud auth, cloud hosting, and ChatGPT App SDK UI are future
-work. Future ChatGPT-compatible `search`/`fetch` names are adapter aliases over
-search/inspect behavior; they are not local MCP tool names.
+Future host adapters may expose generic `search` and `fetch` names over Aictx
+search and inspect behavior. The local MCP server exposes the six Aictx-specific
+tools above.
 
 ## Docs command
 

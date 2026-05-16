@@ -35,33 +35,25 @@ binary before trusting schema errors.
 
 ## MCP tools are not available
 
-`aictx init` creates local storage. It does not start MCP. MCP tools become
-available when the MCP client is configured to launch `aictx-mcp`.
+`aictx init` creates local storage. It does not add MCP tools to an already
+running agent session. MCP tools become available when the client is configured
+to launch `aictx-mcp`.
 
-An agent generally cannot start `aictx-mcp` in a shell and then use it as MCP
-tools in an already-running session. When MCP tools are not available, the CLI
-path provides the same routine memory workflow.
+If you need to keep working right now, use the CLI:
 
-Local MCP exposes exactly `load_memory`, `search_memory`, `inspect_memory`,
-`remember_memory`, `save_memory_patch`, and `diff_memory` when the client already exposes Aictx
-tools. Setup, lenses, handoff, maintenance, recovery, export, registry, viewer,
-docs, suggest, audit, wiki, and stale workflows remain CLI-only. Graph inspection is
-available in the CLI and local viewer, but remains outside MCP.
+```bash
+aictx load "<task summary>"
+aictx remember --stdin
+aictx diff
+```
 
-Local MCP is the near-term integration path. Remote MCP, hosted sync, cloud
-auth, cloud hosting, and ChatGPT App SDK surfaces are future work, and future
-`search`/`fetch` adapter names are not local MCP tool names.
-
-:::tip
-If you need to keep working right now, use `aictx load` and
-`aictx remember --stdin` from the CLI. Configure MCP later in the client
-settings.
-:::
+Configure MCP later in the client settings, then start a new agent session. See
+the [MCP guide](/mcp/) for exact tool names and CLI-only boundaries.
 
 ## Memory is empty after init
 
-`aictx init` creates starter storage. It does not infer a full project memory
-model by itself.
+`aictx init` creates starter storage. It does not create a full project memory
+map by itself.
 
 Guided setup:
 

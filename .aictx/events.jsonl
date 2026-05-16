@@ -32,3 +32,5 @@
 {"actor":"agent","event":"memory.created","id":"decision.viewer-project-deletion-removes-memory-only","timestamp":"2026-05-16T11:12:34+02:00"}
 {"actor":"agent","event":"memory.updated","id":"decision.schema-browser-keeps-navigation-fixed-above-object-scrolling","timestamp":"2026-05-16T11:12:34+02:00"}
 {"actor":"agent","event":"memory.created","id":"decision.public-repo-identity-uses-aictx-organization","timestamp":"2026-05-16T14:25:18+02:00"}
+{"actor":"agent","event":"memory.created","id":"decision.public-docs-centralize-exact-contracts","timestamp":"2026-05-16T14:47:14+02:00"}
+{"actor":"agent","event":"memory.created","id":"constraint.docs-tests-should-avoid-editorial-copy-locks","timestamp":"2026-05-16T14:47:14+02:00"}

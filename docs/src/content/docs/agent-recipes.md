@@ -6,15 +6,14 @@ description: Copyable Aictx setup and routine-loop recipes for common coding age
 Use these recipes when you want an AI coding agent to set up and use Aictx from
 inside an existing repository.
 
-Aictx is not an agent runtime. It is the local project-memory loop the agent
-uses:
+The working loop is:
 
 ```text
 load relevant memory -> do the work -> save what future agents should remember
 ```
 
-The CLI is the default path. MCP is optional and should be used only when the
-agent client has already launched and connected to `aictx-mcp`.
+The CLI is the default path. MCP is optional and only helps after the agent
+client has launched with `aictx-mcp` configured.
 
 ## Quick comparison
 
@@ -24,14 +23,14 @@ agent client has already launched and connected to `aictx-mcp`.
 | Claude Code | `CLAUDE.md` | Paste the setup prompt into Claude Code from the repo root. | CLI by default; MCP only when configured. |
 | Cursor | `.cursor/rules/aictx.mdc` | Add the generated rule, then paste the setup prompt. | CLI by default in agent commands. |
 | Cline | `.clinerules/aictx.md` | Add the generated rule, then paste the setup prompt. | CLI by default in agent commands. |
-| OpenCode | `AGENTS.md` | Use the root `AGENTS.md` created by `aictx init`. | CLI by default; MCP only when configured. |
+| OpenCode | `AGENTS.md` | Use the root `AGENTS.md` created by setup. | CLI by default; MCP only when configured. |
 | Generic MCP-capable agent | Agent-specific instructions plus MCP config | Paste the setup prompt; configure MCP later if needed. | CLI first, MCP for routine equivalents when already exposed. |
 
 ## Distribution artifacts
 
 The files below package the same generated Aictx guidance for external
 marketplace or catalog submission. They are not used by `aictx setup`, which
-continues to write the marked sections in `AGENTS.md` and `CLAUDE.md`.
+writes the marked sections in `AGENTS.md` and `CLAUDE.md`.
 
 | Target | Path | Submission note |
 | --- | --- | --- |
@@ -39,8 +38,8 @@ continues to write the marked sections in `AGENTS.md` and `CLAUDE.md`.
 | Codex plugin | `integrations/codex/plugins/aictx-memory/` | Follows the `.codex-plugin/plugin.json` format and points at `./skills/`. |
 | Claude Code plugin | `integrations/claude/plugins/aictx-memory/` | Follows the `.claude-plugin/plugin.json` format; use Anthropic's plugin submission flow for official listing. |
 
-These artifacts stay CLI-first. They do not bundle `.mcp.json`; use Aictx MCP
-only when the current client has already launched and exposed `aictx-mcp`.
+These artifacts stay CLI-first. They do not bundle `.mcp.json`; configure MCP
+in the client when you want it.
 
 For the self-hosted marketplace in this repo, Codex users add the marketplace,
 then install **Aictx Memory** from Codex Plugins:
@@ -56,9 +55,8 @@ Claude Code users can add the marketplace and install the plugin directly:
 /plugin install aictx-memory@aictx
 ```
 
-See [Publishing plugins](/plugin-publishing/) for the self-hosted marketplace,
-Codex skill PR, Codex plugin listing status, and Claude official submission
-process.
+See [Publishing plugins](/plugin-publishing/) for marketplace and official
+submission details.
 
 ## Common setup prompt
 
@@ -67,17 +65,10 @@ Paste this prompt into the agent from the project root:
 ```text
 Set up fresh Aictx memory for this repository.
 
-First install the current Aictx package globally:
+Run:
 npm install -g @aictx/memory
-
-Run first-run onboarding, apply the conservative bootstrap memory patch, and
-start the local viewer for inspection:
 aictx setup
-
-Validate memory:
 aictx check
-
-Load the first task-focused memory pack:
 aictx load "onboard to this repository"
 
 When this is done, report:
@@ -91,9 +82,9 @@ When this is done, report:
 
 Instruction file: `AGENTS.md`
 
-Codex reads repository guidance from `AGENTS.md`. Run `aictx init` once so the
-marked Aictx section is present, or paste the common setup prompt into Codex
-from the repository root.
+Codex reads repository guidance from `AGENTS.md`. Run `aictx setup` once so the
+marked Aictx section is present and first-run memory is seeded, or paste the
+common setup prompt into Codex from the repository root.
 
 Normal loop:
 
@@ -108,15 +99,14 @@ the current session. `aictx init` does not start MCP.
 
 Distribution artifacts are available at `integrations/codex/skills/aictx-memory/`
 for the standalone skill catalog and `integrations/codex/plugins/aictx-memory/`
-for Codex plugin packaging. The self-hosted Codex marketplace in this repo is
-added with `codex plugin marketplace add aictx/memory`.
+for Codex plugin packaging.
 
 ## Claude Code
 
 Instruction file: `CLAUDE.md`
 
-Claude Code can use the `CLAUDE.md` guidance created by `aictx init`. Paste the
-common setup prompt into Claude Code from the repository root for first-run
+Claude Code can use the `CLAUDE.md` guidance created by `aictx setup`. Paste
+the common setup prompt into Claude Code from the repository root for first-run
 memory seeding.
 
 Normal loop:
@@ -132,9 +122,7 @@ Optional generated guidance is available at `integrations/claude/aictx.md` and
 
 The Claude Code plugin artifact is available at
 `integrations/claude/plugins/aictx-memory/` for marketplace review or official
-plugin submission. Add this repo's Claude marketplace with
-`/plugin marketplace add aictx/memory`, then install the plugin as
-`aictx-memory@aictx`.
+plugin submission.
 
 ## Cursor
 
@@ -177,11 +165,8 @@ Cline should use supported Aictx CLI or MCP entrypoints. It should not edit
 
 Instruction file: `AGENTS.md`
 
-OpenCode can use the root `AGENTS.md` guidance created by `aictx init`. No
-separate OpenCode-specific generated file is needed in this release.
-
-Setup prompt: paste the common setup prompt into OpenCode from the repository
-root.
+OpenCode can use the root `AGENTS.md` guidance created by setup. No separate
+OpenCode-specific generated file is needed in this release.
 
 Normal loop:
 
@@ -191,16 +176,13 @@ aictx remember --stdin
 aictx diff
 ```
 
-MCP note: use MCP equivalents only when OpenCode already exposes Aictx MCP
-tools. Otherwise stay on the CLI path.
-
 ## Generic MCP-capable agents
 
 Instruction file: whatever the agent client treats as persistent project
 instructions.
 
-Setup prompt: paste the common setup prompt from the repository root. Configure
-MCP later only if the client supports launching `aictx-mcp`.
+Paste the common setup prompt from the repository root. Configure MCP later only
+if the client supports launching `aictx-mcp`.
 
 Routine CLI loop:
 
@@ -218,21 +200,4 @@ remember_memory({ task, memories, updates, stale, supersede, relations })
 diff_memory({})
 ```
 
-Setup, lenses, handoff, maintenance, recovery, export, registry, viewer, docs,
-suggest, audit, wiki, and stale workflows remain CLI-only in v1. Graph inspection is
-available in the CLI and local viewer, but remains outside MCP.
-
-## CLI and MCP boundary
-
-MCP exposes exactly `load_memory`, `search_memory`, `inspect_memory`,
-`remember_memory`, `save_memory_patch`, and `diff_memory` when the client
-already exposes Aictx MCP tools.
-
-Setup, lenses, handoff, maintenance, recovery, export, registry, viewer, docs,
-suggest, audit, wiki, and stale workflows are CLI-only in v1. Graph inspection is
-available in the CLI and local viewer, but remains outside MCP. These non-MCP
-surfaces are part of the v1 integration model rather than MCP parity gaps.
-
-Local MCP is the near-term integration path for local agent harnesses. Remote
-MCP, hosted sync, cloud auth, cloud hosting, and ChatGPT App SDK UI are future
-work.
+For the exact MCP tool list and CLI-only boundaries, see the [MCP guide](/mcp/).
