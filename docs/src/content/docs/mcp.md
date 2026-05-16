@@ -6,14 +6,13 @@ description: Configure Aictx MCP and understand the CLI/MCP capability boundary.
 `aictx-mcp` is an MCP stdio server. Configure your MCP client to launch the
 global binary, or a project-local binary when the project pins Aictx.
 
-MCP is useful when the agent client already supports MCP tools. The CLI remains
-the default path for routine memory work and all setup, lenses, handoff,
-maintenance, recovery, viewer, docs, suggestion, audit, stale, and graph workflows.
+Use MCP when your agent client already supports MCP tools and you want routine
+Aictx memory actions inside that client. Keep setup, viewer, maintenance,
+recovery, registry, docs, wiki, and other operational workflows in the CLI.
 
 :::tip
-`aictx init` does not start MCP. Starting `aictx-mcp` in a shell usually cannot
-add MCP tools to an already-running agent session. Configure the client first,
-then start a new session.
+`aictx init` creates local storage; it does not add MCP tools to a running agent
+session. Configure the client to launch `aictx-mcp`, then start a new session.
 :::
 
 ## Install
@@ -64,7 +63,7 @@ Local MCP exposes exactly these tools in v1:
 - `save_memory_patch`
 - `diff_memory`
 
-MCP equivalents are available when the client already exposes Aictx MCP tools:
+Examples:
 
 ```text
 load_memory({ task: "<task summary>", mode: "coding" })
@@ -79,7 +78,7 @@ diff_memory({})
 ```
 
 When the MCP server was launched globally rather than from the project root,
-`project_root` selects the initialized project:
+`project_root` selects the initialized project for a tool call:
 
 ```text
 load_memory({
@@ -89,14 +88,12 @@ load_memory({
 })
 ```
 
-`project_root` selects an initialized local Aictx project for the tool call. It
-is not arbitrary filesystem access; reads and writes remain scoped to the
-resolved project's `.aictx/` directory.
+`project_root` is for choosing an initialized local Aictx project. It is not arbitrary filesystem access;
+reads and writes remain scoped to that project's `.aictx/` directory.
 
-## CLI-only boundaries
+## CLI-only work
 
-Setup, lenses, handoff, maintenance, recovery, export, registry, viewer, docs,
-suggest, audit, stale, and graph workflows are CLI-only in v1:
+These workflows stay in the CLI in v1:
 
 - Setup: `aictx init`, `aictx setup`
 - Lenses: `aictx lens`
@@ -108,19 +105,14 @@ suggest, audit, stale, and graph workflows are CLI-only in v1:
 - Viewer: `aictx view`
 - Docs: `aictx docs`
 - Suggest and audit: `aictx suggest`, `aictx audit`
-- Stale and graph inspection: `aictx stale`, `aictx graph`
+- Wiki workflow: `aictx wiki`
+- Stale inspection: `aictx stale`
+- Graph inspection: `aictx graph`, `aictx view` graph screen
 
-These CLI-only commands are part of the v1 integration model rather than MCP
-parity gaps. Local viewing remains a browser inspection surface, not a routine
-MCP memory operation, so `aictx view` has no MCP equivalent.
+Local viewing remains a browser inspection surface, so `aictx view` has no MCP
+equivalent. Graph inspection is available in the CLI and local viewer, but not
+as a local MCP tool.
 
-Future ChatGPT-compatible or other host adapters may expose generic `search`
-and `fetch` names as aliases over Aictx search and inspect behavior. Those names
-are future adapter mappings only. The local MCP server exposes the six
-Aictx-specific tools above; generic `search` and `fetch` are not local MCP tool
-names.
-
-Local MCP is the near-term integration path for MCP-capable local agent
-harnesses. Remote MCP endpoints, hosted sync, cloud APIs, OAuth or cloud-auth
-surfaces, tenancy layers, billing surfaces, and ChatGPT App SDK UI remain
-future work.
+Future host adapters may expose generic `search` and `fetch` names over Aictx
+search and inspect behavior. The local MCP server exposes the six Aictx-specific
+tools above.

@@ -1,7 +1,7 @@
 {
   "body_path": "memory/syntheses/feature-map.md",
-  "content_hash": "sha256:820040ed17c214d2e93c765659cb718cdc6bd91774a737619b1d90ea8eae5399",
-  "created_at": "2026-05-12T17:53:06+02:00",
+  "content_hash": "sha256:5a389b74599e7143dde8ff52ece30756f02769dc68d0788a31f96623f65921b2",
+  "created_at": "2026-05-16T18:52:44+02:00",
   "evidence": [
     {
       "id": "source.package-json",
@@ -41,5 +41,5 @@
   ],
   "title": "Feature map",
   "type": "synthesis",
-  "updated_at": "2026-05-12T17:53:06+02:00"
+  "updated_at": "2026-05-16T18:52:44+02:00"
 }

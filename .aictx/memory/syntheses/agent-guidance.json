@@ -1,7 +1,7 @@
 {
   "body_path": "memory/syntheses/agent-guidance.md",
-  "content_hash": "sha256:0a0ea3320ca238cf0b12d293be1a9834ce4773a4fe27143c3a18b2b1babb85db",
-  "created_at": "2026-05-12T17:53:06+02:00",
+  "content_hash": "sha256:15767c795cd9333bb590ee04855a8fc570e6503cc46ba1e16db035f18b583ab2",
+  "created_at": "2026-05-16T18:52:44+02:00",
   "evidence": [],
   "facets": {
     "applies_to": [],
@@ -31,5 +31,5 @@
   ],
   "title": "Agent guidance",
   "type": "synthesis",
-  "updated_at": "2026-05-12T17:53:06+02:00"
+  "updated_at": "2026-05-16T18:52:44+02:00"
 }

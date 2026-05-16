@@ -38,6 +38,7 @@ import {
   type ViewerDetacher,
   type ViewerUrlOpener
 } from "./commands/view.js";
+import { registerWikiCommand } from "./commands/wiki.js";
 import {
   CLI_EXIT_SUCCESS,
   CLI_EXIT_USAGE,
@@ -239,6 +240,12 @@ export function createCliProgram(options: CliMainOptions = {}): Command {
     stderr: writeErr
   });
   registerRememberCommand(program, {
+    cwd: options.cwd ?? process.cwd(),
+    stdin: options.stdin ?? process.stdin,
+    stdout: writeOut,
+    stderr: writeErr
+  });
+  registerWikiCommand(program, {
     cwd: options.cwd ?? process.cwd(),
     stdin: options.stdin ?? process.stdin,
     stdout: writeOut,

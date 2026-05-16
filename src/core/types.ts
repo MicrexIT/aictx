@@ -73,6 +73,8 @@ export const PREDICATES = [
   "depends_on",
   "supersedes",
   "conflicts_with",
+  "supports",
+  "challenges",
   "derived_from",
   "summarizes",
   "documents",
@@ -106,6 +108,10 @@ export const ACTORS = ["agent", "user", "cli", "mcp", "system"] as const;
 
 export type Actor = (typeof ACTORS)[number];
 export type SourceKind = Actor;
+
+export const ORIGIN_KINDS = ["file", "url", "user", "external"] as const;
+
+export type OriginKind = (typeof ORIGIN_KINDS)[number];
 
 export const SCOPE_KINDS = ["project", "branch", "task"] as const;
 
@@ -155,6 +161,14 @@ export interface Source {
   kind: SourceKind;
   task?: string;
   commit?: string;
+}
+
+export interface SourceOrigin {
+  kind: OriginKind;
+  locator: string;
+  captured_at?: IsoDateTime;
+  digest?: Sha256Hash;
+  media_type?: string;
 }
 
 export interface Evidence {

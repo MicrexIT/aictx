@@ -1,11 +1,9 @@
-import { execFile } from "node:child_process";
-import { mkdir, mkdtemp, readFile, realpath, rm, stat, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, realpath, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { promisify } from "node:util";
 
-import { chromium, type Browser, type ConsoleMessage, type Locator, type Page } from "playwright";
+import { chromium, type Browser, type ConsoleMessage, type Page } from "playwright";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { main, type CliOutputWriter } from "../../../src/cli/main.js";
@@ -15,7 +13,8 @@ import type {
   ObjectStatus,
   ObjectType,
   Predicate,
-  RelationStatus
+  RelationStatus,
+  SourceOrigin
 } from "../../../src/core/types.js";
 import {
   computeObjectContentHash,
@@ -32,9 +31,6 @@ import {
 
 const repoRoot = resolve(fileURLToPath(new URL("../../..", import.meta.url)));
 const viewerAssetsDir = join(repoRoot, "dist", "viewer");
-const GRAPH_WIDTH = 960;
-const GRAPH_HEIGHT = 420;
-const execFileAsync = promisify(execFile);
 const tempRoots: string[] = [];
 
 interface MemoryFixture {
@@ -47,6 +43,7 @@ interface MemoryFixture {
   tags: string[];
   facets?: ObjectFacets;
   evidence?: Evidence[];
+  origin?: SourceOrigin;
   updatedAt?: string;
 }
 
@@ -64,7 +61,7 @@ afterEach(async () => {
   );
 });
 
-describe("viewer shell", () => {
+describe("read-only viewer shell", () => {
   it("loads bootstrap data, searches objects, renders safe Markdown, JSON, and relations", async () => {
     const assets = await stat(join(viewerAssetsDir, "index.html"));
 
@@ -72,6 +69,7 @@ describe("viewer shell", () => {
 
     const projectRoot = await createInitializedProject("aictx-viewer-shell-project-");
     await writeViewerFixtures(projectRoot);
+    await rebuildProjectIndex(projectRoot);
     const aictxHome = await createTempRoot("aictx-viewer-shell-home-");
     const started = await startViewerServer({
       cwd: projectRoot,
@@ -95,21 +93,59 @@ describe("viewer shell", () => {
       await page.setViewportSize({ width: 1280, height: 900 });
       await page.goto(started.data.url, { waitUntil: "domcontentloaded" });
       await page.locator('[data-testid="projects-view"]').waitFor();
-      await expectText(page, '[data-testid="project-list"]', "Aictx Viewer Shell Project");
-      await page.locator('[data-testid^="project-open-"]').first().click();
+      await expectSidebarClosed(page);
+      await openSidebar(page);
       await page.locator('[data-testid="viewer-search"]').waitFor();
-      await expectText(page, '[data-testid="memory-list-view"]', "Memories");
-      await expectCount(page, '[data-testid="selected-object"]', 0);
-      await expectText(page, '[aria-label="Project memory counts"]', "Memories");
-      await expectText(page, '[aria-label="Project memory counts"]', "12");
-      await expectText(page, '[aria-label="Project memory counts"]', "Connections");
-      await expectText(page, '[aria-label="Project memory counts"]', "4");
-      await expectText(page, '[aria-label="Project memory counts"]', "Syntheses");
-      await expectText(page, '[aria-label="Project memory counts"]', "Sources");
+      await page.keyboard.press("Escape");
+      await expectSidebarClosed(page);
+      await openSidebar(page);
+      await page.locator('[data-testid="sidebar-backdrop"]').click({ position: { x: 700, y: 40 } });
+      await expectSidebarClosed(page);
+      await expectText(page, '[data-testid="projects-view"]', "Projects");
+      await expectText(page, '[data-testid="project-list"]', "Current");
+      await expectCount(page, '[data-testid="memory-list-view"]', 0);
+      await page.getByRole("button", { name: "Open project" }).first().click();
+      await expectText(page, '[data-testid="memory-list-view"]', "Aictx Viewer Shell Project");
+      await expectText(page, '[data-testid="memory-list-view"]', "Memory Schema");
+      await expectText(page, '[data-testid="memory-list-view"]', "Canonical objects");
+      await expectNoText(page, '[data-testid="memory-list-view"]', "Schema projection loaded");
+      await expectCount(page, '[data-testid="guided-views-panel"]', 0);
+      await expectCount(page, '[data-testid="context-preview-panel"]', 0);
+      await page.locator('[data-testid="object-row-decision.viewer-shell"]').click();
+      await assertSelectedObject(page, "Viewer Shell Layout", "decision.viewer-shell");
+
+      await openSidebar(page);
+      await page.locator('[data-testid="nav-graph"]').click();
+      await expectSidebarClosed(page);
+      await expectText(page, '[data-testid="graph-view"]', "Graph");
+      await expectText(page, '[data-testid="graph-node-count"]', "11");
+      await expectText(page, '[data-testid="graph-relation-count"]', "6");
+      await expectCount(page, '[data-testid="relation-graph"]', 1);
+      await expectText(page, '[data-testid="graph-inspector"]', "Viewer Markdown Safety");
+      await expectText(page, '[data-testid="graph-inspector"]', "Viewer Shell Layout");
+      await page.locator('[data-testid="graph-zoom-in"]').click();
+      await page.locator('[data-testid="graph-zoom-out"]').click();
+      await page.locator('[data-testid="graph-fit"]').click();
+      await page.locator('[data-testid="graph-reset-layout"]').click();
+      await page.locator('[data-testid="graph-inspector"] button', { hasText: "Viewer Markdown Safety" }).click();
+      await expectText(page, '[data-testid="graph-inspector"]', "requires");
+      await expectText(page, '[data-testid="graph-inspector"]', "Confidence");
+      await expectText(page, '[data-testid="graph-inspector"]', "high");
+      await page.locator('[data-testid="graph-inspector"] button', { hasText: "Source node" }).click();
+      await expectText(page, '[data-testid="graph-inspector"]', "Viewer Shell Layout");
+      await page.locator('[data-testid="graph-inspector"] button', { hasText: "Open in schema browser" }).click();
+      await assertSelectedObject(page, "Viewer Shell Layout", "decision.viewer-shell");
 
       await page.selectOption('[data-testid="viewer-type-filter"]', "decision");
       await expectCount(page, '[data-testid="object-row-decision.viewer-shell"]', 1);
       await expectCount(page, '[data-testid="object-row-constraint.viewer-markdown"]', 0);
+
+      await page.selectOption('[data-testid="viewer-type-filter"]', "all");
+      await page.selectOption('[data-testid="viewer-facet-filter"]', "decision-rationale");
+      await expectCount(page, '[data-testid="object-row-decision.viewer-shell"]', 1);
+      await expectCount(page, '[data-testid="object-row-constraint.viewer-markdown"]', 0);
+      await expectText(page, '[data-testid="object-meta-decision.viewer-shell"]', "decision-rationale");
+      await page.selectOption('[data-testid="viewer-facet-filter"]', "all");
 
       await page.selectOption('[data-testid="viewer-type-filter"]', "gotcha");
       await expectCount(page, '[data-testid="object-row-gotcha.webhook-duplicates"]', 1);
@@ -123,6 +159,15 @@ describe("viewer shell", () => {
 
       await page.selectOption('[data-testid="viewer-status-filter"]', "all");
 
+      await page.locator('[data-testid="viewer-layer-inactive"]').click();
+      await expectCount(page, '[data-testid="object-row-fact.billing-context"]', 1);
+      await expectCount(page, '[data-testid="object-row-decision.viewer-shell"]', 0);
+
+      await page.locator('[data-testid="viewer-layer-memories"]').click();
+      await expectCount(page, '[data-testid="object-row-decision.viewer-shell"]', 1);
+      await expectCount(page, '[data-testid="object-row-synthesis.agent-guidance"]', 0);
+      await expectCount(page, '[data-testid="object-row-workflow.release-checklist"]', 1);
+
       await page.locator('[data-testid="viewer-layer-sources"]').click();
       await expectCount(page, '[data-testid="object-row-source.agent-integration"]', 1);
       await expectCount(page, '[data-testid="object-row-decision.viewer-shell"]', 0);
@@ -132,85 +177,158 @@ describe("viewer shell", () => {
       await expectCount(page, '[data-testid="object-row-source.agent-integration"]', 0);
 
       await page.locator('[data-testid="viewer-layer-all"]').click();
-      await page.fill('[data-testid="viewer-search"]', "agent guidance provenance");
+      await setViewerSearch(page, "agent guidance provenance");
       await page.locator('[data-testid="object-row-synthesis.agent-guidance"]').click();
       await assertSelectedObject(page, "Agent Guidance Synthesis", "synthesis.agent-guidance");
-      await expectText(page, '[data-testid="provenance-links"]', "Source: docs/agent-integration.md");
-      await expectText(page, '[data-testid="provenance-links"]', "derived_from");
+      await expectText(page, '[data-testid="selected-object"]', "Source: docs/agent-integration.md");
+      await expectText(page, '[data-testid="selected-object"]', "derived_from");
+      await expectText(page, '[data-testid="selected-object"]', "supports");
+      await expectText(page, '[data-testid="selected-object"]', "challenges");
+      await expectText(page, '[data-testid="selected-object"]', "Webhook Duplicates");
       await page.getByRole("button", { name: "Source: docs/agent-integration.md" }).first().click();
       await assertSelectedObject(page, "Source: docs/agent-integration.md", "source.agent-integration");
-      await page.locator('[data-testid="selected-object-back"]').click();
+      await expectText(page, '[data-testid="selected-object"]', "file");
+      await expectText(page, '[data-testid="selected-object"]', "docs/agent-integration.md");
+      await expectText(page, '[data-testid="selected-object"]', "text/markdown");
+      await page.locator('[data-testid="object-row-source.agent-integration"]').click();
+      await expectText(page, '[data-testid="memory-list-view"]', "Agent Guidance Synthesis");
 
-      await page.fill('[data-testid="viewer-search"]', "markdown safety");
+      await setViewerSearch(page, "markdown safety");
       await page.locator('[data-testid="object-row-constraint.viewer-markdown"]').click();
       await assertSelectedObject(page, "Viewer Markdown Safety", "constraint.viewer-markdown");
+      await expectText(page, '[data-testid="selected-object"]', "business-rule");
+      await expectText(page, '[data-testid="facet-details"]', "viewer/src/App.svelte");
       await assertMarkdownIsSafe(page);
-      await expectCount(page, '[data-testid="memory-list-view"]', 0);
 
-      await page.locator('[data-testid="selected-object-back"]').click();
+      await page.locator('[data-testid="object-row-constraint.viewer-markdown"]').click();
       await page.selectOption('[data-testid="viewer-tag-filter"]', "security");
       await expectText(page, '[data-testid="memory-list-view"]', "Viewer Markdown Safety");
       await expectCount(page, '[data-testid="object-row-decision.viewer-shell"]', 0);
 
       await page.selectOption('[data-testid="viewer-tag-filter"]', "all");
-      await page.fill('[data-testid="viewer-search"]', "shell layout");
+      await setViewerSearch(page, "shell layout");
       await page.locator('[data-testid="object-row-decision.viewer-shell"]').click();
       await assertSelectedObject(page, "Viewer Shell Layout", "decision.viewer-shell");
       await expectText(page, '[data-testid="outgoing-relations"]', "requires");
       await expectText(page, '[data-testid="outgoing-relations"]', "Viewer Markdown Safety");
-      await assertGraphSurfaceNonblank(page);
-      await assertSelectedGraphNode(page, "decision.viewer-shell");
-      await expectText(page, '[data-testid="relation-graph"]', "Viewer Shell Layout");
-      await expectText(page, '[data-testid="relation-graph"]', "Viewer Markdown Safety");
-      await expectText(page, '[data-testid="relation-graph"]', "requires");
-      await expectNoText(page, '[data-testid="relation-graph"]', "Unrelated Source");
-      await expectNoText(page, '[data-testid="relation-graph"]', "Unrelated Target");
-      await expectCount(page, '[data-testid="relation-graph-svg"] [data-testid^="relation-graph-edge-"]', 1);
-      await assertGraphNodeWithinViewBox(page, "decision.viewer-shell");
-      await assertGraphNodeWithinViewBox(page, "constraint.viewer-markdown");
-      await assertGraphEdgeWithinViewBox(page, "rel.viewer-shell-requires-markdown");
+      await expectNoText(page, '[data-testid="selected-object"]', "Unrelated Source");
+      await expectNoText(page, '[data-testid="selected-object"]', "Unrelated Target");
+      await expectCount(page, '[data-testid="relation-graph"]', 0);
 
-      await page.getByRole("button", { name: "Viewer Markdown Safety" }).click();
+      await page.locator('[data-testid="relation-card-rel.viewer-shell-requires-markdown"] button').click();
       await assertSelectedObject(page, "Viewer Markdown Safety", "constraint.viewer-markdown");
-      await assertGraphSurfaceNonblank(page);
-      await assertSelectedGraphNode(page, "constraint.viewer-markdown");
-      await expectText(page, '[data-testid="relation-graph"]', "Viewer Shell Layout");
-      await expectText(page, '[data-testid="relation-graph"]', "requires");
-      await expectNoText(page, '[data-testid="relation-graph"]', "Unrelated Source");
+      await expectText(page, '[data-testid="incoming-relations"]', "Viewer Shell Layout");
+      await expectText(page, '[data-testid="incoming-relations"]', "requires");
+      await expectNoText(page, '[data-testid="selected-object"]', "Unrelated Source");
 
       await page.locator('[data-testid="technical-details"] summary').click();
       await expectText(page, '[data-testid="json-view"]', '"id": "constraint.viewer-markdown"');
       await expectText(page, '[data-testid="json-view"]', '"body_path": ".aictx/memory/constraints/viewer-markdown.md"');
       await expectText(page, '[data-testid="incoming-relations"]', "Viewer Shell Layout");
 
-      await page.locator('[data-testid="selected-object-back"]').click();
+      await page.locator('[data-testid="object-row-constraint.viewer-markdown"]').click();
       await expectText(page, '[data-testid="memory-list-view"]', "Viewer Shell Layout");
-      await expectCount(page, '[data-testid="object-row-constraint.viewer-markdown"]', 0);
+      await expectCount(page, '[data-testid="object-row-constraint.viewer-markdown"]', 1);
 
-      await page.fill('[data-testid="viewer-search"]', "empty neighborhood");
+      await setViewerSearch(page, "empty neighborhood");
       await page.locator('[data-testid="object-row-note.viewer-empty"]').click();
       await assertSelectedObject(page, "Viewer Empty Neighborhood", "note.viewer-empty");
-      await assertSelectedGraphNode(page, "note.viewer-empty");
-      await expectText(page, '[data-testid="relation-graph"]', "Viewer Empty Neighborhood");
-      await expectText(page, '[data-testid="relation-graph-empty"]', "No direct relations for this object.");
-      await expectCount(page, '[data-testid="relation-graph-svg"] [data-testid^="relation-graph-edge-"]', 0);
-
-      await page.locator('[data-testid="nav-lenses"]').click();
-      await page.locator('[data-testid="lens-view"]').waitFor();
-      await expectText(page, '[data-testid="role-coverage"]', "Agent Guidance");
-      await expectText(page, '[data-testid="lens-markdown"]', "Project Map");
-      await page.locator('[data-testid="lens-tab-provenance"]').click();
-      await expectText(page, '[data-testid="lens-markdown"]', "Provenance");
-      await expectText(page, '[aria-label="Lens context"]', "Agent Guidance Synthesis");
-
-      await page.locator('[data-testid="nav-projects"]').click();
-      await expectText(page, '[data-testid="projects-view"]', "Projects");
-      await expectCount(page, '[data-testid="selected-object"]', 0);
+      await expectText(page, '[data-testid="outgoing-relations"]', "No outgoing related memories.");
+      await expectText(page, '[data-testid="incoming-relations"]', "No incoming related memories.");
+      await expectCount(page, '[data-testid="relation-graph"]', 0);
 
       expect(await page.evaluate("window.__AICTX_HTML_EXECUTED")).toBeUndefined();
       expect(consoleErrors()).toEqual([]);
     } finally {
       await browser?.close();
+      await started.data.close();
+    }
+  });
+
+  it("serves real read-only load previews without saving context packs or rebuilding indexes", async () => {
+    const projectRoot = await createInitializedProject("aictx-viewer-preview-route-");
+    await writeViewerFixtures(projectRoot);
+    await updateProjectConfig(projectRoot, (config) => {
+      config.memory.saveContextPacks = true;
+    });
+    await rebuildProjectIndex(projectRoot);
+    const aictxHome = await createTempRoot("aictx-viewer-preview-home-");
+    const started = await startViewerServer({
+      cwd: projectRoot,
+      assetsDir: viewerAssetsDir,
+      aictxHome,
+      token: "viewer-preview-token"
+    });
+
+    expect(started.ok).toBe(true);
+    if (!started.ok) {
+      throw new Error(started.error.message);
+    }
+
+    try {
+      const registryId = await currentViewerRegistryId(started.data.url);
+      const previewUrl = `${started.data.url.replace(/\?.*$/, "")}api/projects/${encodeURIComponent(registryId)}/load-preview?token=viewer-preview-token`;
+
+      const unauthorized = await fetch(previewUrl.replace("?token=viewer-preview-token", ""));
+      expect(unauthorized.status).toBe(401);
+
+      const wrongMethod = await fetch(previewUrl);
+      expect(wrongMethod.status).toBe(405);
+
+      const invalidMode = await fetch(previewUrl, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ task: "viewer shell layout", mode: "sales" })
+      });
+      const invalidModeBody = await invalidMode.json() as { error: { code: string } };
+      expect(invalidMode.status).toBe(400);
+      expect(invalidModeBody.error.code).toBe("AICtxValidationFailed");
+
+      const invalidBudget = await fetch(previewUrl, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ task: "viewer shell layout", token_budget: 500 })
+      });
+      const invalidBudgetBody = await invalidBudget.json() as { error: { code: string } };
+      expect(invalidBudget.status).toBe(400);
+      expect(invalidBudgetBody.error.code).toBe("AICtxValidationFailed");
+
+      const success = await fetch(previewUrl, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ task: "viewer shell layout", mode: "coding", token_budget: 1600 })
+      });
+      const successBody = await success.json() as {
+        ok: true;
+        data: {
+          context_pack: string;
+          included_ids: string[];
+          estimated_tokens: number;
+          source: { project: string };
+        };
+      };
+
+      expect(success.status).toBe(200);
+      expect(successBody.ok).toBe(true);
+      expect(successBody.data.context_pack).toContain("# AI Context Pack");
+      expect(successBody.data.context_pack).toContain("Viewer Shell Layout");
+      expect(successBody.data.included_ids).toContain("decision.viewer-shell");
+      expect(successBody.data.estimated_tokens).toBeGreaterThan(0);
+      expect(successBody.data.source.project).toContain("aictx-viewer-preview-route");
+      await expect(listContextPacks(projectRoot)).resolves.toEqual([]);
+
+      await rm(join(projectRoot, ".aictx", "index"), { recursive: true, force: true });
+      const missingIndex = await fetch(previewUrl, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ task: "viewer shell layout" })
+      });
+      const missingIndexBody = await missingIndex.json() as { error: { code: string } };
+
+      expect(missingIndex.status).toBe(412);
+      expect(missingIndexBody.error.code).toBe("AICtxIndexUnavailable");
+      await expect(stat(join(projectRoot, ".aictx", "index"))).rejects.toThrow();
+    } finally {
       await started.data.close();
     }
   });
@@ -243,22 +361,31 @@ describe("viewer shell", () => {
 
       await page.setViewportSize({ width: 390, height: 780 });
       await page.goto(started.data.url, { waitUntil: "domcontentloaded" });
-      await page.locator('[data-testid="projects-view"]').waitFor();
-      await page.locator('[data-testid^="project-open-"]').first().click();
+      await expectSidebarClosed(page);
+      await openSidebar(page);
       await page.locator('[data-testid="viewer-search"]').waitFor();
+      await expectText(page, '[data-testid="projects-view"]', "Projects");
+      await page.getByRole("button", { name: "Close menu" }).click();
+      await expectSidebarClosed(page);
+      await page.getByRole("button", { name: "Open project" }).first().click();
 
       await expectText(page, '[data-testid="starter-memory-notice"]', "Starter memory only.");
-      await expectText(page, '[data-testid="starter-memory-notice"]', "aictx setup");
-      await expectText(page, '[data-testid="starter-memory-notice"]', "aictx lens project-map");
-      await expectCount(page, '[data-testid="selected-object"]', 0);
-      await expectText(page, '[aria-label="Project memory counts"]', "Memories");
-      await expectText(page, '[aria-label="Project memory counts"]', "2");
-      await expectText(page, '[aria-label="Project memory counts"]', "Connections");
-      await expectText(page, '[aria-label="Project memory counts"]', "1");
+      await expectText(page, '[data-testid="starter-memory-notice"]', "aictx suggest --bootstrap --patch > bootstrap-memory.json");
+      await expectText(page, '[data-testid="starter-memory-notice"]', "aictx save --file bootstrap-memory.json");
+      await expectText(page, '[data-testid="memory-list-view"]', "Memory Schema");
+      await expectText(page, '[data-testid="memory-list-view"]', "Canonical objects");
+      await expectNoText(page, '[data-testid="memory-list-view"]', "Schema projection loaded");
+      await expect(page.locator('[data-testid="schema-context-toggle"]').isVisible()).resolves.toBe(true);
+      await expect(page.locator('[data-testid="doc-relation-overview"]').isVisible()).resolves.toBe(true);
       await page.locator('[data-testid="object-row-architecture.current"]').click();
-      await assertSelectedGraphNode(page, "architecture.current");
-      await expectText(page, '[data-testid="relation-graph"]', "related_to");
-      await expectCount(page, '[data-testid="relation-graph-svg"] [data-testid^="relation-graph-edge-"]', 1);
+      await expectCount(page, '[data-testid="selected-object"]', 1);
+      await expectCount(page, '[data-testid="selected-object-back"]', 1);
+      await expect(page.locator('[data-testid="schema-context-toggle"]').isHidden()).resolves.toBe(true);
+      await expectText(page, '[data-testid="incoming-relations"]', "related_to");
+      await expectCount(page, '[data-testid="relation-graph"]', 0);
+      await page.locator('[data-testid="selected-object-back"]').click();
+      await expectCount(page, '[data-testid="selected-object"]', 0);
+      await expectCount(page, '[data-testid="object-row-architecture.current"]', 1);
 
       expect(consoleErrors()).toEqual([]);
     } finally {
@@ -267,83 +394,14 @@ describe("viewer shell", () => {
     }
   });
 
-  it("frames dirty Git-backed memory as local changes with an explanatory tooltip", async () => {
+  it("deletes project memory from the projects page and hides delete controls in demo mode", async () => {
     const assets = await stat(join(viewerAssetsDir, "index.html"));
 
     expect(assets.isFile()).toBe(true);
 
-    const projectRoot = await createInitializedGitProject("aictx-viewer-dirty-project-");
-    await writeMemoryObject(projectRoot, {
-      id: "note.local-memory-change",
-      type: "note",
-      status: "active",
-      title: "Local Memory Change",
-      bodyPath: "memory/notes/local-memory-change.md",
-      body: "# Local Memory Change\n\nThis fixture makes canonical memory dirty.\n",
-      tags: ["viewer", "dirty"],
-      updatedAt: FIXED_TIMESTAMP_NEXT_MINUTE
-    });
-    const aictxHome = await createTempRoot("aictx-viewer-dirty-home-");
-    const started = await startViewerServer({
-      cwd: projectRoot,
-      assetsDir: viewerAssetsDir,
-      aictxHome,
-      token: "viewer-dirty-token"
-    });
-
-    expect(started.ok).toBe(true);
-    if (!started.ok) {
-      throw new Error(started.error.message);
-    }
-
-    let browser: Browser | null = null;
-
-    try {
-      browser = await chromium.launch();
-      const page = await browser.newPage();
-      const consoleErrors = collectPageErrors(page);
-
-      await page.setViewportSize({ width: 920, height: 720 });
-      await page.goto(started.data.url, { waitUntil: "domcontentloaded" });
-      await page.locator('[data-testid="projects-view"]').waitFor();
-      await expectText(page, '[data-testid="projects-view"]', "Local memory changes");
-
-      const info = page.locator('[data-testid^="project-memory-info-"]').first();
-      const tooltip = page.locator('[data-testid^="project-memory-tooltip-"]').first();
-
-      await info.waitFor();
-      await expect(tooltip.textContent()).resolves.toContain("You can keep saving memory");
-      await expect(tooltip.textContent()).resolves.toContain("aictx diff");
-      await expect(tooltip.textContent()).resolves.not.toContain("blocked");
-      await expectTooltipVisibility(tooltip, "hidden");
-
-      await info.hover();
-      await expectTooltipVisibility(tooltip, "visible");
-
-      await page.mouse.move(0, 0);
-      await expectTooltipVisibility(tooltip, "hidden");
-
-      await info.focus();
-      await expectTooltipVisibility(tooltip, "visible");
-
-      expect(consoleErrors()).toEqual([]);
-    } finally {
-      await browser?.close();
-      await started.data.close();
-    }
-  });
-
-  it("deletes a project memory root from the Projects dashboard", async () => {
-    const assets = await stat(join(viewerAssetsDir, "index.html"));
-
-    expect(assets.isFile()).toBe(true);
-
-    const projectRoot = await createInitializedProject("aictx-viewer-delete-ui-project-");
-    const aictxHome = await createTempRoot("aictx-viewer-delete-ui-home-");
-
-    await writeProjectFile(projectRoot, "src/app.ts", "export const sourceFilesStay = true;\n");
-    await registerProject(projectRoot, aictxHome);
-
+    const projectRoot = await createInitializedProject("aictx-viewer-delete-project-");
+    await writeProjectFile(projectRoot, "src/app.ts", "export const kept = true;\n");
+    const aictxHome = await createTempRoot("aictx-viewer-delete-home-");
     const started = await startViewerServer({
       cwd: projectRoot,
       assetsDir: viewerAssetsDir,
@@ -359,43 +417,73 @@ describe("viewer shell", () => {
     let browser: Browser | null = null;
 
     try {
+      const projectsResponse = await fetch(`${started.data.url.replace(/\?.*$/, "")}api/projects?token=viewer-delete-token`);
+      const projectsEnvelope = await projectsResponse.json() as {
+        ok: true;
+        data: { projects: Array<{ registry_id: string; project: { id: string } }> };
+      };
+      const project = projectsEnvelope.data.projects[0];
+
+      expect(project).toBeDefined();
+      if (project === undefined) {
+        throw new Error("Expected a registered project for deletion test.");
+      }
+
       browser = await chromium.launch();
       const page = await browser.newPage();
       const consoleErrors = collectPageErrors(page);
 
-      await page.setViewportSize({ width: 1040, height: 760 });
+      await page.setViewportSize({ width: 1280, height: 900 });
       await page.goto(started.data.url, { waitUntil: "domcontentloaded" });
       await page.locator('[data-testid="projects-view"]').waitFor();
 
-      const card = page.locator('[data-testid^="project-card-"]').first();
-      const projectName = (await card.locator("h3").textContent())?.trim() ?? "";
+      await page.getByTestId(`project-delete-${project.registry_id}`).click();
+      await expectCount(page, `[data-testid="project-delete-confirm-${project.registry_id}"]`, 1);
+      await expect(page.getByTestId(`project-delete-submit-${project.registry_id}`).isDisabled()).resolves.toBe(true);
+      await expectText(page, '[data-testid="project-list"]', "Source files");
 
-      expect(projectName).not.toBe("");
-      await card.locator('[data-testid^="project-delete-"]').click();
-      await page.locator('[data-testid="project-delete-modal"]').waitFor();
-      await expectText(page, '[data-testid="project-delete-modal"]', "Source files are not deleted");
-      await expectText(page, '[data-testid="project-delete-modal"]', ".aictx/");
-      await expect(page.locator('[data-testid="project-delete-modal"]').textContent())
-        .resolves.not.toContain("Source files are deleted");
+      await page.getByTestId(`project-delete-confirm-${project.registry_id}`).fill(project.project.id);
+      await expect(page.getByTestId(`project-delete-submit-${project.registry_id}`).isEnabled()).resolves.toBe(true);
+      await page.getByTestId(`project-delete-submit-${project.registry_id}`).click();
 
-      const confirm = page.locator('[data-testid="project-delete-confirm"]');
-
-      await expect(confirm.isDisabled()).resolves.toBe(true);
-      await page.fill('[data-testid="project-delete-confirmation"]', projectName);
-      await expect(confirm.isEnabled()).resolves.toBe(true);
-      await confirm.click();
-      await page.locator('[data-testid="project-delete-notice"]').waitFor();
-      await expectText(page, '[data-testid="project-delete-notice"]', "Source files were not deleted");
-      await expectText(page, '[data-testid="empty-projects"]', "No projects registered");
-      await expectCount(page, '[data-testid^="project-card-"]', 0);
+      await page.waitForFunction(
+        (testId) => document.querySelector(`[data-testid="${testId}"]`) === null,
+        `project-card-${project.registry_id}`
+      );
+      await expectText(page, '[data-testid="project-delete-status"]', "Deleted .aictx memory");
       await expect(pathExists(join(projectRoot, ".aictx"))).resolves.toBe(false);
       await expect(readFile(join(projectRoot, "src/app.ts"), "utf8"))
-        .resolves.toBe("export const sourceFilesStay = true;\n");
-
+        .resolves.toBe("export const kept = true;\n");
       expect(consoleErrors()).toEqual([]);
     } finally {
       await browser?.close();
       await started.data.close();
+    }
+
+    const demoProjectRoot = await createInitializedProject("aictx-viewer-demo-delete-project-");
+    const demoHome = await createTempRoot("aictx-viewer-demo-delete-home-");
+    const demoStarted = await startViewerServer({
+      cwd: demoProjectRoot,
+      assetsDir: viewerAssetsDir,
+      aictxHome: demoHome,
+      token: "demo"
+    });
+
+    expect(demoStarted.ok).toBe(true);
+    if (!demoStarted.ok) {
+      throw new Error(demoStarted.error.message);
+    }
+
+    try {
+      browser = await chromium.launch();
+      const page = await browser.newPage();
+
+      await page.goto(demoStarted.data.url, { waitUntil: "domcontentloaded" });
+      await page.locator('[data-testid="projects-view"]').waitFor();
+      await expect(page.getByText("Delete memory").count()).resolves.toBe(0);
+    } finally {
+      await browser?.close();
+      await demoStarted.data.close();
     }
   });
 });
@@ -415,61 +503,21 @@ async function assertMarkdownIsSafe(page: Page): Promise<void> {
   await expect(markdown.textContent()).resolves.toContain("Verify search works");
 }
 
-async function assertGraphSurfaceNonblank(page: Page): Promise<void> {
-  const graph = page.locator('[data-testid="relation-graph-svg"]');
-
-  await graph.waitFor();
-  const box = await graph.boundingBox();
-
-  expect(box).not.toBeNull();
-  expect(box?.width ?? 0).toBeGreaterThan(100);
-  expect(box?.height ?? 0).toBeGreaterThan(100);
-  await expectCount(page, '[data-testid="relation-graph-svg"] [data-testid^="relation-graph-edge-"]', 1);
+async function openSidebar(page: Page): Promise<void> {
+  await page.getByRole("button", { name: "Open menu" }).click();
+  await page.locator('[data-testid="viewer-sidebar-drawer"]').waitFor();
 }
 
-async function assertSelectedGraphNode(page: Page, id: string): Promise<void> {
-  const node = page.locator(`[data-testid="relation-graph-node-${id}"]`);
-
-  await node.waitFor();
-  await expect(node.getAttribute("class")).resolves.toContain("selected-node");
+async function expectSidebarClosed(page: Page): Promise<void> {
+  await expectCount(page, '[data-testid="viewer-sidebar-drawer"]', 0);
+  await expectCount(page, '[data-testid="sidebar-backdrop"]', 0);
 }
 
-async function assertGraphNodeWithinViewBox(page: Page, id: string): Promise<void> {
-  const circle = page.locator(`[data-testid="relation-graph-node-${id}"] circle`);
-  const cx = await numberAttribute(circle, "cx");
-  const cy = await numberAttribute(circle, "cy");
-  const radius = await numberAttribute(circle, "r");
-
-  expect(cx - radius).toBeGreaterThanOrEqual(0);
-  expect(cy - radius).toBeGreaterThanOrEqual(0);
-  expect(cx + radius).toBeLessThanOrEqual(GRAPH_WIDTH);
-  expect(cy + radius).toBeLessThanOrEqual(GRAPH_HEIGHT);
-}
-
-async function assertGraphEdgeWithinViewBox(page: Page, id: string): Promise<void> {
-  const line = page.locator(`[data-testid="relation-graph-edge-${id}"] line`);
-
-  for (const attribute of ["x1", "y1", "x2", "y2"] as const) {
-    const value = await numberAttribute(line, attribute);
-    const upperBound = attribute.startsWith("x") ? GRAPH_WIDTH : GRAPH_HEIGHT;
-
-    expect(value).toBeGreaterThanOrEqual(0);
-    expect(value).toBeLessThanOrEqual(upperBound);
-  }
-}
-
-async function numberAttribute(
-  locator: ReturnType<Page["locator"]>,
-  attribute: string
-): Promise<number> {
-  const rawValue = await locator.getAttribute(attribute);
-  const value = Number(rawValue);
-
-  if (rawValue === null || !Number.isFinite(value)) {
-    throw new Error(`Expected numeric ${attribute} attribute, got ${String(rawValue)}.`);
-  }
-
-  return value;
+async function setViewerSearch(page: Page, query: string): Promise<void> {
+  await openSidebar(page);
+  await page.fill('[data-testid="viewer-search"]', query);
+  await page.getByRole("button", { name: "Close menu" }).click();
+  await expectSidebarClosed(page);
 }
 
 async function expectText(page: Page, selector: string, expected: string): Promise<void> {
@@ -486,13 +534,13 @@ async function expectCount(page: Page, selector: string, expected: number): Prom
   await expect(page.locator(selector).count()).resolves.toBe(expected);
 }
 
-async function expectTooltipVisibility(
-  locator: Locator,
-  expected: "hidden" | "visible"
-): Promise<void> {
-  await expect.poll(async () =>
-    locator.evaluate((element) => getComputedStyle(element).visibility)
-  ).toBe(expected);
+async function pathExists(path: string): Promise<boolean> {
+  try {
+    await stat(path);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function collectPageErrors(page: Page): () => string[] {
@@ -527,6 +575,11 @@ async function writeViewerFixtures(projectRoot: string): Promise<void> {
       ""
     ].join("\n"),
     tags: ["viewer", "security"],
+    facets: {
+      category: "business-rule",
+      applies_to: ["viewer/src/App.svelte"],
+      load_modes: ["review"]
+    },
     updatedAt: FIXED_TIMESTAMP_NEXT_MINUTE
   });
   await writeMemoryObject(projectRoot, {
@@ -537,6 +590,10 @@ async function writeViewerFixtures(projectRoot: string): Promise<void> {
     bodyPath: "memory/decisions/viewer-shell.md",
     body: "# Viewer Shell Layout\n\nThe shell shows a searchable object list and direct relation context.\n",
     tags: ["viewer", "ui"],
+    facets: {
+      category: "decision-rationale",
+      applies_to: ["viewer/src/App.svelte"]
+    },
     updatedAt: FIXED_TIMESTAMP_NEXT_MINUTE
   });
   await writeMemoryObject(projectRoot, {
@@ -547,6 +604,9 @@ async function writeViewerFixtures(projectRoot: string): Promise<void> {
     bodyPath: "memory/facts/billing-context.md",
     body: "# Billing Context\n\nThis fixture proves unrelated memory can be filtered away.\n",
     tags: ["billing"],
+    facets: {
+      category: "debugging-fact"
+    },
     updatedAt: FIXED_TIMESTAMP
   });
   await writeMemoryObject(projectRoot, {
@@ -567,6 +627,9 @@ async function writeViewerFixtures(projectRoot: string): Promise<void> {
     bodyPath: "memory/gotchas/webhook-duplicates.md",
     body: "# Webhook Duplicates\n\nNever assume webhook delivery is unique.\n",
     tags: ["viewer", "webhook"],
+    facets: {
+      category: "gotcha"
+    },
     updatedAt: FIXED_TIMESTAMP
   });
   await writeMemoryObject(projectRoot, {
@@ -575,8 +638,12 @@ async function writeViewerFixtures(projectRoot: string): Promise<void> {
     status: "active",
     title: "Release Checklist",
     bodyPath: "memory/workflows/release-checklist.md",
-    body: "# Release Checklist\n\nRun the release checklist before publishing.\n",
+    body: "# Release Checklist\n\nRun pnpm test before publishing.\n",
     tags: ["viewer", "release"],
+    facets: {
+      category: "workflow",
+      load_modes: ["coding", "review"]
+    },
     updatedAt: FIXED_TIMESTAMP
   });
   await writeMemoryObject(projectRoot, {
@@ -593,6 +660,12 @@ async function writeViewerFixtures(projectRoot: string): Promise<void> {
       load_modes: ["onboarding"]
     },
     evidence: [{ kind: "file", id: "docs/agent-integration.md" }],
+    origin: {
+      kind: "file",
+      locator: "docs/agent-integration.md",
+      captured_at: FIXED_TIMESTAMP,
+      media_type: "text/markdown"
+    },
     updatedAt: FIXED_TIMESTAMP
   });
   await writeMemoryObject(projectRoot, {
@@ -653,6 +726,20 @@ async function writeViewerFixtures(projectRoot: string): Promise<void> {
     to: "source.agent-integration",
     status: "active"
   });
+  await writeRelation(projectRoot, {
+    id: "rel.source-agent-integration-supports-synthesis-agent-guidance",
+    from: "source.agent-integration",
+    predicate: "supports",
+    to: "synthesis.agent-guidance",
+    status: "active"
+  });
+  await writeRelation(projectRoot, {
+    id: "rel.gotcha-webhook-duplicates-challenges-synthesis-agent-guidance",
+    from: "gotcha.webhook-duplicates",
+    predicate: "challenges",
+    to: "synthesis.agent-guidance",
+    status: "active"
+  });
 }
 
 async function writeMemoryObject(projectRoot: string, fixture: MemoryFixture): Promise<void> {
@@ -673,6 +760,7 @@ async function writeMemoryObject(projectRoot: string, fixture: MemoryFixture): P
     tags: fixture.tags,
     ...(fixture.facets === undefined ? {} : { facets: fixture.facets }),
     ...(fixture.evidence === undefined ? {} : { evidence: fixture.evidence }),
+    ...(fixture.origin === undefined ? {} : { origin: fixture.origin }),
     source: {
       kind: "agent"
     },
@@ -721,6 +809,56 @@ async function writeRelation(projectRoot: string, fixture: RelationFixture): Pro
   );
 }
 
+async function rebuildProjectIndex(projectRoot: string): Promise<void> {
+  const output = createCapturedOutput();
+  const exitCode = await main(["node", "aictx", "rebuild", "--json"], {
+    ...output.writers,
+    cwd: projectRoot
+  });
+
+  expect(exitCode).toBe(0);
+  expect(output.stderr()).toBe("");
+}
+
+async function updateProjectConfig(
+  projectRoot: string,
+  mutate: (config: { memory: { saveContextPacks: boolean } }) => void
+): Promise<void> {
+  const configPath = join(projectRoot, ".aictx", "config.json");
+  const config = JSON.parse(await readFile(configPath, "utf8")) as {
+    memory: { saveContextPacks: boolean };
+  };
+
+  mutate(config);
+  await writeFile(configPath, `${JSON.stringify(config, null, 2)}\n`, "utf8");
+}
+
+async function currentViewerRegistryId(url: string): Promise<string> {
+  const response = await fetch(`${url.replace(/\?.*$/, "")}api/projects?token=viewer-preview-token`);
+  const body = await response.json() as {
+    ok: true;
+    data: {
+      current_project_registry_id: string | null;
+    };
+  };
+
+  expect(response.status).toBe(200);
+  expect(body.ok).toBe(true);
+  expect(body.data.current_project_registry_id).not.toBeNull();
+
+  return body.data.current_project_registry_id ?? "";
+}
+
+async function listContextPacks(projectRoot: string): Promise<string[]> {
+  const contextDir = join(projectRoot, ".aictx", "context");
+
+  try {
+    return (await readdir(contextDir)).filter((file) => file.endsWith(".md"));
+  } catch {
+    return [];
+  }
+}
+
 async function createInitializedProject(prefix: string): Promise<string> {
   const projectRoot = await createTempRoot(prefix);
   const output = createCapturedOutput();
@@ -733,41 +871,6 @@ async function createInitializedProject(prefix: string): Promise<string> {
   expect(output.stderr()).toBe("");
 
   return projectRoot;
-}
-
-async function registerProject(projectRoot: string, aictxHome: string): Promise<void> {
-  const output = createCapturedOutput();
-  const exitCode = await main(["node", "aictx", "projects", "add", "--json"], {
-    ...output.writers,
-    cwd: projectRoot,
-    registry: {
-      aictxHome
-    }
-  });
-
-  expect(exitCode).toBe(0);
-  expect(output.stderr()).toBe("");
-}
-
-async function createInitializedGitProject(prefix: string): Promise<string> {
-  const projectRoot = await createInitializedProject(prefix);
-
-  await git(projectRoot, ["init"]);
-  await git(projectRoot, ["config", "user.email", "viewer@example.test"]);
-  await git(projectRoot, ["config", "user.name", "Viewer Test"]);
-  await git(projectRoot, ["add", ".aictx"]);
-  await git(projectRoot, ["commit", "-m", "Initial Aictx memory"]);
-
-  return projectRoot;
-}
-
-async function pathExists(path: string): Promise<boolean> {
-  try {
-    await stat(path);
-    return true;
-  } catch {
-    return false;
-  }
 }
 
 async function readStorageOrThrow(projectRoot: string) {
@@ -806,12 +909,6 @@ async function createTempRoot(prefix: string): Promise<string> {
 
   tempRoots.push(resolvedRoot);
   return resolvedRoot;
-}
-
-async function git(cwd: string, args: readonly string[]): Promise<string> {
-  const result = await execFileAsync("git", [...args], { cwd });
-
-  return result.stdout;
 }
 
 function createCapturedOutput(): {

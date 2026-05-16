@@ -208,7 +208,7 @@ describe("audit discipline findings", () => {
         memoryObject({
           id: "decision.no-facets",
           title: "Decision without facets",
-          body: longBody("Decision memory should carry facets in storage v3."),
+          body: longBody("Decision memory should carry facets in storage v4."),
           tags: ["decision"]
         }),
         memoryObject({
@@ -275,7 +275,8 @@ describe("audit discipline findings", () => {
           title: "Source README",
           body: longBody("README source record for synthesis provenance."),
           facets: { category: "source" },
-          evidence: [{ kind: "file", id: "README.md" }]
+          evidence: [{ kind: "file", id: "README.md" }],
+          origin: { kind: "file", locator: "README.md" }
         }),
         memoryObject({
           id: "synthesis.no-source",
@@ -331,6 +332,50 @@ describe("audit discipline findings", () => {
       expect.objectContaining({
         rule: "synthesis_missing_source_provenance",
         memory_id: "synthesis.source-relation"
+      })
+    );
+  });
+
+  it("reports active source objects without origin metadata", async () => {
+    const projectRoot = await createTempRoot("aictx-discipline-audit-source-origin-");
+    const storage = storageSnapshot({
+      projectRoot,
+      version: 4,
+      objects: [
+        memoryObject({
+          id: "source.without-origin",
+          type: "source",
+          title: "Source without origin",
+          body: longBody("Source records should identify their raw origin."),
+          facets: { category: "source" },
+          evidence: [{ kind: "file", id: "docs/source.md" }]
+        }),
+        memoryObject({
+          id: "source.with-origin",
+          type: "source",
+          title: "Source with origin",
+          body: longBody("Source records with origin are healthy for this rule."),
+          facets: { category: "source" },
+          evidence: [{ kind: "file", id: "docs/source.md" }],
+          origin: { kind: "file", locator: "docs/source.md" }
+        })
+      ],
+      relations: []
+    });
+
+    const findings = await buildAuditFindings({ projectRoot, storage });
+
+    expect(findings).toContainEqual(
+      expect.objectContaining({
+        severity: "warning",
+        rule: "source_missing_origin",
+        memory_id: "source.without-origin"
+      })
+    );
+    expect(findings).not.toContainEqual(
+      expect.objectContaining({
+        rule: "source_missing_origin",
+        memory_id: "source.with-origin"
       })
     );
   });
@@ -418,7 +463,7 @@ function storageSnapshot(options: {
   projectRoot: string;
   objects: StoredMemoryObject[];
   relations: StoredMemoryRelation[];
-  version?: 1 | 2 | 3;
+  version?: 1 | 2 | 3 | 4;
 }): CanonicalStorageSnapshot {
   return {
     projectRoot: options.projectRoot,
@@ -453,6 +498,7 @@ function memoryObject(options: {
   tags?: string[];
   facets?: MemoryObjectSidecar["facets"];
   evidence?: MemoryObjectSidecar["evidence"];
+  origin?: MemoryObjectSidecar["origin"];
   supersededBy?: ObjectId | null;
 }): StoredMemoryObject {
   const type = options.type ?? objectTypeFromId(options.id);
@@ -473,6 +519,7 @@ function memoryObject(options: {
     tags: options.tags ?? ["test"],
     ...(options.facets === undefined ? {} : { facets: options.facets }),
     ...(options.evidence === undefined ? {} : { evidence: options.evidence }),
+    ...(options.origin === undefined ? {} : { origin: options.origin }),
     source: {
       kind: "agent"
     },

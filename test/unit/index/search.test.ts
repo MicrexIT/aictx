@@ -6,7 +6,13 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { searchIndex } from "../../../src/index/search.js";
 import { openIndexDatabase, type IndexDatabaseConnection } from "../../../src/index/sqlite.js";
-import type { Evidence, ObjectFacets, ObjectStatus, ObjectType } from "../../../src/core/types.js";
+import type {
+  Evidence,
+  ObjectFacets,
+  ObjectStatus,
+  ObjectType,
+  SourceOrigin
+} from "../../../src/core/types.js";
 
 const tempRoots: string[] = [];
 
@@ -308,6 +314,37 @@ describe("search index", () => {
     }
   });
 
+  it("matches source origin search material", async () => {
+    const connection = await openMigratedConnection();
+
+    try {
+      insertObject(connection, {
+        id: "source.llm-wiki",
+        type: "source",
+        title: "LLM Wiki source",
+        body: "Source record for a wiki workflow article.",
+        origin: {
+          kind: "url",
+          locator: "https://example.com/llm-wiki",
+          captured_at: "2026-05-14T12:00:00+02:00",
+          media_type: "text/markdown"
+        }
+      });
+
+      const result = await searchIndex({
+        aictxRoot: connection.aictxRoot,
+        query: "llm-wiki"
+      });
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.data.matches[0]?.id).toBe("source.llm-wiki");
+      }
+    } finally {
+      connection.close();
+    }
+  });
+
   it("seeds candidates from file and subsystem hints when query text does not match", async () => {
     const connection = await openMigratedConnection();
 
@@ -471,6 +508,7 @@ interface ObjectFixture {
   tags?: string[];
   facets?: ObjectFacets;
   evidence?: Evidence[];
+  origin?: SourceOrigin;
   updatedAt?: string;
 }
 
@@ -506,6 +544,7 @@ function insertObject(connection: TestConnection, fixture: ObjectFixture): void 
   const tags = fixture.tags ?? [];
   const facets = fixture.facets ?? null;
   const evidence = fixture.evidence ?? [];
+  const origin = fixture.origin ?? null;
   const updatedAt = fixture.updatedAt ?? "2026-04-27T12:00:00+02:00";
 
   connection.db
@@ -530,6 +569,7 @@ function insertObject(connection: TestConnection, fixture: ObjectFixture): void 
           facet_category,
           applies_to_json,
           evidence_json,
+          origin_json,
           source_json,
           superseded_by,
           created_at,
@@ -553,6 +593,7 @@ function insertObject(connection: TestConnection, fixture: ObjectFixture): void 
           @facet_category,
           @applies_to_json,
           @evidence_json,
+          @origin_json,
           @source_json,
           @superseded_by,
           @created_at,
@@ -584,6 +625,7 @@ function insertObject(connection: TestConnection, fixture: ObjectFixture): void 
       facet_category: facets?.category ?? null,
       applies_to_json: jsonOrNull(facets?.applies_to),
       evidence_json: JSON.stringify(evidence),
+      origin_json: jsonOrNull(origin),
       source_json: null,
       superseded_by: null,
       created_at: updatedAt,
@@ -603,7 +645,7 @@ function insertObject(connection: TestConnection, fixture: ObjectFixture): void 
       body: fixture.body,
       tags: tags.join(" "),
       facets: facets === null ? "" : facetSearchText(facets),
-      evidence: evidenceSearchText(evidence)
+      evidence: [evidenceSearchText(evidence), originSearchText(origin)].join(" ")
     });
 }
 
@@ -651,4 +693,18 @@ function facetSearchText(facets: ObjectFacets): string {
 
 function evidenceSearchText(evidence: readonly Evidence[]): string {
   return evidence.map((item) => `${item.kind} ${item.id}`).join(" ");
+}
+
+function originSearchText(origin: SourceOrigin | null): string {
+  if (origin === null) {
+    return "";
+  }
+
+  return [
+    origin.kind,
+    origin.locator,
+    origin.captured_at ?? "",
+    origin.digest ?? "",
+    origin.media_type ?? ""
+  ].join(" ");
 }

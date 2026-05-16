@@ -19,6 +19,7 @@ export type AuditRule =
   | "missing_tags"
   | "missing_facets"
   | "missing_object_evidence"
+  | "source_missing_origin"
   | "synthesis_missing_source_provenance"
   | "task_diary_like_memory"
   | "oversized_vague_memory"
@@ -76,7 +77,12 @@ const RELATED_TO_WARNING_MINIMUM = 5;
 const RELATED_TO_WARNING_RATIO = 0.5;
 const REPEATED_CHANGE_MINIMUM = 2;
 const RATIONALE_TYPES = new Set(["decision", "fact", "gotcha", "synthesis"]);
-const SOURCE_PROVENANCE_PREDICATES = new Set(["derived_from", "summarizes", "documents"]);
+const SOURCE_PROVENANCE_PREDICATES = new Set([
+  "derived_from",
+  "summarizes",
+  "documents",
+  "supports"
+]);
 const SEVERITY_ORDER = new Map<AuditSeverity, number>([
   ["warning", 0],
   ["info", 1]
@@ -97,6 +103,7 @@ export async function buildAuditFindings(
   findings.push(...missingTagFindings(options.storage.objects));
   findings.push(...missingFacetFindings(options.storage));
   findings.push(...missingObjectEvidenceFindings(options.storage));
+  findings.push(...sourceMissingOriginFindings(options.storage.objects));
   findings.push(...synthesisMissingSourceProvenanceFindings(options.storage));
   findings.push(...taskDiaryLikeFindings(options.storage.objects));
   findings.push(...oversizedVagueMemoryFindings(options.storage.objects));
@@ -156,6 +163,18 @@ function missingObjectEvidenceFindings(storage: CanonicalStorageSnapshot): Audit
       rule: "missing_object_evidence",
       memory_id: object.sidecar.id,
       message: "Decision, fact, and gotcha memory should include object-level evidence when possible.",
+      evidence: [{ kind: "memory", id: object.sidecar.id }]
+    }));
+}
+
+function sourceMissingOriginFindings(objects: readonly StoredMemoryObject[]): AuditFinding[] {
+  return currentObjects(objects, TAG_REQUIRED_STATUSES)
+    .filter((object) => object.sidecar.type === "source" && object.sidecar.origin === undefined)
+    .map((object) => ({
+      severity: "warning",
+      rule: "source_missing_origin",
+      memory_id: object.sidecar.id,
+      message: "Active source memory should include raw-source origin identity.",
       evidence: [{ kind: "memory", id: object.sidecar.id }]
     }));
 }

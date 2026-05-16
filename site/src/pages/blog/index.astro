@@ -4,7 +4,8 @@ import PostCard from "../../components/PostCard.astro";
 import BaseLayout from "../../layouts/BaseLayout.astro";
 
 const posts = (await getCollection("blog")).sort(
-  (left, right) => right.data.publishedAt.getTime() - left.data.publishedAt.getTime()
+  (left, right) =>
+    right.data.publishedAt.getTime() - left.data.publishedAt.getTime(),
 );
 ---
 
@@ -14,11 +15,11 @@ const posts = (await getCollection("blog")).sort(
 >
   <main>
     <section class="blog-hero" aria-labelledby="blog-title">
-      <p class="section-kicker">Blog</p>
+      <p class="section-kicker">Use Cases</p>
       <h1 id="blog-title">Notes on durable context for AI coding agents.</h1>
       <p>
-        Product updates, implementation notes, and field observations from building local-first
-        project memory.
+        Product updates, implementation notes, and field observations from
+        building local-first project memory.
       </p>
     </section>
 
@@ -39,7 +40,10 @@ const posts = (await getCollection("blog")).sort(
         ) : (
           <div class="empty-state">
             <h2>No posts published yet.</h2>
-            <p>Markdown posts added under <code>site/src/content/blog</code> will appear here newest first.</p>
+            <p>
+              Markdown posts added under <code>site/src/content/blog</code> will
+              appear here newest first.
+            </p>
           </div>
         )
       }

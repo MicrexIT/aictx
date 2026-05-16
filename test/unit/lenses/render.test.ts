@@ -46,6 +46,26 @@ describe("memory lenses", () => {
     expect(lens.included_memory_ids).not.toContain("synthesis.branch-handoff-other");
     expect(lens.markdown).toContain("Branch Handoff");
   });
+
+  it("renders challenged memories in the maintenance lens", () => {
+    const storage = snapshot({
+      objects: [
+        object("architecture.current", "architecture", "active", "Architecture", "Current architecture summary needs review.", "architecture"),
+        object("source.new-article", "source", "active", "New article", "New source article challenges the architecture summary.", "source")
+      ],
+      relations: [
+        relation("rel.article-challenges-architecture", "source.new-article", "challenges", "architecture.current")
+      ]
+    });
+
+    const lens = buildMemoryLens(storage, { available: true, branch: "main" }, "maintenance");
+
+    expect(lens.included_memory_ids).toEqual(
+      expect.arrayContaining(["architecture.current", "source.new-article"])
+    );
+    expect(lens.relation_ids).toContain("rel.article-challenges-architecture");
+    expect(lens.markdown).toContain("source.new-article` challenges `architecture.current");
+  });
 });
 
 function snapshot(input: {
@@ -56,7 +76,7 @@ function snapshot(input: {
     projectRoot: "/tmp/project",
     aictxRoot: "/tmp/project/.aictx",
     config: {
-      version: 3,
+      version: 4,
       project: {
         id: "project.test",
         name: "Test"

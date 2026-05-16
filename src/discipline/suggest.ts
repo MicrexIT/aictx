@@ -15,11 +15,13 @@ import type {
   RelationConfidence,
   RelationId,
   RelationStatus,
-  Source
+  Source,
+  SourceOrigin
 } from "../core/types.js";
 import type { CanonicalStorageSnapshot } from "../storage/read.js";
 import type { StoredMemoryObject } from "../storage/objects.js";
 import type { StoredMemoryRelation } from "../storage/relations.js";
+import { fileSourceOrigin } from "../storage/source-origin.js";
 import type {
   RememberMemoryInput,
   RememberMemoryKind
@@ -95,6 +97,7 @@ export type BootstrapPatchChange =
       tags?: string[];
       facets?: ObjectFacets;
       evidence?: Evidence[];
+      origin?: SourceOrigin;
       source?: Source;
     }
   | {
@@ -106,6 +109,7 @@ export type BootstrapPatchChange =
       tags?: string[];
       facets?: ObjectFacets;
       evidence?: Evidence[];
+      origin?: SourceOrigin;
       source?: Source;
     }
   | {
@@ -401,7 +405,7 @@ export async function buildSuggestBootstrapPatchProposal(
   const changedFiles = await bootstrapCandidateFiles(options.projectRoot);
   const analysis = await analyzeBootstrapRepository(options.projectRoot, changedFiles);
   const packet = buildBootstrapPacketFromAnalysis(options.storage, changedFiles, analysis);
-  const changes = buildBootstrapPatchChanges(options.storage, analysis);
+  const changes = await buildBootstrapPatchChanges(options.projectRoot, options.storage, analysis);
 
   if (changes.length === 0) {
     return {
@@ -515,10 +519,11 @@ async function analyzeBootstrapRepository(
   };
 }
 
-function buildBootstrapPatchChanges(
+async function buildBootstrapPatchChanges(
+  projectRoot: string,
   storage: CanonicalStorageSnapshot,
   analysis: BootstrapAnalysis
-): BootstrapPatchChange[] {
+): Promise<BootstrapPatchChange[]> {
   const changes: BootstrapPatchChange[] = [];
   const projectObject = objectById(storage, storage.config.project.id);
   const architectureObject = objectById(storage, "architecture.current");
@@ -557,7 +562,7 @@ function buildBootstrapPatchChanges(
     changes.push(projectArchitectureRelation);
   }
 
-  const bootstrapSources = sourceRecordChanges(storage, analysis);
+  const bootstrapSources = await sourceRecordChanges(projectRoot, storage, analysis);
   changes.push(...bootstrapSources.changes);
   changes.push(...synthesisRecordChanges(storage, analysis, bootstrapSources.byPath));
 
@@ -1059,7 +1064,8 @@ function activeConflictsTouchRelatedMemory(
   return storage.relations.some(
     (relation) =>
       relation.relation.status === "active" &&
-      relation.relation.predicate === "conflicts_with" &&
+      (relation.relation.predicate === "conflicts_with" ||
+        relation.relation.predicate === "challenges") &&
       (related.has(relation.relation.from) || related.has(relation.relation.to))
   );
 }
@@ -1375,10 +1381,11 @@ interface BootstrapSourceRecords {
   byPath: Map<string, ObjectId>;
 }
 
-function sourceRecordChanges(
+async function sourceRecordChanges(
+  projectRoot: string,
   storage: CanonicalStorageSnapshot,
   analysis: BootstrapAnalysis
-): BootstrapSourceRecords {
+): Promise<BootstrapSourceRecords> {
   const changes: BootstrapPatchChange[] = [];
   const byPath = new Map<string, ObjectId>();
 
@@ -1387,10 +1394,18 @@ function sourceRecordChanges(
     const id = sourceIdForPath(path);
     const existing = similarObject(storage, "source", id, title);
     const sourceId = existing?.sidecar.id ?? id;
+    const origin = await fileSourceOrigin({ projectRoot, locator: path });
 
     byPath.set(path, sourceId);
 
     if (existing !== undefined) {
+      if (existing.sidecar.origin === undefined) {
+        changes.push({
+          op: "update_object",
+          id: sourceId,
+          origin
+        });
+      }
       continue;
     }
 
@@ -1406,7 +1421,8 @@ function sourceRecordChanges(
         applies_to: [path],
         load_modes: ["onboarding", "architecture"]
       },
-      evidence: [{ kind: "file", id: path }]
+      evidence: [{ kind: "file", id: path }],
+      origin
     });
   }
 

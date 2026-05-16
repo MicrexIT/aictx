@@ -1,7 +1,7 @@
 {
   "body_path": "memory/project.md",
-  "content_hash": "sha256:091f32d3ce3f8d4962f5a92bba8eb89ee1b83b41cd56adb3f2940af95c1279a7",
-  "created_at": "2026-05-12T17:53:06+02:00",
+  "content_hash": "sha256:fecae74ee066a7fd739df76921aea3c7bc6c7d2f36f41d65712d03d3ce82c801",
+  "created_at": "2026-05-16T18:52:43+02:00",
   "evidence": [],
   "facets": {
     "category": "project-description"
@@ -23,5 +23,5 @@
   ],
   "title": "Aictx",
   "type": "project",
-  "updated_at": "2026-05-12T17:53:06+02:00"
+  "updated_at": "2026-05-16T18:52:44+02:00"
 }

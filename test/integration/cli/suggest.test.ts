@@ -456,6 +456,42 @@ describe("aictx suggest CLI", () => {
     );
     expect(envelope.data.check?.valid).toBe(true);
     expect(envelope.data.next_step).toContain("aictx lens project-map");
+
+    const storage = await readCanonicalStorage(repo);
+    expect(storage.ok).toBe(true);
+    if (!storage.ok) {
+      return;
+    }
+    const readmeSource = storage.data.objects.find(
+      (object) => object.sidecar.id === "source.readme"
+    );
+    const packageSource = storage.data.objects.find(
+      (object) => object.sidecar.id === "source.package-json"
+    );
+    expect(readmeSource?.sidecar.origin).toMatchObject({
+      kind: "file",
+      locator: "README.md",
+      media_type: "text/markdown"
+    });
+    expect(readmeSource?.sidecar.origin?.digest).toMatch(/^sha256:[a-f0-9]{64}$/u);
+    expect(readmeSource?.sidecar.origin?.captured_at).toBeUndefined();
+    expect(packageSource?.sidecar.origin).toMatchObject({
+      kind: "file",
+      locator: "package.json",
+      media_type: "application/json"
+    });
+    expect(packageSource?.sidecar.origin?.digest).toMatch(/^sha256:[a-f0-9]{64}$/u);
+    expect(packageSource?.sidecar.origin?.captured_at).toBeUndefined();
+
+    const lintOutput = await runCli(["node", "aictx", "wiki", "lint", "--json"], repo);
+    expect(lintOutput.exitCode).toBe(0);
+    const lint = JSON.parse(lintOutput.stdout) as {
+      ok: true;
+      data: { findings: Array<{ rule: string; memory_id: string }> };
+    };
+    expect(lint.data.findings).not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ rule: "source_missing_origin" })])
+    );
   });
 
   it("does not start the setup viewer by default in JSON mode", async () => {
@@ -663,6 +699,15 @@ describe("aictx suggest CLI", () => {
     expect(featureMap?.sidecar.type).toBe("synthesis");
     expect(featureMap?.body).toContain("CLI binary billing");
     expect(featureMap?.body).toContain("CLI command sync");
+    const agentSource = storage.data.objects.find(
+      (object) => object.sidecar.id === "source.agents"
+    );
+    expect(agentSource?.sidecar.origin).toMatchObject({
+      kind: "file",
+      locator: "AGENTS.md",
+      media_type: "text/markdown"
+    });
+    expect(agentSource?.sidecar.origin?.digest).toMatch(/^sha256:[a-f0-9]{64}$/u);
     const binRelation = storage.data.relations.find(
       (stored) =>
         stored.relation.from === "synthesis.feature-map" &&

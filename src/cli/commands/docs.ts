@@ -103,6 +103,14 @@ const DOC_TOPICS = [
     aliases: ["demand-driven", "memory-quality", "context-engine"]
   },
   {
+    topic: "wiki-workflow",
+    title: "Wiki workflow",
+    description: "Maintain source-backed wiki-style memory through CLI-only ingest, file, lint, and log commands.",
+    file: "wiki-workflow.md",
+    path: "/wiki-workflow/",
+    aliases: ["wiki", "ingest", "source-origin", "llm-wiki"]
+  },
+  {
     topic: "cli",
     title: "CLI guide",
     description: "Use setup, routine memory, inspection, recovery, export, viewer, and docs commands.",
@@ -143,6 +151,14 @@ const DOC_TOPICS = [
       "opencode",
       "open-code"
     ]
+  },
+  {
+    topic: "plugin-publishing",
+    title: "Publishing Plugins",
+    description: "Publish the generated Aictx Codex and Claude Code plugin artifacts.",
+    file: "plugin-publishing.md",
+    path: "/plugin-publishing/",
+    aliases: ["plugins", "publishing", "plugin-marketplace", "marketplace"]
   },
   {
     topic: "viewer",

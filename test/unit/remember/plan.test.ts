@@ -9,7 +9,7 @@ import { FIXED_TIMESTAMP } from "../../fixtures/time.js";
 
 const projectId = "project.billing-api";
 const config: AictxConfig = {
-  version: 3,
+  version: 4,
   project: {
     id: projectId,
     name: "Billing API"
@@ -54,6 +54,11 @@ describe("buildRememberMemoryPatch", () => {
             evidence: [
               { kind: "file", id: "services/billing/src/webhooks/handler.ts" }
             ],
+            origin: {
+              kind: "file",
+              locator: "docs/webhook-retries.md",
+              media_type: "text/markdown"
+            },
             related: [
               {
                 predicate: "requires",
@@ -67,7 +72,11 @@ describe("buildRememberMemoryPatch", () => {
           {
             id: "decision.billing-retries",
             body: "Billing retries now execute in the queue worker.",
-            applies_to: ["services/billing/src/workers/retry.ts"]
+            applies_to: ["services/billing/src/workers/retry.ts"],
+            origin: {
+              kind: "url",
+              locator: "https://example.com/retries"
+            }
           }
         ],
         stale: [
@@ -118,7 +127,12 @@ describe("buildRememberMemoryPatch", () => {
           },
           evidence: [
             { kind: "file", id: "services/billing/src/webhooks/handler.ts" }
-          ]
+          ],
+          origin: {
+            kind: "file",
+            locator: "docs/webhook-retries.md",
+            media_type: "text/markdown"
+          }
         },
         {
           op: "create_relation",
@@ -135,6 +149,10 @@ describe("buildRememberMemoryPatch", () => {
             category: "decision-rationale",
             applies_to: ["services/billing/src/workers/retry.ts"],
             load_modes: ["review"]
+          },
+          origin: {
+            kind: "url",
+            locator: "https://example.com/retries"
           }
         },
         {

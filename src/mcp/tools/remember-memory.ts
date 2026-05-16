@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import {
   FACET_CATEGORIES,
+  ORIGIN_KINDS,
   PREDICATES,
   RELATION_CONFIDENCES
 } from "../../core/types.js";
@@ -35,6 +36,15 @@ const EVIDENCE_SCHEMA = z.array(
     })
     .strict()
 );
+const ORIGIN_SCHEMA = z
+  .object({
+    kind: z.enum(ORIGIN_KINDS),
+    locator: z.string().min(1),
+    captured_at: z.string().min(1).optional(),
+    digest: z.string().regex(/^sha256:[a-f0-9]{64}$/u).optional(),
+    media_type: z.string().min(1).optional()
+  })
+  .strict();
 const RELATED_SCHEMA = z
   .object({
     predicate: z.enum(PREDICATES),
@@ -53,6 +63,7 @@ const MEMORY_SCHEMA = z
     applies_to: UNIQUE_NON_EMPTY_STRINGS_SCHEMA.optional(),
     category: z.enum(FACET_CATEGORIES).optional(),
     evidence: EVIDENCE_SCHEMA.optional(),
+    origin: ORIGIN_SCHEMA.optional(),
     related: z.array(RELATED_SCHEMA).optional()
   })
   .strict();
@@ -64,7 +75,8 @@ const UPDATE_SCHEMA = z
     tags: UNIQUE_NON_EMPTY_STRINGS_SCHEMA.optional(),
     applies_to: UNIQUE_NON_EMPTY_STRINGS_SCHEMA.optional(),
     category: z.enum(FACET_CATEGORIES).optional(),
-    evidence: EVIDENCE_SCHEMA.optional()
+    evidence: EVIDENCE_SCHEMA.optional(),
+    origin: ORIGIN_SCHEMA.optional()
   })
   .strict();
 const STALE_SCHEMA = z
