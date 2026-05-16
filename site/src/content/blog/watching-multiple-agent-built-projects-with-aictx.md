@@ -30,6 +30,8 @@ Then I open the viewer:
 aictx view
 ```
 
+![Aictx local viewer showing several projects and their durable memory](/assets/use-case-viewer-dashboard.png)
+
 The viewer gives me a dashboard over the local project registry. I can move
 between projects and inspect what the agents actually made durable: which
 sources were captured, which decisions were saved, which questions are still

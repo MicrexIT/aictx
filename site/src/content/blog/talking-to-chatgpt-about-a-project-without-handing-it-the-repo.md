@@ -54,6 +54,8 @@ For routine CLI use, I can get that pack directly:
 aictx load "plan the billing integration"
 ```
 
+![Conversation panel beside an Aictx context pack](/assets/use-case-chat-memory.png)
+
 If the conversation needs more detail, the assistant can search or inspect
 memory objects instead of asking for the whole repository.
 

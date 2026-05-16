@@ -23,6 +23,8 @@ task.
 
 The way I use Aictx is to draw a hard line between behavior and knowledge.
 
+![Short AGENTS.md file beside reviewable Aictx memory objects](/assets/use-case-agent-files.png)
+
 `AGENTS.md` and `CLAUDE.md` tell the agent how to work in the repo. They say to
 load memory before non-trivial work, save durable knowledge after meaningful
 work, avoid editing `.aictx/` directly when a supported command exists, and tell
