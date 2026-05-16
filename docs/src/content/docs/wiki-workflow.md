@@ -3,25 +3,18 @@ title: Wiki workflow
 description: Source-backed wiki-style memory with ingest, file, lint, and log commands.
 ---
 
-Aictx remains local-first project memory for coding agents. The wiki workflow is
-a CLI-only wrapper for source-backed synthesis when a project, research thread,
-or team knowledge base benefits from maintaining a persistent set of source
-records and synthesized memory over time.
+The wiki workflow is for source-backed synthesis. Use it when a project,
+research thread, or team knowledge base benefits from keeping source records and
+maintained summaries together in Aictx memory.
 
-Aictx does not call an LLM, fetch URLs, read remote sources, or infer semantics.
 The agent reads the source, discusses or synthesizes it with the human, and
-supplies the resulting structured input through stdin.
-
-MCP exposes exactly `load_memory`, `search_memory`, `inspect_memory`,
-`remember_memory`, `save_memory_patch`, and `diff_memory`. Setup, lenses,
-branch handoff, maintenance, recovery, export, registry, viewer, docs, suggest,
-audit, wiki, and stale workflows are CLI-only in v1. Graph inspection is
-available in the CLI and local viewer, but remains outside local MCP.
+supplies structured input through stdin. Aictx stores the source record,
+syntheses, relations, and events locally.
 
 ## Layers
 
 - Raw sources are the files, URLs, transcripts, articles, docs, or human notes
-  the agent read. Aictx does not mutate them.
+  the agent read. Aictx records where they came from; it does not mutate them.
 - Source records are Aictx `source` memories that summarize a raw source and
   carry an `origin` block such as a local file path, URL, capture timestamp,
   digest, and media type.
@@ -84,9 +77,9 @@ aictx wiki file --stdin --dry-run --json
 ```
 
 `wiki file` files a useful query result, comparison, synthesis, or discovered
-connection back into memory using the existing intent-first `remember` path. Use
-it when a question produced reusable project knowledge that should not disappear
-into chat history.
+connection back into memory using the intent-first `remember` path. Use it when
+a question produced reusable project knowledge that should not disappear into
+chat history.
 
 ## Lint
 
@@ -97,9 +90,8 @@ aictx wiki lint --json
 
 `wiki lint` is a wiki-language alias over audit semantics. It reports stale or
 superseded cleanup, weak provenance, missing source origin, excessive
-`related_to`, active `challenges`/`conflicts_with` maintenance signals, role
-coverage gaps, and other deterministic memory hygiene findings. It does not
-mutate canonical files.
+`related_to`, active contradiction signals, role coverage gaps, and other
+deterministic memory hygiene findings. It does not mutate canonical files.
 
 ## Log
 
@@ -118,8 +110,8 @@ The primary workflow is still coding-project memory: product intent, feature
 maps, architecture, conventions, workflows, verification, gotchas, questions,
 and source-backed syntheses.
 
-The same mechanics also work for secondary wiki-style use cases such as
-research notebooks, personal knowledge bases, competitive analysis, course
-notes, and team knowledge bases. In those cases, keep source records explicit,
-link syntheses back to sources, and use `wiki lint` periodically to find stale
-claims, contradiction signals, missing origins, and unlinked concepts.
+The same mechanics also work for research notebooks, personal knowledge bases,
+competitive analysis, course notes, and team knowledge bases. In those cases,
+keep source records explicit, link syntheses back to sources, and use
+`wiki lint` periodically to find stale claims, contradiction signals, missing
+origins, and unlinked concepts.

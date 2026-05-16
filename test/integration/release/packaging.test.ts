@@ -336,7 +336,7 @@ const forbiddenPackedPathPrefixes = [
   "viewer/"
 ] as const;
 
-const publicMcpContractPaths = [
+const bundledPublicDocsPaths = [
   "docs/src/content/docs/agent-integration.md",
   "docs/src/content/docs/capabilities.md",
   "docs/src/content/docs/cli.md",
@@ -362,15 +362,6 @@ const generatedGuidancePaths = [
   "integrations/cursor/aictx.mdc",
   "integrations/cline/aictx.md",
   "integrations/generic/aictx-agent-instructions.md"
-] as const;
-
-const mcpTools = [
-  "`load_memory`",
-  "`search_memory`",
-  "`inspect_memory`",
-  "`remember_memory`",
-  "`save_memory_patch`",
-  "`diff_memory`"
 ] as const;
 
 const forbiddenMcpToolNames = [
@@ -541,10 +532,14 @@ function exactDependencyVersion(version: string): string {
 }
 
 async function expectInstalledMemoryDisciplineDocs(installRoot: string): Promise<void> {
-  for (const relativePath of publicMcpContractPaths) {
+  for (const relativePath of bundledPublicDocsPaths) {
     const content = await readInstalledPackageFile(installRoot, relativePath);
 
-    expectMcpBoundaryContent(content);
+    expect(content).toMatch(/^---\n/u);
+    expect(content).toMatch(/^title:/m);
+    for (const forbiddenName of forbiddenMcpToolNames) {
+      expect(content).not.toContain(forbiddenName);
+    }
   }
 
   const agentIntegration = await readInstalledPackageFile(
@@ -552,50 +547,14 @@ async function expectInstalledMemoryDisciplineDocs(installRoot: string): Promise
     "docs/src/content/docs/agent-integration.md"
   );
 
-  expectMemoryDisciplineContent(agentIntegration);
-  expect(agentIntegration).toContain("The v1 agent model is CLI-first and MCP-compatible");
+  expect(agentIntegration).toContain("aictx remember --stdin");
+  expect(agentIntegration).toContain("Save nothing when the task produced no durable future value.");
 
   for (const relativePath of generatedGuidancePaths) {
     const content = await readInstalledPackageFile(installRoot, relativePath);
 
     expectGeneratedGuidanceContent(content);
   }
-}
-
-function expectMcpBoundaryContent(content: string): void {
-  expect(content).toMatch(/MCP\s+exposes\s+exactly/i);
-  expect(content).toMatch(
-    /setup,\s+lenses,\s+(?:branch\s+)?handoff,\s+maintenance,\s+recovery,\s+export,\s+registry,\s+viewer,\s+docs,\s+suggest,\s+audit,\s+wiki,\s+and stale/i
-  );
-  expect(content).toMatch(
-    /graph inspection[\s\S]{0,120}(?:CLI|local viewer)[\s\S]{0,120}outside local MCP|graph inspection[\s\S]{0,120}outside MCP/i
-  );
-
-  for (const tool of mcpTools) {
-    expect(content).toContain(tool);
-  }
-
-  for (const forbiddenName of forbiddenMcpToolNames) {
-    expect(content).not.toContain(forbiddenName);
-  }
-
-  expect(content).not.toContain(
-    "exactly `load_memory`, `search_memory`, `save_memory_patch`, and `diff_memory`"
-  );
-}
-
-function expectMemoryDisciplineContent(content: string): void {
-  expect(content).toContain("aictx suggest --bootstrap --json");
-  expect(content).toContain("aictx audit --json");
-  expect(content).toContain("`gotcha`");
-  expect(content).toContain("`workflow`");
-  expect(content).toContain("`mark_stale`");
-  expect(content).toContain("`supersede_object`");
-  expect(
-    /report whether memory changed/i.test(content) ||
-      /inspect(?:ion)?[\s\S]{0,40}asynchron/i.test(content) ||
-      /async inspection/i.test(content)
-  ).toBe(true);
 }
 
 function expectGeneratedGuidanceContent(content: string): void {
@@ -605,16 +564,6 @@ function expectGeneratedGuidanceContent(content: string): void {
   expect(content).toContain("remember_template");
   expect(content).toContain("`gotcha`");
   expect(content).toContain("`workflow`");
-  expect(content).toMatch(
-    /setup,\s+lenses,\s+(?:branch\s+)?handoff,\s+maintenance,\s+recovery,\s+export,\s+registry,\s+viewer,\s+docs,\s+suggest,\s+audit,\s+wiki,\s+and stale/i
-  );
-  expect(content).toMatch(
-    /graph inspection[\s\S]{0,120}(?:CLI|local viewer)[\s\S]{0,120}outside local MCP|graph inspection[\s\S]{0,120}outside MCP/i
-  );
-
-  for (const tool of mcpTools) {
-    expect(content).toContain(tool);
-  }
 
   for (const forbiddenName of forbiddenMcpToolNames) {
     expect(content).not.toContain(forbiddenName);

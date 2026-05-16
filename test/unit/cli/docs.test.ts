@@ -28,7 +28,7 @@ describe("aictx docs", () => {
     expect(exitCode).toBe(0);
     expect(output.stderr()).toBe("");
     expect(output.stdout()).toContain("# Getting started");
-    expect(output.stdout()).toContain("aictx init");
+    expect(output.stdout()).toContain("aictx setup");
     expect(output.stdout()).not.toMatch(/^---\n/u);
   });
 
@@ -90,7 +90,7 @@ describe("aictx docs", () => {
     expect(output.stderr()).toBe("");
     expect(output.stdout()).toContain("# Wiki workflow");
     expect(output.stdout()).toContain("aictx wiki ingest");
-    expect(output.stdout()).toContain("does not call an LLM");
+    expect(output.stdout()).toContain("source records");
   });
 
   it("prints the bundled agent recipes topic", async () => {
@@ -104,7 +104,7 @@ describe("aictx docs", () => {
     expect(output.stdout()).toContain("Codex");
     expect(output.stdout()).toContain("Cursor");
     expect(output.stdout()).toContain("aictx setup");
-    expect(output.stdout()).toContain("start the local viewer for inspection");
+    expect(output.stdout()).toContain("aictx diff");
   });
 
   it("opens the hosted docs URL through the injected opener", async () => {
