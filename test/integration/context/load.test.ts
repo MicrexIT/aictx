@@ -13,7 +13,13 @@ import { dirname, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { initProject, loadMemory, rebuildIndex } from "../../../src/app/operations.js";
-import type { Evidence, ObjectFacets, ObjectStatus, ObjectType } from "../../../src/core/types.js";
+import type {
+  Evidence,
+  ObjectFacets,
+  ObjectStatus,
+  ObjectType,
+  SourceOrigin
+} from "../../../src/core/types.js";
 import {
   computeObjectContentHash,
   computeRelationContentHash
@@ -177,6 +183,62 @@ describe("loadMemory integration", () => {
     expect(result.data.context_pack).toContain("Agent memory guidance");
     expect(result.data.context_pack).toContain("## Relevant sources");
     expect(result.data.context_pack).toContain("Source: docs/agent-integration.md");
+  });
+
+  it("loads source memory matched only by origin locator", async () => {
+    const projectRoot = await createInitializedProject("aictx-load-origin-source-");
+
+    await writeMemoryObject(projectRoot, {
+      id: "source.external-origin-only",
+      type: "source",
+      status: "active",
+      title: "External briefing source",
+      bodyPath: "memory/sources/external-origin-only.md",
+      body:
+        "# External briefing source\n\nThis source record body intentionally omits the external locator phrase.\n",
+      tags: ["source"],
+      facets: {
+        category: "source"
+      },
+      origin: {
+        kind: "url",
+        locator: "https://example.com/research/origin-only-article",
+        media_type: "text/markdown"
+      },
+      updatedAt: FIXED_TIMESTAMP
+    });
+    for (let index = 0; index < 6; index += 1) {
+      await writeMemoryObject(projectRoot, {
+        id: `note.newer-filler-${index}`,
+        type: "note",
+        status: "active",
+        title: `Newer filler ${index}`,
+        bodyPath: `memory/notes/newer-filler-${index}.md`,
+        body: `# Newer filler ${index}\n\nThis fixture should stay unrelated to the requested source.\n`,
+        tags: ["filler"],
+        updatedAt: `2026-05-01T12:0${index}:00+02:00`
+      });
+    }
+    const rebuilt = await rebuildIndex({
+      cwd: projectRoot,
+      clock: createFixedTestClock(FIXED_TIMESTAMP_NEXT_MINUTE)
+    });
+
+    expect(rebuilt.ok).toBe(true);
+
+    const result = await loadMemory({
+      cwd: projectRoot,
+      task: "origin-only-article",
+      clock: createFixedTestClock(FIXED_TIMESTAMP_NEXT_MINUTE)
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+
+    expect(result.data.included_ids).toContain("source.external-origin-only");
+    expect(result.data.context_pack).toContain("External briefing source");
   });
 
   it("surfaces active memory conflicts from conflicts_with relations", async () => {
@@ -597,6 +659,7 @@ interface MemoryFixture {
   scope?: MemoryObjectSidecar["scope"];
   facets?: ObjectFacets;
   evidence?: Evidence[];
+  origin?: SourceOrigin;
   updatedAt?: string;
 }
 
@@ -727,6 +790,7 @@ async function writeMemoryObject(projectRoot: string, fixture: MemoryFixture): P
     tags: fixture.tags,
     ...(fixture.facets === undefined ? {} : { facets: fixture.facets }),
     ...(fixture.evidence === undefined ? {} : { evidence: fixture.evidence }),
+    ...(fixture.origin === undefined ? {} : { origin: fixture.origin }),
     source: {
       kind: "agent"
     },

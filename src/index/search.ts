@@ -127,6 +127,7 @@ interface ObjectRow {
   tags_json: string;
   facets_json: string | null;
   evidence_json: string | null;
+  origin_json: string | null;
   updated_at: string;
 }
 
@@ -331,7 +332,7 @@ function selectObjectById(db: SqliteDatabase, id: string): IndexedObject | undef
   const row = db
     .prepare<[string], ObjectRow>(
       `
-        SELECT id, type, status, title, body_path, body, tags_json, facets_json, evidence_json, updated_at
+        SELECT id, type, status, title, body_path, body, tags_json, facets_json, evidence_json, origin_json, updated_at
         FROM objects
         WHERE id = ? AND status <> 'rejected'
       `
@@ -345,7 +346,7 @@ function selectObjectByBodyPath(db: SqliteDatabase, bodyPath: string): IndexedOb
   const row = db
     .prepare<[string], ObjectRow>(
       `
-        SELECT id, type, status, title, body_path, body, tags_json, facets_json, evidence_json, updated_at
+        SELECT id, type, status, title, body_path, body, tags_json, facets_json, evidence_json, origin_json, updated_at
         FROM objects
         WHERE body_path = ? AND status <> 'rejected'
       `
@@ -369,6 +370,7 @@ function selectObjectsByFts(db: SqliteDatabase, ftsQuery: string): IndexedObject
           o.tags_json,
           o.facets_json,
           o.evidence_json,
+          o.origin_json,
           o.updated_at
         FROM objects_fts
         JOIN objects o ON o.id = objects_fts.object_id
@@ -404,7 +406,7 @@ function selectObjectsByHints(
 
   const select = db.prepare<[string], ObjectRow>(
     `
-      SELECT id, type, status, title, body_path, body, tags_json, facets_json, evidence_json, updated_at
+      SELECT id, type, status, title, body_path, body, tags_json, facets_json, evidence_json, origin_json, updated_at
       FROM objects
       WHERE id = ? AND status <> 'rejected'
     `
@@ -491,7 +493,7 @@ function indexedObjectFromRow(row: ObjectRow): IndexedObject {
     body: row.body,
     tags: parseTags(row.tags_json),
     facetsText: jsonSearchText(row.facets_json),
-    evidenceText: jsonSearchText(row.evidence_json),
+    evidenceText: [jsonSearchText(row.evidence_json), jsonSearchText(row.origin_json)].join(" "),
     updatedAt: row.updated_at
   };
 }

@@ -29,7 +29,8 @@ import type {
   RelationConfidence,
   RelationId,
   Scope,
-  Source
+  Source,
+  SourceOrigin
 } from "../core/types.js";
 import {
   compileProjectSchemas,
@@ -145,6 +146,7 @@ interface ObjectSidecarInput {
   facets?: ObjectFacets | undefined;
   evidence?: Evidence[] | undefined;
   source?: Source | undefined;
+  origin?: SourceOrigin | undefined;
   supersededBy?: ObjectId | null | undefined;
 }
 
@@ -661,6 +663,7 @@ function buildCreateObjectActions(
     facets: change.facets,
     evidence: change.evidence,
     source: change.source,
+    origin: change.origin,
     createdAt: timestamp.data,
     updatedAt: timestamp.data
   });
@@ -732,6 +735,7 @@ function buildUpdateObjectActions(
     facets: change.facets ?? existing.sidecar.facets,
     evidence: change.evidence ?? existing.sidecar.evidence,
     source: change.source ?? existing.sidecar.source,
+    origin: change.origin ?? existing.sidecar.origin,
     supersededBy:
       change.superseded_by === undefined
         ? existing.sidecar.superseded_by
@@ -1065,6 +1069,10 @@ function buildObjectSidecarWithoutHash(
     sidecar.source = cloneSource(input.source);
   }
 
+  if (input.origin !== undefined) {
+    sidecar.origin = cloneSourceOrigin(input.origin);
+  }
+
   if (input.supersededBy !== undefined) {
     sidecar.superseded_by = input.supersededBy;
   }
@@ -1142,6 +1150,10 @@ function objectSidecarToJson(
     json.source = sourceToJson(sidecar.source);
   }
 
+  if (sidecar.origin !== undefined) {
+    json.origin = sourceOriginToJson(sidecar.origin);
+  }
+
   if (sidecar.superseded_by !== undefined) {
     json.superseded_by = sidecar.superseded_by;
   }
@@ -1167,6 +1179,26 @@ function sourceToJson(source: Source): Record<string, JsonValue> {
   }
 
   return json;
+}
+
+function cloneSourceOrigin(origin: SourceOrigin): SourceOrigin {
+  return {
+    kind: origin.kind,
+    locator: origin.locator,
+    ...(origin.captured_at === undefined ? {} : { captured_at: origin.captured_at }),
+    ...(origin.digest === undefined ? {} : { digest: origin.digest }),
+    ...(origin.media_type === undefined ? {} : { media_type: origin.media_type })
+  };
+}
+
+function sourceOriginToJson(origin: SourceOrigin): Record<string, JsonValue> {
+  return {
+    kind: origin.kind,
+    locator: origin.locator,
+    ...(origin.captured_at === undefined ? {} : { captured_at: origin.captured_at }),
+    ...(origin.digest === undefined ? {} : { digest: origin.digest }),
+    ...(origin.media_type === undefined ? {} : { media_type: origin.media_type })
+  };
 }
 
 function facetsToJson(facets: ObjectFacets): Record<string, JsonValue> {
@@ -1357,6 +1389,7 @@ function objectUpdateTouchesMutableField(change: NormalizedUpdateObjectChange): 
     change.facets !== undefined ||
     change.evidence !== undefined ||
     change.source !== undefined ||
+    change.origin !== undefined ||
     change.superseded_by !== undefined
   );
 }

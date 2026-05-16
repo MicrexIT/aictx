@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://aictx.dev/schemas/v3/patch.schema.json",
+  "$id": "https://aictx.dev/schemas/v4/patch.schema.json",
   "type": "object",
   "additionalProperties": false,
   "required": ["source", "changes"],
@@ -104,6 +104,32 @@
           "type": "string"
         },
         "commit": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "origin": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "locator"],
+      "properties": {
+        "kind": {
+          "enum": ["file", "url", "user", "external"]
+        },
+        "locator": {
+          "type": "string",
+          "minLength": 1
+        },
+        "captured_at": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$"
+        },
+        "digest": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$"
+        },
+        "media_type": {
           "type": "string",
           "minLength": 1
         }
@@ -215,6 +241,9 @@
         },
         "source": {
           "$ref": "#/$defs/source"
+        },
+        "origin": {
+          "$ref": "#/$defs/origin"
         }
       }
     },
@@ -254,6 +283,9 @@
         },
         "source": {
           "$ref": "#/$defs/source"
+        },
+        "origin": {
+          "$ref": "#/$defs/origin"
         },
         "superseded_by": {
           "$ref": "#/$defs/objectId"
@@ -325,7 +357,7 @@
           "$ref": "#/$defs/objectId"
         },
         "predicate": {
-          "enum": ["affects", "requires", "depends_on", "supersedes", "conflicts_with", "derived_from", "summarizes", "documents", "mentions", "implements", "related_to"]
+          "enum": ["affects", "requires", "depends_on", "supersedes", "conflicts_with", "supports", "challenges", "derived_from", "summarizes", "documents", "mentions", "implements", "related_to"]
         },
         "to": {
           "$ref": "#/$defs/objectId"

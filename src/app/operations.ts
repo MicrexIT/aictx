@@ -15,6 +15,7 @@ import {
   type GitWrapperOptions,
   type ProjectFileChange
 } from "../core/git.js";
+import { generateObjectId } from "../core/ids.js";
 import { withProjectLock } from "../core/lock.js";
 import { resolveProjectPaths, type ProjectPaths } from "../core/paths.js";
 import { err, ok, type Result } from "../core/result.js";
@@ -35,6 +36,7 @@ import type {
   RelationStatus,
   Scope,
   Source,
+  SourceOrigin,
   ValidationIssue
 } from "../core/types.js";
 import {
@@ -139,7 +141,7 @@ import {
 } from "../storage/write.js";
 import { planMemoryPatch } from "../storage/patch.js";
 import {
-  upgradeStorageToV3,
+  upgradeStorageToV4,
   type UpgradeStorageData
 } from "../storage/upgrade.js";
 import {
@@ -184,6 +186,8 @@ export interface UpgradeStorageOptions extends GitWrapperOptions {
 export interface LoadMemoryOptions extends GitWrapperOptions, LoadMemoryInput {
   cwd: string;
   clock?: Clock;
+  saveContextPack?: boolean;
+  autoRebuildIndex?: boolean;
 }
 
 export interface SearchMemoryOptions extends GitWrapperOptions, SearchMemoryInput {
@@ -307,6 +311,10 @@ export interface DeleteViewerProjectOptions extends ProjectRegistryOperationOpti
   registryId: string;
 }
 
+export interface PreviewViewerProjectLoadOptions extends ProjectRegistryOperationOptions, LoadMemoryInput {
+  registryId: string;
+}
+
 export interface SaveMemoryPatchOptions extends GitWrapperOptions {
   cwd: string;
   patch?: unknown;
@@ -318,6 +326,29 @@ export interface RememberMemoryOptions extends GitWrapperOptions {
   input?: unknown;
   dryRun?: boolean;
   clock?: Clock;
+}
+
+export interface WikiIngestOptions extends GitWrapperOptions {
+  cwd: string;
+  input?: unknown;
+  dryRun?: boolean;
+  clock?: Clock;
+}
+
+export interface WikiFileOptions extends GitWrapperOptions {
+  cwd: string;
+  input?: unknown;
+  dryRun?: boolean;
+  clock?: Clock;
+}
+
+export interface WikiLintOptions extends GitWrapperOptions {
+  cwd: string;
+}
+
+export interface WikiLogOptions extends GitWrapperOptions {
+  cwd: string;
+  limit?: number;
 }
 
 export interface SaveMemoryData {
@@ -341,6 +372,26 @@ export interface SaveMemoryData {
 export interface RememberMemoryData extends SaveMemoryData {
   dry_run: boolean;
   patch: RememberMemoryPatch;
+}
+
+export interface WikiIngestData extends RememberMemoryData {
+  source_id: ObjectId;
+}
+
+export type WikiFileData = RememberMemoryData;
+
+export interface WikiLogEntry {
+  line: number;
+  event: string;
+  actor: string;
+  timestamp: string;
+  id: ObjectId | null;
+  relation_id: RelationId | null;
+  reason: string | null;
+}
+
+export interface WikiLogData {
+  entries: WikiLogEntry[];
 }
 
 export interface DiffMemoryData {
@@ -412,6 +463,7 @@ export interface MemoryObjectSummary {
     id: string;
   }>;
   source: Source | null;
+  origin: SourceOrigin | null;
   superseded_by: ObjectId | null;
   created_at: string;
   updated_at: string;
@@ -842,7 +894,7 @@ export async function upgradeStorage(
       clock
     },
     async () => {
-      const result = await upgradeStorageToV3({
+      const result = await upgradeStorageToV4({
         projectRoot: paths.data.projectRoot,
         clock
       });
@@ -1006,7 +1058,8 @@ export async function loadMemory(
     ...(options.mode === undefined ? {} : { mode: options.mode }),
     ...(options.hints === undefined ? {} : { hints: options.hints }),
     gitFileChanges: gitFileChanges.data,
-    clock
+    clock,
+    ...(options.saveContextPack === undefined ? {} : { saveContextPack: options.saveContextPack })
   });
 
   if (compiled.ok) {
@@ -1018,7 +1071,7 @@ export async function loadMemory(
     };
   }
 
-  if (compiled.error.code !== "AICtxIndexUnavailable") {
+  if (compiled.error.code !== "AICtxIndexUnavailable" || options.autoRebuildIndex === false) {
     return {
       ok: false,
       error: compiled.error,
@@ -1076,7 +1129,8 @@ export async function loadMemory(
     ...(options.mode === undefined ? {} : { mode: options.mode }),
     ...(options.hints === undefined ? {} : { hints: options.hints }),
     gitFileChanges: gitFileChanges.data,
-    clock
+    clock,
+    ...(options.saveContextPack === undefined ? {} : { saveContextPack: options.saveContextPack })
   });
 
   if (!retried.ok) {
@@ -1738,6 +1792,33 @@ export async function deleteViewerProject(
     warnings,
     meta
   };
+}
+
+export async function previewViewerProjectLoad(
+  options: PreviewViewerProjectLoadOptions
+): Promise<AppResult<LoadMemoryData>> {
+  const resolved = await resolveViewerProjectCwd(options);
+
+  if (!resolved.ok) {
+    return {
+      ok: false,
+      error: resolved.error,
+      warnings: resolved.warnings,
+      meta: await buildBestEffortMeta(options)
+    };
+  }
+
+  return loadMemory({
+    cwd: resolved.data.project_root,
+    task: options.task,
+    saveContextPack: false,
+    autoRebuildIndex: false,
+    ...(options.token_budget === undefined ? {} : { token_budget: options.token_budget }),
+    ...(options.mode === undefined ? {} : { mode: options.mode }),
+    ...(options.hints === undefined ? {} : { hints: options.hints }),
+    ...(options.runner === undefined ? {} : { runner: options.runner }),
+    ...(options.clock === undefined ? {} : { clock: options.clock })
+  });
 }
 
 export async function exportObsidianProjection(
@@ -2653,6 +2734,450 @@ export async function rememberMemory(
   };
 }
 
+export async function wikiIngestMemory(
+  options: WikiIngestOptions
+): Promise<AppResult<WikiIngestData>> {
+  const clock = options.clock ?? systemClock;
+  const paths = await resolveProjectPaths({
+    cwd: options.cwd,
+    mode: "require-initialized",
+    runner: options.runner
+  });
+
+  if (!paths.ok) {
+    return {
+      ok: false,
+      error: paths.error,
+      warnings: paths.warnings,
+      meta: await buildBestEffortMeta(options)
+    };
+  }
+
+  const meta = await buildMeta(paths.data, options);
+
+  if (!meta.ok) {
+    return meta;
+  }
+
+  if (options.input === undefined) {
+    return {
+      ok: false,
+      error: aictxError("AICtxPatchRequired", "Wiki ingest input is required."),
+      warnings: [],
+      meta: meta.meta
+    };
+  }
+
+  const storage = await readCanonicalStorage(paths.data.projectRoot);
+
+  if (!storage.ok) {
+    return {
+      ok: false,
+      error: storage.error,
+      warnings: storage.warnings,
+      meta: meta.meta
+    };
+  }
+
+  const normalized = buildWikiIngestRememberInput(options.input, storage.data);
+
+  if (!normalized.ok) {
+    return {
+      ok: false,
+      error: normalized.error,
+      warnings: [...storage.warnings, ...normalized.warnings],
+      meta: meta.meta
+    };
+  }
+
+  const patch = buildRememberMemoryPatch({
+    input: normalized.data.input,
+    storage: storage.data
+  });
+
+  if (!patch.ok) {
+    return {
+      ok: false,
+      error: patch.error,
+      warnings: [...storage.warnings, ...patch.warnings],
+      meta: meta.meta
+    };
+  }
+
+  addWikiSourceRelations(patch.data, normalized.data.sourceId);
+
+  const executed = await executeRememberPatch({
+    paths: paths.data,
+    meta: meta.meta,
+    patch: patch.data,
+    storageWarnings: storage.warnings,
+    dryRun: options.dryRun === true,
+    clock,
+    runner: options.runner
+  });
+
+  if (!executed.ok) {
+    return executed;
+  }
+
+  return {
+    ...executed,
+    data: {
+      source_id: normalized.data.sourceId,
+      ...executed.data
+    }
+  };
+}
+
+export async function wikiFileMemory(
+  options: WikiFileOptions
+): Promise<AppResult<WikiFileData>> {
+  return rememberMemory(options);
+}
+
+export async function wikiLintMemory(
+  options: WikiLintOptions
+): Promise<AppResult<AuditMemoryData>> {
+  return auditMemory(options);
+}
+
+export async function wikiLogMemory(
+  options: WikiLogOptions
+): Promise<AppResult<WikiLogData>> {
+  const prepared = await readOnlyCanonicalStorage(options);
+
+  if (!prepared.ok) {
+    return prepared;
+  }
+
+  const limit = options.limit ?? 20;
+
+  if (!Number.isSafeInteger(limit) || limit < 1 || limit > 500) {
+    return {
+      ok: false,
+      error: aictxError("AICtxValidationFailed", "Wiki log limit must be between 1 and 500.", {
+        field: "limit",
+        minimum: 1,
+        maximum: 500,
+        actual: limit
+      }),
+      warnings: [],
+      meta: prepared.meta
+    };
+  }
+
+  const entries = prepared.storage.events.slice(-limit).map((event) => ({
+    line: event.line,
+    event: event.event,
+    actor: event.actor,
+    timestamp: event.timestamp,
+    id: event.id ?? null,
+    relation_id: event.relation_id ?? null,
+    reason: event.reason ?? null
+  }));
+
+  return {
+    ok: true,
+    data: { entries },
+    warnings: prepared.storageWarnings,
+    meta: prepared.meta
+  };
+}
+
+async function executeRememberPatch(options: {
+  paths: ProjectPaths;
+  meta: AictxMeta;
+  patch: RememberMemoryPatch;
+  storageWarnings: readonly string[];
+  dryRun: boolean;
+  clock: Clock;
+  runner?: GitWrapperOptions["runner"];
+}): Promise<AppResult<RememberMemoryData>> {
+  if (options.dryRun) {
+    const secrets = rejectPatchSecrets(options.patch);
+
+    if (!secrets.ok) {
+      return {
+        ok: false,
+        error: secrets.error,
+        warnings: [...options.storageWarnings, ...secrets.warnings],
+        meta: options.meta
+      };
+    }
+
+    const planned = await planMemoryPatch({
+      projectRoot: options.paths.projectRoot,
+      patch: options.patch,
+      git: options.meta.git,
+      clock: options.clock,
+      runner: options.runner
+    });
+
+    if (!planned.ok) {
+      return {
+        ok: false,
+        error: planned.error,
+        warnings: [...options.storageWarnings, ...secrets.warnings, ...planned.warnings],
+        meta: options.meta
+      };
+    }
+
+    return {
+      ok: true,
+      data: {
+        dry_run: true,
+        patch: options.patch,
+        files_changed: planned.data.files_changed,
+        recovery_files: planned.data.recovery_files,
+        repairs_applied: planned.data.repairs_applied,
+        memory_created: planned.data.memory_created,
+        memory_updated: planned.data.memory_updated,
+        memory_deleted: planned.data.memory_deleted,
+        relations_created: planned.data.relations_created,
+        relations_updated: planned.data.relations_updated,
+        relations_deleted: planned.data.relations_deleted,
+        events_appended: planned.data.events_appended,
+        index_updated: false
+      },
+      warnings: [...options.storageWarnings, ...secrets.warnings, ...planned.warnings],
+      meta: options.meta
+    };
+  }
+
+  const saved = await saveMemoryPatch({
+    cwd: options.paths.projectRoot,
+    patch: options.patch,
+    clock: options.clock,
+    runner: options.runner
+  });
+
+  if (!saved.ok) {
+    return {
+      ok: false,
+      error: saved.error,
+      warnings: [...options.storageWarnings, ...saved.warnings],
+      meta: saved.meta
+    };
+  }
+
+  return {
+    ok: true,
+    data: {
+      dry_run: false,
+      patch: options.patch,
+      ...saved.data
+    },
+    warnings: [...options.storageWarnings, ...saved.warnings],
+    meta: saved.meta
+  };
+}
+
+function buildWikiIngestRememberInput(
+  input: unknown,
+  storage: CanonicalStorageSnapshot
+): Result<{ input: unknown; sourceId: ObjectId }> {
+  if (!isRecord(input)) {
+    return err(aictxError("AICtxValidationFailed", "Wiki ingest input must be an object.", {
+      field: "<input>"
+    }));
+  }
+
+  const task = typeof input.task === "string" ? input.task.trim() : "";
+  if (task === "") {
+    return err(aictxError("AICtxValidationFailed", "Wiki ingest task is required.", {
+      field: "task"
+    }));
+  }
+
+  if (!isRecord(input.source)) {
+    return err(aictxError("AICtxValidationFailed", "Wiki ingest source block is required.", {
+      field: "source"
+    }));
+  }
+
+  if (!isRecord(input.source.origin)) {
+    return err(aictxError("AICtxValidationFailed", "Wiki ingest source.origin is required.", {
+      field: "source.origin"
+    }));
+  }
+
+  const requestedSourceId =
+    typeof input.source.id === "string" && input.source.id.trim() !== ""
+      ? input.source.id.trim()
+      : undefined;
+  const existingSource =
+    requestedSourceId === undefined ? undefined : findStoredObject(storage.objects, requestedSourceId);
+
+  if (existingSource !== undefined && existingSource.sidecar.type !== "source") {
+    return err(aictxError("AICtxValidationFailed", "Wiki ingest source id must refer to a source memory.", {
+      field: "source.id",
+      id: requestedSourceId ?? ""
+    }));
+  }
+
+  const sourceId =
+    requestedSourceId ??
+    generateObjectId({
+      type: "source",
+      title:
+        typeof input.source.title === "string" && input.source.title.trim() !== ""
+          ? input.source.title
+          : "Source",
+      existingIds: new Set(storage.objects.map((object) => object.sidecar.id))
+    });
+  const sourceAction = sourceActionFromWikiSource(input.source, sourceId, existingSource !== undefined);
+
+  if (!sourceAction.ok) {
+    return sourceAction;
+  }
+
+  const memories = optionalUnknownArray(input.memories, "memories");
+  const updates = optionalUnknownArray(input.updates, "updates");
+  const stale = optionalUnknownArray(input.stale, "stale");
+  const supersede = optionalUnknownArray(input.supersede, "supersede");
+  const relations = optionalUnknownArray(input.relations, "relations");
+
+  if (!memories.ok) {
+    return memories;
+  }
+  if (!updates.ok) {
+    return updates;
+  }
+  if (!stale.ok) {
+    return stale;
+  }
+  if (!supersede.ok) {
+    return supersede;
+  }
+  if (!relations.ok) {
+    return relations;
+  }
+
+  const rememberInput = {
+    task,
+    ...(sourceAction.data.kind === "memory" || memories.data.length > 0
+      ? {
+          memories: [
+            ...(sourceAction.data.kind === "memory" ? [sourceAction.data.value] : []),
+            ...memories.data
+          ]
+        }
+      : {}),
+    ...(sourceAction.data.kind === "update" || updates.data.length > 0
+      ? {
+          updates: [
+            ...(sourceAction.data.kind === "update" ? [sourceAction.data.value] : []),
+            ...updates.data
+          ]
+        }
+      : {}),
+    ...(stale.data.length === 0 ? {} : { stale: stale.data }),
+    ...(supersede.data.length === 0 ? {} : { supersede: supersede.data }),
+    ...(relations.data.length === 0 ? {} : { relations: relations.data })
+  };
+
+  return ok({ input: rememberInput, sourceId });
+}
+
+function sourceActionFromWikiSource(
+  source: Record<string, unknown>,
+  sourceId: ObjectId,
+  updateExisting: boolean
+): Result<
+  | { kind: "memory"; value: Record<string, unknown> }
+  | { kind: "update"; value: Record<string, unknown> }
+> {
+  const common = {
+    id: sourceId,
+    ...(source.title === undefined ? {} : { title: source.title }),
+    ...(source.body === undefined ? {} : { body: source.body }),
+    ...(source.tags === undefined ? {} : { tags: source.tags }),
+    ...(source.applies_to === undefined ? {} : { applies_to: source.applies_to }),
+    ...(source.category === undefined ? {} : { category: source.category }),
+    ...(source.evidence === undefined ? {} : { evidence: source.evidence }),
+    origin: source.origin
+  };
+
+  if (updateExisting) {
+    return ok({
+      kind: "update",
+      value: common
+    });
+  }
+
+  return ok({
+    kind: "memory",
+    value: {
+      ...common,
+      kind: "source"
+    }
+  });
+}
+
+const WIKI_SOURCE_RELATION_PREDICATES = new Set<Predicate>([
+  "derived_from",
+  "supports",
+  "summarizes",
+  "documents"
+]);
+
+function addWikiSourceRelations(patch: RememberMemoryPatch, sourceId: ObjectId): void {
+  const createdSemanticIds = patch.changes
+    .flatMap((change) => {
+      if (
+        change.op !== "create_object" ||
+        change.id === undefined ||
+        change.id === sourceId ||
+        change.type === "source"
+      ) {
+        return [];
+      }
+
+      return [change.id];
+    });
+
+  for (const id of createdSemanticIds) {
+    if (hasWikiSourceRelation(patch, id, sourceId)) {
+      continue;
+    }
+
+    patch.changes.push({
+      op: "create_relation",
+      from: id,
+      predicate: "derived_from",
+      to: sourceId
+    });
+  }
+}
+
+function hasWikiSourceRelation(
+  patch: RememberMemoryPatch,
+  from: ObjectId,
+  sourceId: ObjectId
+): boolean {
+  return patch.changes.some(
+    (change) =>
+      change.op === "create_relation" &&
+      change.from === from &&
+      change.to === sourceId &&
+      WIKI_SOURCE_RELATION_PREDICATES.has(change.predicate)
+  );
+}
+
+function optionalUnknownArray(value: unknown, field: string): Result<unknown[]> {
+  if (value === undefined) {
+    return ok([]);
+  }
+
+  if (!Array.isArray(value)) {
+    return err(aictxError("AICtxValidationFailed", "Wiki ingest field must be an array.", {
+      field
+    }));
+  }
+
+  return ok(value);
+}
+
 export async function showBranchHandoff(
   options: ShowBranchHandoffOptions
 ): Promise<AppResult<BranchHandoffShowData>> {
@@ -3370,6 +3895,7 @@ function summarizeObject(object: StoredMemoryObject): MemoryObjectSummary {
     facets: sidecar.facets ?? null,
     evidence: [...(sidecar.evidence ?? [])],
     source: sidecar.source ?? null,
+    origin: sidecar.origin ?? null,
     superseded_by: sidecar.superseded_by ?? null,
     created_at: sidecar.created_at,
     updated_at: sidecar.updated_at,

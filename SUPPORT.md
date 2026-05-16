@@ -3,8 +3,8 @@
 Use these paths for help:
 
 - Public documentation: https://docs.aictx.dev
-- Questions and usage discussion: https://github.com/MicrexIT/aictx/discussions
-- Reproducible bugs: https://github.com/MicrexIT/aictx/issues/new/choose
+- Questions and usage discussion: https://github.com/aictx/memory/discussions
+- Reproducible bugs: https://github.com/aictx/memory/issues/new/choose
 - Security reports: follow `SECURITY.md`
 
 Before opening an issue, check:

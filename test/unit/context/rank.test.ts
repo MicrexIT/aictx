@@ -546,6 +546,41 @@ describe("context memory ranking", () => {
     });
   });
 
+  it("scores source origin locator and file references as direct matches", () => {
+    const result = rankMemoryCandidates({
+      task: "Review docs/source-only.md before updating the source record",
+      mode: "review",
+      projectId: PROJECT_ID,
+      git: GIT_MAIN,
+      candidates: [
+        memory({
+          id: "source.origin-only",
+          type: "source",
+          title: "Source record",
+          body: "This body intentionally omits the source file path.",
+          origin: {
+            kind: "file",
+            locator: "docs/source-only.md",
+            media_type: "text/markdown"
+          }
+        }),
+        memory({
+          id: "source.unrelated",
+          type: "source",
+          title: "Source record",
+          body: "This body is unrelated."
+        })
+      ]
+    });
+
+    expect(result.items[0]?.id).toBe("source.origin-only");
+    expect(result.items[0]?.scoreBreakdown).toMatchObject({
+      appliesToMatch: 35,
+      evidenceMatch: 18,
+      modeModifier: 25
+    });
+  });
+
   it("keeps conflicted memory out of high-priority sections by default", () => {
     const result = rankMemoryCandidates({
       task: "webhook",
@@ -585,6 +620,7 @@ function memory(overrides: Partial<RankMemoryCandidate> & { id: string }): RankM
     tags: overrides.tags ?? [],
     ...(overrides.facets === undefined ? {} : { facets: overrides.facets }),
     ...(overrides.evidence === undefined ? {} : { evidence: overrides.evidence }),
+    ...(overrides.origin === undefined ? {} : { origin: overrides.origin }),
     updated_at: overrides.updated_at ?? "2026-04-27T12:00:00+02:00"
   };
 }

@@ -6,7 +6,8 @@ import type {
   ObjectStatus,
   ObjectType,
   Predicate,
-  Scope
+  Scope,
+  SourceOrigin
 } from "../core/types.js";
 import type { MemoryRelation } from "../storage/relations.js";
 import { DEFAULT_LOAD_MODE, type LoadMemoryMode } from "./modes.js";
@@ -55,7 +56,9 @@ const PREDICATE_MODIFIERS = {
   requires: 12,
   depends_on: 10,
   conflicts_with: 10,
+  challenges: 10,
   derived_from: 8,
+  supports: 8,
   summarizes: 8,
   supersedes: 8,
   affects: 8,
@@ -265,6 +268,7 @@ export interface RankMemoryCandidate {
   tags?: string[];
   facets?: ObjectFacets;
   evidence?: Evidence[];
+  origin?: SourceOrigin;
   updated_at: string;
 }
 
@@ -509,6 +513,8 @@ function scoreDirectMatches(
   taskTerms: readonly string[],
   taskFileReferences: readonly string[]
 ): DirectScoreBreakdown {
+  const originMatchesTask = hasOriginMatch(candidate.origin, taskText, taskTerms);
+
   return {
     exactId: taskText.includes(candidate.id.toLowerCase()) ? SCORE.exactId : 0,
     exactBodyPath: taskText.includes(candidate.body_path.toLowerCase())
@@ -516,12 +522,14 @@ function scoreDirectMatches(
       : 0,
     tagMatch: hasTagMatch(candidate.tags ?? [], taskTerms) ? SCORE.tagMatch : 0,
     facetMatch: hasFacetMatch(candidate.facets, taskTerms) ? SCORE.facetMatch : 0,
-    appliesToMatch: hasAppliesToMatch(candidate.facets, taskText, taskFileReferences)
+    appliesToMatch: hasAppliesToMatch(candidate.facets, taskText, taskFileReferences) ||
+      originReferencesFile(candidate.origin, taskText, taskFileReferences)
       ? SCORE.appliesToMatch
       : 0,
     titleFtsMatch: hasTermOverlap(candidate.title, taskTerms) ? SCORE.titleFtsMatch : 0,
     bodyFtsMatch: hasTermOverlap(candidate.body, taskTerms) ? SCORE.bodyFtsMatch : 0,
-    evidenceMatch: hasEvidenceMatch(candidate.evidence ?? [], taskText, taskTerms)
+    evidenceMatch: hasEvidenceMatch(candidate.evidence ?? [], taskText, taskTerms) ||
+      originMatchesTask
       ? SCORE.evidenceMatch
       : 0
   };
@@ -702,7 +710,11 @@ function reviewFileReferenceModifier(
     return 0;
   }
 
-  const searchableText = `${candidate.body_path}\n${candidate.body}`.toLowerCase();
+  const searchableText = [
+    candidate.body_path,
+    candidate.body,
+    originSearchText(candidate.origin)
+  ].join("\n").toLowerCase();
 
   return taskFileReferences.some((reference) =>
     searchableText.includes(reference.toLowerCase())
@@ -751,6 +763,54 @@ function hasEvidenceMatch(
     const normalized = item.id.toLowerCase();
     return taskText.includes(normalized) || hasTermOverlap(normalized, taskTerms);
   });
+}
+
+function hasOriginMatch(
+  origin: SourceOrigin | undefined,
+  taskText: string,
+  taskTerms: readonly string[]
+): boolean {
+  if (origin === undefined) {
+    return false;
+  }
+
+  const normalized = originSearchText(origin).toLowerCase();
+
+  return taskText.includes(origin.locator.toLowerCase()) || hasTermOverlap(normalized, taskTerms);
+}
+
+function originReferencesFile(
+  origin: SourceOrigin | undefined,
+  taskText: string,
+  taskFileReferences: readonly string[]
+): boolean {
+  if (origin?.kind !== "file") {
+    return false;
+  }
+
+  const normalized = origin.locator.toLowerCase();
+
+  return (
+    taskText.includes(normalized) ||
+    taskFileReferences.some((reference) => {
+      const lowerReference = reference.toLowerCase();
+      return normalized.includes(lowerReference) || lowerReference.includes(normalized);
+    })
+  );
+}
+
+function originSearchText(origin: SourceOrigin | undefined): string {
+  if (origin === undefined) {
+    return "";
+  }
+
+  return [
+    origin.kind,
+    origin.locator,
+    origin.captured_at ?? "",
+    origin.digest ?? "",
+    origin.media_type ?? ""
+  ].join(" ");
 }
 
 function hasTermOverlap(value: string, taskTerms: readonly string[]): boolean {

@@ -8,7 +8,7 @@ export async function getStaticPaths() {
 
   return posts.map((post) => ({
     params: { slug: post.id },
-    props: { post }
+    props: { post },
   }));
 }
 
@@ -17,17 +17,22 @@ const { Content } = await render(post);
 const publishedLabel = new Intl.DateTimeFormat("en", {
   month: "long",
   day: "numeric",
-  year: "numeric"
+  year: "numeric",
 }).format(post.data.publishedAt);
 ---
 
-<BaseLayout title={`${post.data.title} - Aictx Blog`} description={post.data.description}>
+<BaseLayout
+  title={`${post.data.title} - Aictx Blog`}
+  description={post.data.description}
+>
   <main>
     <article class="post-shell">
-      <a class="back-link" href="/blog/">Back to blog</a>
+      <a class="back-link" href="/blog/">Back</a>
 
       <header class="post-header">
-        <time datetime={post.data.publishedAt.toISOString()}>{publishedLabel}</time>
+        <time datetime={post.data.publishedAt.toISOString()}
+          >{publishedLabel}</time
+        >
         <h1>{post.data.title}</h1>
         <p>{post.data.description}</p>
         {

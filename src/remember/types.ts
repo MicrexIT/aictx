@@ -3,7 +3,8 @@ import type {
   FacetCategory,
   ObjectId,
   Predicate,
-  RelationConfidence
+  RelationConfidence,
+  SourceOrigin
 } from "../core/types.js";
 
 export const REMEMBER_MEMORY_KINDS = [
@@ -37,6 +38,7 @@ export interface RememberMemoryInputItem {
   applies_to?: string[];
   category?: FacetCategory;
   evidence?: Evidence[];
+  origin?: SourceOrigin;
   related?: RememberRelatedInput[];
 }
 
@@ -48,6 +50,7 @@ export interface RememberUpdateInputItem {
   applies_to?: string[];
   category?: FacetCategory;
   evidence?: Evidence[];
+  origin?: SourceOrigin;
 }
 
 export interface RememberStaleInputItem {

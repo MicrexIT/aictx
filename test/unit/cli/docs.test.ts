@@ -1,3 +1,6 @@
+import { readdir } from "node:fs/promises";
+import { basename } from "node:path";
+
 import { describe, expect, it } from "vitest";
 
 import { main, type CliOutputWriter } from "../../../src/cli/main.js";
@@ -15,8 +18,39 @@ describe("aictx docs", () => {
     expect(output.stdout()).toContain("- capabilities:");
     expect(output.stdout()).toContain("- specializing-aictx:");
     expect(output.stdout()).toContain("- demand-driven-memory:");
+    expect(output.stdout()).toContain("- wiki-workflow:");
     expect(output.stdout()).toContain("- agent-integration:");
     expect(output.stdout()).toContain("- agent-recipes:");
+    expect(output.stdout()).toContain("- plugin-publishing:");
+  });
+
+  it("keeps the topic list aligned with bundled docs pages", async () => {
+    const output = createCapturedOutput();
+
+    const exitCode = await main(["node", "aictx", "--json", "docs"], output.writers);
+
+    expect(exitCode).toBe(0);
+    expect(output.stderr()).toBe("");
+
+    const envelope = JSON.parse(output.stdout()) as {
+      ok: true;
+      data: {
+        kind: "list";
+        topics: { topic: string }[];
+      };
+    };
+    const bundledDocs = await readdir(
+      new URL("../../../docs/src/content/docs/", import.meta.url)
+    );
+    const docTopics = bundledDocs
+      .filter((file) => file.endsWith(".md") && file !== "index.md")
+      .map((file) => basename(file, ".md"))
+      .sort();
+    const listedTopics = envelope.data.topics.map((topic) => topic.topic).sort();
+
+    expect(envelope.ok).toBe(true);
+    expect(envelope.data.kind).toBe("list");
+    expect(listedTopics).toEqual(docTopics);
   });
 
   it("prints a bundled topic without Starlight frontmatter", async () => {
@@ -27,7 +61,7 @@ describe("aictx docs", () => {
     expect(exitCode).toBe(0);
     expect(output.stderr()).toBe("");
     expect(output.stdout()).toContain("# Getting started");
-    expect(output.stdout()).toContain("aictx init");
+    expect(output.stdout()).toContain("aictx setup");
     expect(output.stdout()).not.toMatch(/^---\n/u);
   });
 
@@ -80,6 +114,18 @@ describe("aictx docs", () => {
     expect(output.stdout()).toContain("Routine memory work");
   });
 
+  it("prints the bundled wiki workflow topic", async () => {
+    const output = createCapturedOutput();
+
+    const exitCode = await main(["node", "aictx", "docs", "wiki"], output.writers);
+
+    expect(exitCode).toBe(0);
+    expect(output.stderr()).toBe("");
+    expect(output.stdout()).toContain("# Wiki workflow");
+    expect(output.stdout()).toContain("aictx wiki ingest");
+    expect(output.stdout()).toContain("source records");
+  });
+
   it("prints the bundled agent recipes topic", async () => {
     const output = createCapturedOutput();
 
@@ -91,7 +137,19 @@ describe("aictx docs", () => {
     expect(output.stdout()).toContain("Codex");
     expect(output.stdout()).toContain("Cursor");
     expect(output.stdout()).toContain("aictx setup");
-    expect(output.stdout()).toContain("start the local viewer for inspection");
+    expect(output.stdout()).toContain("aictx diff");
+  });
+
+  it("prints the bundled plugin publishing topic", async () => {
+    const output = createCapturedOutput();
+
+    const exitCode = await main(["node", "aictx", "docs", "plugin-publishing"], output.writers);
+
+    expect(exitCode).toBe(0);
+    expect(output.stderr()).toBe("");
+    expect(output.stdout()).toContain("# Publishing Plugins");
+    expect(output.stdout()).toContain("codex plugin marketplace add aictx/memory");
+    expect(output.stdout()).toContain("claude plugin validate");
   });
 
   it("opens the hosted docs URL through the injected opener", async () => {

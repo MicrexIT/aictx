@@ -1,37 +1,23 @@
 <svelte:options runes={true} />
 
 <script lang="ts">
-  import { onMount } from "svelte";
+  import { FACET_CATEGORIES, OBJECT_TYPES } from "../../src/core/types.js";
+  import cytoscape from "cytoscape";
+  import { onDestroy, onMount } from "svelte";
 
+  type FacetCategory = (typeof FACET_CATEGORIES)[number];
   type ObjectStatus = "active" | "stale" | "superseded" | "open" | "closed";
-  type ObjectType =
-    | "project"
-    | "architecture"
-    | "source"
-    | "synthesis"
-    | "decision"
-    | "constraint"
-    | "question"
-    | "fact"
-    | "gotcha"
-    | "workflow"
-    | "note"
-    | "concept";
+  type ObjectType = (typeof OBJECT_TYPES)[number];
   type RelationStatus = "active" | "stale" | "rejected";
   type RelationConfidence = "low" | "medium" | "high";
-  type RoleCoverageStatus = "populated" | "thin" | "missing" | "stale" | "conflicted";
-  type MemoryLensName =
-    | "project-map"
-    | "current-work"
-    | "review-risk"
-    | "provenance"
-    | "maintenance";
   type Predicate =
     | "affects"
     | "requires"
     | "depends_on"
     | "supersedes"
     | "conflicts_with"
+    | "supports"
+    | "challenges"
     | "derived_from"
     | "summarizes"
     | "documents"
@@ -52,13 +38,21 @@
     commit?: string;
   }
 
+  interface SourceOrigin {
+    kind: "file" | "url" | "user" | "external";
+    locator: string;
+    captured_at?: string;
+    digest?: string;
+    media_type?: string;
+  }
+
   interface Evidence {
     kind: "memory" | "relation" | "file" | "commit" | "task" | "source";
     id: string;
   }
 
   interface ObjectFacets {
-    category: string;
+    category: FacetCategory;
     applies_to?: string[];
     load_modes?: string[];
   }
@@ -75,6 +69,7 @@
     facets: ObjectFacets | null;
     evidence: Evidence[];
     source: Source | null;
+    origin: SourceOrigin | null;
     superseded_by: string | null;
     created_at: string;
     updated_at: string;
@@ -93,33 +88,6 @@
     created_at: string;
     updated_at: string;
     json_path: string;
-  }
-
-  interface RoleCoverageItem {
-    key: string;
-    label: string;
-    description: string;
-    status: RoleCoverageStatus;
-    optional: boolean;
-    memory_ids: string[];
-    relation_ids: string[];
-    gap: string | null;
-  }
-
-  interface RoleCoverageData {
-    roles: RoleCoverageItem[];
-    counts: Record<RoleCoverageStatus, number>;
-  }
-
-  interface MemoryLensData {
-    name: MemoryLensName;
-    title: string;
-    markdown: string;
-    role_coverage: RoleCoverageData;
-    included_memory_ids: string[];
-    relation_ids: string[];
-    relations: MemoryRelationSummary[];
-    generated_gaps: string[];
   }
 
   interface ViewerBootstrapData {
@@ -222,12 +190,44 @@
   type ViewerEnvelope = ViewerSuccessEnvelope<ViewerBootstrapData> | ViewerErrorEnvelope;
   type ViewerProjectsEnvelope = ViewerSuccessEnvelope<ViewerProjectsData> | ViewerErrorEnvelope;
   type ExportEnvelope = ViewerSuccessEnvelope<ExportObsidianProjectionData> | ViewerErrorEnvelope;
-  type DeleteProjectEnvelope = ViewerSuccessEnvelope<ViewerProjectDeleteData> | ViewerErrorEnvelope;
+  type LoadPreviewEnvelope = ViewerSuccessEnvelope<LoadPreviewData> | ViewerErrorEnvelope;
+  type ProjectDeleteEnvelope = ViewerSuccessEnvelope<ViewerProjectDeleteData> | ViewerErrorEnvelope;
   type ViewerState = "loading" | "ready" | "error";
-  type ViewerScreen = "projects" | "memories" | "detail" | "lenses" | "export";
+  type ViewerScreen = "projects" | "memories" | "detail" | "graph" | "export";
   type ExportState = "idle" | "running" | "success" | "error";
-  type DeleteProjectState = "idle" | "confirming" | "running" | "error";
+  type PreviewState = "idle" | "running" | "success" | "error";
   type LayerFilter = "all" | "memories" | "syntheses" | "sources" | "inactive";
+  type PagePreset = "all" | "atomic-memory" | "syntheses" | "sources" | "inactive";
+  type LoadMemoryMode = "coding" | "debugging" | "review" | "architecture" | "onboarding";
+  type MemoryLensName = "project-map" | "current-work" | "review-risk" | "provenance" | "maintenance";
+  type RoleCoverageStatus = "populated" | "thin" | "missing" | "stale" | "conflicted";
+
+  interface RoleCoverageItem {
+    key: string;
+    label: string;
+    description: string;
+    status: RoleCoverageStatus;
+    optional: boolean;
+    memory_ids: string[];
+    relation_ids: string[];
+    gap: string | null;
+  }
+
+  interface RoleCoverageData {
+    roles: RoleCoverageItem[];
+    counts: Record<RoleCoverageStatus, number>;
+  }
+
+  interface MemoryLensData {
+    name: MemoryLensName;
+    title: string;
+    markdown: string;
+    role_coverage: RoleCoverageData;
+    included_memory_ids: string[];
+    relation_ids: string[];
+    relations: MemoryRelationSummary[];
+    generated_gaps: string[];
+  }
 
   interface MarkdownBlock {
     kind: "heading" | "paragraph" | "list" | "quote" | "code";
@@ -236,22 +236,84 @@
     items?: string[];
   }
 
-  type GraphNodeRole = "selected" | "incoming" | "outgoing" | "both";
-
-  interface GraphNode {
+  interface MemorySection {
     id: string;
     title: string;
-    subtitle: string;
-    missing: boolean;
-    role: GraphNodeRole;
-    x: number;
-    y: number;
+    objects: MemoryObjectSummary[];
   }
 
-  interface GraphEdge {
-    relation: MemoryRelationSummary;
-    fromId: string;
-    toId: string;
+  interface MemorySnapshotItem {
+    label: string;
+    value: string;
+    detail: string;
+  }
+
+  interface DocGraphNode {
+    id: string;
+    label: string;
+    type: ObjectType;
+    color: string;
+    borderColor: string;
+    x: number;
+    y: number;
+    radius: number;
+    hub: boolean;
+    muted: boolean;
+  }
+
+  interface DocGraphEdge {
+    id: string;
+    color: string;
+    x1: number;
+    y1: number;
+    x2: number;
+    y2: number;
+    muted: boolean;
+  }
+
+  interface DocGraphRelation {
+    id: string;
+    predicate: Predicate;
+    targetLabel: string;
+    status: RelationStatus;
+    confidence: RelationConfidence | null;
+  }
+
+  interface DocGraphOverview {
+    hub: MemoryObjectSummary | null;
+    nodes: DocGraphNode[];
+    edges: DocGraphEdge[];
+    relations: DocGraphRelation[];
+    hiddenRelationCount: number;
+  }
+
+  interface TokenTarget {
+    value: number;
+    source: "explicit" | "config_default" | "fallback_default";
+    enforced: boolean;
+    was_capped: boolean;
+  }
+
+  interface LoadMemorySource {
+    project: string;
+    git_available: boolean;
+    branch: string | null;
+    commit: string | null;
+  }
+
+  interface LoadPreviewData {
+    task: string;
+    token_budget: number;
+    mode: LoadMemoryMode;
+    context_pack: string;
+    source: LoadMemorySource;
+    token_target: TokenTarget;
+    estimated_tokens: number;
+    budget_status: "within_target" | "over_target";
+    truncated: boolean;
+    included_ids: string[];
+    excluded_ids: string[];
+    omitted_ids: string[];
   }
 
   let loadState = $state<ViewerState>("loading");
@@ -263,77 +325,209 @@
   let projectErrorMessage = $state("");
   let currentScreen = $state<ViewerScreen>("projects");
   let selectedProjectId = $state<string | null>(null);
+  let selectedObjectId = $state<string | null>(null);
   let searchQuery = $state("");
   let layerFilter = $state<LayerFilter>("all");
   let typeFilter = $state("all");
+  let facetCategoryFilter = $state("all");
   let statusFilter = $state("all");
   let tagFilter = $state("all");
-  let selectedObjectId = $state<string | null>(null);
-  let selectedLensName = $state<MemoryLensName>("project-map");
+  let pagePreset = $state<PagePreset>("all");
+  let activeLensName = $state<MemoryLensName>("project-map");
+  let sidebarDrawerOpen = $state(false);
   let exportOutDir = $state("");
   let exportState = $state<ExportState>("idle");
   let exportMessage = $state("");
   let exportErrorCode = $state("");
   let exportFilesWritten = $state(0);
   let exportManifestPath = $state("");
-  let activeStatusTooltipId = $state<string | null>(null);
-  let deleteProjectId = $state<string | null>(null);
-  let deleteConfirmation = $state("");
-  let deleteState = $state<DeleteProjectState>("idle");
-  let deleteMessage = $state("");
-  let deleteErrorCode = $state("");
-  let deleteNotice = $state("");
+  let previewTask = $state("");
+  let previewMode = $state<LoadMemoryMode>("coding");
+  let previewTokenBudget = $state("");
+  let previewState = $state<PreviewState>("idle");
+  let previewMessage = $state("");
+  let previewErrorCode = $state("");
+  let previewData = $state<LoadPreviewData | null>(null);
+  let copiedPreviewTarget = $state<"command" | "context" | null>(null);
+  let pendingDeleteProjectId = $state<string | null>(null);
+  let deleteConfirmText = $state("");
+  let deletingProjectId = $state<string | null>(null);
+  let projectDeleteMessage = $state("");
+  let projectDeleteErrorCode = $state("");
+  let graphContainer = $state<HTMLDivElement | null>(null);
+  let memoryWorkspaceElement = $state<HTMLElement | null>(null);
+  let graphInstance: cytoscape.Core | null = null;
+  let graphShowInactive = $state(false);
+  let selectedGraphObjectId = $state<string | null>(null);
+  let selectedGraphRelationId = $state<string | null>(null);
+  let schemaContextOpen = $state(true);
 
   const allOption = "all";
+  const token = viewerToken();
+  const isDemoMode = token === "demo";
   const layerOptions: Array<{ value: LayerFilter; label: string }> = [
     { value: "all", label: "All" },
-    { value: "memories", label: "Memories" },
+    { value: "memories", label: "Atomic" },
     { value: "syntheses", label: "Syntheses" },
     { value: "sources", label: "Sources" },
-    { value: "inactive", label: "Stale / Superseded" }
+    { value: "inactive", label: "Inactive" }
   ];
-  const graphWidth = 960;
-  const graphHeight = 420;
-  const token = new URLSearchParams(window.location.search).get("token") ?? "";
+  const loadModeOptions: Array<{ value: LoadMemoryMode; label: string }> = [
+    { value: "coding", label: "Coding" },
+    { value: "debugging", label: "Debugging" },
+    { value: "review", label: "Review" },
+    { value: "architecture", label: "Architecture" },
+    { value: "onboarding", label: "Onboarding" }
+  ];
+  const graphStyles: cytoscape.StylesheetJson = [
+    {
+      selector: "node",
+      style: {
+        "background-color": "data(color)",
+        "border-color": "data(borderColor)",
+        "border-width": 2,
+        color: "#37352f",
+        "font-size": 9,
+        "font-weight": 700,
+        height: "data(size)",
+        label: "data(label)",
+        "min-zoomed-font-size": 8.5,
+        "overlay-opacity": 0,
+        "text-background-color": "#fffefa",
+        "text-background-opacity": 0.9,
+        "text-background-padding": "2px",
+        "text-halign": "center",
+        "text-margin-y": 10,
+        "text-max-width": "74px",
+        "text-valign": "bottom",
+        "text-wrap": "wrap",
+        width: "data(size)"
+      }
+    },
+    {
+      selector: "edge",
+      style: {
+        "curve-style": "bezier",
+        "font-size": 8,
+        "line-color": "data(color)",
+        opacity: 0.72,
+        "overlay-opacity": 0,
+        "target-arrow-color": "data(color)",
+        "target-arrow-shape": "triangle",
+        width: "data(width)"
+      }
+    },
+    {
+      selector: "node.graph-selected",
+      style: {
+        "border-color": "#111214",
+        "border-width": 4,
+        "font-size": 10.5,
+        height: "data(size)",
+        label: "data(fullLabel)",
+        "min-zoomed-font-size": 0,
+        opacity: 1,
+        "text-background-opacity": 0.96,
+        "text-max-width": "118px",
+        width: "data(size)",
+        "z-index": 20
+      }
+    },
+    {
+      selector: "edge.graph-selected",
+      style: {
+        "line-color": "#111214",
+        opacity: 1,
+        "target-arrow-color": "#111214",
+        width: 3.2,
+        "z-index": 20
+      }
+    },
+    {
+      selector: "node.graph-neighbor",
+      style: {
+        label: "data(label)",
+        "min-zoomed-font-size": 0,
+        opacity: 1,
+        "text-background-opacity": 0.92,
+        "text-opacity": 1,
+        "z-index": 12
+      }
+    },
+    {
+      selector: "edge.graph-neighbor",
+      style: {
+        opacity: 1,
+        "z-index": 12
+      }
+    },
+    {
+      selector: "node.graph-faded",
+      style: {
+        color: "#5f594f",
+        "font-size": 8.8,
+        label: "data(peekLabel)",
+        "min-zoomed-font-size": 6.8,
+        opacity: 0.52,
+        "text-background-opacity": 0.78,
+        "text-max-width": "80px",
+        "text-opacity": 1,
+        "z-index": 1
+      }
+    },
+    {
+      selector: "edge.graph-faded",
+      style: {
+        opacity: 0.14
+      }
+    }
+  ];
+
   const projects = $derived(projectsData?.projects ?? []);
   const selectedProject = $derived.by(() =>
     selectedProjectId === null
       ? null
       : projects.find((project) => project.registry_id === selectedProjectId) ?? null
   );
-  const projectPendingDelete = $derived.by(() =>
-    deleteProjectId === null
-      ? null
-      : projects.find((project) => project.registry_id === deleteProjectId) ?? null
-  );
-  const deleteConfirmationMatches = $derived(
-    projectPendingDelete !== null &&
-      deleteConfirmation.trim() === projectPendingDelete.project.name
-  );
   const objects = $derived(bootstrap?.objects ?? []);
   const relations = $derived(bootstrap?.relations ?? []);
-  const lenses = $derived(bootstrap?.lenses ?? []);
-  const selectedLens = $derived.by(() =>
-    lenses.find((lens) => lens.name === selectedLensName) ?? lenses[0] ?? null
-  );
-  const selectedLensBlocks = $derived(
-    selectedLens === null ? [] : parseMarkdownBlocks(selectedLens.markdown)
-  );
   const objectById = $derived(new Map(objects.map((object) => [object.id, object])));
-  const typeOptions = $derived(uniqueSorted(objects.map((object) => object.type)));
-  const statusOptions = $derived(uniqueSorted(objects.map((object) => object.status)));
-  const tagOptions = $derived(uniqueSorted(objects.flatMap((object) => object.tags)));
   const filteredObjects = $derived.by(() =>
     objects.filter((object) => objectMatchesFilters(object))
   );
   const selectedObject = $derived.by(() =>
     selectedObjectId === null ? null : objectById.get(selectedObjectId) ?? null
   );
-  const selectedJson = $derived(
-    selectedObject === null ? "" : JSON.stringify(sidecarJsonForObject(selectedObject), null, 2)
+  const graphObjects = $derived.by(() =>
+    objects.filter((object) =>
+      (graphShowInactive || isCurrentStatus(object.status)) &&
+      objectMatchesSearch(object, searchQuery)
+    )
   );
-  const markdownBlocks = $derived(
-    selectedObject === null ? [] : parseMarkdownBlocks(selectedObject.body)
+  const graphVisibleObjectIds = $derived(new Set(graphObjects.map((object) => object.id)));
+  const graphRelations = $derived.by(() =>
+    relations.filter((relation) =>
+      (graphShowInactive || relation.status === "active") &&
+      graphVisibleObjectIds.has(relation.from) &&
+      graphVisibleObjectIds.has(relation.to)
+    )
+  );
+  const graphElements = $derived.by(() => buildGraphElements(graphObjects, graphRelations));
+  const selectedGraphObject = $derived.by(() =>
+    selectedGraphObjectId === null || !graphVisibleObjectIds.has(selectedGraphObjectId)
+      ? null
+      : objectById.get(selectedGraphObjectId) ?? null
+  );
+  const selectedGraphRelation = $derived.by(() =>
+    selectedGraphRelationId === null
+      ? null
+      : graphRelations.find((relation) => relation.id === selectedGraphRelationId) ?? null
+  );
+  const selectedGraphRelationSource = $derived(
+    selectedGraphRelation === null ? null : objectById.get(selectedGraphRelation.from) ?? null
+  );
+  const selectedGraphRelationTarget = $derived(
+    selectedGraphRelation === null ? null : objectById.get(selectedGraphRelation.to) ?? null
   );
   const directRelations = $derived.by(() =>
     selectedObject === null
@@ -352,39 +546,94 @@
       ? []
       : directRelations.filter((relation) => relation.from === selectedObject.id)
   );
-  const provenanceEvidence = $derived.by(() =>
-    selectedObject === null
-      ? []
-      : selectedObject.evidence.filter((evidence) =>
-          ["source", "file", "commit", "memory"].includes(evidence.kind)
-        )
-  );
-  const provenanceRelations = $derived.by(() =>
-    directRelations.filter((relation) =>
-      ["derived_from", "summarizes", "documents"].includes(relation.predicate)
+  const typeOptions = $derived(uniqueSorted(objects.map((object) => object.type)));
+  const facetCategoryOptions = $derived.by(() =>
+    FACET_CATEGORIES.filter((category) =>
+      objects.some((object) => object.facets?.category === category)
     )
   );
-  const graphNodes = $derived.by(() =>
-    selectedObject === null ? [] : buildGraphNodes(selectedObject, directRelations, objectById)
+  const statusOptions = $derived(uniqueSorted(objects.map((object) => object.status)));
+  const tagOptions = $derived(uniqueSorted(objects.flatMap((object) => object.tags)));
+  const markdownBlocks = $derived(
+    selectedObject === null ? [] : parseMarkdownBlocks(selectedObject.body)
   );
-  const graphEdges = $derived.by(() =>
-    directRelations.map((relation) => ({
-      relation,
-      fromId: relation.from,
-      toId: relation.to
-    }))
+  const previewMarkdownBlocks = $derived(
+    previewData === null ? [] : parseMarkdownBlocks(previewData.context_pack)
   );
-  const graphNodeById = $derived(new Map(graphNodes.map((node) => [node.id, node])));
+  const guidedLenses = $derived(bootstrap?.lenses ?? []);
+  const activeGuidedLens = $derived.by(() =>
+    guidedLenses.find((lens) => lens.name === activeLensName) ?? guidedLenses[0] ?? null
+  );
+  const activeLensMarkdownBlocks = $derived(
+    activeGuidedLens === null ? [] : parseMarkdownBlocks(activeGuidedLens.markdown)
+  );
+  const roleCoverage = $derived(bootstrap?.role_coverage ?? emptyRoleCoverage());
+  const selectedJson = $derived(
+    selectedObject === null ? "" : JSON.stringify(sidecarJsonForObject(selectedObject), null, 2)
+  );
   const visibleWarnings = $derived(uniqueSorted([
     ...(bootstrap?.storage_warnings ?? []),
     ...(selectedProject?.warnings ?? []),
     ...warnings
   ]));
   const hasStarterMemoryOnly = $derived.by(() => isStarterMemoryOnly(objects));
+  const memorySnapshot = $derived.by(() => buildMemorySnapshot(objects, relations));
+  const activeMemoryCount = $derived(objects.filter((object) => isCurrentStatus(object.status)).length);
+  const facetCategoryCount = $derived(facetCategoryOptions.length);
+  const staleMemoryCount = $derived(objects.filter((object) => object.status === "stale" || object.status === "superseded").length);
+  const trustLabel = $derived.by(() => selectedProject === null ? "No project" : gitLabel(selectedProject));
+  const trustDescription = $derived.by(() =>
+    selectedProject === null ? "No project is selected." : gitDescription(selectedProject)
+  );
+  const memorySections = $derived.by(() => buildMemorySections(filteredObjects));
+  const previewCommandTask = $derived.by(() => previewTask.trim() || (previewData?.task ?? ""));
+  const showPreviewCommand = $derived(previewCommandTask.trim() !== "");
+  const previewCommand = $derived.by(() => buildPreviewCommand(previewCommandTask, previewMode, previewTokenBudget));
+  const docGraphOverview = $derived.by(() => buildDocGraphOverview(graphObjects, graphRelations));
+  const docGraphPreviewRelations = $derived(docGraphOverview.relations.slice(0, 3));
+  const docGraphOverflowCount = $derived(
+    docGraphOverview.hiddenRelationCount + Math.max(0, docGraphOverview.relations.length - docGraphPreviewRelations.length)
+  );
+  const hasSelectedObject = $derived(selectedObject !== null);
+  const memoryScreenActive = $derived(
+    bootstrap !== null && (currentScreen === "memories" || currentScreen === "detail")
+  );
 
   onMount(() => {
     void loadProjects();
   });
+
+  onDestroy(() => {
+    destroyGraph();
+  });
+
+  $effect(() => {
+    if (currentScreen !== "graph" || graphContainer === null || bootstrap === null) {
+      destroyGraph();
+      return;
+    }
+
+    renderGraph(graphElements);
+    queueMicrotask(() => {
+      applyGraphSelection();
+    });
+  });
+
+  $effect(() => {
+    if (currentScreen === "graph") {
+      applyGraphSelection();
+    }
+  });
+
+  function viewerToken(): string {
+    const explicitToken = new URLSearchParams(window.location.search).get("token");
+
+    if (explicitToken !== null) {
+      return explicitToken;
+    }
+
+    return window.location.hostname === "demo.aictx.dev" ? "demo" : "";
+  }
 
   async function loadProjects(): Promise<void> {
     if (token === "") {
@@ -395,9 +644,7 @@
 
     try {
       const response = await fetch(`/api/projects?token=${encodeURIComponent(token)}`, {
-        headers: {
-          accept: "application/json"
-        }
+        headers: { accept: "application/json" }
       });
       const envelope = (await response.json()) as ViewerProjectsEnvelope;
 
@@ -432,9 +679,7 @@
 
     try {
       const response = await fetch(`/api/projects/${encodeURIComponent(registryId)}/bootstrap?token=${encodeURIComponent(token)}`, {
-        headers: {
-          accept: "application/json"
-        }
+        headers: { accept: "application/json" }
       });
       const envelope = (await response.json()) as ViewerEnvelope;
 
@@ -450,6 +695,7 @@
 
       bootstrap = envelope.data;
       projectLoadState = "ready";
+      selectedObjectId = null;
     } catch (error) {
       projectLoadState = "error";
       projectErrorMessage = error instanceof Error ? error.message : String(error);
@@ -457,10 +703,17 @@
   }
 
   async function exportObsidian(): Promise<void> {
-    if (token === "") {
+    if (isDemoMode) {
       exportState = "error";
       exportErrorCode = "AICtxValidationFailed";
-      exportMessage = "Viewer API token is missing from the local URL.";
+      exportMessage = "The public demo viewer is read-only.";
+      return;
+    }
+
+    if (selectedProjectId === null) {
+      exportState = "error";
+      exportErrorCode = "AICtxValidationFailed";
+      exportMessage = "Select a project before exporting.";
       return;
     }
 
@@ -470,24 +723,15 @@
     exportFilesWritten = 0;
     exportManifestPath = "";
 
-    const trimmedOutDir = exportOutDir.trim();
-    const requestBody = trimmedOutDir === "" ? {} : { outDir: trimmedOutDir };
-
     try {
-      if (selectedProjectId === null) {
-        exportState = "error";
-        exportErrorCode = "AICtxValidationFailed";
-        exportMessage = "Select a project before exporting.";
-        return;
-      }
-
+      const trimmedOutDir = exportOutDir.trim();
       const response = await fetch(`/api/projects/${encodeURIComponent(selectedProjectId)}/export/obsidian?token=${encodeURIComponent(token)}`, {
         method: "POST",
         headers: {
           accept: "application/json",
           "content-type": "application/json"
         },
-        body: JSON.stringify(requestBody)
+        body: JSON.stringify(trimmedOutDir === "" ? {} : { outDir: trimmedOutDir })
       });
       const envelope = (await response.json()) as ExportEnvelope;
 
@@ -513,107 +757,302 @@
     }
   }
 
-  function openDeleteProjectDialog(project: ViewerProjectSummary): void {
-    deleteProjectId = project.registry_id;
-    deleteConfirmation = "";
-    deleteState = "confirming";
-    deleteMessage = "";
-    deleteErrorCode = "";
-    deleteNotice = "";
-  }
-
-  function closeDeleteProjectDialog(): void {
-    if (deleteState === "running") {
+  async function previewContext(): Promise<void> {
+    if (selectedProjectId === null) {
+      previewState = "error";
+      previewErrorCode = "AICtxValidationFailed";
+      previewMessage = "Select a project before previewing context.";
       return;
     }
 
-    deleteProjectId = null;
-    deleteConfirmation = "";
-    deleteState = "idle";
-    deleteMessage = "";
-    deleteErrorCode = "";
-  }
+    const task = previewTask.trim();
 
-  async function confirmDeleteProject(): Promise<void> {
-    if (token === "") {
-      deleteState = "error";
-      deleteErrorCode = "AICtxValidationFailed";
-      deleteMessage = "Viewer API token is missing from the local URL.";
+    if (task === "") {
+      previewState = "error";
+      previewErrorCode = "AICtxValidationFailed";
+      previewMessage = "Enter a task to preview the context an agent would load.";
       return;
     }
 
-    if (projectPendingDelete === null) {
-      deleteState = "error";
-      deleteErrorCode = "AICtxValidationFailed";
-      deleteMessage = "Select a project before deleting.";
+    const parsedBudget = parsePreviewTokenBudget(previewTokenBudget);
+
+    if (!parsedBudget.ok) {
+      previewState = "error";
+      previewErrorCode = "AICtxValidationFailed";
+      previewMessage = parsedBudget.message;
       return;
     }
 
-    if (!deleteConfirmationMatches) {
-      deleteState = "error";
-      deleteErrorCode = "AICtxValidationFailed";
-      deleteMessage = "Type the project name exactly before deleting.";
-      return;
-    }
-
-    const registryId = projectPendingDelete.registry_id;
-
-    deleteState = "running";
-    deleteMessage = "Deleting Aictx memory.";
-    deleteErrorCode = "";
+    previewState = "running";
+    previewMessage = "Compiling the same context pack an agent would load.";
+    previewErrorCode = "";
+    copiedPreviewTarget = null;
 
     try {
-      const response = await fetch(`/api/projects/${encodeURIComponent(registryId)}?token=${encodeURIComponent(token)}`, {
-        method: "DELETE",
+      const response = await fetch(`/api/projects/${encodeURIComponent(selectedProjectId)}/load-preview?token=${encodeURIComponent(token)}`, {
+        method: "POST",
         headers: {
-          accept: "application/json"
-        }
+          accept: "application/json",
+          "content-type": "application/json"
+        },
+        body: JSON.stringify({
+          task,
+          mode: previewMode,
+          ...(parsedBudget.value === null ? {} : { token_budget: parsedBudget.value })
+        })
       });
-      const envelope = (await response.json()) as DeleteProjectEnvelope;
+      const envelope = (await response.json()) as LoadPreviewEnvelope;
 
       warnings = uniqueSorted([...warnings, ...(envelope.warnings ?? [])]);
 
       if (!response.ok || !envelope.ok) {
-        deleteState = "error";
-        deleteErrorCode = envelope.ok ? "" : envelope.error.code;
-        deleteMessage = envelope.ok
+        previewState = "error";
+        previewData = null;
+        previewErrorCode = envelope.ok ? "" : envelope.error.code;
+        previewMessage = envelope.ok
+          ? `Viewer load preview request failed with HTTP ${response.status}.`
+          : previewErrorMessage(envelope.error.code, envelope.error.message);
+        return;
+      }
+
+      previewState = "success";
+      previewMessage = "Context preview ready.";
+      previewData = envelope.data;
+    } catch (error) {
+      previewState = "error";
+      previewData = null;
+      previewErrorCode = "AICtxInternalError";
+      previewMessage = error instanceof Error ? error.message : String(error);
+    }
+  }
+
+  async function copyPreview(kind: "command" | "context"): Promise<void> {
+    const text = kind === "command" ? previewCommand : previewData?.context_pack ?? "";
+
+    if (text === "") {
+      return;
+    }
+
+    await navigator.clipboard.writeText(text);
+    copiedPreviewTarget = kind;
+  }
+
+  function requestProjectDelete(registryId: string): void {
+    pendingDeleteProjectId = registryId;
+    deleteConfirmText = "";
+    projectDeleteMessage = "";
+    projectDeleteErrorCode = "";
+  }
+
+  function cancelProjectDelete(): void {
+    pendingDeleteProjectId = null;
+    deleteConfirmText = "";
+    projectDeleteErrorCode = "";
+  }
+
+  function projectDeleteConfirmationMatches(project: ViewerProjectSummary): boolean {
+    return deleteConfirmText.trim() === project.project.id;
+  }
+
+  async function deleteProjectMemory(project: ViewerProjectSummary): Promise<void> {
+    if (isDemoMode) {
+      projectDeleteErrorCode = "AICtxValidationFailed";
+      projectDeleteMessage = "The public demo viewer is read-only.";
+      return;
+    }
+
+    if (!projectDeleteConfirmationMatches(project)) {
+      projectDeleteErrorCode = "AICtxValidationFailed";
+      projectDeleteMessage = `Type ${project.project.id} to confirm memory deletion.`;
+      return;
+    }
+
+    deletingProjectId = project.registry_id;
+    projectDeleteMessage = `Deleting ${project.project.name} memory.`;
+    projectDeleteErrorCode = "";
+
+    try {
+      const response = await fetch(`/api/projects/${encodeURIComponent(project.registry_id)}?token=${encodeURIComponent(token)}`, {
+        method: "DELETE",
+        headers: { accept: "application/json" }
+      });
+      const envelope = (await response.json()) as ProjectDeleteEnvelope;
+
+      warnings = uniqueSorted([...warnings, ...(envelope.warnings ?? [])]);
+
+      if (!response.ok || !envelope.ok) {
+        projectDeleteErrorCode = envelope.ok ? "" : envelope.error.code;
+        projectDeleteMessage = envelope.ok
           ? `Viewer delete request failed with HTTP ${response.status}.`
           : `${envelope.error.code}: ${envelope.error.message}`;
         return;
       }
 
-      deleteNotice = `Deleted Aictx memory for ${envelope.data.project.project.name}. Source files were not deleted.`;
-
-      if (selectedProjectId === registryId) {
-        selectedProjectId = null;
-        bootstrap = null;
-        selectedObjectId = null;
-        currentScreen = "projects";
-        projectLoadState = "loading";
-        projectErrorMessage = "";
+      if (selectedProjectId === project.registry_id) {
+        clearSelectedProjectAfterDelete();
       }
 
-      deleteProjectId = null;
-      deleteConfirmation = "";
-      deleteState = "idle";
-      deleteMessage = "";
-      deleteErrorCode = "";
+      pendingDeleteProjectId = null;
+      deleteConfirmText = "";
+      projectDeleteMessage = projectDeleteSuccessMessage(envelope.data);
+      projectDeleteErrorCode = "";
       await loadProjects();
     } catch (error) {
-      deleteState = "error";
-      deleteErrorCode = "AICtxInternalError";
-      deleteMessage = error instanceof Error ? error.message : String(error);
+      projectDeleteErrorCode = "AICtxInternalError";
+      projectDeleteMessage = error instanceof Error ? error.message : String(error);
+    } finally {
+      if (deletingProjectId === project.registry_id) {
+        deletingProjectId = null;
+      }
     }
+  }
+
+  function clearSelectedProjectAfterDelete(): void {
+    selectedProjectId = null;
+    selectedObjectId = null;
+    bootstrap = null;
+    projectLoadState = "loading";
+    currentScreen = "projects";
+    exportState = "idle";
+    previewState = "idle";
+    previewData = null;
+    previewMessage = "";
+    previewErrorCode = "";
+    selectedGraphObjectId = null;
+    selectedGraphRelationId = null;
+  }
+
+  function projectDeleteSuccessMessage(data: ViewerProjectDeleteData): string {
+    const removedMemory = data.entries_removed.includes(".aictx");
+    const action = removedMemory
+      ? "Deleted .aictx memory and removed the project from the viewer."
+      : "Removed the project from the viewer; .aictx memory was already missing.";
+
+    return `${data.project.project.name}: ${action}`;
+  }
+
+  function selectProject(registryId: string): void {
+    selectedProjectId = registryId;
+    selectedObjectId = null;
+    searchQuery = "";
+    layerFilter = "all";
+    typeFilter = allOption;
+    facetCategoryFilter = allOption;
+    statusFilter = allOption;
+    tagFilter = allOption;
+    pagePreset = "all";
+    activeLensName = "project-map";
+    exportState = "idle";
+    previewState = "idle";
+    previewData = null;
+    previewMessage = "";
+    previewErrorCode = "";
+    graphShowInactive = false;
+    selectedGraphObjectId = null;
+    selectedGraphRelationId = null;
+    currentScreen = "memories";
+    void loadBootstrap(registryId);
+  }
+
+  function selectObject(id: string): void {
+    if (selectedObjectId === id) {
+      selectedObjectId = null;
+      return;
+    }
+
+    selectedObjectId = id;
+    currentScreen = "memories";
+    focusMemoryWorkspaceStart();
+  }
+
+  function closeSelectedObject(): void {
+    selectedObjectId = null;
+    focusMemoryWorkspaceStart();
+  }
+
+  function focusMemoryWorkspaceStart(): void {
+    queueMicrotask(() => {
+      memoryWorkspaceElement?.scrollTo({ top: 0, left: 0 });
+    });
+  }
+
+  function showProjects(): void {
+    currentScreen = "projects";
+    closeSidebarDrawer();
+  }
+
+  function showMemories(): void {
+    currentScreen = selectedProjectId === null ? "projects" : "memories";
+    closeSidebarDrawer();
+  }
+
+  function showGraph(): void {
+    if (selectedProjectId === null) {
+      showProjects();
+      return;
+    }
+
+    currentScreen = "graph";
+    closeSidebarDrawer();
+
+    if (selectedGraphObjectId === null) {
+      selectedGraphObjectId = preferredGraphObjectId();
+    }
+  }
+
+  function showExport(): void {
+    if (isDemoMode) {
+      showMemories();
+      return;
+    }
+
+    currentScreen = selectedProjectId === null ? "projects" : "export";
+    closeSidebarDrawer();
+  }
+
+  function rankedObjects(memoryObjects: MemoryObjectSummary[]): MemoryObjectSummary[] {
+    return [...memoryObjects].sort((left, right) => {
+      const leftStatus = isCurrentStatus(left.status) ? 0 : 1;
+      const rightStatus = isCurrentStatus(right.status) ? 0 : 1;
+      if (leftStatus !== rightStatus) {
+        return leftStatus - rightStatus;
+      }
+
+      const leftType = OBJECT_TYPES.indexOf(left.type);
+      const rightType = OBJECT_TYPES.indexOf(right.type);
+      if (leftType !== rightType) {
+        return leftType - rightType;
+      }
+
+      return left.title.localeCompare(right.title);
+    });
   }
 
   function objectMatchesFilters(object: MemoryObjectSummary): boolean {
     return (
+      objectMatchesPagePreset(object, pagePreset) &&
       objectMatchesLayer(object, layerFilter) &&
       optionMatches(typeFilter, object.type) &&
+      optionMatches(facetCategoryFilter, object.facets?.category ?? "") &&
       optionMatches(statusFilter, object.status) &&
       (tagFilter === allOption || object.tags.includes(tagFilter)) &&
       objectMatchesSearch(object, searchQuery)
     );
+  }
+
+  function objectMatchesPagePreset(object: MemoryObjectSummary, preset: PagePreset): boolean {
+    switch (preset) {
+      case "all":
+        return true;
+      case "atomic-memory":
+        return object.type !== "source" && object.type !== "synthesis" && isCurrentStatus(object.status);
+      case "syntheses":
+        return object.type === "synthesis";
+      case "sources":
+        return object.type === "source";
+      case "inactive":
+        return object.status === "stale" || object.status === "superseded";
+    }
   }
 
   function objectMatchesSearch(object: MemoryObjectSummary, rawQuery: string): boolean {
@@ -631,12 +1070,17 @@
       object.tags.join(" "),
       object.facets?.category ?? "",
       object.evidence.map((evidence) => `${evidence.kind} ${evidence.id}`).join(" "),
+      object.origin === null
+        ? ""
+        : [
+            object.origin.kind,
+            object.origin.locator,
+            object.origin.captured_at ?? "",
+            object.origin.digest ?? "",
+            object.origin.media_type ?? ""
+          ].join(" "),
       object.body
     ].join(" ")).includes(query);
-  }
-
-  function optionMatches(filter: string, value: string): boolean {
-    return filter === allOption || filter === value;
   }
 
   function objectMatchesLayer(object: MemoryObjectSummary, filter: LayerFilter): boolean {
@@ -654,12 +1098,836 @@
     }
   }
 
+  function optionMatches(filter: string, value: string): boolean {
+    return filter === allOption || filter === value;
+  }
+
   function isCurrentStatus(status: ObjectStatus): boolean {
     return status === "active" || status === "open";
   }
 
   function normalizeText(value: string): string {
     return value.trim().toLowerCase();
+  }
+
+  function selectRelated(id: string): void {
+    if (objectById.has(id)) {
+      searchQuery = "";
+      layerFilter = "all";
+      typeFilter = allOption;
+      facetCategoryFilter = allOption;
+      statusFilter = allOption;
+      tagFilter = allOption;
+      selectedObjectId = id;
+      currentScreen = "memories";
+      focusMemoryWorkspaceStart();
+    }
+  }
+
+  function selectGraphObject(id: string): void {
+    if (!objectById.has(id)) {
+      return;
+    }
+
+    selectedGraphObjectId = id;
+    selectedGraphRelationId = null;
+    selectedObjectId = id;
+  }
+
+  function selectGraphRelation(id: string): void {
+    if (!relations.some((relation) => relation.id === id)) {
+      return;
+    }
+
+    selectedGraphRelationId = id;
+    selectedGraphObjectId = null;
+  }
+
+  function setGraphShowInactive(showInactive: boolean): void {
+    if (graphShowInactive === showInactive) {
+      return;
+    }
+
+    graphShowInactive = showInactive;
+    selectedGraphObjectId = null;
+    selectedGraphRelationId = null;
+  }
+
+  function preferredGraphObjectId(): string | null {
+    if (selectedObjectId !== null && graphVisibleObjectIds.has(selectedObjectId)) {
+      return selectedObjectId;
+    }
+
+    const degreeById = new Map<string, number>();
+
+    for (const relation of graphRelations) {
+      degreeById.set(relation.from, (degreeById.get(relation.from) ?? 0) + 1);
+      degreeById.set(relation.to, (degreeById.get(relation.to) ?? 0) + 1);
+    }
+
+    return [...graphObjects]
+      .sort((left, right) => {
+        const degreeComparison = (degreeById.get(right.id) ?? 0) - (degreeById.get(left.id) ?? 0);
+        return degreeComparison === 0 ? left.id.localeCompare(right.id) : degreeComparison;
+      })[0]?.id ?? null;
+  }
+
+  function fitGraph(): void {
+    graphInstance?.fit(undefined, 48);
+  }
+
+  function zoomGraph(factor: number): void {
+    if (graphInstance === null) {
+      return;
+    }
+
+    const nextZoom = clamp(graphInstance.zoom() * factor, 0.25, 3);
+
+    graphInstance.zoom({
+      level: nextZoom,
+      renderedPosition: {
+        x: graphInstance.width() / 2,
+        y: graphInstance.height() / 2
+      }
+    });
+  }
+
+  function resetGraphLayout(): void {
+    runGraphLayout(true);
+  }
+
+  function focusGraphSelection(): void {
+    if (selectedGraphObjectId !== null) {
+      focusGraphNode(selectedGraphObjectId, true);
+      return;
+    }
+
+    if (selectedGraphRelationId !== null) {
+      focusGraphEdge(selectedGraphRelationId, true);
+    }
+  }
+
+  function clearPagePreset(): void {
+    pagePreset = "all";
+  }
+
+  function relationsForObject(id: string): MemoryRelationSummary[] {
+    return relations
+      .filter((relation) => relation.from === id || relation.to === id)
+      .sort(compareRelations);
+  }
+
+  function buildDocGraphOverview(
+    memoryObjects: MemoryObjectSummary[],
+    relationList: MemoryRelationSummary[]
+  ): DocGraphOverview {
+    if (memoryObjects.length === 0) {
+      return {
+        hub: null,
+        nodes: [],
+        edges: [],
+        relations: [],
+        hiddenRelationCount: 0
+      };
+    }
+
+    const objectMap = new Map(memoryObjects.map((object) => [object.id, object]));
+    const hubId = preferredGraphObjectId() ?? memoryObjects[0]?.id ?? null;
+    const hub = hubId === null ? null : objectMap.get(hubId) ?? null;
+
+    if (hub === null) {
+      return {
+        hub: null,
+        nodes: [],
+        edges: [],
+        relations: [],
+        hiddenRelationCount: 0
+      };
+    }
+
+    const directRelations = relationList
+      .filter((relation) => relation.from === hub.id || relation.to === hub.id)
+      .sort((left, right) => {
+        const leftTarget = relationTargetLabel(left, hub.id);
+        const rightTarget = relationTargetLabel(right, hub.id);
+        const targetComparison = leftTarget.localeCompare(rightTarget);
+        return targetComparison === 0 ? left.predicate.localeCompare(right.predicate) : targetComparison;
+      });
+    const relatedObjects = uniqueById(
+      directRelations
+        .map((relation) => objectMap.get(relationCounterpart(relation, hub.id)) ?? null)
+        .filter((object): object is MemoryObjectSummary => object !== null)
+    ).slice(0, 6);
+    const fillerObjects = rankedObjects(memoryObjects)
+      .filter((object) => object.id !== hub.id && !relatedObjects.some((related) => related.id === object.id))
+      .slice(0, Math.max(0, 6 - relatedObjects.length));
+    const visibleObjects = [hub, ...relatedObjects, ...fillerObjects];
+    const positions = docGraphNodePositions(visibleObjects.length);
+    const nodePositionById = new Map<string, { x: number; y: number }>();
+    const directlyRelatedIds = new Set(relatedObjects.map((object) => object.id));
+    const nodes = visibleObjects.map((object, index) => {
+      const position = positions[index] ?? { x: 180, y: 100 };
+      nodePositionById.set(object.id, position);
+
+      return {
+        id: object.id,
+        label: graphObjectLabel(object),
+        type: object.type,
+        color: graphObjectColor(object),
+        borderColor: graphObjectBorderColor(object),
+        x: position.x,
+        y: position.y,
+        radius: object.id === hub.id ? 18 : 11,
+        hub: object.id === hub.id,
+        muted: object.id !== hub.id && !directlyRelatedIds.has(object.id)
+      };
+    });
+    const directEdges = directRelations.filter((relation) => {
+      const sourcePosition = nodePositionById.get(relation.from);
+      const targetPosition = nodePositionById.get(relation.to);
+      return sourcePosition !== undefined && targetPosition !== undefined;
+    });
+    const edges = directEdges.map((relation) => {
+      const sourcePosition = nodePositionById.get(relation.from) ?? { x: 180, y: 100 };
+      const targetPosition = nodePositionById.get(relation.to) ?? { x: 180, y: 100 };
+
+      return {
+        id: relation.id,
+        color: graphRelationColor(relation),
+        x1: sourcePosition.x,
+        y1: sourcePosition.y,
+        x2: targetPosition.x,
+        y2: targetPosition.y,
+        muted: false
+      };
+    });
+
+    return {
+      hub,
+      nodes,
+      edges,
+      relations: directRelations.slice(0, 4).map((relation) => ({
+        id: relation.id,
+        predicate: relation.predicate,
+        targetLabel: relationTargetLabel(relation, hub.id),
+        status: relation.status,
+        confidence: relation.confidence
+      })),
+      hiddenRelationCount: Math.max(0, directRelations.length - 4)
+    };
+  }
+
+  function docGraphNodePositions(count: number): Array<{ x: number; y: number }> {
+    const center = { x: 180, y: 100 };
+
+    if (count <= 1) {
+      return [center];
+    }
+
+    const slots = [
+      { x: 104, y: 62 },
+      { x: 256, y: 64 },
+      { x: 280, y: 134 },
+      { x: 174, y: 154 },
+      { x: 80, y: 130 },
+      { x: 182, y: 36 }
+    ];
+
+    return [center, ...slots.slice(0, count - 1)];
+  }
+
+  function uniqueById(memoryObjects: MemoryObjectSummary[]): MemoryObjectSummary[] {
+    const seen = new Set<string>();
+    const uniqueObjects: MemoryObjectSummary[] = [];
+
+    for (const object of memoryObjects) {
+      if (!seen.has(object.id)) {
+        uniqueObjects.push(object);
+        seen.add(object.id);
+      }
+    }
+
+    return uniqueObjects;
+  }
+
+  function buildGraphElements(
+    memoryObjects: MemoryObjectSummary[],
+    relationList: MemoryRelationSummary[]
+  ): cytoscape.ElementDefinition[] {
+    const degreeById = new Map<string, number>();
+
+    for (const relation of relationList) {
+      degreeById.set(relation.from, (degreeById.get(relation.from) ?? 0) + 1);
+      degreeById.set(relation.to, (degreeById.get(relation.to) ?? 0) + 1);
+    }
+
+    return [
+      ...memoryObjects.map((object) => ({
+        group: "nodes" as const,
+        data: {
+          id: object.id,
+          label: graphObjectLabel(object),
+          peekLabel: graphObjectPeekLabel(object),
+          fullLabel: graphObjectFullLabel(object),
+          type: object.type,
+          status: object.status,
+          color: graphObjectColor(object),
+          borderColor: graphObjectBorderColor(object),
+          size: 28 + Math.min(degreeById.get(object.id) ?? 0, 8) * 3
+        }
+      })),
+      ...relationList.map((relation) => ({
+        group: "edges" as const,
+        data: {
+          id: relation.id,
+          source: relation.from,
+          target: relation.to,
+          predicate: relation.predicate,
+          status: relation.status,
+          color: graphRelationColor(relation),
+          width: relation.status === "active" ? 1.8 : 1
+        }
+      }))
+    ];
+  }
+
+  function renderGraph(elements: cytoscape.ElementDefinition[]): void {
+    if (graphContainer === null) {
+      return;
+    }
+
+    if (graphInstance === null) {
+      graphInstance = cytoscape({
+        container: graphContainer,
+        elements,
+        style: graphStyles,
+        layout: graphLayoutOptions(true),
+        minZoom: 0.25,
+        maxZoom: 3,
+        boxSelectionEnabled: false
+      });
+      graphInstance.on("tap", "node", (event: cytoscape.EventObject) => {
+        selectGraphObject(event.target.id());
+      });
+      graphInstance.on("tap", "edge", (event: cytoscape.EventObject) => {
+        selectGraphRelation(event.target.id());
+      });
+      graphInstance.on("tap", (event: cytoscape.EventObject) => {
+        if (event.target === graphInstance) {
+          selectedGraphObjectId = null;
+          selectedGraphRelationId = null;
+        }
+      });
+      return;
+    }
+
+    graphInstance.batch(() => {
+      graphInstance?.elements().remove();
+      graphInstance?.add(elements);
+    });
+    runGraphLayout(true);
+  }
+
+  function destroyGraph(): void {
+    graphInstance?.destroy();
+    graphInstance = null;
+  }
+
+  function graphLayoutOptions(fit: boolean): cytoscape.LayoutOptions {
+    return {
+      name: "cose",
+      animate: false,
+      componentSpacing: 132,
+      edgeElasticity: 140,
+      fit,
+      gravity: 0.16,
+      idealEdgeLength: 138,
+      nodeOverlap: 36,
+      nodeRepulsion: 9800,
+      numIter: 1200,
+      padding: 72,
+      randomize: true
+    };
+  }
+
+  function runGraphLayout(fit: boolean): void {
+    if (graphInstance === null) {
+      return;
+    }
+
+    graphInstance.layout(graphLayoutOptions(fit)).run();
+  }
+
+  function applyGraphSelection(): void {
+    if (graphInstance === null) {
+      return;
+    }
+
+    graphInstance.elements().removeClass("graph-selected graph-neighbor graph-faded");
+
+    if (selectedGraphObjectId !== null) {
+      const node = graphInstance.getElementById(selectedGraphObjectId);
+
+      if (node.nonempty()) {
+        const neighborhood = node.closedNeighborhood();
+        node.addClass("graph-selected");
+        neighborhood.difference(node).addClass("graph-neighbor");
+        graphInstance.elements().difference(neighborhood).addClass("graph-faded");
+      }
+      return;
+    }
+
+    if (selectedGraphRelationId !== null) {
+      const edge = graphInstance.getElementById(selectedGraphRelationId);
+
+      if (edge.nonempty()) {
+        const neighborhood = edge.connectedNodes().union(edge);
+        edge.addClass("graph-selected");
+        neighborhood.difference(edge).addClass("graph-neighbor");
+        graphInstance.elements().difference(neighborhood).addClass("graph-faded");
+      }
+    }
+  }
+
+  function focusGraphNode(id: string, animate: boolean): void {
+    if (graphInstance === null) {
+      return;
+    }
+
+    const node = graphInstance.getElementById(id);
+
+    if (node.nonempty()) {
+      graphInstance.animate({
+        center: { eles: node },
+        duration: animate ? 260 : 0,
+        zoom: Math.max(graphInstance.zoom(), 1.12)
+      });
+    }
+  }
+
+  function focusGraphEdge(id: string, animate: boolean): void {
+    if (graphInstance === null) {
+      return;
+    }
+
+    const edge = graphInstance.getElementById(id);
+
+    if (edge.nonempty()) {
+      graphInstance.animate({
+        center: { eles: edge.connectedNodes() },
+        duration: animate ? 260 : 0,
+        zoom: Math.max(graphInstance.zoom(), 1.04)
+      });
+    }
+  }
+
+  function graphObjectLabel(object: MemoryObjectSummary): string {
+    const concise = compactGraphTitle(object);
+    const words = concise.split(/\s+/).filter(Boolean);
+
+    if (words.length <= 1) {
+      return truncateGraphLabel(concise, 18);
+    }
+
+    const lines: string[] = [];
+    let line = "";
+
+    for (const word of words) {
+      const candidate = line === "" ? word : `${line} ${word}`;
+
+      if (candidate.length > 14 && line !== "") {
+        lines.push(line);
+        line = word;
+      } else {
+        line = candidate;
+      }
+
+      if (lines.length === 2) {
+        break;
+      }
+    }
+
+    if (line !== "" && lines.length < 2) {
+      lines.push(line);
+    }
+
+    const label = lines.slice(0, 2).join("\n");
+    return truncateGraphLabel(label, 30);
+  }
+
+  function graphObjectFullLabel(object: MemoryObjectSummary): string {
+    return truncateGraphLabel(object.title.replace(/^Source:\s*/i, ""), 46);
+  }
+
+  function graphObjectPeekLabel(object: MemoryObjectSummary): string {
+    return truncateGraphLabel(compactGraphTitle(object).replace(/\s+/g, " "), 22);
+  }
+
+  function compactGraphTitle(object: MemoryObjectSummary): string {
+    const title = object.title.replace(/^Source:\s*/i, "").trim();
+
+    if (object.type !== "source") {
+      return title;
+    }
+
+    if (!looksLikePathLabel(title)) {
+      return title;
+    }
+
+    const originLabel = graphOriginLabel(object.origin?.locator ?? title);
+    return originLabel === "" ? title : originLabel;
+  }
+
+  function looksLikePathLabel(label: string): boolean {
+    return /[\\/]/.test(label) || /\.[a-z0-9]{2,8}$/i.test(label);
+  }
+
+  function graphOriginLabel(locator: string): string {
+    if (/^https?:\/\//i.test(locator)) {
+      try {
+        const url = new URL(locator);
+        const filename = url.pathname.split("/").filter(Boolean).at(-1) ?? "";
+        return filename === "" ? url.hostname.replace(/^www\./, "") : filename;
+      } catch {
+        return locator.replace(/^https?:\/\//i, "").split("/")[0] ?? locator;
+      }
+    }
+
+    const withoutQuery = locator.split(/[?#]/)[0] ?? locator;
+    const segments = withoutQuery.split(/[\\/]/).filter(Boolean);
+    const filename = segments.at(-1) ?? withoutQuery.trim();
+
+    if (filename === "") {
+      return "";
+    }
+
+    return filename.replace(/\.(markdown|mdx?)$/i, ".md");
+  }
+
+  function truncateGraphLabel(label: string, maxLength: number): string {
+    if (label.length <= maxLength) {
+      return label;
+    }
+
+    return `${label.slice(0, Math.max(0, maxLength - 1)).trimEnd()}…`;
+  }
+
+  function graphObjectColor(object: MemoryObjectSummary): string {
+    if (!isCurrentStatus(object.status)) {
+      return "#c7c1b8";
+    }
+
+    switch (object.type) {
+      case "project":
+        return "#2f5d62";
+      case "architecture":
+        return "#8b5e34";
+      case "synthesis":
+        return "#574b90";
+      case "decision":
+        return "#9a5b23";
+      case "constraint":
+        return "#8e3b46";
+      case "question":
+        return "#5f6c37";
+      case "fact":
+        return "#356b4f";
+      case "workflow":
+        return "#3f648c";
+      case "gotcha":
+        return "#b54708";
+      case "source":
+        return "#6b6f76";
+      case "concept":
+        return "#7a5c99";
+      case "note":
+        return "#6f6259";
+      default:
+        return "#5f6b65";
+    }
+  }
+
+  function graphObjectBorderColor(object: MemoryObjectSummary): string {
+    if (object.type === "source") {
+      return "#9a968d";
+    }
+
+    return isCurrentStatus(object.status) ? "#fffefa" : "#8f8a81";
+  }
+
+  function graphRelationColor(relation: MemoryRelationSummary): string {
+    if (relation.status !== "active") {
+      return "#b9b2a8";
+    }
+
+    switch (relation.predicate) {
+      case "requires":
+      case "depends_on":
+        return "#5b6f95";
+      case "supersedes":
+      case "conflicts_with":
+      case "challenges":
+        return "#a14a3d";
+      case "derived_from":
+      case "supports":
+      case "summarizes":
+      case "documents":
+        return "#6b637d";
+      case "implements":
+        return "#4d745b";
+      default:
+        return "#78736b";
+    }
+  }
+
+  function pageFilter(section: string): void {
+    currentScreen = "memories";
+    closeSidebarDrawer();
+    searchQuery = "";
+    typeFilter = allOption;
+    facetCategoryFilter = allOption;
+    statusFilter = allOption;
+    tagFilter = allOption;
+    pagePreset = section as PagePreset;
+
+    switch (section) {
+      case "overview":
+        pagePreset = "all";
+        layerFilter = "all";
+        break;
+      case "atomic-memory":
+        layerFilter = "memories";
+        break;
+      case "syntheses":
+        layerFilter = "syntheses";
+        break;
+      case "sources":
+        layerFilter = "sources";
+        break;
+      case "inactive":
+        layerFilter = "inactive";
+        break;
+      default:
+        pagePreset = "all";
+        layerFilter = "all";
+    }
+  }
+
+  function buildMemorySections(memoryObjects: MemoryObjectSummary[]): MemorySection[] {
+    return OBJECT_TYPES
+      .map((type) => ({
+        id: `type-${type}`,
+        title: objectTypeLabel(type),
+        objects: rankedObjects(memoryObjects.filter((object) => object.type === type))
+      }))
+      .filter((section) => section.objects.length > 0);
+  }
+
+  function buildMemorySnapshot(
+    memoryObjects: MemoryObjectSummary[],
+    relationList: MemoryRelationSummary[]
+  ): MemorySnapshotItem[] {
+    const reusableCount = memoryObjects.filter((object) =>
+      object.type !== "source" && object.type !== "synthesis" && isCurrentStatus(object.status)
+    ).length;
+    const memoryFacetCategoryCount = uniqueSorted(
+      memoryObjects.flatMap((object) => object.facets?.category === undefined ? [] : [object.facets.category])
+    ).length;
+    const sourceCount = memoryObjects.filter((object) => object.type === "source").length;
+    const activeRelationCount = relationList.filter((relation) => relation.status === "active").length;
+
+    return [
+      {
+        label: "Active objects",
+        value: String(reusableCount),
+        detail: "canonical non-source records agents can load"
+      },
+      {
+        label: "Facet categories",
+        value: String(memoryFacetCategoryCount),
+        detail: "typed durable categories represented in storage"
+      },
+      {
+        label: "Provenance trail",
+        value: `${sourceCount}/${activeRelationCount}`,
+        detail: "source records / active memory links"
+      }
+    ];
+  }
+
+  function bodyPreview(object: MemoryObjectSummary): string {
+    const text = object.body
+      .replace(/^#+\s+/gm, "")
+      .replace(/[`*_>#-]/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
+
+    return text.length > 190 ? `${text.slice(0, 187)}...` : text;
+  }
+
+  function objectTypeLabel(type: ObjectType): string {
+    return `${type.charAt(0).toUpperCase()}${type.slice(1)} objects`;
+  }
+
+  function facetCategoryLabel(object: MemoryObjectSummary): string {
+    return object.facets?.category ?? "no facet category";
+  }
+
+  function scopeLabel(scope: Scope): string {
+    if (scope.kind === "branch") {
+      return `branch:${scope.branch ?? "unknown"}`;
+    }
+
+    if (scope.kind === "task") {
+      return `task:${scope.task ?? "unknown"}`;
+    }
+
+    return "project";
+  }
+
+  function emptyRoleCoverage(): RoleCoverageData {
+    return {
+      roles: [],
+      counts: {
+        populated: 0,
+        thin: 0,
+        missing: 0,
+        stale: 0,
+        conflicted: 0
+      }
+    };
+  }
+
+  function roleStatusClass(status: RoleCoverageStatus): string {
+    return `status-${status}`;
+  }
+
+  function relationCounterpart(relation: MemoryRelationSummary, objectId: string): string {
+    return relation.from === objectId ? relation.to : relation.from;
+  }
+
+  function relationObject(relation: MemoryRelationSummary, objectId: string): MemoryObjectSummary | null {
+    return objectById.get(relationCounterpart(relation, objectId)) ?? null;
+  }
+
+  function relationTargetLabel(relation: MemoryRelationSummary, objectId: string): string {
+    const related = relationObject(relation, objectId);
+
+    return related === null ? relationCounterpart(relation, objectId) : related.title;
+  }
+
+  function relationStatusLabel(relation: Pick<MemoryRelationSummary, "status" | "confidence">): string {
+    return relation.confidence === null
+      ? relation.status
+      : `${relation.status} / ${relation.confidence} confidence`;
+  }
+
+  function parsePreviewTokenBudget(raw: string): { ok: true; value: number | null } | { ok: false; message: string } {
+    const trimmed = raw.trim();
+
+    if (trimmed === "") {
+      return { ok: true, value: null };
+    }
+
+    const value = Number(trimmed);
+
+    if (!Number.isSafeInteger(value) || value <= 500) {
+      return { ok: false, message: "Token budget must be an integer greater than 500." };
+    }
+
+    return { ok: true, value };
+  }
+
+  function previewErrorMessage(code: string, message: string): string {
+    if (code === "AICtxIndexUnavailable") {
+      return `${code}: ${message} Run aictx rebuild, then preview again.`;
+    }
+
+    return `${code}: ${message}`;
+  }
+
+  function buildPreviewCommand(task: string, mode: LoadMemoryMode, tokenBudget: string): string {
+    const parts = ["aictx", "load", shellQuote(task.trim())];
+
+    if (mode !== "coding") {
+      parts.push("--mode", mode);
+    }
+
+    const parsedBudget = parsePreviewTokenBudget(tokenBudget);
+
+    if (parsedBudget.ok && parsedBudget.value !== null) {
+      parts.push("--token-budget", String(parsedBudget.value));
+    }
+
+    return parts.join(" ");
+  }
+
+  function shellQuote(value: string): string {
+    return `"${value.replace(/["\\$`]/g, "\\$&")}"`;
+  }
+
+  function previewSourceLabel(source: LoadMemorySource): string {
+    if (!source.git_available) {
+      return `${source.project}, Git unavailable`;
+    }
+
+    return `${source.project}, ${source.branch ?? "detached HEAD"}@${source.commit ?? "unknown commit"}`;
+  }
+
+  function gitLabel(project: ViewerProjectSummary): string {
+    if (!project.available) {
+      return "Unavailable";
+    }
+
+    if (project.git === null || !project.git.available) {
+      return "No Git";
+    }
+
+    if (project.git.dirty === true) {
+      return "Uncommitted memory";
+    }
+
+    if (project.git.dirty === false) {
+      return "Committed memory";
+    }
+
+    return "Git available";
+  }
+
+  function gitDescription(project: ViewerProjectSummary): string {
+    if (!project.available) {
+      return "This registered memory root is unavailable.";
+    }
+
+    if (project.git === null || !project.git.available) {
+      return "Git status is unavailable for this memory root.";
+    }
+
+    if (project.git.dirty === true) {
+      return "There are uncommitted changes under this memory root. Use aictx diff or Git before treating it as committed team state.";
+    }
+
+    if (project.git.dirty === false) {
+      return "The memory root has no uncommitted Git changes.";
+    }
+
+    return "Git is available, but dirty state is unknown.";
+  }
+
+  function countLabel(count: number, singular: string, plural: string): string {
+    return `${count} ${count === 1 ? singular : plural}`;
+  }
+
+  function clamp(value: number, min: number, max: number): number {
+    return Math.min(max, Math.max(min, value));
+  }
+
+  function uniqueSorted(values: string[]): string[] {
+    return [...new Set(values)].sort((left, right) => left.localeCompare(right));
+  }
+
+  function compareRelations(left: MemoryRelationSummary, right: MemoryRelationSummary): number {
+    return left.id.localeCompare(right.id);
   }
 
   function isStarterMemoryOnly(memoryObjects: readonly MemoryObjectSummary[]): boolean {
@@ -677,328 +1945,14 @@
     return (
       projectObject !== undefined &&
       architectureObject !== undefined &&
-      isInitialProjectBody(projectObject.body) &&
+      /^# .+\n\nProject-level memory for .+\.$/.test(normalizeBody(projectObject.body)) &&
       normalizeBody(architectureObject.body) ===
         "# Current Architecture\n\nArchitecture memory starts here."
     );
   }
 
-  function isInitialProjectBody(body: string): boolean {
-    return /^# .+\n\nProject-level memory for .+\.$/.test(normalizeBody(body));
-  }
-
   function normalizeBody(body: string): string {
     return body.replace(/\r\n?/g, "\n").trim();
-  }
-
-  function selectObject(id: string): void {
-    selectedObjectId = id;
-    currentScreen = "detail";
-  }
-
-  function selectProject(registryId: string): void {
-    selectedProjectId = registryId;
-    selectedObjectId = null;
-    searchQuery = "";
-    layerFilter = "all";
-    typeFilter = allOption;
-    statusFilter = allOption;
-    tagFilter = allOption;
-    selectedLensName = "project-map";
-    exportState = "idle";
-    exportMessage = "";
-    currentScreen = "memories";
-    void loadBootstrap(registryId);
-  }
-
-  function openRelatedObject(id: string): void {
-    selectObject(id);
-  }
-
-  function showProjects(): void {
-    currentScreen = "projects";
-    selectedObjectId = null;
-  }
-
-  function showMemories(): void {
-    if (selectedProjectId === null) {
-      currentScreen = "projects";
-      return;
-    }
-
-    currentScreen = "memories";
-  }
-
-  function showLenses(): void {
-    if (selectedProjectId === null) {
-      currentScreen = "projects";
-      return;
-    }
-
-    currentScreen = "lenses";
-  }
-
-  function showExport(): void {
-    if (selectedProjectId === null) {
-      currentScreen = "projects";
-      return;
-    }
-
-    currentScreen = "export";
-  }
-
-  function gitLabel(project: ViewerProjectSummary): string {
-    if (!project.available) {
-      return "Unavailable";
-    }
-
-    if (project.git === null || !project.git.available) {
-      return "No Git";
-    }
-
-    if (project.git.dirty === true) {
-      return "Local memory changes";
-    }
-
-    if (project.git.dirty === false) {
-      return "Memory clean";
-    }
-
-    return "Git available";
-  }
-
-  function gitTooltip(project: ViewerProjectSummary): string | null {
-    if (!project.available || project.git === null || !project.git.available) {
-      return null;
-    }
-
-    if (project.git.dirty === true) {
-      return "`.aictx/` has local memory changes. You can keep saving memory; supported memory writes protect dirty touched files. Review with `aictx diff` or commit `.aictx/` when you want this memory versioned. Project deletion is permanent after confirmation.";
-    }
-
-    if (project.git.dirty === false) {
-      return "No local `.aictx/` memory changes are reported by Git.";
-    }
-
-    return "Git is available, but Aictx could not determine whether local memory changed.";
-  }
-
-  function statusTooltipId(registryId: string): string {
-    return `project-status-tooltip-${registryId.replace(/[^a-zA-Z0-9_-]/g, "-")}`;
-  }
-
-  function showStatusTooltip(tooltipId: string): void {
-    activeStatusTooltipId = tooltipId;
-  }
-
-  function hideStatusTooltip(tooltipId: string): void {
-    if (activeStatusTooltipId === tooltipId) {
-      activeStatusTooltipId = null;
-    }
-  }
-
-  function relationCounterpart(relation: MemoryRelationSummary, objectId: string): string {
-    return relation.from === objectId ? relation.to : relation.from;
-  }
-
-  function relationObject(relation: MemoryRelationSummary, objectId: string): MemoryObjectSummary | null {
-    return objectById.get(relationCounterpart(relation, objectId)) ?? null;
-  }
-
-  function relationDirectionLabel(relation: MemoryRelationSummary, objectId: string): string {
-    if (relation.from === objectId && relation.to === objectId) {
-      return "self";
-    }
-
-    return relation.from === objectId ? "outgoing" : "incoming";
-  }
-
-  function relationTargetLabel(relation: MemoryRelationSummary, objectId: string): string {
-    const related = relationObject(relation, objectId);
-
-    return related === null ? relationCounterpart(relation, objectId) : related.title;
-  }
-
-  function relationStatusLabel(relation: MemoryRelationSummary): string {
-    return relation.confidence === null
-      ? relation.status
-      : `${relation.status} / ${relation.confidence} confidence`;
-  }
-
-  function countLabel(count: number, singular: string, plural: string): string {
-    return `${count} ${count === 1 ? singular : plural}`;
-  }
-
-  function buildGraphNodes(
-    selected: MemoryObjectSummary,
-    relationList: MemoryRelationSummary[],
-    objectLookup: Map<string, MemoryObjectSummary>
-  ): GraphNode[] {
-    const incomingIds: string[] = [];
-    const outgoingIds: string[] = [];
-
-    for (const relation of relationList) {
-      if (
-        relation.to === selected.id &&
-        relation.from !== selected.id &&
-        !incomingIds.includes(relation.from)
-      ) {
-        incomingIds.push(relation.from);
-      }
-
-      if (
-        relation.from === selected.id &&
-        relation.to !== selected.id &&
-        !outgoingIds.includes(relation.to)
-      ) {
-        outgoingIds.push(relation.to);
-      }
-    }
-
-    const bothIds = incomingIds
-      .filter((id) => outgoingIds.includes(id))
-      .sort((left, right) => left.localeCompare(right));
-    const incomingOnlyIds = incomingIds
-      .filter((id) => !outgoingIds.includes(id))
-      .sort((left, right) => left.localeCompare(right));
-    const outgoingOnlyIds = outgoingIds
-      .filter((id) => !incomingIds.includes(id))
-      .sort((left, right) => left.localeCompare(right));
-    const nodes: GraphNode[] = [
-      graphNodeForObject(selected, "selected", graphWidth / 2, graphHeight / 2)
-    ];
-
-    nodes.push(
-      ...graphNeighborNodes(incomingOnlyIds, "incoming", 180, objectLookup),
-      ...graphNeighborNodes(outgoingOnlyIds, "outgoing", 780, objectLookup),
-      ...graphBidirectionalNodes(bothIds, objectLookup)
-    );
-
-    return nodes;
-  }
-
-  function graphNeighborNodes(
-    ids: string[],
-    role: Exclude<GraphNodeRole, "selected">,
-    x: number,
-    objectLookup: Map<string, MemoryObjectSummary>
-  ): GraphNode[] {
-    return graphYPositions(ids.length, role).map((y, index) =>
-      graphNodeForId(ids[index], role, x, y, objectLookup)
-    );
-  }
-
-  function graphBidirectionalNodes(
-    ids: string[],
-    objectLookup: Map<string, MemoryObjectSummary>
-  ): GraphNode[] {
-    return ids.map((id, index) => {
-      const position = graphBidirectionalPosition(ids.length, index);
-
-      return graphNodeForId(id, "both", position.x, position.y, objectLookup);
-    });
-  }
-
-  function graphBidirectionalPosition(count: number, index: number): { x: number; y: number } {
-    const columns = Math.min(count, 3);
-    const row = Math.floor(index / 3);
-    const column = index % 3;
-    const xStart = graphWidth / 2 - 170;
-    const xStep = columns === 1 ? 0 : 340 / (columns - 1);
-
-    return {
-      x: columns === 1 ? graphWidth / 2 : xStart + xStep * column,
-      y: row % 2 === 0 ? 76 : 344
-    };
-  }
-
-  function graphYPositions(count: number, role: Exclude<GraphNodeRole, "selected">): number[] {
-    if (count <= 0) {
-      return [];
-    }
-
-    if (role === "both") {
-      return count === 1
-        ? [76]
-        : Array.from({ length: count }, (_, index) => 76 + (268 / (count - 1)) * index);
-    }
-
-    if (count === 1) {
-      return [graphHeight / 2];
-    }
-
-    return Array.from({ length: count }, (_, index) => 88 + (244 / (count - 1)) * index);
-  }
-
-  function graphNodeForId(
-    id: string,
-    role: GraphNodeRole,
-    x: number,
-    y: number,
-    objectLookup: Map<string, MemoryObjectSummary>
-  ): GraphNode {
-    const object = objectLookup.get(id);
-
-    if (object === undefined) {
-      return {
-        id,
-        title: id,
-        subtitle: "Missing memory",
-        missing: true,
-        role,
-        x,
-        y
-      };
-    }
-
-    return graphNodeForObject(object, role, x, y);
-  }
-
-  function graphNodeForObject(
-    object: MemoryObjectSummary,
-    role: GraphNodeRole,
-    x: number,
-    y: number
-  ): GraphNode {
-    return {
-      id: object.id,
-      title: object.title,
-      subtitle: `${object.type} / ${object.status}`,
-      missing: false,
-      role,
-      x,
-      y
-    };
-  }
-
-  function graphNodeRadius(node: GraphNode): number {
-    return node.role === "selected" ? 56 : 46;
-  }
-
-  function graphConnectionPoint(node: GraphNode, toward: GraphNode, offset: number): { x: number; y: number } {
-    const deltaX = toward.x - node.x;
-    const deltaY = toward.y - node.y;
-    const length = Math.hypot(deltaX, deltaY);
-
-    if (length === 0) {
-      return {
-        x: node.x,
-        y: node.y - offset
-      };
-    }
-
-    return {
-      x: node.x + (deltaX / length) * offset,
-      y: node.y + (deltaY / length) * offset
-    };
-  }
-
-  function graphText(value: string, maxLength: number): string {
-    return value.length > maxLength ? `${value.slice(0, maxLength - 1)}...` : value;
-  }
-
-  function graphMidpoint(start: number, end: number): number {
-    return start + (end - start) / 2;
   }
 
   function sidecarJsonForObject(object: MemoryObjectSummary): Record<string, unknown> {
@@ -1014,6 +1968,7 @@
       facets: object.facets,
       evidence: object.evidence,
       source: object.source,
+      origin: object.origin,
       superseded_by: object.superseded_by,
       created_at: object.created_at,
       updated_at: object.updated_at
@@ -1030,28 +1985,19 @@
 
     const flushParagraph = (): void => {
       if (paragraph.length > 0) {
-        blocks.push({
-          kind: "paragraph",
-          text: paragraph.join(" ")
-        });
+        blocks.push({ kind: "paragraph", text: paragraph.join(" ") });
         paragraph = [];
       }
     };
     const flushList = (): void => {
       if (list.length > 0) {
-        blocks.push({
-          kind: "list",
-          items: list
-        });
+        blocks.push({ kind: "list", items: list });
         list = [];
       }
     };
     const flushQuote = (): void => {
       if (quote.length > 0) {
-        blocks.push({
-          kind: "quote",
-          text: quote.join(" ")
-        });
+        blocks.push({ kind: "quote", text: quote.join(" ") });
         quote = [];
       }
     };
@@ -1069,10 +2015,7 @@
           flushLooseBlocks();
           code = [];
         } else {
-          blocks.push({
-            kind: "code",
-            text: code.join("\n")
-          });
+          blocks.push({ kind: "code", text: code.join("\n") });
           code = null;
         }
         continue;
@@ -1089,7 +2032,6 @@
       }
 
       const heading = /^(#{1,3})\s+(.+)$/.exec(line);
-
       if (heading !== null) {
         flushLooseBlocks();
         blocks.push({
@@ -1101,7 +2043,6 @@
       }
 
       const listItem = /^\s*[-*]\s+(.+)$/.exec(line);
-
       if (listItem !== null) {
         flushParagraph();
         flushQuote();
@@ -1110,7 +2051,6 @@
       }
 
       const quoteLine = /^\s*>\s?(.+)$/.exec(line);
-
       if (quoteLine !== null) {
         flushParagraph();
         flushList();
@@ -1124,26 +2064,31 @@
     }
 
     if (code !== null) {
-      blocks.push({
-        kind: "code",
-        text: code.join("\n")
-      });
+      blocks.push({ kind: "code", text: code.join("\n") });
     }
 
     flushLooseBlocks();
     return blocks;
   }
 
-  function uniqueSorted(values: string[]): string[] {
-    return [...new Set(values)].sort((left, right) => left.localeCompare(right));
+  function toggleSidebarDrawer(): void {
+    sidebarDrawerOpen = !sidebarDrawerOpen;
   }
 
-  function compareRelations(left: MemoryRelationSummary, right: MemoryRelationSummary): number {
-    return left.id.localeCompare(right.id);
+  function closeSidebarDrawer(): void {
+    sidebarDrawerOpen = false;
+  }
+
+  function handleWindowKeydown(event: KeyboardEvent): void {
+    if (event.key === "Escape" && sidebarDrawerOpen) {
+      closeSidebarDrawer();
+    }
   }
 </script>
 
-<main class:ready-shell={loadState === "ready" && projectsData !== null} class="viewer-shell" aria-labelledby="viewer-title">
+<svelte:window onkeydown={handleWindowKeydown} />
+
+<main class="viewer-shell" aria-labelledby="viewer-title">
   {#if loadState === "loading"}
     <section class="system-panel" aria-live="polite">
       <p class="eyebrow">Aictx local viewer</p>
@@ -1158,92 +2103,171 @@
       <p>{errorMessage}</p>
     </section>
   {:else if projectsData !== null}
-    <aside class="nav-rail" aria-label="Viewer navigation">
-      <div class="brand-block">
-        <p class="eyebrow">Aictx local viewer</p>
-        <h1 id="viewer-title">Memory Viewer</h1>
-        <p class="project-name">{selectedProject?.project.name ?? "Projects"}</p>
-        <p class="project-id">{selectedProject?.project.id ?? projectsData.registry_path}</p>
+    <button
+      type="button"
+      class="sidebar-toggle"
+      class:open={sidebarDrawerOpen}
+      aria-label={sidebarDrawerOpen ? "Close menu" : "Open menu"}
+      aria-expanded={sidebarDrawerOpen}
+      aria-controls="viewer-sidebar-drawer"
+      onclick={toggleSidebarDrawer}
+      data-testid="sidebar-menu-toggle"
+    >
+      <span class="burger-icon" aria-hidden="true"></span>
+      <span>{sidebarDrawerOpen ? "Close menu" : "Menu"}</span>
+    </button>
+
+    {#if sidebarDrawerOpen}
+      <button
+        type="button"
+        class="sidebar-backdrop"
+        aria-label="Dismiss menu"
+        onclick={closeSidebarDrawer}
+        data-testid="sidebar-backdrop"
+      ></button>
+    {/if}
+
+    {#if sidebarDrawerOpen}
+    <aside id="viewer-sidebar-drawer" class="sidebar" aria-label="Viewer navigation" data-testid="viewer-sidebar-drawer">
+      <div class="brand">
+        <div class="brand-row">
+          <img class="book-icon" src="/favicon.ico" width="28" height="28" alt="" aria-hidden="true" />
+          <h1 id="viewer-title">Memory Schema</h1>
+        </div>
+        <p>{selectedProject?.project.name ?? "No project selected"} · {selectedProject?.project.id ?? "local memory"}</p>
       </div>
 
-      <nav class="nav-list">
-        <button
-          type="button"
-          class:active={currentScreen === "projects"}
-          aria-current={currentScreen === "projects" ? "page" : undefined}
-          onclick={showProjects}
-          data-testid="nav-projects"
-        >
-          Projects
-        </button>
-        <button
-          type="button"
-          class:active={currentScreen === "memories" || currentScreen === "detail"}
-          aria-current={currentScreen === "memories" || currentScreen === "detail" ? "page" : undefined}
-          disabled={selectedProjectId === null}
-          onclick={showMemories}
-          data-testid="nav-memories"
-        >
-          Memories
-        </button>
-        <button
-          type="button"
-          class:active={currentScreen === "lenses"}
-          aria-current={currentScreen === "lenses" ? "page" : undefined}
-          disabled={selectedProjectId === null}
-          onclick={showLenses}
-          data-testid="nav-lenses"
-        >
-          Lenses
-        </button>
-        <button
-          type="button"
-          class:active={currentScreen === "export"}
-          aria-current={currentScreen === "export" ? "page" : undefined}
-          disabled={selectedProjectId === null}
-          onclick={showExport}
-          data-testid="nav-export"
-        >
-          Export
-        </button>
-      </nav>
-
-      <dl class="project-stats" aria-label="Project memory counts">
-        {#if currentScreen === "projects" || bootstrap === null}
-          <div>
-            <dt>Projects</dt>
-            <dd>{projectsData.counts.projects}</dd>
-          </div>
-          <div>
-            <dt>Available</dt>
-            <dd>{projectsData.counts.available}</dd>
-          </div>
-          <div>
-            <dt>Missing</dt>
-            <dd>{projectsData.counts.unavailable}</dd>
-          </div>
-        {:else}
-          <div>
-            <dt>Memories</dt>
-            <dd>{bootstrap.counts.objects}</dd>
-          </div>
-          <div>
-            <dt>Connections</dt>
-            <dd>{bootstrap.counts.relations}</dd>
-          </div>
-	          <div>
-	            <dt>Syntheses</dt>
-	            <dd>{bootstrap.counts.synthesis_objects}</dd>
-	          </div>
-	          <div>
-	            <dt>Sources</dt>
-	            <dd>{bootstrap.counts.source_objects}</dd>
-	          </div>
+      <div class="sidebar-menu open">
+        {#if bootstrap !== null}
+          <dl class="sidebar-stats" aria-label="Memory schema stats">
+            <div><dt>{activeMemoryCount}</dt><dd>active</dd></div>
+            <div><dt>{relations.length}</dt><dd>links</dd></div>
+            <div><dt>{facetCategoryCount}</dt><dd>facets</dd></div>
+            <div><dt>{staleMemoryCount}</dt><dd>stale</dd></div>
+          </dl>
         {/if}
-      </dl>
-    </aside>
 
-    <section class="main-stage" aria-label="Read-only memory browser">
+        <label class="sidebar-search">
+          <span>Search storage</span>
+          <input
+            type="search"
+            bind:value={searchQuery}
+            placeholder="oauth, schema, cron..."
+            autocomplete="off"
+            data-testid="viewer-search"
+          />
+        </label>
+
+        <nav class="nav-list" aria-label="Memory schema views">
+          <section class="nav-section" aria-labelledby="workspace-pages-heading">
+            <p class="nav-heading" id="workspace-pages-heading">Workspace</p>
+            <button
+              type="button"
+              class:active={currentScreen === "projects"}
+              aria-current={currentScreen === "projects" ? "page" : undefined}
+              data-testid="nav-projects"
+              onclick={showProjects}
+            >
+              <span class="nav-row-icon" aria-hidden="true">⌂</span>
+              <span>Projects</span>
+            </button>
+            <button
+              type="button"
+              class:active={currentScreen === "memories" || currentScreen === "detail"}
+              aria-current={currentScreen === "memories" || currentScreen === "detail" ? "page" : undefined}
+              data-testid="nav-memories"
+              disabled={selectedProjectId === null}
+              onclick={showMemories}
+            >
+              <span class="nav-row-icon" aria-hidden="true">#</span>
+              <span>Schema Browser</span>
+            </button>
+            <button
+              type="button"
+              class:active={currentScreen === "graph"}
+              aria-current={currentScreen === "graph" ? "page" : undefined}
+              data-testid="nav-graph"
+              disabled={selectedProjectId === null}
+              onclick={showGraph}
+            >
+              <span class="nav-row-icon" aria-hidden="true">◎</span>
+              <span>Graph</span>
+            </button>
+            {#if !isDemoMode}
+              <button
+                type="button"
+                class:active={currentScreen === "export"}
+                aria-current={currentScreen === "export" ? "page" : undefined}
+                data-testid="nav-export"
+                disabled={selectedProjectId === null}
+                onclick={showExport}
+              >
+                <span class="nav-row-icon" aria-hidden="true">↗</span>
+                <span>Export</span>
+              </button>
+            {/if}
+          </section>
+
+          <section class="nav-section" aria-labelledby="memory-views-heading">
+            <p class="nav-heading" id="memory-views-heading">Schema views</p>
+            <button type="button" class:active={pagePreset === "all"} onclick={() => pageFilter("overview")}>
+              <span class="nav-row-icon" aria-hidden="true">≡</span>
+              <span>All objects</span>
+            </button>
+            <button type="button" class:active={pagePreset === "atomic-memory"} onclick={() => pageFilter("atomic-memory")}>
+              <span class="nav-row-icon" aria-hidden="true">#</span>
+              <span>Atomic memory</span>
+            </button>
+            <button type="button" class:active={pagePreset === "syntheses"} onclick={() => pageFilter("syntheses")}>
+              <span class="nav-row-icon" aria-hidden="true">S</span>
+              <span>Syntheses</span>
+            </button>
+            <button type="button" class:active={pagePreset === "sources"} onclick={() => pageFilter("sources")}>
+              <span class="nav-row-icon" aria-hidden="true">R</span>
+              <span>Sources</span>
+            </button>
+            <button type="button" class:active={pagePreset === "inactive"} onclick={() => pageFilter("inactive")}>
+              <span class="nav-row-icon" aria-hidden="true">!</span>
+              <span>Inactive</span>
+            </button>
+          </section>
+        </nav>
+
+        {#if !isDemoMode}
+          <details class="sidebar-export">
+            <summary>Obsidian export</summary>
+            <button
+              type="button"
+              onclick={() => window.print()}
+            >
+              Print/PDF
+            </button>
+            <label class="obsidian-field">
+              <span>Obsidian vault</span>
+              <input
+                type="text"
+                bind:value={exportOutDir}
+                placeholder=".aictx/exports/obsidian"
+                autocomplete="off"
+              />
+            </label>
+            <button
+              type="button"
+              disabled={exportState === "running" || selectedProjectId === null}
+              onclick={() => void exportObsidian()}
+            >
+              {exportState === "running" ? "Exporting" : "Export Obsidian"}
+            </button>
+          </details>
+        {/if}
+      </div>
+    </aside>
+    {/if}
+
+    <section
+      class={`main-stage ${memoryScreenActive ? "memory-stage" : ""} ${hasSelectedObject ? "has-selected-object" : ""}`}
+      aria-label="Read-only memory browser"
+    >
       {#if currentScreen === "projects"}
         <section class="projects-page" aria-labelledby="projects-title" data-testid="projects-view">
           <header class="page-header">
@@ -1252,264 +2276,267 @@
             <p>{countLabel(projects.length, "registered project", "registered projects")}</p>
           </header>
 
-          {#if projects.length === 0}
-            <section class="empty-projects" data-testid="empty-projects">
-              <h3>No projects registered</h3>
-              <p>Run <code>aictx projects add</code> inside an initialized project, or run any successful Aictx project command to register it automatically.</p>
-              <p class="object-id">{projectsData.registry_path}</p>
+          {#if projectDeleteMessage !== ""}
+            <section
+              class:error={projectDeleteErrorCode !== ""}
+              class:success={projectDeleteErrorCode === ""}
+              class="project-delete-status"
+              role={projectDeleteErrorCode === "" ? "status" : "alert"}
+              aria-live="polite"
+              data-testid="project-delete-status"
+            >
+              <p>{projectDeleteMessage}</p>
+              {#if projectDeleteErrorCode !== ""}
+                <p class="mono">{projectDeleteErrorCode}</p>
+              {/if}
             </section>
-          {:else}
-            <div class="project-grid" data-testid="project-list">
-              {#each projects as project (project.registry_id)}
-                {@const tooltip = gitTooltip(project)}
-                {@const tooltipId = statusTooltipId(project.registry_id)}
-                <article
-                  class:unavailable-project={!project.available}
-                  class:current-project={project.current}
-                  class="project-card"
-                  data-testid={`project-card-${project.registry_id}`}
-                >
-                  <div class="project-card-topline">
-                    <span>{project.source}</span>
-                    <span class="project-git-status">
-                      <strong>{gitLabel(project)}</strong>
-                      {#if tooltip !== null}
-                        <span class="project-status-info">
-                          <button
-                            type="button"
-                            class="status-info-button"
-                            aria-label={`About ${gitLabel(project).toLowerCase()}`}
-                            aria-describedby={tooltipId}
-                            onblur={() => hideStatusTooltip(tooltipId)}
-                            onfocus={() => showStatusTooltip(tooltipId)}
-                            onmouseenter={() => showStatusTooltip(tooltipId)}
-                            onmouseleave={() => hideStatusTooltip(tooltipId)}
-                            data-testid={`project-memory-info-${project.registry_id}`}
-                          >
-                            i
-                          </button>
-                          <span
-                            id={tooltipId}
-                            class:visible={activeStatusTooltipId === tooltipId}
-                            class="status-tooltip"
-                            role="tooltip"
-                            data-testid={`project-memory-tooltip-${project.registry_id}`}
-                          >
-                            {tooltip}
-                          </span>
-                        </span>
-                      {/if}
-                    </span>
-                  </div>
-                  <h3>{project.project.name}</h3>
-                  <p class="project-id">{project.project.id}</p>
-                  <p class="project-root">{project.project_root}</p>
+          {/if}
 
-                  <dl class="project-card-stats">
-                    <div>
-                      <dt>Memories</dt>
-                      <dd>{project.counts?.objects ?? 0}</dd>
-                    </div>
-                    <div>
-                      <dt>Connections</dt>
-                      <dd>{project.counts?.relations ?? 0}</dd>
-                    </div>
-                    <div>
-                      <dt>Syntheses</dt>
-                      <dd>{project.counts?.synthesis_objects ?? 0}</dd>
-                    </div>
-                  </dl>
-
-                  {#if project.warnings.length > 0}
-                    <p class="project-warning">{project.warnings[0]}</p>
-                  {/if}
-
-                  <div class="project-actions">
-                    <button
-                      type="button"
-                      class="primary-action"
-                      disabled={!project.available}
-                      onclick={() => selectProject(project.registry_id)}
-                      data-testid={`project-open-${project.registry_id}`}
-                    >
-                      Open project
-                    </button>
+          <div class="project-grid" data-testid="project-list">
+            {#each projects as project (project.registry_id)}
+              <article
+                class:unavailable={!project.available}
+                class:current={project.current}
+                class="project-card"
+                data-testid={`project-card-${project.registry_id}`}
+              >
+                <div class="card-topline">
+                  <span>{project.current ? "Current" : project.source}</span>
+                  <strong>{gitLabel(project)}</strong>
+                </div>
+                <h3>{project.project.name}</h3>
+                <p class="mono">{project.project.id}</p>
+                <p class="path">{project.project_root}</p>
+                <dl class="mini-stats">
+                  <div><dt>Memories</dt><dd>{project.counts?.objects ?? 0}</dd></div>
+                  <div><dt>Relations</dt><dd>{project.counts?.relations ?? 0}</dd></div>
+                  <div><dt>Syntheses</dt><dd>{project.counts?.synthesis_objects ?? 0}</dd></div>
+                </dl>
+                {#if project.warnings.length > 0}
+                  <p class="warning-copy">{project.warnings[0]}</p>
+                {/if}
+                <div class="project-card-actions">
+                  <button
+                    type="button"
+                    class="primary-action"
+                    disabled={!project.available || deletingProjectId === project.registry_id}
+                    onclick={() => selectProject(project.registry_id)}
+                    data-testid={`project-open-${project.registry_id}`}
+                  >
+                    Open project
+                  </button>
+                  {#if !isDemoMode}
                     <button
                       type="button"
                       class="danger-action"
-                      aria-label={`Delete Aictx memory for ${project.project.name}`}
-                      disabled={deleteState === "running"}
-                      onclick={() => openDeleteProjectDialog(project)}
+                      disabled={deletingProjectId !== null}
+                      onclick={() => requestProjectDelete(project.registry_id)}
                       data-testid={`project-delete-${project.registry_id}`}
                     >
-                      Delete
+                      Delete memory
                     </button>
-                  </div>
-                </article>
-              {/each}
-            </div>
-          {/if}
-
-          {#if deleteNotice !== ""}
-            <section class="delete-notice" role="status" aria-live="polite" data-testid="project-delete-notice">
-              <p>{deleteNotice}</p>
-            </section>
-          {/if}
+                  {/if}
+                </div>
+                {#if !isDemoMode && pendingDeleteProjectId === project.registry_id}
+                  <section class="project-delete-confirm" aria-label={`Confirm memory deletion for ${project.project.name}`}>
+                    <p>
+                      Delete this project's <code>.aictx</code> memory directory and unregister it from the viewer.
+                      Source files in <span class="mono">{project.project_root}</span> remain.
+                    </p>
+                    <label class="field">
+                      <span>Type <strong>{project.project.id}</strong> to confirm</span>
+                      <input
+                        type="text"
+                        bind:value={deleteConfirmText}
+                        autocomplete="off"
+                        disabled={deletingProjectId === project.registry_id}
+                        data-testid={`project-delete-confirm-${project.registry_id}`}
+                      />
+                    </label>
+                    <div class="project-card-actions">
+                      <button
+                        type="button"
+                        class="danger-action solid"
+                        disabled={!projectDeleteConfirmationMatches(project) || deletingProjectId === project.registry_id}
+                        onclick={() => void deleteProjectMemory(project)}
+                        data-testid={`project-delete-submit-${project.registry_id}`}
+                      >
+                        {deletingProjectId === project.registry_id ? "Deleting" : "Delete .aictx memory"}
+                      </button>
+                      <button
+                        type="button"
+                        class="ghost-action"
+                        disabled={deletingProjectId === project.registry_id}
+                        onclick={cancelProjectDelete}
+                        data-testid={`project-delete-cancel-${project.registry_id}`}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </section>
+                {/if}
+              </article>
+            {:else}
+              <section class="empty-panel" data-testid="empty-projects">
+                <h3>No projects registered</h3>
+                <p>Run <code>aictx projects add</code> inside an initialized project.</p>
+                <p class="mono">{projectsData.registry_path}</p>
+              </section>
+            {/each}
+          </div>
         </section>
       {:else if projectLoadState === "error"}
         <section class="system-panel error-panel" role="alert" data-testid="project-load-error">
           <p class="eyebrow">Aictx local viewer</p>
           <h2>Project failed to load</h2>
           <p>{projectErrorMessage}</p>
-          <button type="button" class="back-action" onclick={showProjects}>Back to projects</button>
+          <button type="button" class="ghost-action" onclick={showProjects}>Back to projects</button>
         </section>
       {:else if projectLoadState === "loading" || bootstrap === null}
         <section class="system-panel" aria-live="polite" data-testid="project-loading">
           <p class="eyebrow">Aictx local viewer</p>
-          <h2>Loading Project</h2>
+          <h2>Loading project</h2>
           <p>{selectedProject?.project.name ?? "Selected project"}</p>
         </section>
-      {:else if currentScreen === "lenses"}
-        <section class="lens-page" aria-labelledby="lens-title" data-testid="lens-view">
-          <header class="page-header">
+      {:else if currentScreen === "graph"}
+        <article class="graph-page" aria-labelledby="graph-title" data-testid="graph-view">
+          <header class="page-header compact">
             <div>
-              <p class="eyebrow">Readable project views</p>
-              <h2 id="lens-title">Lenses</h2>
+              <p class="eyebrow">Relation map</p>
+              <h2 id="graph-title">Graph</h2>
             </div>
-            <p>{bootstrap.role_coverage.counts.populated} populated / {bootstrap.role_coverage.roles.length} roles</p>
+            <dl class="graph-counts" aria-label="Visible graph counts">
+              <div><dt>Nodes</dt><dd data-testid="graph-node-count">{graphObjects.length}</dd></div>
+              <div><dt>Links</dt><dd data-testid="graph-relation-count">{graphRelations.length}</dd></div>
+            </dl>
           </header>
 
-          <div class="layer-tabs lens-tabs" role="group" aria-label="Memory lenses">
-            {#each lenses as lens (lens.name)}
-              <button
-                type="button"
-                class:active={selectedLens?.name === lens.name}
-                onclick={() => {
-                  selectedLensName = lens.name;
-                }}
-                data-testid={`lens-tab-${lens.name}`}
-              >
-                {lens.title}
-              </button>
-            {/each}
-          </div>
+          <section class="graph-panel">
+            <div class="graph-toolbar" aria-label="Graph controls">
+              <div class="graph-filter-tabs" role="group" aria-label="Graph item scope">
+                <button
+                  type="button"
+                  class:active={!graphShowInactive}
+                  onclick={() => setGraphShowInactive(false)}
+                  data-testid="graph-filter-current"
+                >
+                  Current
+                </button>
+                <button
+                  type="button"
+                  class:active={graphShowInactive}
+                  onclick={() => setGraphShowInactive(true)}
+                  data-testid="graph-filter-all"
+                >
+                  All
+                </button>
+              </div>
+              <div class="graph-actions">
+                <button type="button" onclick={() => zoomGraph(1.18)} data-testid="graph-zoom-in">Zoom in</button>
+                <button type="button" onclick={() => zoomGraph(0.84)} data-testid="graph-zoom-out">Zoom out</button>
+                <button type="button" onclick={fitGraph} data-testid="graph-fit">Fit</button>
+                <button type="button" onclick={resetGraphLayout} data-testid="graph-reset-layout">Reset layout</button>
+                <button
+                  type="button"
+                  disabled={selectedGraphObject === null && selectedGraphRelation === null}
+                  onclick={focusGraphSelection}
+                  data-testid="graph-focus-selected"
+                >
+                  Focus
+                </button>
+              </div>
+            </div>
 
-          <section class="role-coverage-grid" aria-label="Role coverage" data-testid="role-coverage">
-            {#each bootstrap.role_coverage.roles as role (role.key)}
-              <article class:coverage-gap={role.status !== "populated"} class="coverage-card">
-                <div>
-                  <h3>{role.label}</h3>
-                  <p>{role.description}</p>
-                </div>
-                <span class={`coverage-status status-${role.status}`}>{role.status}</span>
-              </article>
-            {/each}
-          </section>
+            <section class="graph-workspace">
+              <div class="graph-canvas-wrap">
+                <div
+                  class="graph-canvas"
+                  bind:this={graphContainer}
+                  aria-label="Memory relation graph"
+                  data-testid="relation-graph"
+                ></div>
+                {#if graphObjects.length === 0}
+                  <div class="graph-empty" data-testid="graph-empty">
+                    <h3>No visible graph nodes</h3>
+                    <p>Clear search or show all memory.</p>
+                  </div>
+                {/if}
+              </div>
 
-          {#if selectedLens !== null}
-            <section class="lens-layout">
-              <article class="lens-markdown markdown-view" aria-label={`${selectedLens.title} lens`} data-testid="lens-markdown">
-                {#each selectedLensBlocks as block, index (`lens-${block.kind}-${index}`)}
-                  {#if block.kind === "heading"}
-                    {#if block.level === 1}
-                      <h3>{block.text}</h3>
-                    {:else if block.level === 2}
-                      <h4>{block.text}</h4>
-                    {:else}
-                      <h5>{block.text}</h5>
-                    {/if}
-                  {:else if block.kind === "list"}
-                    <ul>
-                      {#each block.items ?? [] as item, itemIndex (itemIndex)}
-                        <li>{item}</li>
-                      {/each}
-                    </ul>
-                  {:else if block.kind === "quote"}
-                    <blockquote>{block.text}</blockquote>
-                  {:else if block.kind === "code"}
-                    <pre><code>{block.text}</code></pre>
-                  {:else}
-                    <p>{block.text}</p>
-                  {/if}
-                {/each}
-              </article>
-
-              <aside class="lens-side-panel" aria-label="Lens context">
-                <section>
-                  <h3>Included Memory</h3>
-                  {#if selectedLens.included_memory_ids.length === 0}
-                    <p class="empty-copy">No memories included in this lens yet.</p>
-                  {:else}
-                    <ul class="evidence-list">
-                      {#each selectedLens.included_memory_ids as id (id)}
-                        {@const object = objectById.get(id)}
-                        <li>
-                          <span class="pill">{object?.type ?? "missing"}</span>
-                          <button
-                            type="button"
-                            disabled={object === undefined}
-                            onclick={() => openRelatedObject(id)}
-                          >
-                            {object?.title ?? id}
-                          </button>
-                        </li>
-                      {/each}
-                    </ul>
-                  {/if}
-                </section>
-
-                <section>
-                  <h3>Gaps</h3>
-                  {#if selectedLens.generated_gaps.length === 0}
-                    <p class="empty-copy">No generated gaps for this lens.</p>
-                  {:else}
-                    <ul class="lens-gap-list">
-                      {#each selectedLens.generated_gaps as gap (gap)}
-                        <li>{gap}</li>
-                      {/each}
-                    </ul>
-                  {/if}
-                </section>
-
-                <section>
-                  <h3>Relations</h3>
-                  {#if selectedLens.relations.length === 0}
-                    <p class="empty-copy">No relation context for this lens yet.</p>
-                  {:else}
-                    <ul class="lens-relation-list">
-                      {#each selectedLens.relations as relation (relation.id)}
-                        {@const fromObject = objectById.get(relation.from)}
-                        {@const toObject = objectById.get(relation.to)}
-                        <li>
-                          <span>{relation.predicate}</span>
-                          <button
-                            type="button"
-                            disabled={fromObject === undefined}
-                            onclick={() => openRelatedObject(relation.from)}
-                          >
-                            {fromObject?.title ?? relation.from}
-                          </button>
-                          <button
-                            type="button"
-                            disabled={toObject === undefined}
-                            onclick={() => openRelatedObject(relation.to)}
-                          >
-                            {toObject?.title ?? relation.to}
-                          </button>
-                        </li>
-                      {/each}
-                    </ul>
-                  {/if}
-                </section>
+              <aside class="graph-inspector" aria-label="Graph selection" data-testid="graph-inspector">
+                {#if selectedGraphObject !== null}
+                  <section>
+                    <p class="eyebrow">Selected object</p>
+                    <h3>{selectedGraphObject.title}</h3>
+                    <p class="mono">{selectedGraphObject.id}</p>
+                    <dl class="graph-meta">
+                      <div><dt>Type</dt><dd>{selectedGraphObject.type}</dd></div>
+                      <div><dt>Status</dt><dd>{selectedGraphObject.status}</dd></div>
+                      <div><dt>Facet</dt><dd>{facetCategoryLabel(selectedGraphObject)}</dd></div>
+                      <div><dt>Relations</dt><dd>{relationsForObject(selectedGraphObject.id).length}</dd></div>
+                    </dl>
+                    <p class="graph-body-preview">{bodyPreview(selectedGraphObject)}</p>
+                    <div class="graph-inspector-actions">
+                      <button type="button" onclick={() => selectRelated(selectedGraphObject.id)}>
+                        Open in schema browser
+                      </button>
+                      <button type="button" onclick={focusGraphSelection}>Focus node</button>
+                    </div>
+                    <details class="graph-relations" open>
+                      <summary>Direct relations</summary>
+                      <ul class="relation-list">
+                        {#each graphRelations.filter((relation) => relation.from === selectedGraphObject.id || relation.to === selectedGraphObject.id) as relation (relation.id)}
+                          <li>
+                            <span class="pill">{relation.predicate}</span>
+                            <button type="button" onclick={() => selectGraphRelation(relation.id)}>
+                              {relationTargetLabel(relation, selectedGraphObject.id)}
+                            </button>
+                            <small>{relationStatusLabel(relation)}</small>
+                          </li>
+                        {:else}
+                          <li class="empty-copy">No visible related memories.</li>
+                        {/each}
+                      </ul>
+                    </details>
+                  </section>
+                {:else if selectedGraphRelation !== null}
+                  <section>
+                    <p class="eyebrow">Selected relation</p>
+                    <h3>{selectedGraphRelation.predicate}</h3>
+                    <p class="mono">{selectedGraphRelation.id}</p>
+                    <dl class="graph-meta">
+                      <div><dt>Status</dt><dd>{selectedGraphRelation.status}</dd></div>
+                      <div><dt>Confidence</dt><dd>{selectedGraphRelation.confidence ?? "not set"}</dd></div>
+                      <div><dt>Source</dt><dd>{selectedGraphRelationSource?.title ?? selectedGraphRelation.from}</dd></div>
+                      <div><dt>Target</dt><dd>{selectedGraphRelationTarget?.title ?? selectedGraphRelation.to}</dd></div>
+                    </dl>
+                    <div class="graph-inspector-actions">
+                      <button type="button" onclick={() => selectGraphObject(selectedGraphRelation.from)}>
+                        Source node
+                      </button>
+                      <button type="button" onclick={() => selectGraphObject(selectedGraphRelation.to)}>
+                        Target node
+                      </button>
+                      <button type="button" onclick={focusGraphSelection}>Focus link</button>
+                    </div>
+                  </section>
+                {:else}
+                  <section class="graph-empty-selection">
+                    <p class="eyebrow">Selection</p>
+                    <h3>{graphObjects.length} visible objects</h3>
+                    <p>{graphRelations.length} visible relation links.</p>
+                  </section>
+                {/if}
               </aside>
             </section>
-          {/if}
-        </section>
-      {:else if currentScreen === "export"}
+          </section>
+        </article>
+      {:else if currentScreen === "export" && !isDemoMode}
         <section class="export-page" aria-labelledby="export-title" data-testid="export-view">
-          <header class="page-header compact-header">
+          <header class="page-header compact">
             <p class="eyebrow">Generated projection</p>
             <h2 id="export-title">Obsidian Export</h2>
+            <p>Write the current project memory into a linked vault-shaped projection.</p>
           </header>
 
           <form
@@ -1531,20 +2558,18 @@
                 data-testid="obsidian-export-out-dir"
               />
             </label>
-
             <button
               type="submit"
               class="primary-action"
               disabled={exportState === "running"}
               data-testid="obsidian-export-submit"
             >
-              {exportState === "running" ? "Exporting" : "Export"}
+              {exportState === "running" ? "Exporting" : "Export Obsidian"}
             </button>
-
             {#if exportState !== "idle"}
               <section
-                class:export-status-error={exportState === "error"}
-                class:export-status-success={exportState === "success"}
+                class:error={exportState === "error"}
+                class:success={exportState === "success"}
                 class="export-status"
                 role={exportState === "error" ? "alert" : "status"}
                 aria-live="polite"
@@ -1552,528 +2577,453 @@
               >
                 <p>{exportMessage}</p>
                 {#if exportState === "error" && exportErrorCode !== ""}
-                  <p class="export-code">{exportErrorCode}</p>
+                  <p class="mono">{exportErrorCode}</p>
                 {/if}
                 {#if exportState === "success"}
-                  <dl>
-                    <div>
-                      <dt>Files written</dt>
-                      <dd data-testid="obsidian-export-files-written">{exportFilesWritten}</dd>
-                    </div>
-                    <div>
-                      <dt>Manifest</dt>
-                      <dd data-testid="obsidian-export-manifest-path">{exportManifestPath}</dd>
-                    </div>
+                  <dl class="mini-stats">
+                    <div><dt>Files written</dt><dd data-testid="obsidian-export-files-written">{exportFilesWritten}</dd></div>
+                    <div><dt>Manifest</dt><dd data-testid="obsidian-export-manifest-path">{exportManifestPath}</dd></div>
                   </dl>
                 {/if}
               </section>
             {/if}
           </form>
         </section>
-      {:else if currentScreen === "detail" && selectedObject !== null}
-        <article class="detail-page" aria-labelledby="selected-object-title" data-testid="selected-object">
-          <header class="detail-header">
-            <button
-              type="button"
-              class="back-action"
-              onclick={showMemories}
-              data-testid="selected-object-back"
-            >
-              Back to list
-            </button>
-
-            <div class="title-stack">
-              <p class="eyebrow">{selectedObject.type} / {selectedObject.status}</p>
-              <h2 id="selected-object-title">{selectedObject.title}</h2>
-              <p class="object-id">{selectedObject.id}</p>
-            </div>
-
-            {#if selectedObject.tags.length > 0}
-              <ul class="tag-list" aria-label="Tags">
-                {#each selectedObject.tags as tag (tag)}
-                  <li>{tag}</li>
-                {/each}
-              </ul>
-            {/if}
-          </header>
-
-	          <section class="markdown-view" aria-label="Markdown body" data-testid="markdown-view">
-            {#each markdownBlocks as block, index (`${block.kind}-${index}`)}
-              {#if block.kind === "heading"}
-                {#if block.level === 1}
-                  <h3>{block.text}</h3>
-                {:else if block.level === 2}
-                  <h4>{block.text}</h4>
-                {:else}
-                  <h5>{block.text}</h5>
-                {/if}
-              {:else if block.kind === "list"}
-                <ul>
-                  {#each block.items ?? [] as item, itemIndex (itemIndex)}
-                    <li>{item}</li>
-                  {/each}
-                </ul>
-              {:else if block.kind === "quote"}
-                <blockquote>{block.text}</blockquote>
-              {:else if block.kind === "code"}
-                <pre><code>{block.text}</code></pre>
-              {:else}
-                <p>{block.text}</p>
-              {/if}
-            {:else}
-              <p class="empty-copy">This memory object has an empty Markdown body.</p>
-	            {/each}
-	          </section>
-
-	          <section class="provenance-section" aria-labelledby="provenance-title" data-testid="provenance-links">
-	            <div class="section-heading">
-	              <div>
-	                <p class="eyebrow">Provenance</p>
-	                <h3 id="provenance-title">Sources</h3>
-	              </div>
-	              <p>{countLabel(provenanceEvidence.length + provenanceRelations.length, "link", "links")}</p>
-	            </div>
-
-	            {#if provenanceEvidence.length === 0 && provenanceRelations.length === 0}
-	              <p class="empty-copy">No provenance links on this object.</p>
-	            {:else}
-	              <div class="provenance-grid">
-	                {#if provenanceEvidence.length > 0}
-	                  <section aria-label="Evidence">
-	                    <h4>Evidence</h4>
-	                    <ul class="evidence-list">
-	                      {#each provenanceEvidence as evidence (`${evidence.kind}-${evidence.id}`)}
-	                        <li>
-	                          <span class="pill">{evidence.kind}</span>
-	                          {#if objectById.has(evidence.id)}
-	                            <button type="button" onclick={() => openRelatedObject(evidence.id)}>
-	                              {objectById.get(evidence.id)?.title ?? evidence.id}
-	                            </button>
-	                          {:else}
-	                            <code>{evidence.id}</code>
-	                          {/if}
-	                        </li>
-	                      {/each}
-	                    </ul>
-	                  </section>
-	                {/if}
-
-	                {#if provenanceRelations.length > 0}
-	                  <section aria-label="Provenance relations">
-	                    <h4>Relations</h4>
-	                    <ul class="evidence-list">
-	                      {#each provenanceRelations as relation (relation.id)}
-	                        {@const related = relationObject(relation, selectedObject.id)}
-	                        <li>
-	                          <span class="pill">{relation.predicate}</span>
-	                          <button
-	                            type="button"
-	                            disabled={related === null}
-	                            onclick={() => openRelatedObject(relationCounterpart(relation, selectedObject.id))}
-	                          >
-	                            {relationTargetLabel(relation, selectedObject.id)}
-	                          </button>
-	                        </li>
-	                      {/each}
-	                    </ul>
-	                  </section>
-	                {/if}
-	              </div>
-	            {/if}
-	          </section>
-
-	          <section class="connections-section" aria-labelledby="connections-title">
-            <div class="section-heading">
-              <div>
-                <p class="eyebrow">Direct context</p>
-                <h3 id="connections-title">Related Memories</h3>
-              </div>
-              <p>{countLabel(directRelations.length, "direct connection", "direct connections")}</p>
-            </div>
-
-            <div class="relation-columns" data-testid="relation-cards">
-              <section aria-label="Outgoing related memories">
-                <h4>Outgoing</h4>
-                {#if outgoingRelations.length === 0}
-                  <p class="empty-copy">No outgoing related memories.</p>
-                {:else}
-                  <ul class="relation-list" data-testid="outgoing-relations">
-                    {#each outgoingRelations as relation (relation.id)}
-                      {@const related = relationObject(relation, selectedObject.id)}
-                      <li class="relation-card" data-testid={`relation-card-${relation.id}`}>
-                        <div class="relation-topline">
-                          <span>{relationDirectionLabel(relation, selectedObject.id)}</span>
-                          <strong>{relation.predicate}</strong>
-                        </div>
-                        <button
-                          type="button"
-                          disabled={related === null}
-                          onclick={() => openRelatedObject(relation.to)}
-                          title={related === null ? "Memory is not present in bootstrap data" : "Open related memory"}
-                        >
-                          {relationTargetLabel(relation, selectedObject.id)}
-                        </button>
-                        <p>{relationStatusLabel(relation)}</p>
-                      </li>
-                    {/each}
-                  </ul>
-                {/if}
-              </section>
-
-              <section aria-label="Incoming related memories">
-                <h4>Incoming</h4>
-                {#if incomingRelations.length === 0}
-                  <p class="empty-copy">No incoming related memories.</p>
-                {:else}
-                  <ul class="relation-list" data-testid="incoming-relations">
-                    {#each incomingRelations as relation (relation.id)}
-                      {@const related = relationObject(relation, selectedObject.id)}
-                      <li class="relation-card" data-testid={`relation-card-${relation.id}`}>
-                        <div class="relation-topline">
-                          <span>{relationDirectionLabel(relation, selectedObject.id)}</span>
-                          <strong>{relation.predicate}</strong>
-                        </div>
-                        <button
-                          type="button"
-                          disabled={related === null}
-                          onclick={() => openRelatedObject(relation.from)}
-                          title={related === null ? "Memory is not present in bootstrap data" : "Open related memory"}
-                        >
-                          {relationTargetLabel(relation, selectedObject.id)}
-                        </button>
-                        <p>{relationStatusLabel(relation)}</p>
-                      </li>
-                    {/each}
-                  </ul>
-                {/if}
-              </section>
-            </div>
-          </section>
-
-          <section class="graph-panel" aria-label="Direct memory connection map" data-testid="relation-graph">
-            <div class="section-heading">
-              <div>
-                <p class="eyebrow">Connection map</p>
-                <h3>Direct Neighborhood</h3>
-              </div>
-              <p>
-                {countLabel(graphNodes.length, "memory", "memories")} /
-                {countLabel(graphEdges.length, "connection", "connections")}
-              </p>
-            </div>
-
-            <div class="graph-surface">
-              <svg
-                class="relation-graph-svg"
-                viewBox={`0 0 ${graphWidth} ${graphHeight}`}
-                role="img"
-                aria-labelledby="relation-graph-title"
-                data-testid="relation-graph-svg"
-              >
-                <title id="relation-graph-title">
-                  Direct memory connections for {selectedObject.title}
-                </title>
-                <defs>
-                  <marker
-                    id="graph-arrow"
-                    markerWidth="8"
-                    markerHeight="8"
-                    refX="7"
-                    refY="4"
-                    orient="auto"
-                    markerUnits="strokeWidth"
-                  >
-                    <path d="M0,0 L8,4 L0,8 Z" fill="#667085" />
-                  </marker>
-                </defs>
-
-                {#each graphEdges as edge (edge.relation.id)}
-                  {@const fromNode = graphNodeById.get(edge.fromId)}
-                  {@const toNode = graphNodeById.get(edge.toId)}
-                  {#if fromNode !== undefined && toNode !== undefined}
-                    {@const startPoint = graphConnectionPoint(fromNode, toNode, graphNodeRadius(fromNode) + 6)}
-                    {@const endPoint = graphConnectionPoint(toNode, fromNode, graphNodeRadius(toNode) + 10)}
-                    <g class="graph-edge" data-testid={`relation-graph-edge-${edge.relation.id}`}>
-                      <line
-                        x1={startPoint.x}
-                        y1={startPoint.y}
-                        x2={endPoint.x}
-                        y2={endPoint.y}
-                        marker-end="url(#graph-arrow)"
-                      />
-                      <text
-                        x={graphMidpoint(fromNode.x, toNode.x)}
-                        y={graphMidpoint(fromNode.y, toNode.y) - 12}
-                      >
-                        {edge.relation.predicate}
-                      </text>
-                    </g>
-                  {/if}
-                {/each}
-
-                {#each graphNodes as node (node.id)}
-                  <g
-                    class:selected-node={node.role === "selected"}
-                    class:incoming-node={node.role === "incoming"}
-                    class:outgoing-node={node.role === "outgoing"}
-                    class:bidirectional-node={node.role === "both"}
-                    class:missing-node={node.missing}
-                    class="graph-node"
-                    data-testid={`relation-graph-node-${node.id}`}
-                  >
-                    <title>{node.title} ({node.id})</title>
-                    <circle cx={node.x} cy={node.y} r={graphNodeRadius(node)} />
-                    <text class="graph-node-title" x={node.x} y={node.y - 6}>
-                      {graphText(node.title, node.role === "selected" ? 28 : 22)}
-                    </text>
-                    <text class="graph-node-subtitle" x={node.x} y={node.y + 16}>
-                      {graphText(node.subtitle, node.role === "selected" ? 28 : 22)}
-                    </text>
-                  </g>
-                {/each}
-              </svg>
-            </div>
-
-            {#if directRelations.length === 0}
-              <p class="empty-copy" data-testid="relation-graph-empty">
-                No direct relations for this object.
-              </p>
-            {/if}
-          </section>
-
-          <details class="technical-details" data-testid="technical-details">
-            <summary>Technical details</summary>
-            <dl>
-              <div>
-                <dt>Body</dt>
-                <dd>{selectedObject.body_path}</dd>
-              </div>
-              <div>
-                <dt>Sidecar</dt>
-                <dd>{selectedObject.json_path}</dd>
-              </div>
-              <div>
-                <dt>Scope</dt>
-                <dd>{selectedObject.scope.kind}</dd>
-              </div>
-              <div>
-                <dt>Created</dt>
-                <dd>{selectedObject.created_at}</dd>
-              </div>
-              <div>
-                <dt>Updated</dt>
-                <dd>{selectedObject.updated_at}</dd>
-              </div>
-            </dl>
-            <section class="json-view" aria-label="Object sidecar JSON" data-testid="json-view">
-              <pre>{selectedJson}</pre>
-            </section>
-          </details>
-        </article>
       {:else}
-        <section class="memory-list-page" aria-labelledby="memory-list-title" data-testid="memory-list-view">
-          <header class="page-header">
-            <div>
-              <p class="eyebrow">Project memory</p>
-              <h2 id="memory-list-title">Memories</h2>
-            </div>
-            <p>{filteredObjects.length} shown / {objects.length} total</p>
+        <article
+          class={`memory-page ${hasSelectedObject ? "has-selected-object" : ""}`}
+          aria-labelledby="memory-list-title"
+          data-testid="memory-list-view"
+        >
+          <header class="doc-hero">
+            <img class="doc-icon" src="/favicon.ico" width="46" height="46" alt="" aria-hidden="true" />
+            <p class="eyebrow">Canonical Aictx storage</p>
+            <h2 id="memory-list-title">{bootstrap.project.name} Memory Schema</h2>
+            <p>
+              Browse the real object types, facet categories, statuses, scopes, evidence, and relations
+              saved in this project's local memory database.
+            </p>
           </header>
 
-	          <section class="filters" aria-label="Search and filters">
-	            <div class="layer-tabs" role="group" aria-label="Memory layers">
-	              {#each layerOptions as option (option.value)}
-	                <button
-	                  type="button"
-	                  class:active={layerFilter === option.value}
-	                  onclick={() => {
-	                    layerFilter = option.value;
-	                  }}
-	                  data-testid={`viewer-layer-${option.value}`}
-	                >
-	                  {option.label}
-	                </button>
-	              {/each}
-	            </div>
-
-	            <label class="field search-field">
-              <span>Search</span>
-              <input
-                type="search"
-                bind:value={searchQuery}
-                placeholder="Title, id, tag, body"
-                autocomplete="off"
-                data-testid="viewer-search"
-              />
-            </label>
-
-            <div class="filter-grid">
-              <label class="field">
-                <span>Type</span>
-                <select bind:value={typeFilter} data-testid="viewer-type-filter">
-                  <option value={allOption}>All types</option>
-                  {#each typeOptions as type (type)}
-                    <option value={type}>{type}</option>
-                  {/each}
-                </select>
-              </label>
-
-              <label class="field">
-                <span>Status</span>
-                <select bind:value={statusFilter} data-testid="viewer-status-filter">
-                  <option value={allOption}>All statuses</option>
-                  {#each statusOptions as status (status)}
-                    <option value={status}>{status}</option>
-                  {/each}
-                </select>
-              </label>
-
-              <label class="field">
-                <span>Tag</span>
-                <select bind:value={tagFilter} data-testid="viewer-tag-filter">
-                  <option value={allOption}>All tags</option>
-                  {#each tagOptions as tag (tag)}
-                    <option value={tag}>{tag}</option>
-                  {/each}
-                </select>
-              </label>
+          <section class="list-controls" aria-label="Memory list controls">
+            <div class="list-controls-heading">
+              <div>
+                <strong>Canonical objects</strong>
+                <span>
+                  {filteredObjects.length} rows · {objects.length} objects · {facetCategoryCount} facets · {relations.length} links
+                </span>
+              </div>
+              <p class="projection-status" role="status">
+                <span>{trustLabel}</span> {trustDescription}
+              </p>
+            </div>
+            <div class="controls-row">
+              <div class="layer-tabs" role="group" aria-label="Memory layers">
+                {#each layerOptions as option (option.value)}
+                  <button
+                    type="button"
+                    class:active={layerFilter === option.value}
+                    onclick={() => {
+                      clearPagePreset();
+                      layerFilter = option.value;
+                    }}
+                    data-testid={`viewer-layer-${option.value}`}
+                  >
+                    {option.label}
+                  </button>
+                {/each}
+              </div>
+              <select bind:value={typeFilter} onchange={clearPagePreset} data-testid="viewer-type-filter" aria-label="Type">
+                <option value={allOption}>All types</option>
+                {#each typeOptions as type (type)}
+                  <option value={type}>{type}</option>
+                {/each}
+              </select>
+              <select bind:value={facetCategoryFilter} onchange={clearPagePreset} data-testid="viewer-facet-filter" aria-label="Facet category">
+                <option value={allOption}>All facets</option>
+                {#each facetCategoryOptions as category (category)}
+                  <option value={category}>{category}</option>
+                {/each}
+              </select>
+              <select bind:value={statusFilter} onchange={clearPagePreset} data-testid="viewer-status-filter" aria-label="Status">
+                <option value={allOption}>All statuses</option>
+                {#each statusOptions as status (status)}
+                  <option value={status}>{status}</option>
+                {/each}
+              </select>
+              <select bind:value={tagFilter} onchange={clearPagePreset} data-testid="viewer-tag-filter" aria-label="Tag">
+                <option value={allOption}>All tags</option>
+                {#each tagOptions as tag (tag)}
+                  <option value={tag}>{tag}</option>
+                {/each}
+              </select>
             </div>
           </section>
 
-          {#if visibleWarnings.length > 0}
-            <section class="warnings" aria-label="Storage warnings">
-              {#each visibleWarnings as warning (warning)}
-                <p>{warning}</p>
+          <section class="schema-browser-layout">
+            <details
+              class="schema-context-panel"
+              open={schemaContextOpen}
+              ontoggle={(event) => {
+                schemaContextOpen = (event.currentTarget as HTMLDetailsElement).open;
+              }}
+            >
+              <summary data-testid="schema-context-toggle">
+                <span>
+                  <strong>Relation overview</strong>
+                  <small>
+                    {docGraphOverview.hub?.title ?? `${graphObjects.length} visible objects`}
+                  </small>
+                </span>
+              </summary>
+
+              {#if docGraphOverview.hub !== null}
+                <section class="doc-relation-overview" aria-labelledby="doc-relation-title" data-testid="doc-relation-overview">
+                  <div class="doc-relation-map" aria-label="Embedded relation overview">
+                    <svg viewBox="0 0 360 200" role="img" aria-labelledby="doc-relation-title">
+                      <defs>
+                        <marker id="doc-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+                          <path d="M 0 0 L 10 5 L 0 10 z"></path>
+                        </marker>
+                      </defs>
+                      {#each docGraphOverview.edges as edge (edge.id)}
+                        <line
+                          x1={edge.x1}
+                          y1={edge.y1}
+                          x2={edge.x2}
+                          y2={edge.y2}
+                          stroke={edge.color}
+                          class:muted={edge.muted}
+                          marker-end="url(#doc-arrow)"
+                        />
+                      {/each}
+                      {#each docGraphOverview.nodes as node (node.id)}
+                        <g class:hub={node.hub} class:muted={node.muted}>
+                          <circle
+                            cx={node.x}
+                            cy={node.y}
+                            r={node.radius}
+                            fill={node.color}
+                            stroke={node.borderColor}
+                          />
+                          <text x={node.x} y={node.y + node.radius + 14}>
+                            {#each node.label.split("\n") as line, lineIndex (`${node.id}-${lineIndex}`)}
+                              <tspan x={node.x} dy={lineIndex === 0 ? 0 : 11}>{line}</tspan>
+                            {/each}
+                          </text>
+                        </g>
+                      {/each}
+                    </svg>
+                  </div>
+
+                  <div class="doc-relation-copy">
+                    <div class="doc-relation-heading">
+                      <div>
+                        <p class="eyebrow">Relation overview</p>
+                        <h3 id="doc-relation-title">{docGraphOverview.hub.title}</h3>
+                        <p>{docGraphOverview.hub.id}</p>
+                      </div>
+                      <button
+                        type="button"
+                        class="doc-graph-action"
+                        onclick={showGraph}
+                        data-testid="doc-hero-graph-link"
+                      >
+                        View full graph
+                      </button>
+                    </div>
+
+                    <dl class="doc-relation-stats" aria-label="Visible graph counts">
+                      <div><dt>Nodes</dt><dd>{graphObjects.length}</dd></div>
+                      <div><dt>Links</dt><dd>{graphRelations.length}</dd></div>
+                    </dl>
+
+                    <ul class="doc-relation-list" aria-label="Visible direct relations">
+                      {#each docGraphPreviewRelations as relation (relation.id)}
+                        <li>
+                          <span class="pill">{relation.predicate}</span>
+                          <strong>
+                            {relation.targetLabel}
+                          </strong>
+                          <small>{relationStatusLabel(relation)}</small>
+                        </li>
+                      {:else}
+                        <li class="empty-copy">No direct relation links.</li>
+                      {/each}
+                      {#if docGraphOverflowCount > 0}
+                        <li class="doc-relation-more">
+                          {docGraphOverflowCount} more linked {docGraphOverflowCount === 1 ? "object" : "objects"}
+                        </li>
+                      {/if}
+                    </ul>
+                  </div>
+                </section>
+              {:else}
+                <div class="doc-hero-actions">
+                  <button
+                    type="button"
+                    class="doc-graph-link"
+                    onclick={showGraph}
+                    data-testid="doc-hero-graph-link"
+                  >
+                    <span class="doc-graph-icon" aria-hidden="true">◎</span>
+                    <span>
+                      <strong>Open relation graph</strong>
+                      <small>{graphObjects.length} visible nodes, {graphRelations.length} links</small>
+                    </span>
+                  </button>
+                </div>
+              {/if}
+            </details>
+
+          <section class="memory-workspace" class:has-preview={hasSelectedObject} bind:this={memoryWorkspaceElement}>
+            {#if visibleWarnings.length > 0}
+              <section class="warnings" aria-label="Storage warnings">
+                {#each visibleWarnings as warning (warning)}
+                  <p>{warning}</p>
+                {/each}
+              </section>
+            {/if}
+
+            {#if hasStarterMemoryOnly}
+              <section class="onboarding-callout" aria-label="Starter memory notice" data-testid="starter-memory-notice">
+                <p><strong>Starter memory only.</strong> Seed useful repo memory with a bootstrap patch, then refresh the viewer.</p>
+                <code>aictx suggest --bootstrap --patch &gt; bootstrap-memory.json</code>
+                <code>aictx save --file bootstrap-memory.json</code>
+              </section>
+            {/if}
+
+            <div class="browser-workspace-grid">
+            <section class="sectioned-memory" aria-label="Memory objects">
+              {#each memorySections as section (section.id)}
+                <section id={section.id}>
+                  <h3>{section.title}</h3>
+                  <p>{countLabel(section.objects.length, "matching memory", "matching memories")}</p>
+                  <div class="object-list">
+                    {#each section.objects as object (object.id)}
+                      <button
+                        type="button"
+                        class:selected={selectedObject?.id === object.id}
+                        onclick={() => selectObject(object.id)}
+                        data-testid={`object-row-${object.id}`}
+                      >
+                        <span>
+                          <strong>{object.title}</strong>
+                          <span class="object-meta" data-testid={`object-meta-${object.id}`}>
+                            <span>{object.type}</span>
+                            <span>{object.status}</span>
+                            <span>{facetCategoryLabel(object)}</span>
+                            <span>{scopeLabel(object.scope)}</span>
+                          </span>
+                          <small>{bodyPreview(object)}</small>
+                        </span>
+                        <em aria-hidden="true">{selectedObject?.id === object.id ? "Selected" : "Open"}</em>
+                      </button>
+                    {/each}
+                  </div>
+                </section>
               {/each}
             </section>
-          {/if}
 
-          {#if hasStarterMemoryOnly}
-            <section
-              class="onboarding-callout"
-              aria-label="Starter memory notice"
-              data-testid="starter-memory-notice"
-            >
-              <p>
-                <strong>Starter memory only.</strong>
-                Seed useful repo memory with setup, then reopen or refresh the viewer.
-              </p>
-              <code>aictx setup</code>
-              <code>aictx lens project-map</code>
-            </section>
-          {/if}
+            {#if selectedObject !== null}
+              <article class="memory-preview object-detail-panel" aria-label={selectedObject.title} data-testid="selected-object">
+                <header class="memory-preview-header">
+                  <button
+                    type="button"
+                    class="selected-object-back"
+                    onclick={closeSelectedObject}
+                    data-testid="selected-object-back"
+                  >
+                    Back
+                  </button>
+                  <div>
+                    <p class="eyebrow">Selected object</p>
+                    <h3>{selectedObject.title}</h3>
+                    <p class="mono">{selectedObject.id}</p>
+                  </div>
+                </header>
 
-          <nav class="object-list" aria-label="Memory objects">
-            {#each filteredObjects as object (object.id)}
-              <button
-                type="button"
-                class:selected={selectedObject?.id === object.id}
-                onclick={() => selectObject(object.id)}
-                data-testid={`object-row-${object.id}`}
-              >
-                <span class="object-title">{object.title}</span>
-                <span class="object-id">{object.id}</span>
-                <span class="object-meta">
-                  <span class="pill">{object.type}</span>
-                  <span class:muted-status={object.status !== "active"} class="pill">{object.status}</span>
-                </span>
-              </button>
-            {:else}
-              <p class="empty-copy">No memory objects match the current filters.</p>
-            {/each}
-          </nav>
-        </section>
+                <dl class="notion-properties">
+                  <div><dt>Name</dt><dd>{selectedObject.title}</dd></div>
+                  <div><dt>ID</dt><dd class="mono">{selectedObject.id}</dd></div>
+                  <div><dt>Type</dt><dd>{selectedObject.type}</dd></div>
+                  <div><dt>Facet</dt><dd>{facetCategoryLabel(selectedObject)}</dd></div>
+                  <div><dt>Status</dt><dd>{selectedObject.status}</dd></div>
+                  <div><dt>Scope</dt><dd>{scopeLabel(selectedObject.scope)}</dd></div>
+                  <div><dt>Origin</dt><dd>{selectedObject.origin?.kind ?? "none"}</dd></div>
+                  <div><dt>Evidence</dt><dd>{selectedObject.evidence.length}</dd></div>
+                  <div><dt>Relations</dt><dd>{directRelations.length}</dd></div>
+                  <div><dt>Updated</dt><dd>{selectedObject.updated_at}</dd></div>
+                </dl>
+
+                <div class="notion-toggle-list">
+                  <details class="notion-toggle" open>
+                    <summary>Memory</summary>
+                    <section class="markdown-view" aria-label="Markdown body" data-testid="markdown-view">
+                      {#each markdownBlocks as block, index (`${block.kind}-${index}`)}
+                        {#if block.kind === "heading"}
+                          {#if block.level === 1}
+                            <h3>{block.text}</h3>
+                          {:else if block.level === 2}
+                            <h4>{block.text}</h4>
+                          {:else}
+                            <h5>{block.text}</h5>
+                          {/if}
+                        {:else if block.kind === "list"}
+                          <ul>
+                            {#each block.items ?? [] as item, itemIndex (itemIndex)}
+                              <li>{item}</li>
+                            {/each}
+                          </ul>
+                        {:else if block.kind === "quote"}
+                          <blockquote>{block.text}</blockquote>
+                        {:else if block.kind === "code"}
+                          <pre><code>{block.text}</code></pre>
+                        {:else}
+                          <p>{block.text}</p>
+                        {/if}
+                      {:else}
+                        <p class="empty-copy">This memory object has an empty Markdown body.</p>
+                      {/each}
+                    </section>
+                  </details>
+
+                  {#if selectedObject.tags.length > 0}
+                    <details class="notion-toggle" open>
+                      <summary>Tags</summary>
+                      <ul class="tag-list" aria-label="Tags">
+                        {#each selectedObject.tags as tag (tag)}
+                          <li>{tag}</li>
+                        {/each}
+                      </ul>
+                    </details>
+                  {/if}
+
+                  <details class="notion-toggle" open data-testid="facet-details">
+                    <summary>Facet category</summary>
+                    {#if selectedObject.facets === null}
+                      <p class="empty-copy">No facets saved on this object.</p>
+                    {:else}
+                      <dl class="facet-grid">
+                        <div><dt>Category</dt><dd>{selectedObject.facets.category}</dd></div>
+                        <div><dt>Applies to</dt><dd>{selectedObject.facets.applies_to?.join(", ") || "global"}</dd></div>
+                        <div><dt>Load modes</dt><dd>{selectedObject.facets.load_modes?.join(", ") || "all modes"}</dd></div>
+                      </dl>
+                    {/if}
+                  </details>
+
+                  <details class="notion-toggle" open data-testid="provenance-links">
+                    <summary>Provenance</summary>
+                    <ul class="relation-list">
+                      {#if selectedObject.origin !== null}
+                        <li>
+                          <span class="pill">{selectedObject.origin.kind}</span>
+                          <code>{selectedObject.origin.locator}</code>
+                        </li>
+                        {#if selectedObject.origin.digest !== undefined}
+                          <li>
+                            <span class="pill">digest</span>
+                            <code>{selectedObject.origin.digest}</code>
+                          </li>
+                        {/if}
+                        {#if selectedObject.origin.media_type !== undefined}
+                          <li>
+                            <span class="pill">media</span>
+                            <code>{selectedObject.origin.media_type}</code>
+                          </li>
+                        {/if}
+                        {#if selectedObject.origin.captured_at !== undefined}
+                          <li>
+                            <span class="pill">captured</span>
+                            <code>{selectedObject.origin.captured_at}</code>
+                          </li>
+                        {/if}
+                      {/if}
+                      {#each selectedObject.evidence as evidence (`${evidence.kind}-${evidence.id}`)}
+                        <li>
+                          <span class="pill">{evidence.kind}</span>
+                          {#if objectById.has(evidence.id)}
+                            <button type="button" onclick={() => selectRelated(evidence.id)}>
+                              {objectById.get(evidence.id)?.title ?? evidence.id}
+                            </button>
+                          {:else}
+                            <code>{evidence.id}</code>
+                          {/if}
+                        </li>
+                      {:else}
+                        <li class="empty-copy">No evidence links.</li>
+                      {/each}
+                      {#each directRelations.filter((relation) => ["derived_from", "supports", "summarizes", "documents"].includes(relation.predicate)) as relation (relation.id)}
+                        <li>
+                          <span class="pill">{relation.predicate}</span>
+                          <button type="button" onclick={() => selectRelated(relationCounterpart(relation, selectedObject.id))}>
+                            {relationTargetLabel(relation, selectedObject.id)}
+                          </button>
+                        </li>
+                      {/each}
+                    </ul>
+                  </details>
+
+                  <details class="notion-toggle" open>
+                    <summary>Direct relations</summary>
+                    <section class="relation-columns">
+                      <div>
+                        <p class="eyebrow">Outgoing</p>
+                        <ul class="relation-list" data-testid="outgoing-relations">
+                          {#each outgoingRelations as relation (relation.id)}
+                            <li data-testid={`relation-card-${relation.id}`}>
+                              <span class="pill">{relation.predicate}</span>
+                              <button type="button" onclick={() => selectRelated(relation.to)}>
+                                {relationTargetLabel(relation, selectedObject.id)}
+                              </button>
+                              <small>{relationStatusLabel(relation)}</small>
+                            </li>
+                          {:else}
+                            <li class="empty-copy">No outgoing related memories.</li>
+                          {/each}
+                        </ul>
+                      </div>
+
+                      <div>
+                        <p class="eyebrow">Incoming</p>
+                        <ul class="relation-list" data-testid="incoming-relations">
+                          {#each incomingRelations as relation (relation.id)}
+                            <li data-testid={`relation-card-${relation.id}`}>
+                              <span class="pill">{relation.predicate}</span>
+                              <button type="button" onclick={() => selectRelated(relation.from)}>
+                                {relationTargetLabel(relation, selectedObject.id)}
+                              </button>
+                              <small>{relationStatusLabel(relation)}</small>
+                            </li>
+                          {:else}
+                            <li class="empty-copy">No incoming related memories.</li>
+                          {/each}
+                        </ul>
+                      </div>
+                    </section>
+                  </details>
+
+                  <details class="notion-toggle technical-details" data-testid="technical-details">
+                    <summary>Technical details</summary>
+                    <dl>
+                      <div><dt>Body</dt><dd>{selectedObject.body_path}</dd></div>
+                      <div><dt>Sidecar</dt><dd>{selectedObject.json_path}</dd></div>
+                      <div><dt>Scope</dt><dd>{selectedObject.scope.kind}</dd></div>
+                      <div><dt>Updated</dt><dd>{selectedObject.updated_at}</dd></div>
+                    </dl>
+                    <section class="json-view" aria-label="Object sidecar JSON" data-testid="json-view">
+                      <pre>{selectedJson}</pre>
+                    </section>
+                  </details>
+                </div>
+              </article>
+            {/if}
+            </div>
+          </section>
+          </section>
+        </article>
       {/if}
     </section>
-
-    {#if projectPendingDelete !== null}
-      <section
-        class="modal-backdrop"
-        role="presentation"
-        data-testid="project-delete-modal"
-      >
-        <div
-          class="delete-dialog"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="project-delete-title"
-          aria-describedby="project-delete-description"
-        >
-          <form
-            onsubmit={(event) => {
-              event.preventDefault();
-              void confirmDeleteProject();
-            }}
-          >
-            <div class="title-stack">
-              <p class="eyebrow">Permanent project memory delete</p>
-              <h2 id="project-delete-title">Delete {projectPendingDelete.project.name}</h2>
-            </div>
-
-            <p id="project-delete-description" class="delete-warning">
-              This permanently deletes this project's <code>.aictx/</code> memory directory and removes it from registered memory roots. Source files are not deleted.
-            </p>
-
-            <dl class="delete-paths">
-              <div>
-                <dt>Project root</dt>
-                <dd>{projectPendingDelete.project_root}</dd>
-              </div>
-              <div>
-                <dt>Aictx root</dt>
-                <dd>{projectPendingDelete.aictx_root}</dd>
-              </div>
-            </dl>
-
-            <label class="field">
-              <span>Type project name to confirm</span>
-              <input
-                type="text"
-                bind:value={deleteConfirmation}
-                autocomplete="off"
-                disabled={deleteState === "running"}
-                data-testid="project-delete-confirmation"
-              />
-            </label>
-
-            {#if deleteState === "error" || deleteState === "running"}
-              <section
-                class:delete-status-error={deleteState === "error"}
-                class="delete-status"
-                role={deleteState === "error" ? "alert" : "status"}
-                aria-live="polite"
-                data-testid="project-delete-status"
-              >
-                <p>{deleteMessage}</p>
-                {#if deleteState === "error" && deleteErrorCode !== ""}
-                  <p class="export-code">{deleteErrorCode}</p>
-                {/if}
-              </section>
-            {/if}
-
-            <div class="dialog-actions">
-              <button
-                type="button"
-                class="back-action"
-                disabled={deleteState === "running"}
-                onclick={closeDeleteProjectDialog}
-                data-testid="project-delete-cancel"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                class="danger-action"
-                disabled={!deleteConfirmationMatches || deleteState === "running"}
-                data-testid="project-delete-confirm"
-              >
-                {deleteState === "running" ? "Deleting" : "Delete memory"}
-              </button>
-            </div>
-          </form>
-        </div>
-      </section>
-    {/if}
   {/if}
 </main>
 
@@ -2086,15 +3036,11 @@
     margin: 0;
     min-width: 320px;
     min-height: 100vh;
-    color: #172033;
-    background:
-      linear-gradient(90deg, rgb(23 32 51 / 4%) 1px, transparent 1px),
-      linear-gradient(rgb(23 32 51 / 4%) 1px, transparent 1px),
-      #f5f6f3;
-    background-size: 30px 30px;
+    color: #182230;
+    background: #f6f7f4;
     font-family:
-      "Avenir Next", "Segoe UI", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
-      sans-serif;
+      Inter, "Avenir Next", "Segoe UI", ui-sans-serif, system-ui, -apple-system,
+      BlinkMacSystemFont, sans-serif;
   }
 
   button,
@@ -2109,13 +3055,13 @@
 
   button:disabled {
     cursor: not-allowed;
+    opacity: 0.58;
   }
 
   h1,
   h2,
   h3,
   h4,
-  h5,
   p {
     margin-top: 0;
   }
@@ -2123,121 +3069,89 @@
   h1,
   h2,
   h3,
-  h4,
-  h5 {
+  h4 {
     color: #101828;
     letter-spacing: 0;
   }
 
   h1 {
     margin-bottom: 0;
-    font-size: 1.45rem;
-    line-height: 1.08;
+    font-size: 1.35rem;
+    line-height: 1.1;
   }
 
   h2 {
     margin-bottom: 0;
-    font-size: 2.1rem;
+    font-size: 2rem;
     line-height: 1.08;
   }
 
   h3 {
     margin-bottom: 0;
-    font-size: 1.35rem;
+    font-size: 1.2rem;
     line-height: 1.2;
   }
 
-  h4 {
-    margin-bottom: 0;
-    font-size: 1rem;
-    line-height: 1.25;
+  code,
+  pre,
+  .mono,
+  .path {
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
   }
 
   .viewer-shell {
+    display: grid;
+    grid-template-columns: 236px minmax(0, 1fr);
     min-height: 100vh;
-    padding: 18px;
   }
 
-  .viewer-shell.ready-shell {
-    display: grid;
-    grid-template-columns: 184px minmax(0, 1fr);
-    gap: 18px;
-  }
-
-  .nav-rail,
-  .main-stage,
-  .system-panel {
-    min-width: 0;
-    border: 1px solid #d6d9d2;
-    border-radius: 8px;
-    background: rgb(255 255 255 / 96%);
-    box-shadow: 0 16px 42px rgb(16 24 40 / 8%);
-  }
-
-  .nav-rail {
+  .sidebar {
     position: sticky;
-    top: 18px;
+    top: 0;
     display: flex;
-    align-self: start;
-    min-height: calc(100vh - 36px);
+    height: 100vh;
     flex-direction: column;
-    padding: 14px;
+    gap: 20px;
+    border-right: 1px solid #d8ded8;
+    padding: 22px 18px;
+    background: #fbfcfa;
   }
 
-  .brand-block {
+  .brand {
     display: grid;
-    gap: 6px;
-    border-bottom: 1px solid #e2e5df;
-    padding-bottom: 16px;
+    gap: 8px;
+  }
+
+  .brand p:last-child {
+    margin: 0;
+    color: #52605b;
+    font-size: 0.88rem;
+    line-height: 1.35;
   }
 
   .eyebrow {
-    margin: 0 0 6px;
+    margin: 0;
     color: #667085;
-    font-size: 0.74rem;
+    font-size: 0.72rem;
     font-weight: 800;
     letter-spacing: 0;
     text-transform: uppercase;
   }
 
-  .project-name {
-    margin: 8px 0 0;
-    color: #101828;
-    font-weight: 800;
-    line-height: 1.25;
-  }
-
-  .project-id,
-  .object-id {
-    overflow-wrap: anywhere;
-    color: #667085;
-    font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
-    font-size: 0.78rem;
-    line-height: 1.4;
-  }
-
-  .project-id {
-    margin: 0;
-  }
-
   .nav-list {
     display: grid;
     gap: 8px;
-    margin-top: 16px;
   }
 
   .nav-list button,
-  .back-action,
-  .primary-action,
-  .danger-action,
-  .relation-card button {
+  .ghost-action,
+  .primary-action {
     min-height: 40px;
-    border-radius: 6px;
+    border-radius: 7px;
     font-weight: 800;
   }
 
   .nav-list button {
-    width: 100%;
     border: 1px solid transparent;
     padding: 9px 10px;
     color: #344054;
@@ -2245,63 +3159,70 @@
     text-align: left;
   }
 
-  .nav-list button:hover,
-  .nav-list button.active {
-    border-color: #a7b6b2;
-    color: #123532;
-    background: #eef7f4;
+  .nav-list button:hover {
+    border-color: #a5bbb4;
+    color: #2f2f2b;
+    background: #ece9e1;
   }
 
-  .project-stats {
-    display: grid;
-    gap: 10px;
-    margin: auto 0 0;
-    border-top: 1px solid #e2e5df;
-    padding-top: 16px;
-  }
-
-  .project-stats div {
+  .mini-stats div {
     display: flex;
     align-items: baseline;
     justify-content: space-between;
     gap: 12px;
   }
 
-  .project-stats dt {
+  .mini-stats dt {
     color: #667085;
-    font-size: 0.73rem;
+    font-size: 0.72rem;
     font-weight: 800;
     text-transform: uppercase;
   }
 
-  .project-stats dd {
+  .mini-stats dd {
     margin: 0;
     color: #101828;
-    font-size: 1.1rem;
     font-weight: 900;
   }
 
   .main-stage {
-    min-height: calc(100vh - 36px);
+    min-width: 0;
     padding: 24px;
   }
 
-  .memory-list-page,
-  .detail-page,
-  .export-page,
-  .lens-page,
-  .projects-page {
-    width: min(100%, 1080px);
+  .system-panel {
+    width: min(720px, calc(100vw - 32px));
+    margin: 18vh auto 0;
+    border: 1px solid #d7ded7;
+    border-radius: 8px;
+    padding: 24px;
+    background: #ffffff;
+    box-shadow: 0 18px 50px rgb(16 24 40 / 8%);
+  }
+
+  .error-panel {
+    border-color: #efb5a8;
+    background: #fff8f6;
+  }
+
+  .projects-page,
+  .memory-page,
+  .export-page {
+    width: min(1180px, 100%);
     margin: 0 auto;
   }
 
-  .detail-page {
-    display: grid;
+  .page-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
     gap: 18px;
+    margin-bottom: 18px;
   }
 
-  .export-page {
-    width: min(100%, 760px);
+  .page-header p {
+    margin-bottom: 0;
+    color: #667085;
   }
 
   .project-grid {
@@ -2311,229 +3232,135 @@
   }
 
   .project-card,
-  .empty-projects {
-    display: grid;
-    gap: 12px;
-    min-width: 0;
-    border: 1px solid #d9ded7;
-    border-radius: 8px;
-    padding: 16px;
-    background: #ffffff;
-    box-shadow: 0 8px 20px rgb(16 24 40 / 5%);
-  }
-
-  .project-card.current-project {
-    border-color: #8fb5ad;
-    background: #f5faf8;
-  }
-
-  .project-card.unavailable-project {
-    border-color: #e3c1b6;
-    background: #fff8f5;
-  }
-
-  .project-card h3,
-  .empty-projects h3 {
-    margin: 0;
-  }
-
-  .project-card-topline {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    color: #667085;
-    font-size: 0.74rem;
-    font-weight: 900;
-    text-transform: uppercase;
-  }
-
-  .project-card-topline strong {
-    color: #28514b;
-  }
-
-  .project-git-status {
-    display: inline-flex;
-    position: relative;
-    align-items: center;
-    justify-content: flex-end;
-    min-width: 0;
-    gap: 6px;
-    text-align: right;
-  }
-
-  .project-status-info {
-    display: inline-flex;
-    position: relative;
-    align-items: center;
-  }
-
-  .status-info-button {
-    display: inline-grid;
-    width: 18px;
-    height: 18px;
-    place-items: center;
-    border: 1px solid #b9c8c2;
-    border-radius: 999px;
-    padding: 0;
-    color: #28514b;
-    background: #f5faf8;
-    font-size: 0.68rem;
-    font-weight: 900;
-    line-height: 1;
-  }
-
-  .status-info-button:hover,
-  .status-info-button:focus-visible {
-    border-color: #1b7f75;
-    outline: none;
-    background: #e7f4f1;
-  }
-
-  .status-info-button:focus-visible {
-    box-shadow: 0 0 0 3px rgb(27 127 117 / 18%);
-  }
-
-  .status-tooltip {
-    position: absolute;
-    z-index: 10;
-    top: calc(100% + 8px);
-    right: 0;
-    width: min(280px, calc(100vw - 48px));
-    border: 1px solid #ccd8d4;
-    border-radius: 6px;
-    padding: 10px;
-    color: #172033;
-    background: #ffffff;
-    box-shadow: 0 14px 32px rgb(16 24 40 / 14%);
-    font-size: 0.78rem;
-    font-weight: 650;
-    line-height: 1.42;
-    opacity: 0;
-    pointer-events: none;
-    text-align: left;
-    text-transform: none;
-    transform: translateY(-3px);
-    transition:
-      opacity 120ms ease,
-      transform 120ms ease,
-      visibility 120ms ease;
-    visibility: hidden;
-  }
-
-  .project-status-info:hover .status-tooltip,
-  .project-status-info:focus-within .status-tooltip,
-  .status-tooltip.visible,
-  .status-info-button:hover + .status-tooltip,
-  .status-info-button:focus + .status-tooltip,
-  .status-info-button:focus-visible + .status-tooltip {
-    opacity: 1;
-    transform: translateY(0);
-    visibility: visible;
-  }
-
-  .project-root {
-    margin: 0;
-    overflow-wrap: anywhere;
-    color: #52615d;
-    font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
-    font-size: 0.78rem;
-    line-height: 1.45;
-  }
-
-  .project-card-stats {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 8px;
-    margin: 0;
-  }
-
-  .project-card-stats div {
-    border: 1px solid #e1e6df;
-    border-radius: 6px;
-    padding: 8px;
-    background: #fbfcfa;
-  }
-
-  .project-card-stats dt {
-    color: #667085;
-    font-size: 0.68rem;
-    font-weight: 900;
-    text-transform: uppercase;
-  }
-
-  .project-card-stats dd {
-    margin: 3px 0 0;
-    color: #101828;
-    font-size: 1.05rem;
-    font-weight: 900;
-  }
-
-  .project-warning {
-    margin: 0;
-    color: #8a3d22;
-    font-size: 0.84rem;
-    line-height: 1.45;
-  }
-
-  .project-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    align-items: center;
-  }
-
-  .page-header,
-  .detail-header,
-  .section-heading {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 18px;
-  }
-
-  .page-header {
-    margin-bottom: 20px;
-    border-bottom: 1px solid #e2e5df;
-    padding-bottom: 18px;
-  }
-
-  .page-header > p,
-  .section-heading > p {
-    margin: 0;
-    color: #667085;
-    font-size: 0.86rem;
-    font-weight: 800;
-  }
-
-  .compact-header {
-    margin-bottom: 18px;
-  }
-
-  .filters,
+  .empty-panel,
+  .markdown-view,
+  .object-list,
   .export-form,
-  .provenance-section,
-  .connections-section,
-  .graph-panel,
-  .technical-details,
+  .project-delete-status,
   .warnings,
   .onboarding-callout {
     border: 1px solid #d9ded7;
     border-radius: 8px;
     background: #ffffff;
+    box-shadow: 0 10px 28px rgb(16 24 40 / 5%);
   }
 
-  .filters {
+  .project-card {
     display: grid;
-    gap: 14px;
-    margin-bottom: 16px;
+    gap: 12px;
     padding: 16px;
   }
 
-  .filter-grid {
+  .project-card.current {
+    border-color: #bdb7ab;
+    background: #fbfaf7;
+  }
+
+  .project-card.unavailable {
+    border-color: #edc3b8;
+    background: #fff8f5;
+  }
+
+  .project-card-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .project-delete-confirm {
+    display: grid;
+    gap: 12px;
+    border: 1px solid #efc7bd;
+    border-radius: 8px;
+    padding: 12px;
+    background: #fff8f5;
+  }
+
+  .project-delete-confirm p,
+  .project-delete-status p {
+    margin: 0;
+    color: #5f433d;
+    line-height: 1.45;
+  }
+
+  .project-delete-status {
+    margin: 0 0 14px;
+    padding: 12px 14px;
+  }
+
+  .project-delete-status.success {
+    border-color: #d8d0c3;
+    background: #fbfaf7;
+  }
+
+  .project-delete-status.error {
+    border-color: #efb5a8;
+    background: #fff1f0;
+  }
+
+  .card-topline {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    color: #667085;
+    font-size: 0.72rem;
+    font-weight: 900;
+    text-transform: uppercase;
+  }
+
+  .card-topline strong {
+    color: #37352f;
+  }
+
+  .path,
+  .mono {
+    overflow-wrap: anywhere;
+    color: #667085;
+    font-size: 0.78rem;
+    line-height: 1.45;
+  }
+
+  .mini-stats {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 12px;
+    gap: 8px;
+    margin: 0;
+  }
+
+  .mini-stats div {
+    display: grid;
+    justify-content: stretch;
+    border-radius: 7px;
+    padding: 9px;
+    background: #f6f8f6;
+  }
+
+  .primary-action,
+  .danger-action,
+  .ghost-action {
+    border: 1px solid #2b2925;
+    padding: 9px 13px;
+  }
+
+  .primary-action {
+    color: #ffffff;
+    background: #2b2925;
+  }
+
+  .danger-action {
+    border-color: #b5473d;
+    color: #94342c;
+    background: #fff8f5;
+  }
+
+  .danger-action.solid {
+    color: #ffffff;
+    background: #b5473d;
+  }
+
+  .ghost-action {
+    color: #2b2925;
+    background: #ffffff;
   }
 
   .layer-tabs {
@@ -2543,159 +3370,18 @@
   }
 
   .layer-tabs button {
-    min-height: 34px;
-    border: 1px solid #cfd4d3;
-    border-radius: 6px;
-    padding: 6px 10px;
-    color: #344054;
-    background: #ffffff;
-    font-weight: 800;
-  }
-
-  .layer-tabs button:hover,
-  .layer-tabs button.active {
-    border-color: #8fb5ad;
-    color: #123532;
-    background: #eef7f4;
-  }
-
-  .lens-tabs {
-    margin-bottom: 16px;
-  }
-
-  .role-coverage-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 10px;
-    margin-bottom: 16px;
-  }
-
-  .coverage-card {
-    display: grid;
-    gap: 10px;
-    min-width: 0;
-    border: 1px solid #d9ded7;
-    border-radius: 8px;
-    padding: 12px;
-    background: #ffffff;
-  }
-
-  .coverage-card.coverage-gap {
-    border-color: #e2d2a6;
-    background: #fffaf0;
-  }
-
-  .coverage-card h3 {
-    margin: 0 0 4px;
-    font-size: 0.95rem;
-  }
-
-  .coverage-card p {
-    margin: 0;
-    color: #667085;
-    font-size: 0.8rem;
-    line-height: 1.4;
-  }
-
-  .coverage-status {
-    width: fit-content;
-    border: 1px solid #cfd4d3;
+    border: 1px solid #d0d5dd;
     border-radius: 999px;
-    padding: 3px 8px;
+    padding: 7px 11px;
     color: #344054;
-    background: #f8fbfa;
-    font-size: 0.72rem;
-    font-weight: 900;
-  }
-
-  .status-populated {
-    border-color: #a7c9bd;
-    color: #1f5136;
-    background: #eff8f2;
-  }
-
-  .status-thin,
-  .status-missing,
-  .status-stale,
-  .status-conflicted {
-    border-color: #d8be78;
-    color: #6f4c00;
-    background: #fff7df;
-  }
-
-  .lens-layout {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(260px, 340px);
-    gap: 16px;
-    align-items: start;
-  }
-
-  .lens-markdown,
-  .lens-side-panel {
-    border: 1px solid #d9ded7;
-    border-radius: 8px;
     background: #ffffff;
-  }
-
-  .lens-markdown {
-    width: 100%;
-    padding: 16px;
-  }
-
-  .lens-side-panel {
-    display: grid;
-    gap: 16px;
-    padding: 16px;
-  }
-
-  .lens-side-panel section {
-    display: grid;
-    gap: 10px;
-    min-width: 0;
-  }
-
-  .lens-side-panel h3 {
-    margin: 0;
-    font-size: 1rem;
-  }
-
-  .lens-gap-list,
-  .lens-relation-list {
-    display: grid;
-    gap: 10px;
-    margin: 0;
-    padding-left: 18px;
-    color: #263141;
-    font-size: 0.86rem;
-    line-height: 1.45;
-  }
-
-  .lens-relation-list li {
-    display: grid;
-    gap: 4px;
-  }
-
-  .lens-relation-list span {
-    color: #28514b;
-    font-weight: 900;
-  }
-
-  .lens-relation-list button {
-    width: fit-content;
-    max-width: 100%;
-    border: 0;
-    padding: 0;
-    background: transparent;
-    overflow-wrap: anywhere;
-    color: #52615d;
-    font: inherit;
     font-weight: 800;
-    text-align: left;
-    cursor: pointer;
   }
 
-  .lens-relation-list button:disabled {
-    cursor: default;
+  .layer-tabs button.active {
+    border-color: #2b2925;
+    color: #ffffff;
+    background: #2b2925;
   }
 
   .field {
@@ -2704,9 +3390,9 @@
   }
 
   .field span {
-    color: #52615d;
-    font-size: 0.73rem;
-    font-weight: 800;
+    color: #667085;
+    font-size: 0.76rem;
+    font-weight: 900;
     text-transform: uppercase;
   }
 
@@ -2714,19 +3400,11 @@
   select {
     width: 100%;
     min-height: 40px;
-    border: 1px solid #cfd4d3;
-    border-radius: 6px;
+    border: 1px solid #cfd7cf;
+    border-radius: 7px;
     padding: 8px 10px;
-    color: #172033;
+    color: #101828;
     background: #ffffff;
-  }
-
-  input:focus,
-  select:focus,
-  button:focus-visible,
-  summary:focus-visible {
-    outline: 3px solid rgb(15 118 110 / 28%);
-    outline-offset: 2px;
   }
 
   .warnings,
@@ -2738,732 +3416,3106 @@
   }
 
   .warnings {
-    border-color: #e7d9a8;
-    background: #fff9e7;
-  }
-
-  .warnings p {
-    margin: 0;
-    color: #694d00;
-    font-size: 0.86rem;
-    line-height: 1.45;
+    border-color: #e5d08b;
+    background: #fffbea;
   }
 
   .onboarding-callout {
-    border-color: #b7d4c3;
-    background: #eff8f2;
-  }
-
-  .onboarding-callout p {
-    margin: 0;
-    color: #1f5136;
-    font-size: 0.88rem;
-    line-height: 1.45;
-  }
-
-  .onboarding-callout code {
-    display: block;
-    overflow-wrap: anywhere;
-    color: #123532;
-    font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
-    font-size: 0.78rem;
-    line-height: 1.45;
+    border-color: #b8c9c4;
+    background: #f7f5f0;
   }
 
   .object-list {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-    gap: 12px;
+    overflow: hidden;
   }
 
   .object-list button {
     display: grid;
-    gap: 9px;
-    min-height: 132px;
-    border: 1px solid #d9ded7;
-    border-radius: 8px;
-    padding: 14px;
-    color: inherit;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 12px;
+    width: 100%;
+    border: 0;
+    border-bottom: 1px solid #edf0ed;
+    padding: 13px 14px;
     background: #ffffff;
     text-align: left;
-    box-shadow: 0 8px 20px rgb(16 24 40 / 5%);
   }
 
   .object-list button:hover,
   .object-list button.selected {
-    border-color: #8fb5ad;
-    background: #f1f8f6;
-    transform: translateY(-1px);
+    background: #f7f5f0;
   }
 
-  .object-title {
-    color: #101828;
-    font-size: 1rem;
-    font-weight: 900;
-    line-height: 1.25;
-  }
-
-  .object-meta,
   .tag-list {
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
-  }
-
-  .pill,
-  .tag-list li,
-  .relation-topline span {
-    border: 1px solid #d4d9d5;
-    border-radius: 999px;
-    padding: 2px 8px;
-    color: #28514b;
-    background: #f2f8f6;
-    font-size: 0.74rem;
-    font-weight: 800;
-  }
-
-  .muted-status {
-    color: #6f4c00;
-    background: #fff7df;
-  }
-
-  .detail-header {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
-    align-items: start;
-    border-bottom: 1px solid #e2e5df;
-    padding-bottom: 18px;
-  }
-
-  .title-stack {
-    display: grid;
-    gap: 6px;
-  }
-
-  .back-action {
-    border: 1px solid #c7cfc9;
-    padding: 8px 11px;
-    color: #344054;
-    background: #ffffff;
-  }
-
-  .back-action:hover {
-    border-color: #8fb5ad;
-    color: #123532;
-    background: #eef7f4;
-  }
-
-  .tag-list {
-    grid-column: 2;
-    margin: 0;
     padding: 0;
     list-style: none;
   }
 
+  .pill,
+  .tag-list li {
+    display: inline-flex;
+    border: 1px solid #d0d5dd;
+    border-radius: 999px;
+    padding: 3px 8px;
+    color: #344054;
+    background: #f8fafc;
+    font-size: 0.75rem;
+    font-weight: 800;
+  }
+
+  .markdown-view,
+  .export-form {
+    padding: 16px;
+  }
+
   .markdown-view {
-    width: min(100%, 850px);
-    color: #263141;
-    font-size: 1rem;
-    line-height: 1.68;
+    color: #2f3a4a;
+    line-height: 1.65;
   }
 
-  .markdown-view h3 {
-    margin: 0 0 12px;
-    font-size: 1.55rem;
-  }
-
-  .markdown-view h4 {
-    margin: 22px 0 10px;
-    font-size: 1.16rem;
-  }
-
+  .markdown-view h3,
+  .markdown-view h4,
   .markdown-view h5 {
-    margin: 18px 0 8px;
-    font-size: 1rem;
-  }
-
-  .markdown-view p,
-  .markdown-view ul,
-  .markdown-view blockquote,
-  .markdown-view pre {
-    margin: 0 0 14px;
-  }
-
-  .markdown-view blockquote {
-    border-left: 3px solid #0f766e;
-    padding-left: 12px;
-    color: #465750;
+    margin-top: 1.1rem;
   }
 
   .markdown-view pre,
   .json-view pre {
     overflow: auto;
-    border: 1px solid #2a3447;
     border-radius: 7px;
-    padding: 14px;
-    background: #111827;
-    color: #f7faf9;
-    font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
-    font-size: 0.85rem;
-    line-height: 1.55;
-    white-space: pre-wrap;
+    padding: 12px;
+    background: #101828;
+    color: #f8fafc;
   }
 
-  .connections-section,
-  .provenance-section,
-  .graph-panel,
-  .technical-details {
-    display: grid;
-    gap: 14px;
-    padding: 16px;
-  }
-
-  .section-heading {
-    align-items: flex-end;
-    border-bottom: 1px solid #e2e5df;
-    padding-bottom: 14px;
-  }
-
-  .relation-columns {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 14px;
-  }
-
-  .provenance-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 14px;
-  }
-
-  .evidence-list {
-    display: grid;
-    gap: 10px;
+  .markdown-view blockquote {
     margin: 0;
-    padding: 0;
-    list-style: none;
-  }
-
-  .evidence-list li {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 8px;
-    min-width: 0;
-  }
-
-  .evidence-list button {
-    min-height: 34px;
-    border: 1px solid #b9c8c4;
-    border-radius: 6px;
-    padding: 6px 9px;
-    color: #17443e;
-    background: #eef7f4;
-    overflow-wrap: anywhere;
-    text-align: left;
-  }
-
-  .evidence-list code {
-    overflow-wrap: anywhere;
-    color: #52615d;
-    font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
-    font-size: 0.78rem;
-  }
-
-  .relation-columns section {
-    display: grid;
-    align-content: start;
-    gap: 10px;
-    min-width: 0;
+    border-left: 3px solid #bdb7ab;
+    padding-left: 12px;
+    color: #475467;
   }
 
   .relation-list {
     display: grid;
-    gap: 10px;
-    margin: 0;
+    gap: 9px;
+    margin: 10px 0 0;
     padding: 0;
     list-style: none;
   }
 
-  .relation-card {
+  .relation-list li {
     display: grid;
-    gap: 9px;
-    border: 1px solid #e0e4e1;
-    border-radius: 8px;
-    padding: 12px;
-    background: #fbfcfa;
+    gap: 5px;
   }
 
-  .relation-topline {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .relation-topline strong {
-    color: #101828;
-    font-size: 0.92rem;
-  }
-
-  .relation-card button {
-    width: 100%;
-    border: 1px solid #b9c8c4;
-    padding: 8px 10px;
-    color: #17443e;
-    background: #eef7f4;
-    overflow-wrap: anywhere;
+  .relation-list button {
+    justify-self: start;
+    border: 0;
+    padding: 0;
+    color: #2b2925;
+    background: transparent;
+    font-weight: 900;
     text-align: left;
   }
 
-  .relation-card button:hover:not(:disabled) {
-    border-color: #0f766e;
-    background: #e1f1ed;
-  }
-
-  .relation-card button:disabled {
-    color: #7b8581;
-    background: #f1f1ee;
-  }
-
-  .relation-card p {
-    margin: 0;
+  .relation-list small {
     color: #667085;
-    font-size: 0.82rem;
-    font-weight: 800;
   }
 
-  .graph-surface {
-    min-height: 360px;
-    border: 1px solid #d4d9d5;
-    border-radius: 8px;
-    background:
-      linear-gradient(90deg, rgb(16 24 40 / 5%) 1px, transparent 1px),
-      linear-gradient(rgb(16 24 40 / 5%) 1px, transparent 1px),
-      #f8fbfa;
-    background-size: 24px 24px;
-  }
-
-  .relation-graph-svg {
-    display: block;
-    width: 100%;
-    min-height: 360px;
-  }
-
-  .graph-edge line {
-    stroke: #667085;
-    stroke-width: 3;
-    vector-effect: non-scaling-stroke;
-  }
-
-  .graph-edge text {
-    fill: #344054;
-    font-size: 18px;
-    font-weight: 900;
-    paint-order: stroke;
-    pointer-events: none;
-    stroke: #f8fbfa;
-    stroke-linejoin: round;
-    stroke-width: 6px;
-    text-anchor: middle;
-  }
-
-  .graph-node circle {
-    fill: #ffffff;
-    stroke: #9fb6b1;
-    stroke-width: 3;
-    vector-effect: non-scaling-stroke;
-  }
-
-  .graph-node.incoming-node circle {
-    fill: #f0f7ff;
-    stroke: #5b8fc9;
-  }
-
-  .graph-node.outgoing-node circle {
-    fill: #fff6e9;
-    stroke: #d9902f;
-  }
-
-  .graph-node.bidirectional-node circle {
-    fill: #f6f1ff;
-    stroke: #8b6bb8;
-  }
-
-  .graph-node.selected-node circle {
-    fill: #0f766e;
-    stroke: #0b5f59;
-  }
-
-  .graph-node.missing-node circle {
-    fill: #fff7df;
-    stroke: #c9a84d;
-    stroke-dasharray: 6 5;
-  }
-
-  .graph-node text {
-    pointer-events: none;
-    text-anchor: middle;
-  }
-
-  .graph-node-title {
-    fill: #101828;
-    font-size: 18px;
-    font-weight: 900;
-  }
-
-  .graph-node-subtitle {
-    fill: #52615d;
-    font-size: 12px;
-    font-weight: 800;
-  }
-
-  .graph-node.selected-node .graph-node-title,
-  .graph-node.selected-node .graph-node-subtitle {
-    fill: #ffffff;
+  .technical-details {
+    border-top: 1px solid #e4e8e4;
+    padding-top: 12px;
   }
 
   .technical-details summary {
-    color: #101828;
     cursor: pointer;
     font-weight: 900;
   }
 
   .technical-details dl {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px;
-    margin: 0;
-  }
-
-  .technical-details div {
-    display: grid;
-    gap: 4px;
-  }
-
-  .technical-details dt {
-    color: #667085;
-    font-size: 0.72rem;
-    font-weight: 800;
-    text-transform: uppercase;
+    gap: 8px;
   }
 
   .technical-details dd {
     margin: 0;
     overflow-wrap: anywhere;
-    color: #172033;
-    font-size: 0.86rem;
+    color: #667085;
+  }
+
+  .export-page {
+    width: min(760px, 100%);
   }
 
   .export-form {
     display: grid;
     gap: 14px;
-    padding: 16px;
-  }
-
-  .primary-action {
-    width: fit-content;
-    min-width: 132px;
-    border: 1px solid #0b5f59;
-    padding: 9px 13px;
-    color: #ffffff;
-    background: #0f766e;
-  }
-
-  .primary-action:hover:not(:disabled) {
-    background: #0b5f59;
-  }
-
-  .primary-action:disabled {
-    border-color: #a7b6b2;
-    color: #52615d;
-    background: #eef2f1;
-  }
-
-  .danger-action {
-    width: fit-content;
-    min-width: 96px;
-    border: 1px solid #b93815;
-    padding: 9px 13px;
-    color: #ffffff;
-    background: #c2411d;
-  }
-
-  .danger-action:hover:not(:disabled) {
-    background: #9f3318;
-  }
-
-  .danger-action:disabled {
-    border-color: #d7b9ad;
-    color: #8a3d22;
-    background: #f7e4dc;
   }
 
   .export-status {
-    display: grid;
-    gap: 8px;
-    border: 1px solid #cfd4d3;
     border-radius: 7px;
     padding: 12px;
-    background: #f8fbfa;
-    color: #263141;
+    background: #f8fafc;
   }
 
-  .export-status p {
-    margin: 0;
-    overflow-wrap: anywhere;
-    font-size: 0.86rem;
-    line-height: 1.4;
+  .export-status.success {
+    background: #f7f5f0;
   }
 
-  .export-status-success {
-    border-color: #85aaa4;
-    background: #eef7f4;
-  }
-
-  .export-status-error {
-    border-color: #dab0a3;
-    background: #fff4ef;
-  }
-
-  .export-code {
-    color: #8b2e19;
-    font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
-    font-weight: 800;
-  }
-
-  .export-status dl {
-    display: grid;
-    gap: 8px;
-    margin: 0;
-  }
-
-  .export-status div {
-    display: grid;
-    gap: 3px;
-  }
-
-  .export-status dt {
-    color: #52615d;
-    font-size: 0.7rem;
-    font-weight: 800;
-    text-transform: uppercase;
-  }
-
-  .export-status dd {
-    margin: 0;
-    overflow-wrap: anywhere;
-    font-size: 0.82rem;
-  }
-
-  .delete-notice {
-    margin-top: 14px;
-    border: 1px solid #85aaa4;
-    border-radius: 7px;
-    padding: 12px;
-    color: #263141;
-    background: #eef7f4;
-  }
-
-  .delete-notice p {
-    margin: 0;
-    font-size: 0.86rem;
-    line-height: 1.4;
-  }
-
-  .modal-backdrop {
-    position: fixed;
-    z-index: 40;
-    inset: 0;
-    display: grid;
-    place-items: center;
-    padding: 18px;
-    background: rgb(16 24 40 / 44%);
-  }
-
-  .delete-dialog {
-    width: min(100%, 560px);
-    max-height: calc(100vh - 36px);
-    overflow: auto;
-    border: 1px solid #d7b9ad;
-    border-radius: 8px;
-    padding: 18px;
-    background: #ffffff;
-    box-shadow: 0 24px 70px rgb(16 24 40 / 28%);
-  }
-
-  .delete-dialog form {
-    display: grid;
-    gap: 14px;
-  }
-
-  .delete-warning {
-    margin: 0;
-    color: #344054;
-    font-size: 0.92rem;
-    line-height: 1.5;
-  }
-
-  .delete-paths {
-    display: grid;
-    gap: 8px;
-    margin: 0;
-    border: 1px solid #e5d9d3;
-    border-radius: 7px;
-    padding: 12px;
-    background: #fff8f5;
-  }
-
-  .delete-paths div {
-    display: grid;
-    gap: 3px;
-  }
-
-  .delete-paths dt {
-    color: #8a3d22;
-    font-size: 0.7rem;
-    font-weight: 850;
-    text-transform: uppercase;
-  }
-
-  .delete-paths dd {
-    margin: 0;
-    overflow-wrap: anywhere;
-    color: #172033;
-    font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
-    font-size: 0.8rem;
-    line-height: 1.4;
-  }
-
-  .delete-status {
-    display: grid;
-    gap: 6px;
-    border: 1px solid #cfd4d3;
-    border-radius: 7px;
-    padding: 10px;
-    background: #f8fbfa;
-  }
-
-  .delete-status p {
-    margin: 0;
-    overflow-wrap: anywhere;
-    font-size: 0.86rem;
-    line-height: 1.4;
-  }
-
-  .delete-status-error {
-    border-color: #dab0a3;
-    background: #fff4ef;
-  }
-
-  .dialog-actions {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: flex-end;
-    gap: 8px;
+  .export-status.error {
+    background: #fff1f0;
   }
 
   .empty-copy {
     margin: 0;
     color: #667085;
-    font-size: 0.9rem;
-    line-height: 1.5;
   }
 
-  .system-panel {
-    width: min(100%, 680px);
-    margin: 12vh auto 0;
-    padding: 28px;
-  }
+  @media (max-width: 900px) {
+    .viewer-shell {
+      display: block;
+    }
 
-  .system-panel p:last-child {
-    margin-bottom: 0;
-    color: #52615d;
-  }
+    .sidebar {
+      position: static;
+      height: auto;
+      border-right: 0;
+      border-bottom: 1px solid #d8ded8;
+    }
 
-  .error-panel {
-    border-color: #dab0a3;
-    background: #fff4ef;
-  }
-
-  @media (max-width: 980px) {
-    .viewer-shell.ready-shell {
+    .object-list button {
       grid-template-columns: 1fr;
     }
 
-    .nav-rail {
+  }
+
+  :global(body) {
+    color: #2b2b2b;
+    background: #ffffff;
+    font-family:
+      Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+
+  .viewer-shell {
+    grid-template-columns: 248px minmax(0, 1fr);
+    background: #ffffff;
+  }
+
+  .sidebar {
+    border-right: 1px solid #e6e3dc;
+    background: #f7f6f2;
+    padding: 14px 10px;
+    gap: 14px;
+  }
+
+  .brand-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 32px;
+    border-radius: 6px;
+    padding: 4px 6px;
+  }
+
+  .sidebar-menu {
+    display: grid;
+    gap: 14px;
+  }
+
+  .book-icon {
+    display: block;
+    width: 22px;
+    height: 22px;
+    flex: 0 0 auto;
+    border-radius: 6px;
+    object-fit: contain;
+  }
+
+  .brand h1 {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 800;
+    letter-spacing: 0;
+  }
+
+  .brand p:last-child {
+    overflow: hidden;
+    padding: 0 6px 0 36px;
+    color: #8b8a84;
+    font-size: 0.76rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .sidebar-search,
+  .obsidian-field {
+    display: grid;
+    gap: 6px;
+  }
+
+  .sidebar-search span,
+  .obsidian-field span,
+  .nav-heading {
+    margin: 0;
+    color: #8a8880;
+    font-size: 0.68rem;
+    font-weight: 800;
+    text-transform: uppercase;
+  }
+
+  .sidebar-search input,
+  .obsidian-field input,
+  .list-controls select {
+    min-height: 32px;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    background: #eeece6;
+    color: #33332f;
+    font-size: 0.83rem;
+  }
+
+  .sidebar-search input {
+    width: 100%;
+    padding: 0 10px;
+  }
+
+  .sidebar-search input:focus,
+  .obsidian-field input:focus {
+    border-color: #d1cdc4;
+    background: #ffffff;
+    outline: 0;
+    box-shadow: 0 0 0 2px rgb(18 53 50 / 8%);
+  }
+
+  .nav-list {
+    display: grid;
+    gap: 16px;
+    border-top: 1px solid #ebe8e0;
+    padding-top: 12px;
+  }
+
+  .nav-section {
+    display: grid;
+    gap: 2px;
+  }
+
+  .nav-list button {
+    display: grid;
+    grid-template-columns: 20px minmax(0, 1fr);
+    align-items: center;
+    gap: 7px;
+    min-height: 30px;
+    border: 0;
+    border-radius: 6px;
+    padding: 4px 7px;
+    color: #5f5e58;
+    background: transparent;
+    font-size: 0.88rem;
+    font-weight: 560;
+    text-align: left;
+  }
+
+  .nav-list button span:last-child {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .nav-row-icon {
+    display: inline-grid;
+    place-items: center;
+    width: 20px;
+    color: #96948c;
+    font-size: 0.84rem;
+  }
+
+  .nav-list button:hover,
+  .nav-list button.active {
+    color: #262621;
+    background: #e9e6df;
+  }
+
+  .nav-list button.active .nav-row-icon {
+    color: #2b2925;
+  }
+
+  .nav-list button:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  .nav-list button:disabled:hover {
+    color: #5f5e58;
+    background: transparent;
+  }
+
+  .sidebar-export {
+    display: grid;
+    gap: 9px;
+    border-top: 1px solid #ebe8e0;
+    padding-top: 12px;
+  }
+
+  .sidebar-export summary {
+    border-radius: 6px;
+    padding: 5px 7px;
+    color: #6a6861;
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: 760;
+  }
+
+  .sidebar-export summary:hover {
+    background: #e9e6df;
+    color: #262621;
+  }
+
+  .sidebar-export button {
+    min-height: 28px;
+    border: 1px solid #dedbd5;
+    border-radius: 6px;
+    color: #464646;
+    background: #ffffff;
+    font-weight: 700;
+  }
+
+  .main-stage {
+    padding: 56px clamp(28px, 6vw, 88px) 72px;
+  }
+
+  .memory-page,
+  .projects-page,
+  .export-page {
+    width: min(1180px, 100%);
+  }
+
+  .memory-page {
+    display: grid;
+    gap: 22px;
+  }
+
+  .doc-hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 16px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid #e9e6e0;
+  }
+
+  .doc-hero h2 {
+    font-size: clamp(1.9rem, 3vw, 2.45rem);
+    line-height: 1.06;
+    font-weight: 950;
+  }
+
+  .doc-hero p:not(.eyebrow) {
+    margin: 8px 0 0;
+    max-width: 720px;
+    color: #777777;
+    font-size: 0.98rem;
+    line-height: 1.55;
+  }
+
+  .list-controls button {
+    border: 1px solid #e1ded7;
+    border-radius: 7px;
+    padding: 7px 10px;
+    color: #343434;
+    background: #ffffff;
+    text-decoration: none;
+    font-size: 0.82rem;
+    font-weight: 800;
+  }
+
+  .projection-status {
+    margin: 0;
+    max-width: 640px;
+    color: #666666;
+    line-height: 1.5;
+  }
+
+  .sectioned-memory h3 {
+    color: #2f2f2b;
+    font-size: 1.16rem;
+    font-weight: 760;
+  }
+
+  .sectioned-memory > section > p {
+    margin: 4px 0 0;
+    color: #9a988f;
+    font-size: 0.86rem;
+  }
+
+  .list-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+    border-bottom: 1px solid #e9e6e0;
+    padding-bottom: 14px;
+  }
+
+  .list-controls strong,
+  .list-controls span {
+    display: block;
+  }
+
+  .list-controls span {
+    color: #777777;
+    font-size: 0.85rem;
+  }
+
+  .layer-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-left: auto;
+  }
+
+  .layer-tabs button {
+    border-color: #e2dfd8;
+    border-radius: 7px;
+    padding: 7px 10px;
+    font-size: 0.84rem;
+  }
+
+  .layer-tabs button.active {
+    border-color: #bdb7ab;
+    color: #2f2f2b;
+    background: #ece9e1;
+  }
+
+  .list-controls select {
+    width: auto;
+    min-width: 138px;
+    padding: 0 32px 0 12px;
+  }
+
+  .list-controls [data-testid="viewer-tag-filter"] {
+    min-width: 170px;
+  }
+
+  .memory-workspace {
+    display: grid;
+    gap: 18px;
+  }
+
+  .memory-workspace.has-preview {
+    grid-template-columns: 1fr;
+  }
+
+  .memory-preview {
+    display: grid;
+    gap: 10px;
+    margin: 2px 0 14px 34px;
+    padding: 2px 0 8px;
+    background: transparent;
+  }
+
+  .notion-properties {
+    display: grid;
+    gap: 4px;
+    margin: 0;
+    padding: 2px 0 10px;
+    border-bottom: 1px solid #f0eee8;
+  }
+
+  .notion-properties div {
+    display: grid;
+    grid-template-columns: 92px minmax(0, 1fr);
+    gap: 12px;
+    align-items: baseline;
+  }
+
+  .notion-properties dt {
+    color: #9a988f;
+    font-size: 0.78rem;
+    font-weight: 650;
+  }
+
+  .notion-properties dd {
+    margin: 0;
+    color: #44443f;
+    font-size: 0.86rem;
+    overflow-wrap: anywhere;
+  }
+
+  .notion-toggle-list {
+    display: grid;
+    gap: 4px;
+  }
+
+  .notion-toggle {
+    border: 0;
+    padding: 0;
+  }
+
+  .notion-toggle summary {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 30px;
+    border-radius: 5px;
+    padding: 4px 6px;
+    color: #3d3d38;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 760;
+    list-style: none;
+  }
+
+  .notion-toggle summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .notion-toggle summary::before {
+    content: "›";
+    display: inline-grid;
+    place-items: center;
+    width: 14px;
+    color: #8a8880;
+    transition: transform 120ms ease;
+  }
+
+  .notion-toggle[open] > summary::before {
+    transform: rotate(90deg);
+  }
+
+  .notion-toggle summary:hover {
+    background: #f1efea;
+  }
+
+  .notion-toggle > :not(summary) {
+    margin-left: 22px;
+    padding: 4px 0 12px;
+  }
+
+  .memory-preview .markdown-view {
+    border: 0;
+    border-radius: 0;
+    padding: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .relation-columns {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+  }
+
+  .sectioned-memory > section {
+    margin-top: 24px;
+    border-top: 1px solid #f0eee8;
+    padding-top: 14px;
+  }
+
+  .sectioned-memory > section:first-child {
+    margin-top: 0;
+    border-top: 0;
+    padding-top: 0;
+  }
+
+  .object-list {
+    display: grid;
+    gap: 1px;
+    margin-top: 8px;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .object-list button {
+    grid-template-columns: minmax(0, 1fr) 18px;
+    align-items: center;
+    border: 0;
+    border-radius: 4px;
+    padding: 6px 8px;
+    background: transparent;
+  }
+
+  .object-list button:hover,
+  .object-list button.selected {
+    background: #f1efea;
+  }
+
+  .object-list button.selected {
+    box-shadow: none;
+  }
+
+  .object-list button:focus-visible {
+    outline: 0;
+    background: #ebe9e3;
+  }
+
+  .object-list strong {
+    display: block;
+    color: #37352f;
+    font-size: 0.96rem;
+    font-weight: 650;
+  }
+
+  .object-list small {
+    display: block;
+    margin-top: 1px;
+    color: #8f8d86;
+    font-size: 0.84rem;
+    line-height: 1.35;
+  }
+
+  .object-list em {
+    display: inline-grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    color: #8a8a8a;
+    font-style: normal;
+    font-weight: 900;
+  }
+
+  @media (max-width: 980px) {
+    .doc-hero,
+    .list-controls {
+      grid-template-columns: 1fr;
+    }
+
+    .memory-workspace.has-preview {
+      grid-template-columns: 1fr;
+    }
+
+    .memory-preview {
       position: static;
-      min-height: auto;
+      max-height: none;
     }
 
-    .brand-block {
-      grid-template-columns: minmax(0, 1fr);
-    }
-
-    .nav-list {
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-    }
-
-    .project-stats {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      margin-top: 16px;
-    }
-
-    .project-stats div {
-      display: grid;
-      gap: 3px;
-    }
-
-    .main-stage {
-      min-height: auto;
+    .list-controls {
+      align-items: stretch;
     }
   }
 
-  @media (max-width: 760px) {
+  @media (max-width: 900px) {
     .viewer-shell {
-      padding: 10px;
+      display: block;
+      min-height: 100vh;
     }
 
-    .main-stage,
-    .nav-rail,
-    .system-panel {
+    .sidebar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      height: auto;
+      gap: 0;
+      border-right: 0;
+      border-bottom: 1px solid #dedbd5;
+      padding: 12px 14px;
+      box-shadow: 0 8px 22px rgb(16 24 40 / 7%);
+    }
+
+    .brand {
+      gap: 4px;
+    }
+
+    .brand-row {
+      gap: 8px;
+    }
+
+    .book-icon {
+      width: 22px;
+      height: 22px;
+      border-radius: 5px;
+    }
+
+    .brand h1 {
+      font-size: 1rem;
+      line-height: 1.1;
+    }
+
+    .brand p:last-child {
+      max-width: 100%;
+      overflow: hidden;
+      padding-left: 30px;
+      font-size: 0.78rem;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .sidebar-menu {
+      display: none;
+      position: absolute;
+      top: calc(100% + 8px);
+      right: 10px;
+      left: 10px;
+      gap: 14px;
+      max-height: calc(100dvh - 96px);
+      overflow: auto;
+      border: 1px solid #e1ded7;
+      border-radius: 10px;
       padding: 14px;
+      background: #fffefa;
+      box-shadow:
+        0 24px 60px rgb(16 24 40 / 18%),
+        0 2px 8px rgb(16 24 40 / 8%);
     }
 
-    h2 {
+    .sidebar-menu.open {
+      display: grid;
+    }
+
+    .sidebar-search {
+      gap: 5px;
+    }
+
+    .sidebar-search input {
+      width: 100%;
+      min-height: 40px;
+      padding: 0 13px;
+      font-size: 0.9rem;
+    }
+
+    .nav-list {
+      display: grid;
+      gap: 12px;
+      border-top: 0;
+      padding: 0;
+    }
+
+    .nav-section {
+      gap: 3px;
+    }
+
+    .nav-list button {
+      min-height: 36px;
+      border: 0;
+      border-radius: 6px;
+      padding: 7px 9px;
+      background: transparent;
+      color: #3f4643;
+      font-size: 0.9rem;
+      font-weight: 700;
+      text-align: left;
+    }
+
+    .nav-heading {
+      margin-bottom: 1px;
+    }
+
+    .nav-list button:hover,
+    .nav-list button.active {
+      color: #2b2925;
+      background: #e9e6df;
+    }
+
+    .sidebar-export {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+      border-top: 1px solid #e7e2db;
+      padding-top: 14px;
+    }
+
+    .sidebar-export .obsidian-field {
+      grid-column: 1 / -1;
+    }
+
+    .sidebar-export button {
+      min-height: 36px;
+    }
+
+    .main-stage {
+      padding: 26px 14px 48px;
+    }
+
+    .memory-page {
+      gap: 24px;
+    }
+
+    .doc-hero {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 8px;
+      padding-bottom: 14px;
+    }
+
+    .doc-hero h2 {
+      font-size: 1.9rem;
+      line-height: 1.08;
+    }
+
+    .doc-hero p:not(.eyebrow) {
+      margin-top: 8px;
+      font-size: 0.94rem;
+    }
+
+    .list-controls button {
+      min-height: 36px;
+      white-space: nowrap;
+    }
+
+    .list-controls {
+      gap: 12px;
+      margin-bottom: 12px;
+      padding-top: 18px;
+    }
+
+    .layer-tabs {
+      flex-wrap: nowrap;
+      justify-content: flex-start;
+      overflow-x: auto;
+      padding-bottom: 2px;
+      scrollbar-width: none;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .layer-tabs::-webkit-scrollbar {
+      display: none;
+    }
+
+    .layer-tabs button {
+      flex: 0 0 auto;
+      min-height: 36px;
+      white-space: nowrap;
+    }
+
+    .list-controls select {
+      width: 100%;
+      min-height: 38px;
+    }
+
+    .object-list button {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 10px;
+      padding: 12px;
+    }
+
+    .markdown-view pre {
+      overflow-x: auto;
+      font-size: 0.74rem;
+    }
+  }
+
+  @media (max-width: 560px) {
+    .main-stage {
+      padding-inline: 10px;
+    }
+
+    .sidebar {
+      padding-inline: 10px;
+    }
+
+    .doc-hero h2 {
       font-size: 1.65rem;
     }
 
-    .page-header,
-    .section-heading {
+    .sectioned-memory h3 {
+      font-size: 1.35rem;
+    }
+
+    .list-controls button {
+      padding: 7px 9px;
+      font-size: 0.78rem;
+    }
+
+  }
+
+  /* Document-style viewer pass. */
+  :global(body) {
+    color: #2f2f2b;
+    background: #fbfaf7;
+    font-family:
+      Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+
+  .viewer-shell {
+    grid-template-columns: 340px minmax(0, 1fr);
+    background: #fbfaf7;
+  }
+
+  .sidebar {
+    border-right: 1px solid #dedbd2;
+    background: #f4f1eb;
+    padding: 30px 28px;
+    gap: 28px;
+  }
+
+  .brand {
+    gap: 22px;
+  }
+
+  .brand-row {
+    gap: 10px;
+    padding: 0;
+  }
+
+  .book-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 999px;
+    object-fit: contain;
+    box-shadow:
+      0 1px 2px rgb(16 24 40 / 8%),
+      inset 0 0 0 1px rgb(255 255 255 / 8%);
+  }
+
+  .brand h1 {
+    color: #242423;
+    font-size: 1.46rem;
+    line-height: 1.1;
+    font-weight: 850;
+  }
+
+  .brand p:last-child {
+    padding: 0;
+    color: #6c6962;
+    font-size: 1.02rem;
+    line-height: 1.35;
+    white-space: normal;
+  }
+
+  .sidebar-stats {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin: 0;
+    border-top: 1px solid #dfdbd1;
+    padding-top: 24px;
+  }
+
+  .sidebar-stats div {
+    min-height: 84px;
+    border: 1px solid #dfdbd1;
+    border-radius: 8px;
+    padding: 14px 16px;
+    background: #fffefa;
+    box-shadow: 0 1px 2px rgb(16 24 40 / 5%);
+  }
+
+  .sidebar-stats dt {
+    color: #262522;
+    font-size: 1.7rem;
+    line-height: 1.05;
+    font-weight: 850;
+  }
+
+  .sidebar-stats dd {
+    margin: 7px 0 0;
+    color: #74716a;
+    font-size: 0.92rem;
+    font-weight: 560;
+  }
+
+  .sidebar-menu {
+    gap: 24px;
+  }
+
+  .sidebar-search {
+    gap: 9px;
+  }
+
+  .sidebar-search span,
+  .nav-heading,
+  .obsidian-field span {
+    color: #9a968d;
+    font-size: 0.72rem;
+    letter-spacing: 0;
+  }
+
+  .sidebar-search input,
+  .obsidian-field input {
+    min-height: 44px;
+    border: 1px solid #dedbd3;
+    border-radius: 8px;
+    background: #fffefa;
+    color: #37352f;
+    font-size: 0.94rem;
+    box-shadow: 0 1px 2px rgb(16 24 40 / 4%);
+  }
+
+  .nav-list {
+    gap: 22px;
+    border-top: 1px solid #dfdbd1;
+    padding-top: 22px;
+  }
+
+  .nav-section {
+    gap: 6px;
+  }
+
+  .nav-list button {
+    min-height: 32px;
+    grid-template-columns: 18px minmax(0, 1fr);
+    gap: 9px;
+    border: 0;
+    border-radius: 6px;
+    padding: 5px 9px;
+    color: #6e6b65;
+    background: transparent;
+    font-size: 0.98rem;
+    font-weight: 520;
+  }
+
+  .nav-list button:hover,
+  .nav-list button.active {
+    color: #2f2f2b;
+    background: #e9e6df;
+  }
+
+  .nav-row-icon {
+    width: 18px;
+    color: #9a968d;
+  }
+
+  .sidebar-export {
+    border-top: 1px solid #dfdbd1;
+    padding-top: 18px;
+  }
+
+  .main-stage {
+    min-width: 0;
+    padding: 46px clamp(34px, 4vw, 72px) 88px;
+    background: #fffefa;
+  }
+
+  .memory-page,
+  .projects-page,
+  .graph-page,
+  .export-page {
+    width: min(1060px, 100%);
+    margin: 0;
+  }
+
+  .graph-page {
+    width: min(1280px, 100%);
+  }
+
+  .memory-page {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    justify-content: center;
+    gap: 24px;
+  }
+
+  .doc-hero {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+    max-width: none;
+    margin: 0;
+    border-bottom: 0;
+    padding: 0;
+  }
+
+  .doc-icon {
+    display: block;
+    width: 46px;
+    height: 46px;
+    border-radius: 999px;
+    object-fit: contain;
+    box-shadow:
+      0 16px 42px rgb(16 24 40 / 10%),
+      inset 0 0 0 1px rgb(255 255 255 / 8%);
+  }
+
+  .doc-hero .eyebrow {
+    margin-top: 4px;
+    color: #9a968d;
+  }
+
+  .doc-hero h2 {
+    max-width: 860px;
+    color: #202020;
+    font-size: clamp(2.7rem, 4.1vw, 3.85rem);
+    line-height: 1;
+    font-weight: 880;
+  }
+
+  .doc-hero p:not(.eyebrow) {
+    max-width: 680px;
+    color: #6d6a65;
+    font-size: 1rem;
+    line-height: 1.48;
+  }
+
+  .doc-relation-overview {
+    display: grid;
+    grid-template-columns: minmax(0, 1.08fr) minmax(280px, 0.82fr);
+    gap: 22px;
+    align-items: stretch;
+    border-top: 1px solid #ebe7de;
+    border-bottom: 1px solid #ebe7de;
+    padding: 20px 0 22px;
+  }
+
+  .doc-relation-map {
+    min-height: 244px;
+    overflow: hidden;
+    border: 1px solid #e2ded5;
+    border-radius: 8px;
+    background:
+      linear-gradient(rgb(242 239 232 / 70%) 1px, transparent 1px),
+      linear-gradient(90deg, rgb(242 239 232 / 70%) 1px, transparent 1px),
+      #fffefa;
+    background-size: 24px 24px;
+  }
+
+  .doc-relation-map svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+    min-height: 244px;
+  }
+
+  .doc-relation-map marker path {
+    fill: #8e8981;
+  }
+
+  .doc-relation-map line {
+    stroke-width: 1.25;
+    stroke-linecap: round;
+    opacity: 0.62;
+  }
+
+  .doc-relation-map line.muted {
+    opacity: 0.24;
+  }
+
+  .doc-relation-map circle {
+    stroke-width: 2;
+  }
+
+  .doc-relation-map g.hub circle {
+    stroke-width: 4;
+  }
+
+  .doc-relation-map g.muted circle {
+    opacity: 0.32;
+  }
+
+  .doc-relation-map text {
+    fill: #37352f;
+    font-size: 7.8px;
+    font-weight: 800;
+    text-anchor: middle;
+  }
+
+  .doc-relation-map g.muted text {
+    opacity: 0;
+  }
+
+  .doc-relation-copy {
+    display: grid;
+    align-content: start;
+    gap: 14px;
+    min-width: 0;
+  }
+
+  .doc-relation-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 18px;
+  }
+
+  .doc-relation-heading h3 {
+    margin: 4px 0 0;
+    color: #242423;
+    font-size: 1.26rem;
+    line-height: 1.12;
+    font-weight: 850;
+  }
+
+  .doc-relation-heading p:not(.eyebrow) {
+    margin: 6px 0 0;
+    color: #667085;
+  }
+
+  .doc-relation-stats {
+    display: flex;
+    gap: 8px;
+    margin: 0;
+  }
+
+  .doc-relation-stats div {
+    min-width: 62px;
+    border: 1px solid #e2ded5;
+    border-radius: 8px;
+    padding: 8px 10px;
+    background: #ffffff;
+  }
+
+  .doc-relation-stats dt {
+    color: #9a968d;
+    font-size: 0.64rem;
+    font-weight: 850;
+    text-transform: uppercase;
+  }
+
+  .doc-relation-stats dd {
+    margin: 2px 0 0;
+    color: #262522;
+    font-size: 1.08rem;
+    font-weight: 880;
+  }
+
+  .doc-relation-list {
+    display: grid;
+    gap: 9px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .doc-relation-list li {
+    display: grid;
+    grid-template-columns: minmax(96px, auto) minmax(0, 1fr);
+    gap: 4px 10px;
+    align-items: center;
+    border-top: 1px solid #f0eee8;
+    padding-top: 9px;
+  }
+
+  .doc-relation-list li:first-child {
+    border-top: 0;
+    padding-top: 0;
+  }
+
+  .doc-relation-list .pill {
+    justify-self: start;
+  }
+
+  .doc-relation-list strong {
+    min-width: 0;
+    color: #242423;
+    font-size: 1rem;
+    font-weight: 850;
+    line-height: 1.18;
+  }
+
+  .doc-relation-list small {
+    grid-column: 2;
+    color: #667085;
+  }
+
+  .doc-relation-more {
+    display: block !important;
+    color: #8b8880;
+    font-size: 0.86rem;
+  }
+
+  .doc-graph-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    border: 1px solid #202020;
+    border-radius: 8px;
+    padding: 10px 15px;
+    color: #ffffff;
+    background: #202020;
+    font-size: 0.9rem;
+    font-weight: 850;
+    white-space: nowrap;
+    box-shadow: 0 10px 24px rgb(16 24 40 / 10%);
+  }
+
+  .doc-graph-action:hover {
+    border-color: #111214;
+    background: #111214;
+  }
+
+  .doc-graph-action:focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: 3px;
+  }
+
+  .doc-hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 2px;
+  }
+
+  .doc-graph-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 11px;
+    max-width: 100%;
+    min-height: 54px;
+    border: 1px solid #dedbd3;
+    border-radius: 8px;
+    padding: 9px 14px 9px 10px;
+    color: #2f2f2b;
+    background: #ffffff;
+    text-align: left;
+    box-shadow: 0 8px 24px rgb(16 24 40 / 5%);
+  }
+
+  .doc-graph-link:hover {
+    border-color: #cbc5ba;
+    background: #f7f6f2;
+  }
+
+  .doc-graph-link:focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: 3px;
+  }
+
+  .doc-graph-icon {
+    display: inline-grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    flex: 0 0 auto;
+    border-radius: 999px;
+    color: #faf9f5;
+    background: #111214;
+    font-size: 1rem;
+    font-weight: 900;
+  }
+
+  .doc-graph-link span:last-child {
+    display: grid;
+    min-width: 0;
+    gap: 2px;
+  }
+
+  .doc-graph-link strong {
+    color: #242423;
+    font-size: 0.96rem;
+    font-weight: 820;
+    line-height: 1.15;
+  }
+
+  .doc-graph-link small {
+    color: #77736d;
+    font-size: 0.82rem;
+    line-height: 1.25;
+  }
+
+  .projection-status {
+    margin: 0;
+    color: #6f6b63;
+    font-size: 0.92rem;
+    line-height: 1.45;
+  }
+
+  .projection-status span {
+    display: inline-flex;
+    margin-right: 6px;
+    border: 1px solid #d6d2ca;
+    border-radius: 999px;
+    padding: 2px 8px;
+    color: #37352f;
+    background: #f7f6f2;
+    font-size: 0.78rem;
+    font-weight: 820;
+  }
+
+  .graph-counts {
+    display: flex;
+    gap: 10px;
+    margin: 0;
+  }
+
+  .graph-counts div {
+    min-width: 88px;
+    border: 1px solid #e2ded5;
+    border-radius: 8px;
+    padding: 10px 12px;
+    background: #ffffff;
+    box-shadow: 0 1px 2px rgb(16 24 40 / 4%);
+  }
+
+  .graph-counts dt {
+    color: #9a968d;
+    font-size: 0.68rem;
+    font-weight: 850;
+    text-transform: uppercase;
+  }
+
+  .graph-counts dd {
+    margin: 3px 0 0;
+    color: #262522;
+    font-size: 1.25rem;
+    font-weight: 880;
+  }
+
+  .graph-panel {
+    display: grid;
+    gap: 14px;
+  }
+
+  .graph-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    border: 1px solid #e2ded5;
+    border-radius: 8px;
+    padding: 12px;
+    background: #ffffff;
+    box-shadow: 0 10px 28px rgb(16 24 40 / 5%);
+  }
+
+  .graph-filter-tabs,
+  .graph-actions,
+  .graph-inspector-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .graph-filter-tabs button,
+  .graph-actions button,
+  .graph-inspector-actions button {
+    min-height: 34px;
+    border: 1px solid #dedbd3;
+    border-radius: 7px;
+    padding: 7px 11px;
+    color: #5e5a53;
+    background: #ffffff;
+    font-size: 0.84rem;
+    font-weight: 760;
+  }
+
+  .graph-filter-tabs button.active {
+    border-color: #2b2925;
+    color: #ffffff;
+    background: #2b2925;
+  }
+
+  .graph-workspace {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 340px);
+    gap: 14px;
+    align-items: stretch;
+  }
+
+  .graph-canvas-wrap,
+  .graph-inspector {
+    border: 1px solid #e2ded5;
+    border-radius: 8px;
+    background: #ffffff;
+    box-shadow: 0 10px 28px rgb(16 24 40 / 5%);
+  }
+
+  .graph-canvas-wrap {
+    position: relative;
+    min-height: 640px;
+    overflow: hidden;
+  }
+
+  .graph-canvas {
+    width: 100%;
+    height: 100%;
+    min-height: 640px;
+    background:
+      linear-gradient(rgb(242 239 232 / 68%) 1px, transparent 1px),
+      linear-gradient(90deg, rgb(242 239 232 / 68%) 1px, transparent 1px),
+      #fffefa;
+    background-size: 28px 28px;
+  }
+
+  .graph-empty {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-content: center;
+    gap: 8px;
+    padding: 24px;
+    text-align: center;
+    background: rgb(255 254 250 / 86%);
+  }
+
+  .graph-empty h3,
+  .graph-empty p,
+  .graph-empty-selection h3,
+  .graph-empty-selection p {
+    margin: 0;
+  }
+
+  .graph-empty p,
+  .graph-empty-selection p,
+  .graph-body-preview {
+    color: #746f68;
+    line-height: 1.45;
+  }
+
+  .graph-inspector {
+    align-self: stretch;
+    min-height: 640px;
+    padding: 18px;
+  }
+
+  .graph-inspector section {
+    display: grid;
+    gap: 12px;
+  }
+
+  .graph-inspector h3 {
+    color: #242423;
+    font-size: 1.2rem;
+    font-weight: 850;
+  }
+
+  .graph-meta {
+    display: grid;
+    gap: 7px;
+    margin: 0;
+    border-top: 1px solid #f0eee8;
+    border-bottom: 1px solid #f0eee8;
+    padding: 12px 0;
+  }
+
+  .graph-meta div {
+    display: grid;
+    grid-template-columns: 82px minmax(0, 1fr);
+    gap: 10px;
+    align-items: baseline;
+  }
+
+  .graph-meta dt {
+    color: #9a968d;
+    font-size: 0.76rem;
+    font-weight: 780;
+  }
+
+  .graph-meta dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+    color: #3d3d38;
+    font-size: 0.88rem;
+  }
+
+  .graph-body-preview {
+    margin: 0;
+    font-size: 0.92rem;
+  }
+
+  .graph-relations {
+    border-top: 1px solid #f0eee8;
+    padding-top: 10px;
+  }
+
+  .graph-relations summary {
+    cursor: pointer;
+    color: #37352f;
+    font-weight: 780;
+  }
+
+  .warnings,
+  .onboarding-callout,
+  .list-controls,
+  .sectioned-memory {
+    max-width: none;
+    margin-right: 0;
+    margin-left: 0;
+  }
+
+  .list-controls {
+    display: grid;
+    grid-template-columns: 1fr;
+    align-items: start;
+    justify-content: stretch;
+    gap: 14px;
+    border-bottom: 1px solid #ebe7de;
+    padding: 4px 0 24px;
+  }
+
+  .list-controls > div:first-child {
+    text-align: left;
+  }
+
+  .list-controls strong {
+    color: #2f2f2b;
+    font-size: 0.98rem;
+  }
+
+  .list-controls span {
+    color: #8b8880;
+    font-size: 0.9rem;
+  }
+
+  .controls-row {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    overflow-x: auto;
+    padding-bottom: 2px;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .controls-row::-webkit-scrollbar {
+    display: none;
+  }
+
+  .layer-tabs {
+    flex: 0 0 auto;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    margin: 0;
+    gap: 8px;
+  }
+
+  .layer-tabs button,
+  .list-controls button {
+    flex: 0 0 auto;
+    min-height: 36px;
+    border: 1px solid #dedbd3;
+    border-radius: 999px;
+    padding: 7px 12px;
+    color: #6d6a65;
+    background: #ffffff;
+    font-size: 0.86rem;
+    font-weight: 650;
+    white-space: nowrap;
+    box-shadow: 0 1px 2px rgb(16 24 40 / 4%);
+  }
+
+  .layer-tabs button.active {
+    border-color: #202020;
+    color: #ffffff;
+    background: #202020;
+  }
+
+  .list-controls select {
+    flex: 0 0 auto;
+    width: auto;
+    min-width: 138px;
+    min-height: 38px;
+    border-color: #dedbd3;
+    border-radius: 999px;
+    appearance: none;
+    -webkit-appearance: none;
+    background-color: #efede8;
+    background-image:
+      linear-gradient(45deg, transparent 50%, #6c675f 50%),
+      linear-gradient(135deg, #6c675f 50%, transparent 50%);
+    background-position:
+      calc(100% - 18px) 50%,
+      calc(100% - 13px) 50%;
+    background-repeat: no-repeat;
+    background-size: 5px 5px;
+    color: #504d48;
+    font-size: 0.9rem;
+    white-space: nowrap;
+  }
+
+  .list-controls [data-testid="viewer-tag-filter"] {
+    min-width: 140px;
+  }
+
+  .list-controls [data-testid="viewer-facet-filter"] {
+    min-width: 160px;
+  }
+
+  .sectioned-memory {
+    display: grid;
+    gap: 36px;
+  }
+
+  .sectioned-memory > section {
+    margin: 0;
+    border-top: 0;
+    padding-top: 0;
+  }
+
+  .sectioned-memory h3 {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #202020;
+    font-size: 2.05rem;
+    line-height: 1.08;
+    font-weight: 850;
+  }
+
+  .sectioned-memory > section > p {
+    margin: 6px 0 18px;
+    color: #77736d;
+    font-size: 1.04rem;
+  }
+
+  .object-list {
+    display: grid;
+    gap: 12px;
+    overflow: visible;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .object-list button {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 14px;
+    min-height: 72px;
+    border: 1px solid #e3dfd7;
+    border-radius: 8px;
+    padding: 12px 18px;
+    background: #ffffff;
+    color: #37352f;
+    box-shadow: 0 1px 2px rgb(16 24 40 / 4%);
+  }
+
+  .object-list button:hover {
+    border-color: #d7d2c8;
+    background: #fbfaf7;
+  }
+
+  .object-list button.selected {
+    border-color: #e3dfd7;
+    border-bottom-color: transparent;
+    border-radius: 8px 8px 0 0;
+    background: #f1efea;
+    box-shadow: none;
+  }
+
+  .object-list button:focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: 2px;
+    background: #f7f5f0;
+  }
+
+  .object-list strong {
+    color: #2c2c29;
+    font-size: 1.1rem;
+    line-height: 1.22;
+    font-weight: 800;
+  }
+
+  .object-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 7px;
+  }
+
+  .object-meta span {
+    border: 1px solid #dedbd3;
+    border-radius: 999px;
+    padding: 2px 7px;
+    color: #605c55;
+    background: #fbfaf7;
+    font-size: 0.74rem;
+    font-weight: 760;
+  }
+
+  .object-list small {
+    display: block;
+    margin-top: 7px;
+    color: #77736d;
+    font-size: 0.94rem;
+    line-height: 1.35;
+  }
+
+  .object-list em {
+    width: auto;
+    min-width: 34px;
+    color: #9a968d;
+    font-size: 0.92rem;
+    font-style: normal;
+    font-weight: 620;
+    text-align: right;
+  }
+
+  .memory-preview {
+    display: grid;
+    gap: 18px;
+    margin: -12px 0 4px;
+    border: 1px solid #e3dfd7;
+    border-top: 0;
+    border-radius: 0 0 8px 8px;
+    padding: 24px 56px 28px;
+    background: #ffffff;
+    box-shadow: 0 16px 32px rgb(16 24 40 / 5%);
+  }
+
+  .notion-properties {
+    gap: 0;
+    padding: 0 0 14px;
+    border-bottom: 1px solid #e7e3dc;
+  }
+
+  .notion-properties div {
+    grid-template-columns: 92px minmax(0, 1fr);
+    min-height: 26px;
+    gap: 18px;
+  }
+
+  .notion-properties dt {
+    color: #99958d;
+    font-size: 0.9rem;
+    font-weight: 780;
+  }
+
+  .notion-properties dd {
+    color: #3e3d39;
+    font-size: 0.98rem;
+  }
+
+  .notion-toggle-list {
+    gap: 12px;
+  }
+
+  .facet-grid {
+    display: grid;
+    gap: 8px;
+    margin: 0;
+  }
+
+  .facet-grid div {
+    display: grid;
+    grid-template-columns: 96px minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  .facet-grid dt {
+    color: #99958d;
+    font-weight: 760;
+  }
+
+  .facet-grid dd {
+    margin: 0;
+    color: #3e3d39;
+    overflow-wrap: anywhere;
+  }
+
+  .notion-toggle summary {
+    min-height: 30px;
+    padding: 2px 0;
+    color: #37352f;
+    font-size: 1.02rem;
+    font-weight: 760;
+  }
+
+  .notion-toggle summary:hover {
+    background: transparent;
+  }
+
+  .notion-toggle > :not(summary) {
+    margin-left: 22px;
+    padding: 8px 0 18px;
+  }
+
+  .memory-preview .markdown-view {
+    color: #283247;
+    font-size: 1.05rem;
+    line-height: 1.55;
+  }
+
+  .memory-preview .markdown-view h3 {
+    margin: 0 0 6px;
+    color: #182230;
+    font-size: 1.45rem;
+    line-height: 1.18;
+  }
+
+  .tag-list li,
+  .pill {
+    border-color: #d6d2ca;
+    background: #f7f6f2;
+    color: #4e5a6b;
+  }
+
+  .relation-columns {
+    gap: 28px;
+  }
+
+  .technical-details {
+    border-top: 0;
+    padding-top: 0;
+  }
+
+  @media (max-width: 1040px) {
+    .viewer-shell {
+      grid-template-columns: 286px minmax(0, 1fr);
+    }
+
+    .sidebar {
+      padding: 24px 20px;
+    }
+
+    .main-stage {
+      padding: 52px 28px 72px;
+    }
+
+    .doc-hero h2 {
+      font-size: clamp(2.8rem, 7vw, 4.3rem);
+    }
+  }
+
+  @media (max-width: 900px) {
+    .viewer-shell {
+      display: block;
+    }
+
+    .sidebar {
+      position: sticky;
+      padding: 12px 14px;
+      background: #f4f1eb;
+    }
+
+    .brand {
+      gap: 4px;
+    }
+
+    .brand-row {
+      min-height: 36px;
+    }
+
+    .brand p:last-child {
+      padding-left: 38px;
+      font-size: 0.82rem;
+      white-space: nowrap;
+    }
+
+    .sidebar-stats {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+      padding-top: 0;
+      border-top: 0;
+    }
+
+    .sidebar-stats div {
+      min-height: auto;
+      padding: 9px;
+    }
+
+    .sidebar-stats dt {
+      font-size: 1.08rem;
+    }
+
+    .sidebar-stats dd {
+      margin-top: 2px;
+      font-size: 0.72rem;
+    }
+
+    .main-stage {
+      padding: 34px 16px 58px;
+    }
+
+    .doc-hero {
+      margin: 0 0 18px;
+    }
+
+    .doc-hero-actions,
+    .doc-graph-link {
+      width: 100%;
+    }
+
+    .doc-relation-overview {
+      grid-template-columns: 1fr;
+      gap: 16px;
+      padding: 16px 0 18px;
+    }
+
+    .doc-relation-map,
+    .doc-relation-map svg {
+      min-height: 220px;
+    }
+
+    .doc-relation-heading {
+      align-items: stretch;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .doc-relation-stats {
+      width: 100%;
+    }
+
+    .doc-relation-stats div {
+      flex: 1;
+    }
+
+    .doc-relation-list li {
+      grid-template-columns: 1fr;
+    }
+
+    .doc-relation-list small {
+      grid-column: 1;
+    }
+
+    .doc-graph-action {
+      width: 100%;
+    }
+
+    .doc-hero h2 {
+      font-size: 2.45rem;
+    }
+
+    .graph-workspace {
+      grid-template-columns: 1fr;
+    }
+
+    .graph-canvas-wrap,
+    .graph-canvas,
+    .graph-inspector {
+      min-height: 420px;
+    }
+
+    .graph-toolbar,
+    .graph-actions {
       align-items: stretch;
       flex-direction: column;
     }
 
-    .filter-grid,
-    .lens-layout,
-    .provenance-grid,
-    .relation-columns,
-    .project-card-stats,
-    .technical-details dl {
+    .graph-filter-tabs,
+    .graph-actions {
+      width: 100%;
+    }
+
+    .graph-filter-tabs button,
+    .graph-actions button {
+      flex: 1 1 auto;
+    }
+
+    .list-controls {
+      justify-content: flex-start;
+    }
+
+    .list-controls > div:first-child {
+      text-align: left;
+    }
+
+    .controls-row {
+      display: flex;
+      flex-wrap: nowrap;
+      align-items: center;
+      overflow-x: auto;
+    }
+
+    .memory-preview {
+      padding: 20px 18px 24px;
+    }
+  }
+
+  /* Human readability polish. */
+  :global(body) {
+    color: #2d2b27;
+    font-kerning: normal;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  .main-stage {
+    padding-top: clamp(34px, 5vw, 60px);
+  }
+
+  .main-stage.memory-stage {
+    height: 100vh;
+    overflow: hidden;
+    padding-bottom: 24px;
+  }
+
+  :global(body:has(.main-stage.memory-stage)) {
+    overflow: hidden;
+  }
+
+  .memory-page {
+    gap: 30px;
+  }
+
+  .memory-stage .memory-page {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+    gap: 18px;
+    overflow: hidden;
+  }
+
+  .memory-stage .doc-hero {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .memory-page,
+  .memory-workspace,
+  .sectioned-memory,
+  .sectioned-memory > section,
+  .object-list,
+  .object-list button,
+  .object-list button > span,
+  .memory-preview,
+  .notion-properties,
+  .notion-toggle,
+  .notion-toggle > :not(summary),
+  .markdown-view,
+  .json-view,
+  .facet-grid,
+  .relation-columns {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .doc-hero h2 {
+    font-size: clamp(2.35rem, 3.8vw, 3.25rem);
+    line-height: 1.04;
+    font-weight: 820;
+  }
+
+  .doc-hero p:not(.eyebrow) {
+    color: #68635c;
+    line-height: 1.62;
+  }
+
+  .projection-status {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 0;
+    max-width: none;
+    color: #6c675f;
+    font-size: 0.9rem;
+    line-height: 1.45;
+    white-space: nowrap;
+  }
+
+  .projection-status span {
+    flex: 0 0 auto;
+    margin: 0 8px 0 0;
+    border-color: #d8d0c3;
+    padding: 3px 10px;
+    background: #faf7f1;
+    font-weight: 760;
+  }
+
+  .list-controls {
+    position: sticky;
+    top: 0;
+    z-index: 4;
+    gap: 12px;
+    border-bottom-color: #ece6dc;
+    padding: 2px 0 28px;
+    background: #fffefa;
+  }
+
+  .list-controls-heading {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px 18px;
+    min-width: 0;
+  }
+
+  .list-controls-heading > div {
+    min-width: 0;
+  }
+
+  .list-controls strong {
+    color: #302e2a;
+    font-size: 1rem;
+    line-height: 1.2;
+    font-weight: 780;
+  }
+
+  .list-controls span {
+    margin-top: 2px;
+    color: #858078;
+    font-size: 0.93rem;
+  }
+
+  .list-controls .projection-status span {
+    display: inline-flex;
+    margin: 0 8px 0 0;
+    color: #37352f;
+    font-size: 0.78rem;
+  }
+
+  .controls-row {
+    gap: 10px;
+    min-width: 0;
+    padding-bottom: 6px;
+  }
+
+  .layer-tabs button,
+  .list-controls button {
+    min-height: 40px;
+    border-color: #dfd8cd;
+    padding: 8px 14px;
+    color: #5e5950;
+    background: #fffdf9;
+    font-size: 0.9rem;
+    font-weight: 680;
+  }
+
+  .layer-tabs button.active {
+    border-color: #262522;
+    background: #262522;
+  }
+
+  .list-controls select {
+    min-width: 138px;
+    min-height: 40px;
+    border-color: #dfd8cd;
+    appearance: none;
+    -webkit-appearance: none;
+    padding-right: 38px;
+    padding-left: 14px;
+    background-color: #f4f1eb;
+    background-image:
+      linear-gradient(45deg, transparent 50%, #6c675f 50%),
+      linear-gradient(135deg, #6c675f 50%, transparent 50%);
+    background-position:
+      calc(100% - 18px) 50%,
+      calc(100% - 13px) 50%;
+    background-repeat: no-repeat;
+    background-size: 5px 5px;
+    color: #45413b;
+    font-size: 0.92rem;
+  }
+
+  .sectioned-memory {
+    gap: 42px;
+  }
+
+  .memory-stage .memory-workspace,
+  .memory-stage .sectioned-memory {
+    min-height: 0;
+  }
+
+  .memory-stage .doc-relation-overview {
+    max-height: 280px;
+    min-height: 0;
+    overflow: hidden;
+    padding: 14px 0 16px;
+  }
+
+  .memory-stage .doc-relation-map,
+  .memory-stage .doc-relation-map svg {
+    height: 220px;
+    min-height: 220px;
+  }
+
+  .memory-stage .doc-relation-copy {
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .memory-stage .doc-relation-list {
+    max-height: 116px;
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+
+  .memory-stage .memory-workspace {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 0;
+    gap: 18px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-right: 8px;
+    scrollbar-gutter: stable;
+  }
+
+  .memory-stage .sectioned-memory {
+    overflow: visible;
+  }
+
+  .memory-stage .sectioned-memory > section:last-child {
+    padding-bottom: 22px;
+  }
+
+  .sectioned-memory h3 {
+    color: #24231f;
+    font-size: clamp(1.58rem, 2.3vw, 1.95rem);
+    line-height: 1.12;
+    font-weight: 780;
+  }
+
+  .sectioned-memory > section > p {
+    margin: 7px 0 20px;
+    color: #817c74;
+    font-size: 1rem;
+    line-height: 1.45;
+  }
+
+  .object-list {
+    gap: 14px;
+  }
+
+  .object-list button {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    min-height: 0;
+    border-color: #e6dfd4;
+    padding: 18px 22px;
+    background: #fffdf9;
+    box-shadow:
+      0 1px 2px rgb(39 31 21 / 4%),
+      0 10px 24px rgb(39 31 21 / 4%);
+    transition:
+      background-color 140ms ease,
+      border-color 140ms ease,
+      box-shadow 140ms ease,
+      transform 140ms ease;
+  }
+
+  .object-list button:hover {
+    border-color: #d8cec0;
+    background: #fffaf1;
+    box-shadow:
+      0 2px 5px rgb(39 31 21 / 5%),
+      0 14px 30px rgb(39 31 21 / 7%);
+    transform: translateY(-1px);
+  }
+
+  .object-list button.selected {
+    border-color: #d8cec0;
+    border-bottom-color: transparent;
+    background: #f7f3ec;
+  }
+
+  .object-list strong {
+    color: #292825;
+    font-size: 1.08rem;
+    line-height: 1.32;
+    font-weight: 760;
+    overflow-wrap: anywhere;
+  }
+
+  .object-meta {
+    gap: 6px 7px;
+    margin-top: 8px;
+  }
+
+  .object-meta span,
+  .pill,
+  .tag-list li {
+    border-color: #ded6ca;
+    background: #f8f5ef;
+    color: #59544c;
+    font-size: 0.76rem;
+    line-height: 1.15;
+    font-weight: 680;
+    overflow-wrap: anywhere;
+  }
+
+  .object-list small {
+    max-width: 76ch;
+    margin-top: 9px;
+    color: #6f6a62;
+    font-size: 0.98rem;
+    line-height: 1.52;
+    overflow-wrap: anywhere;
+  }
+
+  .object-list em {
+    align-self: center;
+    min-width: 34px;
+    padding-left: 12px;
+    color: #8a847b;
+    font-size: 0.93rem;
+    font-weight: 650;
+  }
+
+  .memory-preview {
+    margin-top: -14px;
+    border-color: #d8cec0;
+    padding: 28px clamp(24px, 5vw, 64px) 34px;
+    background: #fffdf9;
+    box-shadow: 0 18px 34px rgb(39 31 21 / 6%);
+  }
+
+  .notion-properties {
+    gap: 2px;
+    padding-bottom: 18px;
+  }
+
+  .notion-properties div {
+    grid-template-columns: 112px minmax(0, 1fr);
+    min-height: 30px;
+  }
+
+  .notion-properties dt {
+    color: #8e887f;
+    font-size: 0.86rem;
+    font-weight: 700;
+  }
+
+  .notion-properties dd {
+    color: #3c3934;
+    font-size: 0.96rem;
+    line-height: 1.45;
+  }
+
+  .notion-toggle-list {
+    gap: 14px;
+  }
+
+  .notion-toggle summary {
+    min-height: 34px;
+    font-size: 1.01rem;
+    font-weight: 720;
+  }
+
+  .notion-toggle > :not(summary) {
+    padding: 10px 0 20px;
+  }
+
+  .memory-preview .markdown-view {
+    max-width: 78ch;
+    color: #2f3440;
+    font-size: 1.04rem;
+    line-height: 1.72;
+  }
+
+  .memory-preview .markdown-view p {
+    margin: 0 0 1rem;
+  }
+
+  .memory-preview .markdown-view h3 {
+    margin: 0 0 0.75rem;
+    color: #24231f;
+    font-size: 1.38rem;
+    line-height: 1.22;
+    font-weight: 780;
+  }
+
+  .memory-preview .markdown-view ul {
+    margin: 0 0 1rem;
+    padding-left: 1.2rem;
+  }
+
+  .memory-preview .markdown-view li + li {
+    margin-top: 0.38rem;
+  }
+
+  .relation-list {
+    gap: 11px;
+  }
+
+  .relation-list li {
+    gap: 6px;
+  }
+
+  .relation-list button {
+    line-height: 1.35;
+    font-weight: 760;
+  }
+
+  .relation-list small {
+    color: #777169;
+    line-height: 1.4;
+  }
+
+  @media (max-width: 900px) {
+    .main-stage {
+      padding: 28px 14px 52px;
+    }
+
+    .main-stage.memory-stage {
+      height: calc(100vh - 68px);
+      height: calc(100svh - 68px);
+      padding: 18px 14px 16px;
+    }
+
+    .memory-page {
+      gap: 22px;
+    }
+
+    .memory-stage .memory-page {
+      gap: 14px;
+    }
+
+    .memory-stage .doc-hero {
+      gap: 6px;
+    }
+
+    .memory-stage .doc-icon,
+    .memory-stage .doc-hero p:not(.eyebrow) {
+      display: none;
+    }
+
+    .memory-stage .doc-hero h2 {
+      font-size: 1.45rem;
+      line-height: 1.12;
+    }
+
+    .list-controls {
+      padding-bottom: 16px;
+    }
+
+    .list-controls-heading {
+      grid-template-columns: 1fr;
+      align-items: start;
+      gap: 8px;
+    }
+
+    .projection-status {
+      align-items: flex-start;
+      flex-wrap: wrap;
+      white-space: normal;
+    }
+
+    .memory-stage .doc-relation-overview {
+      gap: 12px;
+      padding: 12px 0 14px;
+    }
+
+    .memory-stage .doc-relation-map,
+    .memory-stage .doc-relation-map svg {
+      height: 172px;
+      min-height: 172px;
+    }
+
+    .memory-stage .doc-relation-list {
+      max-height: 118px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+
+    .sectioned-memory {
+      gap: 34px;
+    }
+
+    .memory-stage .memory-workspace {
+      padding-right: 0;
+      scrollbar-gutter: auto;
+    }
+
+    .sectioned-memory h3 {
+      font-size: 1.5rem;
+    }
+
+    .object-list button {
+      grid-template-columns: minmax(0, 1fr) auto;
+      padding: 16px;
+    }
+
+    .object-list em {
+      grid-column: 2;
+      justify-self: start;
+      padding-left: 0;
+    }
+
+    .memory-preview {
+      margin-top: -14px;
+      padding: 22px 18px 28px;
+    }
+
+    .notion-properties div,
+    .facet-grid div {
+      grid-template-columns: 1fr;
+      gap: 2px;
+    }
+
+    .relation-columns {
+      grid-template-columns: 1fr;
+      gap: 18px;
+    }
+  }
+
+  @media (max-width: 560px) {
+    .object-list button {
       grid-template-columns: 1fr;
     }
 
-    .detail-header {
-      grid-template-columns: 1fr;
+    .object-list em {
+      grid-column: 1;
     }
 
-    .tag-list {
-      grid-column: auto;
+    .memory-preview .markdown-view {
+      font-size: 1rem;
+    }
+  }
+
+  .main-stage.memory-stage {
+    padding-right: clamp(18px, 2vw, 32px);
+    padding-left: clamp(18px, 2vw, 32px);
+  }
+
+  .memory-stage .memory-page {
+    width: 100%;
+    max-width: none;
+  }
+
+  .memory-stage .list-controls {
+    flex: 0 0 auto;
+  }
+
+  .schema-browser-layout {
+    display: grid;
+    grid-template-columns: minmax(260px, 0.3fr) minmax(0, 1fr);
+    gap: clamp(16px, 2vw, 24px);
+    min-height: 0;
+    flex: 1 1 0;
+    overflow: hidden;
+  }
+
+  .schema-context-panel {
+    min-width: 0;
+    min-height: 0;
+  }
+
+  .schema-context-panel > summary {
+    display: none;
+  }
+
+  .schema-context-panel:not([open]) > :not(summary) {
+    display: none;
+  }
+
+  .memory-stage .doc-relation-overview {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+    align-content: start;
+    max-height: none;
+    min-height: 0;
+    overflow: visible;
+    border-top: 0;
+    padding: 0;
+  }
+
+  .memory-stage .doc-relation-map {
+    height: min(28vh, 260px);
+    min-height: 210px;
+  }
+
+  .memory-stage .doc-relation-map svg {
+    height: 100%;
+    min-height: 210px;
+  }
+
+  .memory-stage .doc-relation-copy,
+  .memory-stage .doc-relation-list {
+    max-height: none;
+    overflow: visible;
+  }
+
+  .memory-stage .doc-relation-list {
+    padding-right: 0;
+  }
+
+  .doc-relation-more {
+    color: #817c74;
+    font-size: 0.9rem;
+    font-weight: 700;
+  }
+
+  .memory-stage .memory-workspace {
+    min-height: 0;
+    overflow-y: auto;
+    padding-right: 8px;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+  }
+
+  .browser-workspace-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 18px;
+    min-width: 0;
+  }
+
+  .memory-workspace.has-preview .browser-workspace-grid {
+    grid-template-columns: minmax(340px, 0.92fr) minmax(420px, 1.08fr);
+    align-items: start;
+  }
+
+  .object-detail-panel {
+    align-self: start;
+    margin: 0 0 24px;
+    border: 1px solid #d8cec0;
+    border-radius: 8px;
+    padding: 24px clamp(22px, 3vw, 42px) 30px;
+  }
+
+  .memory-preview-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    min-width: 0;
+  }
+
+  .memory-preview-header h3 {
+    margin: 3px 0 0;
+    color: #24231f;
+    font-size: clamp(1.4rem, 2vw, 1.75rem);
+    line-height: 1.14;
+    font-weight: 800;
+    overflow-wrap: anywhere;
+  }
+
+  .memory-preview-header .mono {
+    margin: 5px 0 0;
+    color: #6f6a62;
+    font-size: 0.86rem;
+    overflow-wrap: anywhere;
+  }
+
+  .selected-object-back {
+    display: none;
+  }
+
+  .memory-stage .object-list button.selected {
+    border-bottom-color: #d8cec0;
+    border-radius: 8px;
+  }
+
+  @media (max-width: 1180px) {
+    .schema-browser-layout {
+      grid-template-columns: minmax(240px, 0.3fr) minmax(0, 1fr);
+      gap: 18px;
     }
 
-    .object-list {
-      grid-template-columns: 1fr;
+    .memory-workspace.has-preview .browser-workspace-grid {
+      grid-template-columns: minmax(300px, 0.85fr) minmax(360px, 1.15fr);
+    }
+  }
+
+  @media (max-width: 900px) {
+    .main-stage.memory-stage {
+      padding-right: 14px;
+      padding-left: 14px;
     }
 
-    .graph-surface,
-    .relation-graph-svg {
-      min-height: 300px;
+    .schema-browser-layout {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      overflow: visible;
+    }
+
+    .schema-context-panel {
+      display: block;
+      flex: 0 0 auto;
+      overflow: visible;
+    }
+
+    .schema-context-panel[open] {
+      display: block;
+    }
+
+    .schema-context-panel > summary {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      min-height: 44px;
+      border: 1px solid #e3dfd7;
+      border-radius: 8px;
+      padding: 10px 12px;
+      background: #fffdf9;
+      color: #302e2a;
+      cursor: pointer;
+      list-style: none;
+    }
+
+    .schema-context-panel > summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .schema-context-panel > summary::after {
+      content: "View";
+      flex: 0 0 auto;
+      color: #6c675f;
+      font-size: 0.82rem;
+      font-weight: 780;
+    }
+
+    .schema-context-panel[open] > summary::after {
+      content: "Hide";
+    }
+
+    .schema-context-panel > summary strong,
+    .schema-context-panel > summary small {
+      display: block;
+      line-height: 1.2;
+    }
+
+    .schema-context-panel > summary small {
+      margin-top: 2px;
+      color: #817c74;
+      font-size: 0.8rem;
+      font-weight: 620;
+    }
+
+    .schema-context-panel[open] .doc-relation-overview,
+    .schema-context-panel[open] .doc-hero-actions {
+      margin-top: 10px;
+    }
+
+    .memory-stage .doc-relation-map,
+    .memory-stage .doc-relation-map svg {
+      height: 148px;
+      min-height: 148px;
+    }
+
+    .memory-stage .doc-relation-overview {
+      gap: 10px;
+    }
+
+    .memory-stage .doc-relation-copy {
+      display: block;
+    }
+
+    .memory-stage .doc-relation-heading {
+      display: block;
+    }
+
+    .memory-stage .doc-relation-heading > div,
+    .memory-stage .doc-relation-stats,
+    .memory-stage .doc-relation-list {
+      display: none;
+    }
+
+    .memory-stage .doc-graph-action {
+      width: 100%;
+      min-height: 38px;
+      padding: 9px 12px;
+    }
+
+    .memory-stage .doc-relation-list {
+      max-height: none;
+      overflow: visible;
+      padding-right: 0;
+    }
+
+    .browser-workspace-grid,
+    .memory-workspace.has-preview .browser-workspace-grid {
+      display: block;
+    }
+
+    .object-detail-panel {
+      margin: 0 0 18px;
+      padding: 20px 16px 28px;
+    }
+
+    .memory-preview-header {
+      display: grid;
+      gap: 12px;
+    }
+
+    .selected-object-back {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      justify-self: start;
+      min-height: 38px;
+      border: 1px solid #d8d0c3;
+      border-radius: 8px;
+      padding: 8px 13px;
+      background: #fffaf1;
+      color: #302e2a;
+      font-weight: 780;
+    }
+
+    .main-stage.memory-stage.has-selected-object {
+      height: auto;
+      min-height: calc(100vh - 68px);
+      min-height: calc(100svh - 68px);
+      overflow: visible;
+    }
+
+    :global(body:has(.main-stage.memory-stage.has-selected-object)) {
+      overflow: auto;
+    }
+
+    .memory-stage.has-selected-object .memory-page,
+    .memory-stage.has-selected-object .schema-browser-layout,
+    .memory-stage.has-selected-object .memory-workspace,
+    .memory-stage.has-selected-object .browser-workspace-grid {
+      display: block;
+      height: auto;
+      min-height: 0;
+      overflow: visible;
+    }
+
+    .memory-stage.has-selected-object .list-controls,
+    .memory-stage.has-selected-object .schema-context-panel,
+    .memory-stage.has-selected-object .warnings,
+    .memory-stage.has-selected-object .onboarding-callout,
+    .memory-stage.has-selected-object .sectioned-memory {
+      display: none;
+    }
+  }
+
+  /* Collapsed navigation drawer. */
+  .viewer-shell {
+    display: block;
+    min-height: 100vh;
+  }
+
+  .sidebar-toggle {
+    position: fixed;
+    top: 18px;
+    left: 18px;
+    z-index: 60;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 42px;
+    border: 1px solid #d8d0c3;
+    border-radius: 8px;
+    padding: 0 14px 0 12px;
+    color: #2f2e2a;
+    background: #fffdf9;
+    font-size: 0.92rem;
+    font-weight: 800;
+    box-shadow:
+      0 1px 2px rgb(39 31 21 / 6%),
+      0 10px 28px rgb(39 31 21 / 8%);
+  }
+
+  .sidebar-toggle:hover,
+  .sidebar-toggle.open {
+    border-color: #262522;
+    background: #262522;
+    color: #fffefa;
+  }
+
+  .sidebar-toggle:focus-visible,
+  .sidebar-backdrop:focus-visible {
+    outline: 3px solid rgb(47 93 98 / 28%);
+    outline-offset: 3px;
+  }
+
+  .burger-icon {
+    position: relative;
+    width: 16px;
+    height: 12px;
+    border-top: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+  }
+
+  .burger-icon::before {
+    position: absolute;
+    top: 3px;
+    left: 0;
+    width: 16px;
+    height: 2px;
+    background: currentColor;
+    content: "";
+  }
+
+  .sidebar-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    border: 0;
+    padding: 0;
+    background: rgb(36 34 30 / 34%);
+    cursor: default;
+  }
+
+  .sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: 50;
+    display: flex;
+    width: min(340px, calc(100vw - 32px));
+    height: 100dvh;
+    max-height: 100dvh;
+    overflow-y: auto;
+    flex-direction: column;
+    gap: 28px;
+    border-right: 1px solid #dedbd2;
+    padding: 82px 28px 30px;
+    background: #f4f1eb;
+    box-shadow:
+      24px 0 70px rgb(39 31 21 / 18%),
+      3px 0 12px rgb(39 31 21 / 10%);
+    scrollbar-gutter: stable;
+  }
+
+  .sidebar-menu,
+  .sidebar-menu.open {
+    position: static;
+    display: grid;
+    gap: 24px;
+    max-height: none;
+    overflow: visible;
+    border: 0;
+    border-radius: 0;
+    padding: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .main-stage {
+    width: 100%;
+    padding-top: max(88px, clamp(34px, 5vw, 60px));
+  }
+
+  .main-stage.memory-stage {
+    height: 100vh;
+  }
+
+  @media (max-width: 900px) {
+    .sidebar {
+      position: fixed;
+      top: 0;
+      height: 100dvh;
+      padding: 76px 18px 24px;
+      border-bottom: 0;
+      background: #f4f1eb;
+      box-shadow:
+        18px 0 52px rgb(39 31 21 / 18%),
+        2px 0 10px rgb(39 31 21 / 10%);
+    }
+
+    .brand {
+      gap: 10px;
+    }
+
+    .brand p:last-child {
+      padding-left: 0;
+      white-space: normal;
+    }
+
+    .sidebar-stats {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .main-stage {
+      padding-top: 88px;
+    }
+  }
+
+  @media (max-width: 560px) {
+    .sidebar-toggle {
+      top: 10px;
+      left: 10px;
+      min-height: 40px;
+      padding-inline: 11px 13px;
+    }
+
+    .sidebar {
+      width: calc(100vw - 20px);
+      padding: 70px 14px 22px;
+    }
+
+    .main-stage {
+      padding-top: 78px;
+    }
+  }
+
+  @media print {
+    .sidebar-toggle,
+    .sidebar-backdrop,
+    .sidebar {
+      display: none;
     }
   }
 </style>

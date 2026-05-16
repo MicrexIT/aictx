@@ -16,13 +16,13 @@ describe("memory role coverage", () => {
         object("synthesis.feature-map", "synthesis", "active", "Feature map", "# Feature map\n\nThis capability map is long enough to count as populated because it describes durable user-facing functions and command surfaces in concrete detail.\n", "feature-map"),
         object("synthesis.repository-map", "synthesis", "stale", "Repository map", "# Repository map\n\nOld layout.\n", "file-layout"),
         object("architecture.current", "architecture", "active", "Architecture", "# Architecture\n\nShort.\n", "architecture"),
-        object("decision.current-architecture", "decision", "active", "Decision", "# Decision\n\nThe current architecture conflicts with the short architecture summary.\n", "decision-rationale")
+        object("decision.current-architecture", "decision", "active", "Decision", "# Decision\n\nThe current architecture challenges the short architecture summary.\n", "decision-rationale")
       ],
       relations: [
         relation(
-          "rel.architecture-conflict",
+          "rel.architecture-challenge",
           "architecture.current",
-          "conflicts_with",
+          "challenges",
           "decision.current-architecture"
         )
       ]
@@ -169,7 +169,7 @@ function snapshot(input: {
     projectRoot: "/tmp/project",
     aictxRoot: "/tmp/project/.aictx",
     config: {
-      version: 3,
+      version: 4,
       project: {
         id: "project.test",
         name: "Test"

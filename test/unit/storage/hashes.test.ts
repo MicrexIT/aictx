@@ -177,6 +177,24 @@ describe("computeObjectContentHash", () => {
     expect(first).toMatch(/^sha256:[a-f0-9]{64}$/);
   });
 
+  it("includes source origin in object hash recomputation", () => {
+    const markdown = "# Source\n\nSource summary.\n";
+    const withoutOrigin = computeObjectContentHash(validObject, markdown);
+    const withOrigin = computeObjectContentHash(
+      {
+        ...validObject,
+        origin: {
+          kind: "file",
+          locator: "README.md",
+          media_type: "text/markdown"
+        }
+      },
+      markdown
+    );
+
+    expect(withOrigin).not.toBe(withoutOrigin);
+  });
+
   it("preserves Markdown whitespace other than line ending normalization", () => {
     expect(computeObjectContentHash(validObject, "# Title\n\nBody\n")).not.toBe(
       computeObjectContentHash(validObject, " # Title\n\nBody\n")

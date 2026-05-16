@@ -1,17 +1,49 @@
 # Contributing to Aictx
 
 Thanks for helping improve Aictx. This project is the npm package
-`@aictx/memory`: a local-first project memory tool for AI coding agents.
+`@aictx/memory`: local-first, reviewable project memory for AI coding agents.
 
-## Ways to contribute
+Aictx is not a chat transcript archive, always-on capture server, hosted memory
+service, vector DB, or prompt template. Contributions should preserve that
+shape: typed memory in `.aictx/`, local indexing, explicit validation, and
+normal Git review.
 
-- Report reproducible bugs with the bug report template.
-- Improve public docs under `docs/src/content/docs/`.
-- Propose CLI, MCP, storage, retrieval, or viewer improvements through focused issues.
-- Send small pull requests that keep behavior, tests, and docs aligned.
+## First contribution paths
+
+You do not need to understand the whole memory model to make a useful
+contribution. Start with the path that matches the change.
+
+| Path | Good first work | Verify with |
+| --- | --- | --- |
+| Docs and examples | Clarify public docs, README wording, recipes, or install notes. | `pnpm build:docs` |
+| CLI behavior | Reproduce a small command bug, add a focused test, then fix it. | `pnpm typecheck && pnpm test` |
+| Viewer UI | Improve filtering, copy, layout, screenshots, or accessibility. | `pnpm typecheck && pnpm build:viewer` |
+| Packaging | Check release packaging, binary entrypoints, or versioned setup text. | `pnpm test:package` |
+| Memory model | Propose schema, storage, ranking, MCP, or migration changes. | Open an issue first |
+
+Small pull requests are easier to review and merge. If a change spans several
+areas, describe the review order in the pull request so maintainers can check
+the riskiest part first.
 
 Please do not include secrets, private project memory, proprietary logs, or
 unredacted `.aictx/` content from another project in issues or pull requests.
+
+## Before opening an issue
+
+Good issues make the problem reproducible without exposing private project
+memory. Include:
+
+- the command or workflow you ran;
+- what you expected to happen;
+- what actually happened;
+- `node --version`, `pnpm --version`, and `aictx --version` when relevant;
+- a minimal redacted `.aictx/` sample only when the issue depends on storage
+  contents;
+- screenshots for viewer or README visual problems.
+
+Use `SECURITY.md` for vulnerabilities, private disclosure, or anything that
+would require sharing secrets, exploit details, proprietary logs, or private
+project memory.
 
 ## Development setup
 
@@ -21,8 +53,25 @@ Aictx requires Node.js `>=22` and uses pnpm.
 pnpm install
 pnpm typecheck
 pnpm test
+```
+
+Useful verification commands by area:
+
+```bash
+pnpm build:docs       # public docs
+pnpm build:viewer     # local viewer bundle
+pnpm build:guidance   # generated agent guidance
+pnpm test:package     # release packaging surface
+pnpm build            # full package build
+pnpm test:local       # typecheck plus packaging integration test
+```
+
+Before opening a pull request for a broad change, run:
+
+```bash
+pnpm typecheck
+pnpm test
 pnpm build
-pnpm build:docs
 ```
 
 Useful local commands:
@@ -38,8 +87,10 @@ pnpm dev:site
 ## Working with protected `main`
 
 The `main` branch is protected. Do not push directly to `main`, force-push
-`main`, or delete `main`; GitHub will reject normal collaborator attempts. Work
-from a branch and merge through a pull request.
+`main`, or delete `main`. Work from a branch and merge through a pull request.
+Repository administrators may have emergency bypass rights, but routine work,
+AI-agent work, and external contributions should still use pull requests so
+required checks and review stay visible.
 
 Recommended git flow:
 
@@ -112,11 +163,18 @@ preserve its commits.
 ## Pull request expectations
 
 - Keep changes scoped to one behavior or documentation improvement.
+- Explain the problem, the approach, and the verification you ran.
 - Write the pull request description as a prompt another coding agent could use
   to reproduce, review, or continue the work.
 - Add or update tests for CLI, MCP, storage, packaging, and viewer behavior.
-- Update README or public docs when user-visible behavior changes.
+- Update README, public docs, or site copy when user-visible behavior,
+  positioning, or workflows change.
 - Run the verification commands that match the changed area.
+- Include before/after output for CLI behavior changes and screenshots for
+  viewer, README visual, or marketing-site changes.
+- For README or marketing-site visual changes, keep screenshots/assets current
+  with the implementation they depict and avoid fake interactive controls in
+  static images.
 - Keep generated guidance files in sync by running `pnpm build:guidance` when
   editing `integrations/templates/agent-guidance.md`; generated integration
   artifacts live under `integrations/`.

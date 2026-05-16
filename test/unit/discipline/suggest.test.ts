@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -502,13 +503,25 @@ describe("suggest discipline packets", () => {
           op: "create_object",
           id: "source.readme",
           type: "source",
-          facets: expect.objectContaining({ category: "source" })
+          facets: expect.objectContaining({ category: "source" }),
+          origin: {
+            kind: "file",
+            locator: "README.md",
+            digest: await fileDigest(projectRoot, "README.md"),
+            media_type: "text/markdown"
+          }
         }),
         expect.objectContaining({
           op: "create_object",
           id: "source.package-json",
           type: "source",
-          facets: expect.objectContaining({ category: "source" })
+          facets: expect.objectContaining({ category: "source" }),
+          origin: {
+            kind: "file",
+            locator: "package.json",
+            digest: await fileDigest(projectRoot, "package.json"),
+            media_type: "application/json"
+          }
         }),
         expect.objectContaining({
           op: "create_object",
@@ -866,6 +879,16 @@ describe("suggest discipline packets", () => {
 
     expect(proposal.proposed).toBe(true);
     expect(proposal.patch?.changes).toEqual([
+      expect.objectContaining({
+        op: "update_object",
+        id: "source.readme",
+        origin: {
+          kind: "file",
+          locator: "README.md",
+          digest: await fileDigest(projectRoot, "README.md"),
+          media_type: "text/markdown"
+        }
+      }),
       {
         op: "create_relation",
         id: "rel.synthesis-feature-map-derived-from-source-readme",
@@ -885,7 +908,7 @@ describe("suggest discipline packets", () => {
     }
   });
 
-  it("does not duplicate existing source-backed syntheses during bootstrap", async () => {
+  it("repairs source origin without duplicating existing source-backed syntheses during bootstrap", async () => {
     const projectRoot = await createTempRoot("aictx-discipline-bootstrap-linked-feature-");
     await writeProjectFile(
       projectRoot,
@@ -933,8 +956,19 @@ describe("suggest discipline packets", () => {
       storage
     });
 
-    expect(proposal.proposed).toBe(false);
-    expect(proposal.patch).toBeNull();
+    expect(proposal.proposed).toBe(true);
+    expect(proposal.patch?.changes).toEqual([
+      expect.objectContaining({
+        op: "update_object",
+        id: "source.readme",
+        origin: {
+          kind: "file",
+          locator: "README.md",
+          digest: await fileDigest(projectRoot, "README.md"),
+          media_type: "text/markdown"
+        }
+      })
+    ]);
   });
 
   it("avoids duplicate bootstrap memories when deterministic objects already exist", async () => {
@@ -1042,7 +1076,17 @@ describe("suggest discipline packets", () => {
     });
 
     expect(proposal.patch?.changes).toEqual([
-      expect.objectContaining({ op: "update_object", id: "project.billing-api" })
+      expect.objectContaining({ op: "update_object", id: "project.billing-api" }),
+      expect.objectContaining({
+        op: "update_object",
+        id: "source.package-json",
+        origin: {
+          kind: "file",
+          locator: "package.json",
+          digest: await fileDigest(projectRoot, "package.json"),
+          media_type: "application/json"
+        }
+      })
     ]);
   });
 
@@ -1085,6 +1129,72 @@ describe("suggest discipline packets", () => {
     );
   });
 
+  it("adds deterministic file origin to bootstrap source records for lockfiles and agent guidance", async () => {
+    const projectRoot = await createTempRoot("aictx-discipline-bootstrap-origin-");
+    await writeProjectFile(projectRoot, "README.md", "# Billing Agent\n");
+    await writeJsonProjectFile(projectRoot, "package.json", {
+      name: "billing-agent",
+      scripts: {
+        test: "vitest run"
+      }
+    });
+    await writeProjectFile(projectRoot, "pnpm-lock.yaml", "lockfileVersion: '9.0'\n");
+    await writeProjectFile(
+      projectRoot,
+      "AGENTS.md",
+      [
+        "# Agent instructions",
+        "",
+        "## Code Conventions",
+        "",
+        "- Prefer source-backed memory.",
+        "- After changes, run `pnpm run test`.",
+        ""
+      ].join("\n")
+    );
+    const storage = storageSnapshot({
+      objects: [
+        initialProjectObject("project.billing-agent", "Billing Agent"),
+        initialArchitectureObject("project.billing-agent")
+      ],
+      relations: [projectArchitectureRelation("project.billing-agent")],
+      projectId: "project.billing-agent",
+      projectName: "Billing Agent"
+    });
+
+    const proposal = await buildSuggestBootstrapPatchProposal({
+      projectRoot,
+      storage
+    });
+
+    expect(proposal.proposed).toBe(true);
+    expect(proposal.patch?.changes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          op: "create_object",
+          id: "source.pnpm-lock-yaml",
+          type: "source",
+          origin: {
+            kind: "file",
+            locator: "pnpm-lock.yaml",
+            digest: await fileDigest(projectRoot, "pnpm-lock.yaml")
+          }
+        }),
+        expect.objectContaining({
+          op: "create_object",
+          id: "source.agents",
+          type: "source",
+          origin: {
+            kind: "file",
+            locator: "AGENTS.md",
+            digest: await fileDigest(projectRoot, "AGENTS.md"),
+            media_type: "text/markdown"
+          }
+        })
+      ])
+    );
+  });
+
   it("creates only source records for small repos without confident synthesis evidence", async () => {
     const projectRoot = await createTempRoot("aictx-discipline-bootstrap-minimal-");
     await writeProjectFile(projectRoot, "README.md", "# Tiny\n");
@@ -1110,7 +1220,17 @@ describe("suggest discipline packets", () => {
     expect(proposal.patch?.changes).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ op: "create_object", id: "source.readme", type: "source" }),
-        expect.objectContaining({ op: "create_object", id: "source.package-json", type: "source" })
+        expect.objectContaining({
+          op: "create_object",
+          id: "source.package-json",
+          type: "source",
+          origin: {
+            kind: "file",
+            locator: "package.json",
+            digest: await fileDigest(projectRoot, "package.json"),
+            media_type: "application/json"
+          }
+        })
       ])
     );
     expect(proposal.patch?.changes).not.toEqual(
@@ -1346,6 +1466,11 @@ async function writeJsonProjectFile(
   value: unknown
 ): Promise<void> {
   await writeProjectFile(projectRoot, relativePath, `${JSON.stringify(value, null, 2)}\n`);
+}
+
+async function fileDigest(projectRoot: string, relativePath: string): Promise<string> {
+  const bytes = await readFile(join(projectRoot, relativePath));
+  return `sha256:${createHash("sha256").update(bytes).digest("hex")}`;
 }
 
 async function writeBundledSchemas(projectRoot: string): Promise<void> {

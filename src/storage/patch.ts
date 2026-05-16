@@ -30,6 +30,7 @@ import type {
   RelationStatus,
   Scope,
   Source,
+  SourceOrigin,
   ValidationIssue
 } from "../core/types.js";
 import { PATCH_OPERATIONS } from "../core/types.js";
@@ -150,6 +151,7 @@ export interface NormalizedCreateObjectChange {
   facets?: ObjectFacets;
   evidence: Evidence[];
   source: Source;
+  origin?: SourceOrigin;
   path: string;
   bodyPath: string;
 }
@@ -167,6 +169,7 @@ export interface NormalizedUpdateObjectChange {
   facets?: ObjectFacets;
   evidence?: Evidence[];
   source?: Source;
+  origin?: SourceOrigin;
   superseded_by?: ObjectId;
 }
 
@@ -247,6 +250,7 @@ interface RawCreateObjectChange {
   facets?: ObjectFacets;
   evidence?: Evidence[];
   source?: Source;
+  origin?: SourceOrigin;
 }
 
 interface RawUpdateObjectChange {
@@ -260,6 +264,7 @@ interface RawUpdateObjectChange {
   facets?: ObjectFacets;
   evidence?: Evidence[];
   source?: Source;
+  origin?: SourceOrigin;
   superseded_by?: ObjectId;
 }
 
@@ -619,6 +624,7 @@ async function planCreateObject(
     ...(change.facets === undefined ? {} : { facets: change.facets }),
     evidence: change.evidence ?? [],
     source,
+    ...(change.origin === undefined ? {} : { origin: change.origin }),
     path: paths.sidecarPath,
     bodyPath: paths.bodyPath
   };
@@ -705,6 +711,7 @@ function planUpdateObject(
     ...(change.facets === undefined ? {} : { facets: change.facets }),
     ...(change.evidence === undefined ? {} : { evidence: change.evidence }),
     ...(change.source === undefined ? {} : { source: change.source }),
+    ...(change.origin === undefined ? {} : { origin: change.origin }),
     ...(change.superseded_by === undefined ? {} : { superseded_by: change.superseded_by })
   };
   const touchesBody = change.body !== undefined;
@@ -717,6 +724,7 @@ function planUpdateObject(
     change.facets !== undefined ||
     change.evidence !== undefined ||
     change.source !== undefined ||
+    change.origin !== undefined ||
     change.superseded_by !== undefined;
 
   state.normalizedChanges.push(normalized);

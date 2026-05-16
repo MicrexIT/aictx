@@ -204,7 +204,11 @@ function scanText(
     const lineNumber = includeLineNumbers ? index + 1 : undefined;
 
     for (const rule of [...BLOCK_RULES, ...WARN_RULES]) {
-      if (rule.pattern.test(line)) {
+      for (const match of matchRule(rule, line)) {
+        if (shouldIgnoreRuleMatch(rule, match, line)) {
+          continue;
+        }
+
         findings.push(secretFinding(rule, path, lineNumber, field));
       }
     }
@@ -230,6 +234,26 @@ function scanText(
   }
 
   return findings;
+}
+
+function matchRule(rule: SecretRule, line: string): string[] {
+  const flags = rule.pattern.flags.includes("g") ? rule.pattern.flags : `${rule.pattern.flags}g`;
+  return [...line.matchAll(new RegExp(rule.pattern.source, flags))].map((match) => match[0]);
+}
+
+function shouldIgnoreRuleMatch(rule: SecretRule, candidate: string, line: string): boolean {
+  return rule.rule === "openai_api_key" && isAictxIdentifierSubstring(candidate, line);
+}
+
+function isAictxIdentifierSubstring(candidate: string, line: string): boolean {
+  const tokens = line.match(/[A-Za-z0-9_.-]+/g) ?? [];
+
+  return tokens.some(
+    (token) =>
+      token.includes(candidate) &&
+      (/^[a-z][a-z0-9_]*\.[a-z0-9][a-z0-9-]*$/.test(token) ||
+        /^rel\.[a-z0-9][a-z0-9-]*$/.test(token))
+  );
 }
 
 function resultFromFindings(findings: readonly SecretFinding[]): SecretDetectionResult {
