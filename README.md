@@ -203,8 +203,6 @@ For official listing paths and release prep, see
 
 ## Documentation
 
-The README is the fast activation path. Core docs:
-
 - [Setup](https://docs.aictx.dev/getting-started/)
 - [Agent recipes](https://docs.aictx.dev/agent-recipes/)
 - [CLI reference](https://docs.aictx.dev/cli/)
