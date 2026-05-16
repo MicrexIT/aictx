@@ -153,6 +153,14 @@
     files_removed: string[];
   }
 
+  interface ViewerProjectDeleteData {
+    registry_path: string;
+    project: RegisteredProjectSummary;
+    removed: RegisteredProjectSummary | null;
+    destroyed: true;
+    entries_removed: string[];
+  }
+
   interface ViewerSuccessEnvelope<TData = ViewerBootstrapData> {
     ok: true;
     data: TData;
@@ -183,6 +191,7 @@
   type ViewerProjectsEnvelope = ViewerSuccessEnvelope<ViewerProjectsData> | ViewerErrorEnvelope;
   type ExportEnvelope = ViewerSuccessEnvelope<ExportObsidianProjectionData> | ViewerErrorEnvelope;
   type LoadPreviewEnvelope = ViewerSuccessEnvelope<LoadPreviewData> | ViewerErrorEnvelope;
+  type ProjectDeleteEnvelope = ViewerSuccessEnvelope<ViewerProjectDeleteData> | ViewerErrorEnvelope;
   type ViewerState = "loading" | "ready" | "error";
   type ViewerScreen = "projects" | "memories" | "detail" | "graph" | "export";
   type ExportState = "idle" | "running" | "success" | "error";
@@ -340,13 +349,18 @@
   let previewErrorCode = $state("");
   let previewData = $state<LoadPreviewData | null>(null);
   let copiedPreviewTarget = $state<"command" | "context" | null>(null);
+  let pendingDeleteProjectId = $state<string | null>(null);
+  let deleteConfirmText = $state("");
+  let deletingProjectId = $state<string | null>(null);
+  let projectDeleteMessage = $state("");
+  let projectDeleteErrorCode = $state("");
   let graphContainer = $state<HTMLDivElement | null>(null);
   let memoryWorkspaceElement = $state<HTMLElement | null>(null);
   let graphInstance: cytoscape.Core | null = null;
   let graphShowInactive = $state(false);
   let selectedGraphObjectId = $state<string | null>(null);
   let selectedGraphRelationId = $state<string | null>(null);
-  let schemaContextOpen = $state(false);
+  let schemaContextOpen = $state(true);
 
   const allOption = "all";
   const token = viewerToken();
@@ -587,18 +601,6 @@
 
   onMount(() => {
     void loadProjects();
-
-    const mediaQuery = window.matchMedia("(max-width: 900px)");
-    const syncSchemaContextMode = (): void => {
-      schemaContextOpen = !mediaQuery.matches;
-    };
-
-    syncSchemaContextMode();
-    mediaQuery.addEventListener("change", syncSchemaContextMode);
-
-    return () => {
-      mediaQuery.removeEventListener("change", syncSchemaContextMode);
-    };
   });
 
   onDestroy(() => {
@@ -833,6 +835,100 @@
 
     await navigator.clipboard.writeText(text);
     copiedPreviewTarget = kind;
+  }
+
+  function requestProjectDelete(registryId: string): void {
+    pendingDeleteProjectId = registryId;
+    deleteConfirmText = "";
+    projectDeleteMessage = "";
+    projectDeleteErrorCode = "";
+  }
+
+  function cancelProjectDelete(): void {
+    pendingDeleteProjectId = null;
+    deleteConfirmText = "";
+    projectDeleteErrorCode = "";
+  }
+
+  function projectDeleteConfirmationMatches(project: ViewerProjectSummary): boolean {
+    return deleteConfirmText.trim() === project.project.id;
+  }
+
+  async function deleteProjectMemory(project: ViewerProjectSummary): Promise<void> {
+    if (isDemoMode) {
+      projectDeleteErrorCode = "AICtxValidationFailed";
+      projectDeleteMessage = "The public demo viewer is read-only.";
+      return;
+    }
+
+    if (!projectDeleteConfirmationMatches(project)) {
+      projectDeleteErrorCode = "AICtxValidationFailed";
+      projectDeleteMessage = `Type ${project.project.id} to confirm memory deletion.`;
+      return;
+    }
+
+    deletingProjectId = project.registry_id;
+    projectDeleteMessage = `Deleting ${project.project.name} memory.`;
+    projectDeleteErrorCode = "";
+
+    try {
+      const response = await fetch(`/api/projects/${encodeURIComponent(project.registry_id)}?token=${encodeURIComponent(token)}`, {
+        method: "DELETE",
+        headers: { accept: "application/json" }
+      });
+      const envelope = (await response.json()) as ProjectDeleteEnvelope;
+
+      warnings = uniqueSorted([...warnings, ...(envelope.warnings ?? [])]);
+
+      if (!response.ok || !envelope.ok) {
+        projectDeleteErrorCode = envelope.ok ? "" : envelope.error.code;
+        projectDeleteMessage = envelope.ok
+          ? `Viewer delete request failed with HTTP ${response.status}.`
+          : `${envelope.error.code}: ${envelope.error.message}`;
+        return;
+      }
+
+      if (selectedProjectId === project.registry_id) {
+        clearSelectedProjectAfterDelete();
+      }
+
+      pendingDeleteProjectId = null;
+      deleteConfirmText = "";
+      projectDeleteMessage = projectDeleteSuccessMessage(envelope.data);
+      projectDeleteErrorCode = "";
+      await loadProjects();
+    } catch (error) {
+      projectDeleteErrorCode = "AICtxInternalError";
+      projectDeleteMessage = error instanceof Error ? error.message : String(error);
+    } finally {
+      if (deletingProjectId === project.registry_id) {
+        deletingProjectId = null;
+      }
+    }
+  }
+
+  function clearSelectedProjectAfterDelete(): void {
+    selectedProjectId = null;
+    selectedObjectId = null;
+    bootstrap = null;
+    projectLoadState = "loading";
+    currentScreen = "projects";
+    exportState = "idle";
+    previewState = "idle";
+    previewData = null;
+    previewMessage = "";
+    previewErrorCode = "";
+    selectedGraphObjectId = null;
+    selectedGraphRelationId = null;
+  }
+
+  function projectDeleteSuccessMessage(data: ViewerProjectDeleteData): string {
+    const removedMemory = data.entries_removed.includes(".aictx");
+    const action = removedMemory
+      ? "Deleted .aictx memory and removed the project from the viewer."
+      : "Removed the project from the viewer; .aictx memory was already missing.";
+
+    return `${data.project.project.name}: ${action}`;
   }
 
   function selectProject(registryId: string): void {
@@ -2181,6 +2277,22 @@
             <p>{countLabel(projects.length, "registered project", "registered projects")}</p>
           </header>
 
+          {#if projectDeleteMessage !== ""}
+            <section
+              class:error={projectDeleteErrorCode !== ""}
+              class:success={projectDeleteErrorCode === ""}
+              class="project-delete-status"
+              role={projectDeleteErrorCode === "" ? "status" : "alert"}
+              aria-live="polite"
+              data-testid="project-delete-status"
+            >
+              <p>{projectDeleteMessage}</p>
+              {#if projectDeleteErrorCode !== ""}
+                <p class="mono">{projectDeleteErrorCode}</p>
+              {/if}
+            </section>
+          {/if}
+
           <div class="project-grid" data-testid="project-list">
             {#each projects as project (project.registry_id)}
               <article
@@ -2204,15 +2316,66 @@
                 {#if project.warnings.length > 0}
                   <p class="warning-copy">{project.warnings[0]}</p>
                 {/if}
-                <button
-                  type="button"
-                  class="primary-action"
-                  disabled={!project.available}
-                  onclick={() => selectProject(project.registry_id)}
-                  data-testid={`project-open-${project.registry_id}`}
-                >
-                  Open project
-                </button>
+                <div class="project-card-actions">
+                  <button
+                    type="button"
+                    class="primary-action"
+                    disabled={!project.available || deletingProjectId === project.registry_id}
+                    onclick={() => selectProject(project.registry_id)}
+                    data-testid={`project-open-${project.registry_id}`}
+                  >
+                    Open project
+                  </button>
+                  {#if !isDemoMode}
+                    <button
+                      type="button"
+                      class="danger-action"
+                      disabled={deletingProjectId !== null}
+                      onclick={() => requestProjectDelete(project.registry_id)}
+                      data-testid={`project-delete-${project.registry_id}`}
+                    >
+                      Delete memory
+                    </button>
+                  {/if}
+                </div>
+                {#if !isDemoMode && pendingDeleteProjectId === project.registry_id}
+                  <section class="project-delete-confirm" aria-label={`Confirm memory deletion for ${project.project.name}`}>
+                    <p>
+                      Delete this project's <code>.aictx</code> memory directory and unregister it from the viewer.
+                      Source files in <span class="mono">{project.project_root}</span> remain.
+                    </p>
+                    <label class="field">
+                      <span>Type <strong>{project.project.id}</strong> to confirm</span>
+                      <input
+                        type="text"
+                        bind:value={deleteConfirmText}
+                        autocomplete="off"
+                        disabled={deletingProjectId === project.registry_id}
+                        data-testid={`project-delete-confirm-${project.registry_id}`}
+                      />
+                    </label>
+                    <div class="project-card-actions">
+                      <button
+                        type="button"
+                        class="danger-action solid"
+                        disabled={!projectDeleteConfirmationMatches(project) || deletingProjectId === project.registry_id}
+                        onclick={() => void deleteProjectMemory(project)}
+                        data-testid={`project-delete-submit-${project.registry_id}`}
+                      >
+                        {deletingProjectId === project.registry_id ? "Deleting" : "Delete .aictx memory"}
+                      </button>
+                      <button
+                        type="button"
+                        class="ghost-action"
+                        disabled={deletingProjectId === project.registry_id}
+                        onclick={cancelProjectDelete}
+                        data-testid={`project-delete-cancel-${project.registry_id}`}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </section>
+                {/if}
               </article>
             {:else}
               <section class="empty-panel" data-testid="empty-projects">
@@ -3075,6 +3238,7 @@
   .markdown-view,
   .object-list,
   .export-form,
+  .project-delete-status,
   .warnings,
   .onboarding-callout {
     border: 1px solid #d9ded7;
@@ -3097,6 +3261,43 @@
   .project-card.unavailable {
     border-color: #edc3b8;
     background: #fff8f5;
+  }
+
+  .project-card-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .project-delete-confirm {
+    display: grid;
+    gap: 12px;
+    border: 1px solid #efc7bd;
+    border-radius: 8px;
+    padding: 12px;
+    background: #fff8f5;
+  }
+
+  .project-delete-confirm p,
+  .project-delete-status p {
+    margin: 0;
+    color: #5f433d;
+    line-height: 1.45;
+  }
+
+  .project-delete-status {
+    margin: 0 0 14px;
+    padding: 12px 14px;
+  }
+
+  .project-delete-status.success {
+    border-color: #d8d0c3;
+    background: #fbfaf7;
+  }
+
+  .project-delete-status.error {
+    border-color: #efb5a8;
+    background: #fff1f0;
   }
 
   .card-topline {
@@ -3137,6 +3338,7 @@
   }
 
   .primary-action,
+  .danger-action,
   .ghost-action {
     border: 1px solid #2b2925;
     padding: 9px 13px;
@@ -3145,6 +3347,17 @@
   .primary-action {
     color: #ffffff;
     background: #2b2925;
+  }
+
+  .danger-action {
+    border-color: #b5473d;
+    color: #94342c;
+    background: #fff8f5;
+  }
+
+  .danger-action.solid {
+    color: #ffffff;
+    background: #b5473d;
   }
 
   .ghost-action {
@@ -6030,7 +6243,17 @@
       display: flex;
       flex-direction: column;
       gap: 14px;
-      overflow: hidden;
+      overflow: visible;
+    }
+
+    .schema-context-panel {
+      display: block;
+      flex: 0 0 auto;
+      overflow: visible;
+    }
+
+    .schema-context-panel[open] {
+      display: block;
     }
 
     .schema-context-panel > summary {
@@ -6084,8 +6307,32 @@
 
     .memory-stage .doc-relation-map,
     .memory-stage .doc-relation-map svg {
-      height: 168px;
-      min-height: 168px;
+      height: 148px;
+      min-height: 148px;
+    }
+
+    .memory-stage .doc-relation-overview {
+      gap: 10px;
+    }
+
+    .memory-stage .doc-relation-copy {
+      display: block;
+    }
+
+    .memory-stage .doc-relation-heading {
+      display: block;
+    }
+
+    .memory-stage .doc-relation-heading > div,
+    .memory-stage .doc-relation-stats,
+    .memory-stage .doc-relation-list {
+      display: none;
+    }
+
+    .memory-stage .doc-graph-action {
+      width: 100%;
+      min-height: 38px;
+      padding: 9px 12px;
     }
 
     .memory-stage .doc-relation-list {

@@ -1,21 +1,16 @@
 {
   "body_path": "memory/decisions/schema-browser-keeps-navigation-fixed-above-object-scrolling.md",
-  "content_hash": "sha256:98ae0ec0f71fb9a52975ffd0318eb8595119ae38275663e7e47e04180b701257",
+  "content_hash": "sha256:dd83a6b63e3f7c03ada2fa2dc4c6492bf80246868914208d142f350f58f34ff5",
   "created_at": "2026-05-15T22:14:27+02:00",
   "evidence": [
     {
       "id": "viewer/src/App.svelte",
       "kind": "file"
-    },
-    {
-      "id": "test/integration/viewer/shell.test.ts",
-      "kind": "file"
     }
   ],
   "facets": {
     "applies_to": [
-      "viewer/src/App.svelte",
-      "test/integration/viewer/shell.test.ts"
+      "viewer/src/App.svelte"
     ],
     "category": "decision-rationale"
   },
@@ -38,5 +33,5 @@
   ],
   "title": "Schema browser uses responsive browse/detail workspace",
   "type": "decision",
-  "updated_at": "2026-05-16T10:12:03+02:00"
+  "updated_at": "2026-05-16T11:12:34+02:00"
 }
