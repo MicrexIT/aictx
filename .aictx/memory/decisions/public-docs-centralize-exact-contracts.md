@@ -1,1 +1,0 @@
-Public docs should keep guide pages concise and practical. Exact MCP tool lists, object taxonomy, structured patch shapes, and CLI/MCP capability contracts belong in reference-oriented pages such as the MCP guide, Reference, and necessary agent workflow docs rather than being repeated across general guide pages.

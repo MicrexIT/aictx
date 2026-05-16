@@ -1,7 +1,7 @@
 {
   "body_path": "memory/architecture.md",
-  "content_hash": "sha256:827872a424b8cb86be4b366a52ca05c8471ccbfe29a96055a086e019799ea995",
-  "created_at": "2026-05-15T15:03:07+02:00",
+  "content_hash": "sha256:990b0cd45af133235c2da5191885ce757a8ef58f8e35e5c27655402075e83646",
+  "created_at": "2026-05-16T18:52:43+02:00",
   "evidence": [],
   "facets": {
     "category": "architecture"
@@ -23,5 +23,5 @@
   ],
   "title": "Current Architecture",
   "type": "architecture",
-  "updated_at": "2026-05-15T15:03:08+02:00"
+  "updated_at": "2026-05-16T18:52:44+02:00"
 }

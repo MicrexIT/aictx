@@ -1,7 +1,7 @@
 {
   "body_path": "memory/constraints/package-manager.md",
-  "content_hash": "sha256:31a1140b7dfb21a48586b47e724530b8bd434eb43216f069e2feee8f84028eeb",
-  "created_at": "2026-05-15T15:03:08+02:00",
+  "content_hash": "sha256:1c4ef119286950c22a84f8dc6bf9ad9b10f69f59e01c3c3723ebcd4b4662a32c",
+  "created_at": "2026-05-16T18:52:44+02:00",
   "evidence": [],
   "id": "constraint.package-manager",
   "scope": {
@@ -21,5 +21,5 @@
   ],
   "title": "Package manager",
   "type": "constraint",
-  "updated_at": "2026-05-15T15:03:08+02:00"
+  "updated_at": "2026-05-16T18:52:44+02:00"
 }

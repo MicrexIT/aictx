@@ -9,7 +9,3 @@ Use the package scripts in `package.json` for repeated project workflows:
 - `build:schemas`: `node scripts/copy-schemas.mjs`
 - `build:site`: `astro build --root site`
 - `build:version`: `node scripts/generate-version.mjs`
-- `build:viewer`: `vite build --config viewer/vite.config.ts`
-- `version:patch`: `npm version patch --no-git-tag-version && pnpm build && pnpm build:docs`
-
-Setup prompt install commands are intentionally unpinned; do not add package-version sync logic to release scripts for README or docs prompts.

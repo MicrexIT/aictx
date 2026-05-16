@@ -1,1 +1,0 @@
-Aictx's public GitHub repository is `aictx/memory`. Public package and plugin owner/author labels should use `Aictx`; keep the existing MIT copyright holder unchanged.

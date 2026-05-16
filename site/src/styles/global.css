@@ -2128,6 +2128,43 @@ h3 {
   text-decoration: none;
 }
 
+@media (max-width: 759px) {
+  .site-footer {
+    gap: 16px;
+    padding: 22px 20px 20px;
+  }
+
+  .site-footer strong {
+    margin-bottom: 6px;
+  }
+
+  .site-footer p {
+    font-size: 13px;
+    line-height: 1.38;
+  }
+
+  .footer-links {
+    width: 100%;
+    flex-wrap: nowrap;
+    justify-content: space-between;
+    gap: 6px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .footer-links::-webkit-scrollbar {
+    display: none;
+  }
+
+  .footer-links a {
+    flex: 0 0 auto;
+    padding: 6px 0;
+    font-size: clamp(10.5px, 3vw, 13px);
+    line-height: 1;
+    white-space: nowrap;
+  }
+}
+
 @media (hover: hover) {
   .post-card a:hover h2,
   .back-link:hover,
