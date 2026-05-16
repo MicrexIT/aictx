@@ -1,14 +1,22 @@
 {
   "body_path": "memory/facts/aictx-ships-generated-skill-and-plugin-distribution-artifacts.md",
-  "content_hash": "sha256:3866099eb44696a9402126e329ff94f1c63238716e17e478c0191b62b3b2d185",
+  "content_hash": "sha256:f3d01db599e26aba69b317a3ed3284fd4fdb6e1cedb12d180223dadb3f78de91",
   "created_at": "2026-05-15T15:24:09+02:00",
   "evidence": [
+    {
+      "id": ".agents/plugins/marketplace.json",
+      "kind": "file"
+    },
+    {
+      "id": ".claude-plugin/marketplace.json",
+      "kind": "file"
+    },
     {
       "id": "README.md",
       "kind": "file"
     },
     {
-      "id": "docs/src/content/docs/agent-recipes.md",
+      "id": "docs/src/content/docs/plugin-publishing.md",
       "kind": "file"
     },
     {
@@ -20,11 +28,14 @@
     "applies_to": [
       "integrations/templates/agent-guidance.md",
       "scripts/generate-agent-guidance.mjs",
+      ".agents/plugins/marketplace.json",
+      ".claude-plugin/marketplace.json",
       "integrations/codex/skills/aictx-memory/SKILL.md",
       "integrations/codex/plugins/aictx-memory/.codex-plugin/plugin.json",
       "integrations/codex/plugins/aictx-memory/README.md",
       "integrations/claude/plugins/aictx-memory/.claude-plugin/plugin.json",
       "integrations/claude/plugins/aictx-memory/README.md",
+      "docs/src/content/docs/plugin-publishing.md",
       "docs/src/content/docs/agent-recipes.md",
       "docs/src/content/docs/specializing-aictx.md",
       "README.md"
@@ -52,5 +63,5 @@
   ],
   "title": "Aictx ships generated skill and plugin distribution artifacts",
   "type": "fact",
-  "updated_at": "2026-05-15T15:51:49+02:00"
+  "updated_at": "2026-05-16T10:15:07+02:00"
 }

@@ -283,6 +283,7 @@ const requiredPackedPaths = [
   "docs/src/content/docs/getting-started.md",
   "docs/src/content/docs/index.md",
   "docs/src/content/docs/mcp.md",
+  "docs/src/content/docs/plugin-publishing.md",
   "docs/src/content/docs/reference.md",
   "docs/src/content/docs/specializing-aictx.md",
   "docs/src/content/docs/troubleshooting.md",
@@ -337,7 +338,6 @@ const forbiddenPackedPathPrefixes = [
 ] as const;
 
 const publicMcpContractPaths = [
-  "README.md",
   "docs/src/content/docs/agent-integration.md",
   "docs/src/content/docs/capabilities.md",
   "docs/src/content/docs/cli.md",

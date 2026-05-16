@@ -38,6 +38,7 @@ export default defineConfig({
             "mcp",
             "agent-integration",
             "agent-recipes",
+            "plugin-publishing",
             "viewer",
             "troubleshooting"
           ]

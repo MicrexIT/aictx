@@ -42,60 +42,23 @@ continues to write the marked sections in `AGENTS.md` and `CLAUDE.md`.
 These artifacts stay CLI-first. They do not bundle `.mcp.json`; use Aictx MCP
 only when the current client has already launched and exposed `aictx-mcp`.
 
-Marketplace commands target marketplace roots, not raw plugin directories. A
-marketplace catalog should point at the generated Aictx plugin path, then users
-add the marketplace and install from it. The Codex standalone skill is different:
-copy `integrations/codex/skills/aictx-memory/` into the
-[`openai/skills`](https://github.com/openai/skills) catalog when preparing that
-PR.
-
-Codex marketplace commands:
+For the self-hosted marketplace in this repo, Codex users add the marketplace,
+then install **Aictx Memory** from Codex Plugins:
 
 ```bash
-codex plugin marketplace add owner/repo
-codex plugin marketplace add owner/repo --ref main
-codex plugin marketplace add https://github.com/example/plugins.git --sparse .agents/plugins
-codex plugin marketplace add ./local-marketplace-root
-
-codex plugin marketplace upgrade
-codex plugin marketplace upgrade marketplace-name
-codex plugin marketplace remove marketplace-name
+codex plugin marketplace add MicrexIT/aictx
 ```
 
-Claude Code interactive commands:
+Claude Code users can add the marketplace and install the plugin directly:
 
 ```text
-/plugin marketplace add owner/repo
-/plugin marketplace add ./local-marketplace-root
-/plugin install aictx-memory@marketplace-name
-/plugin marketplace list
-/plugin marketplace update
-/plugin marketplace remove marketplace-name
+/plugin marketplace add MicrexIT/aictx
+/plugin install aictx-memory@aictx
 ```
 
-Claude Code CLI commands:
-
-```bash
-claude plugin marketplace add owner/repo
-claude plugin marketplace add owner/repo@main
-claude plugin marketplace add https://github.com/example/plugins.git
-claude plugin marketplace add ./local-marketplace-root
-claude plugin marketplace add owner/repo --scope project
-claude plugin marketplace add owner/monorepo --sparse .claude-plugin plugins
-claude plugin marketplace list
-claude plugin marketplace list --json
-claude plugin marketplace update
-claude plugin marketplace update marketplace-name
-claude plugin marketplace remove marketplace-name
-```
-
-Reference formats: [Codex plugin manifests](https://developers.openai.com/codex/plugins/build#create-a-plugin-manually),
-[Codex marketplace CLI](https://developers.openai.com/codex/cli/reference#codex-plugin-marketplace),
-and [Claude Code plugin marketplaces](https://code.claude.com/docs/en/plugin-marketplaces).
-For official Claude listing, use Anthropic's submission forms from
-[Claude.ai](https://claude.ai/settings/plugins/submit) or
-[Console](https://platform.claude.com/plugins/submit) rather than assuming a
-direct pull request is enough.
+See [Publishing plugins](/plugin-publishing/) for the self-hosted marketplace,
+Codex skill PR, Codex plugin listing status, and Claude official submission
+process.
 
 ## Common setup prompt
 
@@ -145,8 +108,8 @@ the current session. `aictx init` does not start MCP.
 
 Distribution artifacts are available at `integrations/codex/skills/aictx-memory/`
 for the standalone skill catalog and `integrations/codex/plugins/aictx-memory/`
-for Codex plugin packaging. Codex plugin marketplace commands add a marketplace
-catalog; after adding one, install the plugin from Codex's plugin directory.
+for Codex plugin packaging. The self-hosted Codex marketplace in this repo is
+added with `codex plugin marketplace add MicrexIT/aictx`.
 
 ## Claude Code
 
@@ -169,9 +132,9 @@ Optional generated guidance is available at `integrations/claude/aictx.md` and
 
 The Claude Code plugin artifact is available at
 `integrations/claude/plugins/aictx-memory/` for marketplace review or official
-plugin submission. Add a Claude marketplace with `/plugin marketplace add` or
-`claude plugin marketplace add`, then install the plugin as
-`aictx-memory@marketplace-name`.
+plugin submission. Add this repo's Claude marketplace with
+`/plugin marketplace add MicrexIT/aictx`, then install the plugin as
+`aictx-memory@aictx`.
 
 ## Cursor
 

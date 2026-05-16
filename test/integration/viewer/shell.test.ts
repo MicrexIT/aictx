@@ -100,9 +100,11 @@ describe("read-only viewer shell", () => {
       await expectText(page, '[data-testid="memory-list-view"]', "Aictx Viewer Shell Project");
       await expectText(page, '[data-testid="memory-list-view"]', "Memory Schema");
       await expectText(page, '[data-testid="memory-list-view"]', "Canonical objects");
+      await expectNoText(page, '[data-testid="memory-list-view"]', "Schema projection loaded");
       await expectCount(page, '[data-testid="guided-views-panel"]', 0);
       await expectCount(page, '[data-testid="context-preview-panel"]', 0);
       await page.locator('[data-testid="object-row-decision.viewer-shell"]').click();
+      await assertSelectedObject(page, "Viewer Shell Layout", "decision.viewer-shell");
 
       await page.locator('[data-testid="nav-graph"]').click();
       await expectText(page, '[data-testid="graph-view"]', "Graph");
@@ -360,9 +362,16 @@ describe("read-only viewer shell", () => {
       await expectText(page, '[data-testid="starter-memory-notice"]', "aictx save --file bootstrap-memory.json");
       await expectText(page, '[data-testid="memory-list-view"]', "Memory Schema");
       await expectText(page, '[data-testid="memory-list-view"]', "Canonical objects");
+      await expectNoText(page, '[data-testid="memory-list-view"]', "Schema projection loaded");
       await page.locator('[data-testid="object-row-architecture.current"]').click();
+      await expectCount(page, '[data-testid="selected-object"]', 1);
+      await expectCount(page, '[data-testid="selected-object-back"]', 1);
+      await expect(page.locator('[data-testid="schema-context-toggle"]').isHidden()).resolves.toBe(true);
       await expectText(page, '[data-testid="incoming-relations"]', "related_to");
       await expectCount(page, '[data-testid="relation-graph"]', 0);
+      await page.locator('[data-testid="selected-object-back"]').click();
+      await expectCount(page, '[data-testid="selected-object"]', 0);
+      await expectCount(page, '[data-testid="object-row-architecture.current"]', 1);
 
       expect(consoleErrors()).toEqual([]);
     } finally {

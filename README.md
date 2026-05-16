@@ -82,6 +82,9 @@ schema, objects, facets, relations, provenance, and graph context agents load.
 | `synthesis` | Compact summaries of product intent, architecture, feature maps, conventions, and agent guidance. |
 | `question` / `fact` / `concept` | Open scope, reusable facts, and domain ideas. |
 
+The full object taxonomy, facets, and write contracts live in the
+[reference docs](https://docs.aictx.dev/reference/).
+
 Aictx does not require a cloud account, embeddings, hosted sync, an external
 model API, or network access for core memory commands. Saved memory is active
 immediately after Aictx validates and writes it.
@@ -175,140 +178,28 @@ Four surfaces ship today. Each one works locally and fits normal Git review.
 
 ## Distribution Artifacts
 
-The `integrations/` directory also includes PR-ready distribution artifacts for
-agent marketplaces. Use `integrations/codex/skills/aictx-memory/` for a Codex
-standalone skill, `integrations/codex/plugins/aictx-memory/` for the Codex
-plugin format, and `integrations/claude/plugins/aictx-memory/` for the Claude
-Code plugin format. These package the same CLI-first guidance as the setup aids;
-they do not add MCP configuration.
+The `integrations/` directory includes generated skill and plugin artifacts for
+external agent packaging. They package the same CLI-first guidance as the setup
+aids and do not add MCP configuration.
 
-Marketplace commands target a marketplace root, not a raw plugin directory. Once
-a marketplace catalog points at the generated Aictx plugin artifact, Codex users
-can add and maintain that marketplace with:
+Codex users can add this repo's marketplace with one command:
 
 ```bash
-codex plugin marketplace add owner/repo
-codex plugin marketplace add owner/repo --ref main
-codex plugin marketplace add https://github.com/example/plugins.git --sparse .agents/plugins
-codex plugin marketplace add ./local-marketplace-root
-
-codex plugin marketplace upgrade
-codex plugin marketplace upgrade marketplace-name
-codex plugin marketplace remove marketplace-name
+codex plugin marketplace add MicrexIT/aictx
 ```
 
-Claude Code users can add the marketplace from inside Claude Code and then
-install the plugin from that marketplace:
+Then open Codex Plugins and install **Aictx Memory**.
+
+Claude Code users can add the marketplace and install the plugin from inside
+Claude Code:
 
 ```text
-/plugin marketplace add owner/repo
-/plugin marketplace add ./local-marketplace-root
-/plugin install aictx-memory@marketplace-name
-/plugin marketplace list
-/plugin marketplace update
-/plugin marketplace remove marketplace-name
+/plugin marketplace add MicrexIT/aictx
+/plugin install aictx-memory@aictx
 ```
 
-For Claude Code scripting, use the equivalent CLI form:
-
-```bash
-claude plugin marketplace add owner/repo
-claude plugin marketplace add owner/repo@main
-claude plugin marketplace add https://github.com/example/plugins.git
-claude plugin marketplace add ./local-marketplace-root
-claude plugin marketplace add owner/repo --scope project
-claude plugin marketplace add owner/monorepo --sparse .claude-plugin plugins
-claude plugin marketplace list
-claude plugin marketplace list --json
-claude plugin marketplace update
-claude plugin marketplace update marketplace-name
-claude plugin marketplace remove marketplace-name
-```
-
-## Reference Contracts
-
-Object types are `project`, `architecture`, `decision`, `constraint`,
-`question`, `fact`, `gotcha`, `workflow`, `note`, `concept`, `source`, and
-`synthesis`. Do not create invalid `history`, `task-note`, or `feature` object
-types. Use `workflow` for project-specific how-to procedures, command
-sequences, release/debugging paths, verification routines, and maintenance
-steps.
-
-Load durable project context narrowly before non-trivial work. Save only durable
-memory. Do not save secrets. Prefer updating stale memory, superseding, or
-deleting existing memory over creating duplicates. Prefer the current user
-request, current code, and tests over loaded memory when they conflict; also
-prefer current code when old memory conflicts with the user request. Report
-whether Aictx memory changed, mention async inspection, and save nothing when
-there is no durable future value.
-
-Load modes are `coding`, `debugging`, `review`, `architecture`, and
-`onboarding`. Modes tune deterministic ranking and rendering; they do not broaden
-project scope, call a model, use external retrieval, or load the whole project.
-
-If `aictx` is not on `PATH`, run commands through the package manager or local
-binary:
-
-```bash
-pnpm exec aictx init
-npm exec aictx init
-./node_modules/.bin/aictx init
-npx --package @aictx/memory -- aictx init
-```
-
-For MCP fallbacks:
-
-```bash
-pnpm exec aictx-mcp
-npm exec aictx-mcp
-./node_modules/.bin/aictx-mcp
-npx --package @aictx/memory -- aictx-mcp
-```
-
-MCP exposes exactly `load_memory`, `search_memory`, `inspect_memory`,
-`remember_memory`, `save_memory_patch`, and `diff_memory` in v1.
-
-Setup, lenses, handoff, maintenance, recovery, export, registry, viewer, docs,
-suggest, audit, wiki, and stale workflows remain outside local MCP. Non-MCP
-capabilities are not MCP parity gaps. Do not add or ask for MCP tools solely to
-mirror these CLI commands, and do not work around supported commands by editing
-`.aictx/` files directly. Graph inspection is available in the CLI and local viewer, but remains outside local MCP.
-
-Local MCP is the near-term integration path. Remote MCP and ChatGPT App SDK are
-future work. Future `search`/`fetch` names are adapter aliases over Aictx
-search/inspect behavior, not local MCP tool names.
-
-| Capability | MCP | CLI |
-| --- | --- | --- |
-| Load task context | `load_memory` | `aictx load` |
-| Search memory | `search_memory` | `aictx search` |
-| Inspect object | `inspect_memory` | `aictx inspect` |
-| Remember durable context | `remember_memory` | `aictx remember` |
-| Save structured patch | `save_memory_patch` | `aictx save` |
-| Show memory diff | `diff_memory` | `aictx diff` |
-| Initialize storage | none | `aictx init`, `aictx setup` |
-| Review patch file | none | `aictx patch review` |
-| Validate storage | none | `aictx check` |
-| Rebuild generated index | none | `aictx rebuild` |
-| Reset local storage | none | `aictx reset` |
-| Upgrade storage schema | none | `aictx upgrade` |
-| Show memory history | none | `aictx history` |
-| Restore memory | none | `aictx restore` |
-| Rewind memory | none | `aictx rewind` |
-| List stale memory | none | `aictx stale` |
-| Show graph neighborhood | none | `aictx graph`, `aictx view` graph screen |
-| Show memory lens | none | `aictx lens` |
-| Manage branch handoff | none | `aictx handoff` |
-| Export Obsidian projection | none | `aictx export obsidian` |
-| Manage project registry | none | `aictx projects` |
-| View local memory | none | `aictx view` |
-| Suggest memory decision packet | none | `aictx suggest` |
-| Audit memory hygiene | none | `aictx audit` |
-| Wiki source workflow | none | `aictx wiki` |
-| Read public docs | none | `aictx docs` |
-
-`aictx view [--port <number>] [--open] [--detach] [--json]` starts the local
-memory viewer. `aictx view` is CLI-only in v1 and has no MCP equivalent.
+For official listing paths and release prep, see
+[Publishing agent plugins](https://docs.aictx.dev/plugin-publishing/).
 
 ## Documentation
 
@@ -318,6 +209,7 @@ The README is the fast activation path. Core docs:
 - [Agent recipes](https://docs.aictx.dev/agent-recipes/)
 - [CLI reference](https://docs.aictx.dev/cli/)
 - [MCP](https://docs.aictx.dev/mcp/)
+- [Reference](https://docs.aictx.dev/reference/)
 - [Wiki workflow](https://docs.aictx.dev/wiki-workflow/)
 
 ## Contribute

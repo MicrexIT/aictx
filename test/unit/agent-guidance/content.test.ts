@@ -19,7 +19,6 @@ const guideTargets = [
 ] as const;
 
 const publicMcpContractTargets = [
-  "README.md",
   "docs/src/content/docs/index.md",
   "docs/src/content/docs/getting-started.md",
   "docs/src/content/docs/capabilities.md",
@@ -38,7 +37,6 @@ const localNowCloudLaterTargets = [
 ] as const;
 
 const futureAdapterMappingTargets = [
-  "README.md",
   "docs/src/content/docs/index.md",
   "docs/src/content/docs/getting-started.md",
   "docs/src/content/docs/capabilities.md",

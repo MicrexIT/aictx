@@ -1,0 +1,16 @@
+{
+  "name": "aictx",
+  "metadata": {
+    "description": "Aictx local project memory plugins for AI coding agents."
+  },
+  "owner": {
+    "name": "MicrexIT"
+  },
+  "plugins": [
+    {
+      "name": "aictx-memory",
+      "source": "./integrations/claude/plugins/aictx-memory",
+      "description": "Use Aictx local project memory in AI coding agents."
+    }
+  ]
+}

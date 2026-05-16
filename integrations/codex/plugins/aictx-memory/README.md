@@ -15,19 +15,10 @@ It keeps Aictx usage CLI-first: load relevant memory with `aictx load` before su
 
 This directory follows the Codex plugin format. It intentionally does not include MCP server configuration; Aictx MCP setup remains an optional client-level configuration.
 
-Codex adds plugins through marketplace sources, not by adding this plugin directory directly. Point a marketplace catalog at this plugin directory, then add that marketplace:
+Codex adds plugins through marketplace sources, not by adding this plugin directory directly. This repo exposes the plugin through its root marketplace catalog:
 
 ```bash
-codex plugin marketplace add owner/repo
-codex plugin marketplace add owner/repo --ref main
-codex plugin marketplace add https://github.com/example/plugins.git --sparse .agents/plugins
-codex plugin marketplace add ./local-marketplace-root
+codex plugin marketplace add MicrexIT/aictx
 ```
 
-Refresh or remove configured marketplaces with:
-
-```bash
-codex plugin marketplace upgrade
-codex plugin marketplace upgrade marketplace-name
-codex plugin marketplace remove marketplace-name
-```
+Then open Codex Plugins, choose the Aictx marketplace, and install Aictx Memory.
