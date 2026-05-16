@@ -10,7 +10,7 @@ import {
 describe("retrieval hints", () => {
   it("normalizes path, text, and history-window hints deterministically", () => {
     const result = normalizeRetrievalHints({
-      files: [" ./src/context/rank.ts ", ".aictx/index/generated.db", "src/context/rank.ts"],
+      files: [" ./src/context/rank.ts ", ".memory/index/generated.db", "src/context/rank.ts"],
       changed_files: ["src/index/search.ts"],
       symbols: [" rankMemoryCandidates ", ""],
       subsystems: [" retrieval  context "],
@@ -65,7 +65,7 @@ describe("retrieval hints", () => {
 
     expect(badArray.ok).toBe(false);
     if (!badArray.ok) {
-      expect(badArray.error.code).toBe("AICtxValidationFailed");
+      expect(badArray.error.code).toBe("MemoryValidationFailed");
       expect(badArray.error.details).toMatchObject({
         field: "hints.files"
       });
@@ -73,7 +73,7 @@ describe("retrieval hints", () => {
 
     expect(badWindow.ok).toBe(false);
     if (!badWindow.ok) {
-      expect(badWindow.error.code).toBe("AICtxValidationFailed");
+      expect(badWindow.error.code).toBe("MemoryValidationFailed");
       expect(badWindow.error.details).toMatchObject({
         field: "hints.history_window",
         actual: "last month"

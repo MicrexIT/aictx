@@ -25,7 +25,7 @@
     "agent-memory",
     "context"
   ],
-  "author": "Aictx",
+  "author": "Memory",
   "publishConfig": {
     "access": "public"
   },
@@ -33,8 +33,8 @@
     "node": ">=22"
   },
   "bin": {
-    "aictx": "dist/cli/main.js",
-    "aictx-mcp": "dist/mcp/server.js"
+    "memory": "dist/cli/main.js",
+    "memory-mcp": "dist/mcp/server.js"
   },
   "files": [
     "dist",

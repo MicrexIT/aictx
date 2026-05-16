@@ -30,7 +30,7 @@ afterEach(async () => {
 
 describe("saveMemoryPatch", () => {
   it("writes canonical files, appends events, updates hashes, and updates search index", async () => {
-    const projectRoot = await createInitializedProject("aictx-save-local-");
+    const projectRoot = await createInitializedProject("memory-save-local-");
 
     const result = await saveMemoryPatch({
       cwd: projectRoot,
@@ -59,9 +59,9 @@ describe("saveMemoryPatch", () => {
 
     expect(result.data).toMatchObject({
       files_changed: [
-        ".aictx/events.jsonl",
-        ".aictx/memory/notes/retry-follow-up.json",
-        ".aictx/memory/notes/retry-follow-up.md"
+        ".memory/events.jsonl",
+        ".memory/memory/notes/retry-follow-up.json",
+        ".memory/memory/notes/retry-follow-up.md"
       ],
       memory_created: ["note.retry-follow-up"],
       memory_updated: [],
@@ -128,9 +128,9 @@ describe("saveMemoryPatch", () => {
   });
 
   it("quarantines canonical conflict markers before applying the patch", async () => {
-    const projectRoot = await createInitializedProject("aictx-save-conflict-marker-");
+    const projectRoot = await createInitializedProject("memory-save-conflict-marker-");
     await writeFile(
-      join(projectRoot, ".aictx", "memory", "project.md"),
+      join(projectRoot, ".memory", "memory", "project.md"),
       "<<<<<<< HEAD\n# Project\n=======\n# Other project\n>>>>>>> branch\n",
       "utf8"
     );
@@ -145,21 +145,21 @@ describe("saveMemoryPatch", () => {
       expect(result.data.memory_created).toEqual(["note.saved-despite-conflict"]);
       expect(result.data.repairs_applied).toEqual(
         expect.arrayContaining([
-          "Quarantined invalid memory object body: .aictx/memory/project.md"
+          "Quarantined invalid memory object body: .memory/memory/project.md"
         ])
       );
     }
     await expect(
-      access(join(projectRoot, ".aictx", "memory", "notes", "saved-despite-conflict.md"))
+      access(join(projectRoot, ".memory", "memory", "notes", "saved-despite-conflict.md"))
     ).resolves.toBeUndefined();
-    await expect(access(join(projectRoot, ".aictx", "memory", "project.md")))
+    await expect(access(join(projectRoot, ".memory", "memory", "project.md")))
       .rejects.toMatchObject({ code: "ENOENT" });
   });
 
   it("repairs invalid events history before appending new save events", async () => {
-    const projectRoot = await createInitializedProject("aictx-save-invalid-events-");
+    const projectRoot = await createInitializedProject("memory-save-invalid-events-");
     const invalidEvents = "{bad json\n";
-    await writeFile(join(projectRoot, ".aictx", "events.jsonl"), invalidEvents, "utf8");
+    await writeFile(join(projectRoot, ".memory", "events.jsonl"), invalidEvents, "utf8");
 
     const result = await saveMemoryPatch({
       cwd: projectRoot,
@@ -171,18 +171,18 @@ describe("saveMemoryPatch", () => {
     if (result.ok) {
       expect(result.data.memory_created).toEqual(["note.saved-after-invalid-events"]);
       expect(result.data.repairs_applied).toEqual([
-        "Repaired invalid events history: .aictx/events.jsonl"
+        "Repaired invalid events history: .memory/events.jsonl"
       ]);
     }
     await expect(
-      access(join(projectRoot, ".aictx", "memory", "notes", "saved-after-invalid-events.md"))
+      access(join(projectRoot, ".memory", "memory", "notes", "saved-after-invalid-events.md"))
     ).resolves.toBeUndefined();
-    await expect(readFile(join(projectRoot, ".aictx", "events.jsonl"), "utf8"))
+    await expect(readFile(join(projectRoot, ".memory", "events.jsonl"), "utf8"))
       .resolves.toContain('"id":"note.saved-after-invalid-events"');
   });
 
   it("rejects block-level secrets in patches without leaking the secret", async () => {
-    const projectRoot = await createInitializedProject("aictx-save-secret-");
+    const projectRoot = await createInitializedProject("memory-save-secret-");
     const before = await readCanonicalSnapshot(projectRoot);
     const secret = `sk-${"a".repeat(20)}`;
 
@@ -194,24 +194,24 @@ describe("saveMemoryPatch", () => {
 
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.error.code).toBe("AICtxSecretDetected");
+      expect(result.error.code).toBe("MemorySecretDetected");
       expect(JSON.stringify(result.error.details)).not.toContain(secret);
     }
     await expect(
-      access(join(projectRoot, ".aictx", "memory", "notes", "do-not-save-secret.md"))
+      access(join(projectRoot, ".memory", "memory", "notes", "do-not-save-secret.md"))
     ).rejects.toMatchObject({ code: "ENOENT" });
     await expect(readCanonicalSnapshot(projectRoot)).resolves.toEqual(before);
   });
 
   it("leaves Git changes uncommitted after a successful save", async () => {
-    const repo = await createRepo("aictx-save-git-");
+    const repo = await createRepo("memory-save-git-");
     const initialized = await initProject({
       cwd: repo,
       clock: createFixedTestClock(FIXED_TIMESTAMP)
     });
     expect(initialized.ok).toBe(true);
-    await git(repo, ["add", ".gitignore", ".aictx"]);
-    await git(repo, ["commit", "-m", "Initialize aictx"]);
+    await git(repo, ["add", ".gitignore", ".memory"]);
+    await git(repo, ["commit", "-m", "Initialize memory"]);
     const commitBefore = (await git(repo, ["rev-parse", "HEAD"])).trim();
 
     const result = await saveMemoryPatch({
@@ -230,24 +230,24 @@ describe("saveMemoryPatch", () => {
     expect(result.meta.git.commit).toBe(commitBefore);
     expect(result.meta.git.dirty).toBe(true);
 
-    const status = await git(repo, ["status", "--porcelain=v1", "-uall", "--", ".aictx"]);
-    expect(status).toContain(".aictx/events.jsonl");
-    expect(status).toContain(".aictx/memory/notes/git-save-note.md");
-    expect(status).toContain(".aictx/memory/notes/git-save-note.json");
+    const status = await git(repo, ["status", "--porcelain=v1", "-uall", "--", ".memory"]);
+    expect(status).toContain(".memory/events.jsonl");
+    expect(status).toContain(".memory/memory/notes/git-save-note.md");
+    expect(status).toContain(".memory/memory/notes/git-save-note.json");
   });
 
   it("appends to valid dirty tracked events history during a Git-backed save", async () => {
-    const repo = await createRepo("aictx-save-dirty-events-");
+    const repo = await createRepo("memory-save-dirty-events-");
     const initialized = await initProject({
       cwd: repo,
       clock: createFixedTestClock(FIXED_TIMESTAMP)
     });
     expect(initialized.ok).toBe(true);
-    await git(repo, ["add", ".gitignore", ".aictx"]);
-    await git(repo, ["commit", "-m", "Initialize aictx"]);
+    await git(repo, ["add", ".gitignore", ".memory"]);
+    await git(repo, ["commit", "-m", "Initialize memory"]);
     const priorEvent =
       '{"actor":"agent","event":"memory.updated","id":"architecture.current","timestamp":"2026-04-25T14:00:00+02:00"}\n';
-    await writeFile(join(repo, ".aictx", "events.jsonl"), priorEvent, "utf8");
+    await writeFile(join(repo, ".memory", "events.jsonl"), priorEvent, "utf8");
 
     const result = await saveMemoryPatch({
       cwd: repo,
@@ -264,7 +264,7 @@ describe("saveMemoryPatch", () => {
       memory_created: ["note.dirty-events-save-note"],
       events_appended: 1
     });
-    const events = await readFile(join(repo, ".aictx", "events.jsonl"), "utf8");
+    const events = await readFile(join(repo, ".memory", "events.jsonl"), "utf8");
     expect(events).toContain(priorEvent.trim());
     expect(events).toContain('"id":"note.dirty-events-save-note"');
     expect(events.indexOf(priorEvent.trim())).toBeLessThan(
@@ -273,16 +273,16 @@ describe("saveMemoryPatch", () => {
   });
 
   it("backs up dirty touched canonical files instead of blocking a Git-backed save", async () => {
-    const repo = await createRepo("aictx-save-dirty-overwrite-");
+    const repo = await createRepo("memory-save-dirty-overwrite-");
     const initialized = await initProject({
       cwd: repo,
       clock: createFixedTestClock(FIXED_TIMESTAMP)
     });
     expect(initialized.ok).toBe(true);
-    await git(repo, ["add", ".gitignore", ".aictx"]);
-    await git(repo, ["commit", "-m", "Initialize aictx"]);
+    await git(repo, ["add", ".gitignore", ".memory"]);
+    await git(repo, ["commit", "-m", "Initialize memory"]);
     const dirtyBody = "# Current Architecture\n\nDirty local edit.\n";
-    await writeFile(join(repo, ".aictx", "memory", "architecture.md"), dirtyBody, "utf8");
+    await writeFile(join(repo, ".memory", "memory", "architecture.md"), dirtyBody, "utf8");
 
     const result = await saveMemoryPatch({
       cwd: repo,
@@ -310,22 +310,22 @@ describe("saveMemoryPatch", () => {
     expect(result.data.memory_updated).toEqual(["architecture.current"]);
     expect(result.data.recovery_files).toEqual([
       expect.objectContaining({
-        path: ".aictx/memory/architecture.md",
+        path: ".memory/memory/architecture.md",
         reason: "dirty_overwrite"
       })
     ]);
     await expect(
       readFile(join(repo, result.data.recovery_files[0]?.recovery_path ?? ""), "utf8")
     ).resolves.toBe(dirtyBody);
-    await expect(readFile(join(repo, ".aictx", "memory", "architecture.md"), "utf8"))
+    await expect(readFile(join(repo, ".memory", "memory", "architecture.md"), "utf8"))
       .resolves.toContain("Saved architecture update.");
   });
 
   it("quarantines unrelated malformed memory and still saves new memory", async () => {
-    const projectRoot = await createInitializedProject("aictx-save-repair-invalid-");
-    await mkdir(join(projectRoot, ".aictx", "memory", "notes"), { recursive: true });
+    const projectRoot = await createInitializedProject("memory-save-repair-invalid-");
+    await mkdir(join(projectRoot, ".memory", "memory", "notes"), { recursive: true });
     await writeFile(
-      join(projectRoot, ".aictx", "memory", "notes", "broken.json"),
+      join(projectRoot, ".memory", "memory", "notes", "broken.json"),
       "{not json\n",
       "utf8"
     );
@@ -344,11 +344,11 @@ describe("saveMemoryPatch", () => {
     expect(result.data.memory_created).toEqual(["note.repair-keeps-saving"]);
     expect(result.data.repairs_applied).toEqual(
       expect.arrayContaining([
-        "Quarantined invalid memory object sidecar: .aictx/memory/notes/broken.json"
+        "Quarantined invalid memory object sidecar: .memory/memory/notes/broken.json"
       ])
     );
     await expect(
-      access(join(projectRoot, ".aictx", "memory", "notes", "broken.json"))
+      access(join(projectRoot, ".memory", "memory", "notes", "broken.json"))
     ).rejects.toMatchObject({ code: "ENOENT" });
     await expect(
       readFile(join(projectRoot, result.data.recovery_files[0]?.recovery_path ?? ""), "utf8")
@@ -392,7 +392,7 @@ async function createRepo(prefix: string): Promise<string> {
   const repo = await createTempRoot(prefix);
   await git(repo, ["init", "--initial-branch=main"]);
   await git(repo, ["config", "user.email", "test@example.com"]);
-  await git(repo, ["config", "user.name", "Aictx Test"]);
+  await git(repo, ["config", "user.name", "Memory Test"]);
   await mkdir(join(repo, "src"), { recursive: true });
   await writeFile(join(repo, "README.md"), "# Test\n", "utf8");
   await git(repo, ["add", "README.md"]);
@@ -409,10 +409,10 @@ async function createTempRoot(prefix: string): Promise<string> {
 
 async function readCanonicalSnapshot(projectRoot: string): Promise<Record<string, string>> {
   const paths = (
-    await fg(".aictx/**/*.{json,jsonl,md}", {
+    await fg(".memory/**/*.{json,jsonl,md}", {
       cwd: projectRoot,
       dot: true,
-      ignore: [".aictx/index/**", ".aictx/context/**"],
+      ignore: [".memory/index/**", ".memory/context/**"],
       onlyFiles: true,
       unique: true
     })

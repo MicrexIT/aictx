@@ -5,7 +5,7 @@ import { dataAccessService } from "../../data-access/index.js";
 import {
   PROJECT_ROOT_ARGUMENT_DESCRIPTION,
   resolveMcpProjectCwd,
-  type AictxMcpContext,
+  type MemoryMcpContext,
   type ProjectScopedMcpArgs
 } from "../context.js";
 import {
@@ -27,15 +27,15 @@ type InspectMemoryArgs = z.infer<typeof INSPECT_MEMORY_INPUT_SCHEMA> & ProjectSc
 
 export const inspectMemoryTool = {
   name: "inspect_memory",
-  title: "Inspect Aictx Memory",
-  description: "Inspect one Aictx memory object and its direct relations.",
+  title: "Inspect Memory",
+  description: "Inspect one Memory object and its direct relations.",
   inputSchema: INSPECT_MEMORY_INPUT_SCHEMA,
   annotations: READ_ONLY_TOOL_ANNOTATIONS,
   call: callInspectMemoryTool
 };
 
 async function callInspectMemoryTool(
-  context: AictxMcpContext,
+  context: MemoryMcpContext,
   args: InspectMemoryArgs
 ): Promise<CallToolResult> {
   const result = await dataAccessService.inspect({

@@ -16,32 +16,32 @@ afterEach(async () => {
 });
 
 describe("maintenance CLI commands", () => {
-  it("backs up .aictx into .aictx/.backup and clears the remaining contents", async () => {
-    const root = await createTempRoot("aictx-cli-reset-");
+  it("backs up .memory into .memory/.backup and clears the remaining contents", async () => {
+    const root = await createTempRoot("memory-cli-reset-");
     const output = createCapturedOutput();
-    await mkdir(join(root, ".aictx", ".backup"), { recursive: true });
-    await mkdir(join(root, ".aictx", "memory"), { recursive: true });
-    await writeFile(join(root, ".aictx", ".backup", "old.tar.gz"), "old");
-    await writeFile(join(root, ".aictx", "config.json"), "{}\n");
-    await writeFile(join(root, ".aictx", "memory", "note.md"), "# Note\n");
+    await mkdir(join(root, ".memory", ".backup"), { recursive: true });
+    await mkdir(join(root, ".memory", "memory"), { recursive: true });
+    await writeFile(join(root, ".memory", ".backup", "old.tar.gz"), "old");
+    await writeFile(join(root, ".memory", "config.json"), "{}\n");
+    await writeFile(join(root, ".memory", "memory", "note.md"), "# Note\n");
 
-    const exitCode = await main(["node", "aictx", "reset"], {
+    const exitCode = await main(["node", "memory", "reset"], {
       ...output.writers,
       cwd: root
     });
 
     expect(exitCode).toBe(0);
     expect(output.stderr()).toBe("");
-    expect(output.stdout()).toContain("Backed up and cleared .aictx.");
-    await expect(readdir(join(root, ".aictx"))).resolves.toEqual([".backup"]);
+    expect(output.stdout()).toContain("Backed up and cleared .memory.");
+    await expect(readdir(join(root, ".memory"))).resolves.toEqual([".backup"]);
 
-    const backups = await readdir(join(root, ".aictx", ".backup"));
+    const backups = await readdir(join(root, ".memory", ".backup"));
     const archive = backups.find((file) => file.endsWith(".tar.gz") && file !== "old.tar.gz");
     expect(archive).toBeDefined();
 
     const tarList = await runSubprocess("tar", [
       "-tzf",
-      join(root, ".aictx", ".backup", archive ?? "")
+      join(root, ".memory", ".backup", archive ?? "")
     ]);
     expect(tarList.ok).toBe(true);
     if (!tarList.ok) {
@@ -54,32 +54,32 @@ describe("maintenance CLI commands", () => {
     expect(tarList.data.stdout).not.toContain(".backup");
   });
 
-  it("deletes .aictx without creating a backup when --destroy is passed", async () => {
-    const root = await createTempRoot("aictx-cli-reset-destroy-");
+  it("deletes .memory without creating a backup when --destroy is passed", async () => {
+    const root = await createTempRoot("memory-cli-reset-destroy-");
     const output = createCapturedOutput();
-    await mkdir(join(root, ".aictx", ".backup"), { recursive: true });
-    await writeFile(join(root, ".aictx", "config.json"), "{}\n");
+    await mkdir(join(root, ".memory", ".backup"), { recursive: true });
+    await writeFile(join(root, ".memory", "config.json"), "{}\n");
 
-    const exitCode = await main(["node", "aictx", "reset", "--destroy"], {
+    const exitCode = await main(["node", "memory", "reset", "--destroy"], {
       ...output.writers,
       cwd: root
     });
 
     expect(exitCode).toBe(0);
     expect(output.stderr()).toBe("");
-    expect(output.stdout()).toContain("Deleted .aictx.");
-    await expect(access(join(root, ".aictx"))).rejects.toMatchObject({ code: "ENOENT" });
+    expect(output.stdout()).toContain("Deleted .memory.");
+    await expect(access(join(root, ".memory"))).rejects.toMatchObject({ code: "ENOENT" });
   });
 
-  it("backs up and clears .aictx for every registered project when --all is passed", async () => {
-    const aictxHome = await createTempRoot("aictx-cli-reset-all-home-");
-    const firstProject = await createRegisteredProject("aictx-cli-reset-all-first-", aictxHome);
-    const secondProject = await createRegisteredProject("aictx-cli-reset-all-second-", aictxHome);
+  it("backs up and clears .memory for every registered project when --all is passed", async () => {
+    const memoryHome = await createTempRoot("memory-cli-reset-all-home-");
+    const firstProject = await createRegisteredProject("memory-cli-reset-all-first-", memoryHome);
+    const secondProject = await createRegisteredProject("memory-cli-reset-all-second-", memoryHome);
 
     const reset = await runCli(
-      ["node", "aictx", "reset", "--all", "--json"],
+      ["node", "memory", "reset", "--all", "--json"],
       firstProject,
-      aictxHome
+      memoryHome
     );
     const envelope = parseJson<{
       ok: true;
@@ -101,26 +101,26 @@ describe("maintenance CLI commands", () => {
     expect(envelope.data.projects_reset.every((project) => project.backup_path !== null)).toBe(true);
     expect(envelope.data.projects_skipped).toHaveLength(0);
     expect(envelope.data.projects_failed).toHaveLength(0);
-    await expect(readdir(join(firstProject, ".aictx"))).resolves.toEqual([".backup"]);
-    await expect(readdir(join(secondProject, ".aictx"))).resolves.toEqual([".backup"]);
-    await expectRegisteredProjectCount(firstProject, aictxHome, 0);
+    await expect(readdir(join(firstProject, ".memory"))).resolves.toEqual([".backup"]);
+    await expect(readdir(join(secondProject, ".memory"))).resolves.toEqual([".backup"]);
+    await expectRegisteredProjectCount(firstProject, memoryHome, 0);
   });
 
-  it("deletes .aictx for every registered project when --all and --destroy are passed", async () => {
-    const aictxHome = await createTempRoot("aictx-cli-reset-all-destroy-home-");
+  it("deletes .memory for every registered project when --all and --destroy are passed", async () => {
+    const memoryHome = await createTempRoot("memory-cli-reset-all-destroy-home-");
     const firstProject = await createRegisteredProject(
-      "aictx-cli-reset-all-destroy-first-",
-      aictxHome
+      "memory-cli-reset-all-destroy-first-",
+      memoryHome
     );
     const secondProject = await createRegisteredProject(
-      "aictx-cli-reset-all-destroy-second-",
-      aictxHome
+      "memory-cli-reset-all-destroy-second-",
+      memoryHome
     );
 
     const reset = await runCli(
-      ["node", "aictx", "reset", "--all", "--destroy", "--json"],
+      ["node", "memory", "reset", "--all", "--destroy", "--json"],
       firstProject,
-      aictxHome
+      memoryHome
     );
     const envelope = parseJson<{
       ok: true;
@@ -138,20 +138,20 @@ describe("maintenance CLI commands", () => {
     expect(envelope.data.projects_reset).toHaveLength(2);
     expect(envelope.data.projects_skipped).toHaveLength(0);
     expect(envelope.data.projects_failed).toHaveLength(0);
-    await expect(access(join(firstProject, ".aictx"))).rejects.toMatchObject({ code: "ENOENT" });
-    await expect(access(join(secondProject, ".aictx"))).rejects.toMatchObject({ code: "ENOENT" });
-    await expectRegisteredProjectCount(firstProject, aictxHome, 0);
+    await expect(access(join(firstProject, ".memory"))).rejects.toMatchObject({ code: "ENOENT" });
+    await expect(access(join(secondProject, ".memory"))).rejects.toMatchObject({ code: "ENOENT" });
+    await expectRegisteredProjectCount(firstProject, memoryHome, 0);
   });
 
   it("skips stale registered projects during reset --all and unregisters them", async () => {
-    const aictxHome = await createTempRoot("aictx-cli-reset-all-stale-home-");
-    const projectRoot = await createRegisteredProject("aictx-cli-reset-all-stale-project-", aictxHome);
-    await rm(join(projectRoot, ".aictx"), { recursive: true, force: true });
+    const memoryHome = await createTempRoot("memory-cli-reset-all-stale-home-");
+    const projectRoot = await createRegisteredProject("memory-cli-reset-all-stale-project-", memoryHome);
+    await rm(join(projectRoot, ".memory"), { recursive: true, force: true });
 
     const reset = await runCli(
-      ["node", "aictx", "reset", "--all", "--json"],
+      ["node", "memory", "reset", "--all", "--json"],
       projectRoot,
-      aictxHome
+      memoryHome
     );
     const envelope = parseJson<{
       ok: true;
@@ -168,24 +168,24 @@ describe("maintenance CLI commands", () => {
     expect(envelope.data.projects_skipped).toMatchObject([
       {
         project_root: projectRoot,
-        reason: ".aictx directory does not exist."
+        reason: ".memory directory does not exist."
       }
     ]);
     expect(envelope.data.projects_failed).toHaveLength(0);
-    await expectRegisteredProjectCount(projectRoot, aictxHome, 0);
+    await expectRegisteredProjectCount(projectRoot, memoryHome, 0);
   });
 });
 
-async function createRegisteredProject(prefix: string, aictxHome: string): Promise<string> {
+async function createRegisteredProject(prefix: string, memoryHome: string): Promise<string> {
   const projectRoot = await createTempRoot(prefix);
-  const init = await runCli(["node", "aictx", "init", "--json"], projectRoot, aictxHome);
+  const init = await runCli(["node", "memory", "init", "--json"], projectRoot, memoryHome);
   expect(init.exitCode).toBe(0);
   expect(init.stderr).toBe("");
 
   const added = await runCli(
-    ["node", "aictx", "projects", "add", projectRoot, "--json"],
+    ["node", "memory", "projects", "add", projectRoot, "--json"],
     projectRoot,
-    aictxHome
+    memoryHome
   );
   expect(added.exitCode).toBe(0);
   expect(added.stderr).toBe("");
@@ -195,10 +195,10 @@ async function createRegisteredProject(prefix: string, aictxHome: string): Promi
 
 async function expectRegisteredProjectCount(
   cwd: string,
-  aictxHome: string,
+  memoryHome: string,
   count: number
 ): Promise<void> {
-  const listed = await runCli(["node", "aictx", "projects", "list", "--json"], cwd, aictxHome);
+  const listed = await runCli(["node", "memory", "projects", "list", "--json"], cwd, memoryHome);
 
   expect(listed.exitCode).toBe(0);
   expect(parseJson<{ ok: true; data: { projects: unknown[] } }>(listed.stdout).data.projects)
@@ -208,14 +208,14 @@ async function expectRegisteredProjectCount(
 async function runCli(
   argv: string[],
   cwd: string,
-  aictxHome: string
+  memoryHome: string
 ): Promise<{ exitCode: number; stdout: string; stderr: string }> {
   const output = createCapturedOutput();
   const exitCode = await main(argv, {
     ...output.writers,
     cwd,
     registry: {
-      aictxHome
+      memoryHome
     }
   });
 

@@ -9,7 +9,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 
 import { version } from "../generated/version.js";
-import type { AictxMcpContext } from "./context.js";
+import type { MemoryMcpContext } from "./context.js";
 import { diffMemoryTool } from "./tools/diff-memory.js";
 import { inspectMemoryTool } from "./tools/inspect-memory.js";
 import { loadMemoryTool } from "./tools/load-memory.js";
@@ -17,33 +17,33 @@ import { rememberMemoryTool } from "./tools/remember-memory.js";
 import { saveMemoryPatchTool } from "./tools/save-memory-patch.js";
 import { searchMemoryTool } from "./tools/search-memory.js";
 
-export interface AictxMcpServer {
-  context: AictxMcpContext;
+export interface MemoryMcpServer {
+  context: MemoryMcpContext;
   server: McpServer;
 }
 
-export interface CreateAictxMcpServerOptions {
+export interface CreateMemoryMcpServerOptions {
   cwd?: string;
 }
 
-export interface StartMcpServerOptions extends CreateAictxMcpServerOptions {
+export interface StartMcpServerOptions extends CreateMemoryMcpServerOptions {
   stdin?: Readable;
   stdout?: Writable;
 }
 
-export interface AictxMcpMainOptions extends StartMcpServerOptions {
+export interface MemoryMcpMainOptions extends StartMcpServerOptions {
   stderr?: Writable;
-  startServer?: (options: StartMcpServerOptions) => Promise<AictxMcpServer>;
+  startServer?: (options: StartMcpServerOptions) => Promise<MemoryMcpServer>;
 }
 
-export function createAictxMcpServer(
-  options: CreateAictxMcpServerOptions = {}
-): AictxMcpServer {
-  const context: AictxMcpContext = {
+export function createMemoryMcpServer(
+  options: CreateMemoryMcpServerOptions = {}
+): MemoryMcpServer {
+  const context: MemoryMcpContext = {
     cwd: resolve(options.cwd ?? process.cwd())
   };
   const server = new McpServer({
-    name: "aictx-mcp",
+    name: "memory-mcp",
     version
   });
   const mcp = {
@@ -58,8 +58,8 @@ export function createAictxMcpServer(
 
 export async function startMcpServer(
   options: StartMcpServerOptions = {}
-): Promise<AictxMcpServer> {
-  const mcp = createAictxMcpServer(options);
+): Promise<MemoryMcpServer> {
+  const mcp = createMemoryMcpServer(options);
   const transport = new StdioServerTransport(options.stdin, options.stdout);
 
   await mcp.server.connect(transport);
@@ -67,7 +67,7 @@ export async function startMcpServer(
   return mcp;
 }
 
-export async function main(options: AictxMcpMainOptions = {}): Promise<void> {
+export async function main(options: MemoryMcpMainOptions = {}): Promise<void> {
   const startServer = options.startServer ?? startMcpServer;
   const startOptions = toStartMcpServerOptions(options);
 
@@ -77,7 +77,7 @@ export async function main(options: AictxMcpMainOptions = {}): Promise<void> {
     writeStartupFailure(error, {
       cwd: resolve(options.cwd ?? process.cwd()),
       stderr: options.stderr ?? process.stderr,
-      debug: process.env.AICTX_DEBUG === "1"
+      debug: process.env.MEMORY_DEBUG === "1"
     });
     throw error;
   }
@@ -119,7 +119,7 @@ interface StartupFailureOptions {
   debug: boolean;
 }
 
-function toStartMcpServerOptions(options: AictxMcpMainOptions): StartMcpServerOptions {
+function toStartMcpServerOptions(options: MemoryMcpMainOptions): StartMcpServerOptions {
   const startOptions: StartMcpServerOptions = {};
 
   if (options.cwd !== undefined) {
@@ -139,7 +139,7 @@ function toStartMcpServerOptions(options: AictxMcpMainOptions): StartMcpServerOp
 
 function writeStartupFailure(error: unknown, options: StartupFailureOptions): void {
   const lines = [
-    "Aictx MCP server failed to start.",
+    "Memory MCP server failed to start.",
     `cwd: ${options.cwd}`,
     `error: ${formatError(error)}`
   ];
@@ -152,7 +152,7 @@ function writeStartupFailure(error: unknown, options: StartupFailureOptions): vo
   options.stderr.write(`${lines.join("\n")}\n`);
 }
 
-function registerTools(mcp: AictxMcpServer): void {
+function registerTools(mcp: MemoryMcpServer): void {
   mcp.server.registerTool(
     loadMemoryTool.name,
     {

@@ -1,4 +1,4 @@
-import { aictxError, type JsonValue } from "../core/errors.js";
+import { memoryError, type JsonValue } from "../core/errors.js";
 import {
   generateObjectId,
   isObjectId
@@ -704,7 +704,7 @@ function optionalObjectIdField(value: unknown, field: string): Result<ObjectId |
 
 function objectIdValue(value: unknown, field: string): Result<ObjectId> {
   if (typeof value !== "string" || !isObjectId(value)) {
-    return invalidRememberInput("Remember input field must be an Aictx object ID.", {
+    return invalidRememberInput("Remember input field must be an Memory object ID.", {
       field
     });
   }
@@ -896,7 +896,7 @@ function optionalSourceOrigin(value: unknown, field: string): Result<SourceOrigi
 }
 
 function invalidRememberInput<T>(message: string, details: JsonValue): Result<T> {
-  return err(aictxError("AICtxValidationFailed", message, details));
+  return err(memoryError("MemoryValidationFailed", message, details));
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

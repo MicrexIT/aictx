@@ -30,11 +30,11 @@ afterEach(async () => {
 
 describe("incremental index update", () => {
   it("skips unchanged object rows by content hash", async () => {
-    const projectRoot = await createInitializedProject("aictx-incremental-skip-");
+    const projectRoot = await createInitializedProject("memory-incremental-skip-");
 
     const result = await updateIndexIncrementally({
       projectRoot,
-      aictxRoot: join(projectRoot, ".aictx"),
+      memoryRoot: join(projectRoot, ".memory"),
       clock: createFixedTestClock(FIXED_TIMESTAMP_NEXT_MINUTE),
       touched: {
         objectIds: ["architecture.current"]
@@ -54,7 +54,7 @@ describe("incremental index update", () => {
   });
 
   it("upserts touched objects and replaces matching FTS rows", async () => {
-    const projectRoot = await createInitializedProject("aictx-incremental-object-");
+    const projectRoot = await createInitializedProject("memory-incremental-object-");
     const storage = await readCanonicalStorage(projectRoot);
     expect(storage.ok).toBe(true);
     if (!storage.ok) {
@@ -66,7 +66,7 @@ describe("incremental index update", () => {
       type: "note",
       title: "Incremental search",
       bodyPath: "memory/notes/incremental-search.md",
-      sidecarPath: ".aictx/memory/notes/incremental-search.json",
+      sidecarPath: ".memory/memory/notes/incremental-search.json",
       body: "# Incremental search\n\nSQLite FTS receives the new body for src/index/incremental.ts during updates.\n",
       tags: ["sqlite", "search"],
       facets: {
@@ -83,7 +83,7 @@ describe("incremental index update", () => {
 
     const result = await updateIndexIncrementally({
       projectRoot,
-      aictxRoot: join(projectRoot, ".aictx"),
+      memoryRoot: join(projectRoot, ".memory"),
       clock: createFixedTestClock(FIXED_TIMESTAMP_NEXT_MINUTE),
       touched: {
         objectIds: ["note.incremental-search"]
@@ -130,7 +130,7 @@ describe("incremental index update", () => {
   });
 
   it("deletes touched objects from objects and FTS", async () => {
-    const projectRoot = await createInitializedProject("aictx-incremental-delete-object-");
+    const projectRoot = await createInitializedProject("memory-incremental-delete-object-");
     const storage = await readCanonicalStorage(projectRoot);
     expect(storage.ok).toBe(true);
     if (!storage.ok) {
@@ -144,13 +144,13 @@ describe("incremental index update", () => {
       throw new Error("Expected starter relation to architecture.current.");
     }
 
-    await rm(join(projectRoot, ".aictx", "memory", "architecture.md"));
-    await rm(join(projectRoot, ".aictx", "memory", "architecture.json"));
+    await rm(join(projectRoot, ".memory", "memory", "architecture.md"));
+    await rm(join(projectRoot, ".memory", "memory", "architecture.json"));
     await rm(join(projectRoot, relation.path));
 
     const result = await updateIndexIncrementally({
       projectRoot,
-      aictxRoot: join(projectRoot, ".aictx"),
+      memoryRoot: join(projectRoot, ".memory"),
       clock: createFixedTestClock(FIXED_TIMESTAMP_NEXT_MINUTE),
       touched: {
         deletedObjectIds: ["architecture.current"],
@@ -174,7 +174,7 @@ describe("incremental index update", () => {
   });
 
   it("upserts relations, deletes relations, and indexes appended events", async () => {
-    const projectRoot = await createInitializedProject("aictx-incremental-relation-event-");
+    const projectRoot = await createInitializedProject("memory-incremental-relation-event-");
     const storage = await readCanonicalStorage(projectRoot);
     expect(storage.ok).toBe(true);
     if (!storage.ok) {
@@ -184,12 +184,12 @@ describe("incremental index update", () => {
     const relation = buildRelation();
     await writeJsonProjectFile(
       projectRoot,
-      ".aictx/relations/project-mentions-architecture.json",
+      ".memory/relations/project-mentions-architecture.json",
       relation
     );
     await writeProjectFile(
       projectRoot,
-      ".aictx/events.jsonl",
+      ".memory/events.jsonl",
       `${JSON.stringify({
         event: "relation.created",
         relation_id: relation.id,
@@ -205,7 +205,7 @@ describe("incremental index update", () => {
 
     const created = await updateIndexIncrementally({
       projectRoot,
-      aictxRoot: join(projectRoot, ".aictx"),
+      memoryRoot: join(projectRoot, ".memory"),
       clock: createFixedTestClock(FIXED_TIMESTAMP_NEXT_MINUTE),
       touched: {
         relationIds: [relation.id],
@@ -237,10 +237,10 @@ describe("incremental index update", () => {
       connection.close();
     }
 
-    await rm(join(projectRoot, ".aictx", "relations", "project-mentions-architecture.json"));
+    await rm(join(projectRoot, ".memory", "relations", "project-mentions-architecture.json"));
     const deleted = await updateIndexIncrementally({
       projectRoot,
-      aictxRoot: join(projectRoot, ".aictx"),
+      memoryRoot: join(projectRoot, ".memory"),
       clock: createFixedTestClock(FIXED_TIMESTAMP_NEXT_MINUTE),
       touched: {
         deletedRelationIds: [relation.id]
@@ -261,8 +261,8 @@ describe("incremental index update", () => {
   });
 
   it("skips cleanly when auto-indexing is disabled", async () => {
-    const projectRoot = await createInitializedProject("aictx-incremental-auto-index-off-");
-    const configPath = join(projectRoot, ".aictx", "config.json");
+    const projectRoot = await createInitializedProject("memory-incremental-auto-index-off-");
+    const configPath = join(projectRoot, ".memory", "config.json");
     const config = JSON.parse(await readFile(configPath, "utf8")) as {
       memory: { autoIndex: boolean };
     };
@@ -271,7 +271,7 @@ describe("incremental index update", () => {
 
     const result = await updateIndexIncrementally({
       projectRoot,
-      aictxRoot: join(projectRoot, ".aictx"),
+      memoryRoot: join(projectRoot, ".memory"),
       clock: createFixedTestClock(FIXED_TIMESTAMP_NEXT_MINUTE),
       touched: {
         objectIds: ["architecture.current"]
@@ -295,11 +295,11 @@ describe("incremental index update", () => {
   });
 
   it("converts strict index failures to post-write warnings", async () => {
-    const projectRoot = await createInitializedProject("aictx-incremental-warning-");
+    const projectRoot = await createInitializedProject("memory-incremental-warning-");
 
     const result = await updateIndexAfterCanonicalWrite({
       projectRoot,
-      aictxRoot: join(projectRoot, ".aictx"),
+      memoryRoot: join(projectRoot, ".memory"),
       clock: createFixedTestClock(FIXED_TIMESTAMP_NEXT_MINUTE),
       touched: {
         appendedEventCount: -1
@@ -381,7 +381,7 @@ async function createTempRoot(prefix: string): Promise<string> {
 }
 
 async function openConnection(projectRoot: string): Promise<IndexDatabaseConnection> {
-  const opened = await openIndexDatabase({ aictxRoot: join(projectRoot, ".aictx") });
+  const opened = await openIndexDatabase({ memoryRoot: join(projectRoot, ".memory") });
 
   expect(opened.ok).toBe(true);
   if (!opened.ok) {
@@ -511,7 +511,7 @@ async function writeObject(
     content_hash: computeObjectContentHash(sidecarWithoutHash, options.body)
   };
 
-  await writeProjectFile(projectRoot, `.aictx/${options.bodyPath}`, options.body);
+  await writeProjectFile(projectRoot, `.memory/${options.bodyPath}`, options.body);
   await writeJsonProjectFile(projectRoot, options.sidecarPath, sidecar);
 }
 

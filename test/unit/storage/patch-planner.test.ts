@@ -66,7 +66,7 @@ afterEach(async () => {
 describe("planMemoryPatch", () => {
   it("normalizes valid changes, resolves paths, and does not mutate disk", async () => {
     const projectRoot = await createPatchProject();
-    const before = await readAictxSnapshot(projectRoot);
+    const before = await readMemorySnapshot(projectRoot);
 
     const result = await planMemoryPatch({
       projectRoot,
@@ -113,37 +113,37 @@ describe("planMemoryPatch", () => {
           branch: null,
           task: null
         },
-        path: ".aictx/memory/notes/billing-retries-follow-up.json",
-        bodyPath: ".aictx/memory/notes/billing-retries-follow-up.md"
+        path: ".memory/memory/notes/billing-retries-follow-up.json",
+        bodyPath: ".memory/memory/notes/billing-retries-follow-up.md"
       })
     );
     expect(result.data.touchedFiles).toEqual([
-      ".aictx/events.jsonl",
-      ".aictx/memory/decisions/billing-retries.json",
-      ".aictx/memory/decisions/billing-retries.md",
-      ".aictx/memory/notes/billing-retries-follow-up.json",
-      ".aictx/memory/notes/billing-retries-follow-up.md"
+      ".memory/events.jsonl",
+      ".memory/memory/decisions/billing-retries.json",
+      ".memory/memory/decisions/billing-retries.md",
+      ".memory/memory/notes/billing-retries-follow-up.json",
+      ".memory/memory/notes/billing-retries-follow-up.md"
     ]);
     expect(result.data.fileWrites).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          path: ".aictx/memory/notes/billing-retries-follow-up.md",
+          path: ".memory/memory/notes/billing-retries-follow-up.md",
           kind: "object_body",
           operation: "create_object"
         }),
         expect.objectContaining({
-          path: ".aictx/memory/decisions/billing-retries.json",
+          path: ".memory/memory/decisions/billing-retries.json",
           kind: "object_sidecar",
           operation: "update_object"
         })
       ])
     );
-    await expect(readAictxSnapshot(projectRoot)).resolves.toEqual(before);
+    await expect(readMemorySnapshot(projectRoot)).resolves.toEqual(before);
   });
 
   it("fails schema-invalid patches before disk writes", async () => {
     const projectRoot = await createPatchProject();
-    const before = await readAictxSnapshot(projectRoot);
+    const before = await readMemorySnapshot(projectRoot);
 
     const result = await planMemoryPatch({
       projectRoot,
@@ -165,9 +165,9 @@ describe("planMemoryPatch", () => {
 
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.error.code).toBe("AICtxSchemaValidationFailed");
+      expect(result.error.code).toBe("MemorySchemaValidationFailed");
     }
-    await expect(readAictxSnapshot(projectRoot)).resolves.toEqual(before);
+    await expect(readMemorySnapshot(projectRoot)).resolves.toEqual(before);
   });
 
   it("fails empty changes", async () => {
@@ -187,12 +187,12 @@ describe("planMemoryPatch", () => {
 
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.error.code).toBe("AICtxSchemaValidationFailed");
+      expect(result.error.code).toBe("MemorySchemaValidationFailed");
       expect(JSON.stringify(result.error.details)).toContain("SchemaMinItems");
     }
   });
 
-  it("fails unknown operations with AICtxUnknownPatchOperation", async () => {
+  it("fails unknown operations with MemoryUnknownPatchOperation", async () => {
     const projectRoot = await createPatchProject();
 
     const result = await planMemoryPatch({
@@ -214,7 +214,7 @@ describe("planMemoryPatch", () => {
 
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.error.code).toBe("AICtxUnknownPatchOperation");
+      expect(result.error.code).toBe("MemoryUnknownPatchOperation");
       expect(result.error.details).toEqual(
         expect.objectContaining({
           op: "rename_object",
@@ -245,11 +245,11 @@ describe("planMemoryPatch", () => {
       clock: createFixedTestClock(),
       runner: createGitStatusRunner(
         [
-          " M .aictx/memory/decisions/billing-retries.json",
-          " M .aictx/memory/facts/unrelated.json",
+          " M .memory/memory/decisions/billing-retries.json",
+          " M .memory/memory/facts/unrelated.json",
           ""
         ].join("\n"),
-        new Set([".aictx/memory/decisions/billing-retries.json"])
+        new Set([".memory/memory/decisions/billing-retries.json"])
       )
     });
 
@@ -257,16 +257,16 @@ describe("planMemoryPatch", () => {
     if (result.ok) {
       expect(result.data.recovery_files).toEqual([
         {
-          path: ".aictx/memory/decisions/billing-retries.json",
+          path: ".memory/memory/decisions/billing-retries.json",
           recovery_path:
-            ".aictx/recovery/2026-04-25T14-00-00-02-00/memory/decisions/billing-retries.json",
+            ".memory/recovery/2026-04-25T14-00-00-02-00/memory/decisions/billing-retries.json",
           reason: "dirty_overwrite"
         }
       ]);
       expect(result.warnings.join("\n")).toContain(
-        ".aictx/memory/decisions/billing-retries.json"
+        ".memory/memory/decisions/billing-retries.json"
       );
-      expect(result.warnings.join("\n")).not.toContain(".aictx/memory/facts/unrelated.json");
+      expect(result.warnings.join("\n")).not.toContain(".memory/memory/facts/unrelated.json");
     }
   });
 
@@ -294,13 +294,13 @@ describe("planMemoryPatch", () => {
       clock: createFixedTestClock(),
       runner: createGitStatusRunner(
         [
-          " M .aictx/memory/decisions/billing-retries.json",
-          " M .aictx/memory/decisions/billing-retries.md",
+          " M .memory/memory/decisions/billing-retries.json",
+          " M .memory/memory/decisions/billing-retries.md",
           ""
         ].join("\n"),
         new Set([
-          ".aictx/memory/decisions/billing-retries.json",
-          ".aictx/memory/decisions/billing-retries.md"
+          ".memory/memory/decisions/billing-retries.json",
+          ".memory/memory/decisions/billing-retries.md"
         ])
       )
     });
@@ -309,15 +309,15 @@ describe("planMemoryPatch", () => {
     if (result.ok) {
       expect(result.data.recovery_files).toEqual([
         {
-          path: ".aictx/memory/decisions/billing-retries.json",
+          path: ".memory/memory/decisions/billing-retries.json",
           recovery_path:
-            ".aictx/recovery/2026-04-25T14-00-00-02-00/memory/decisions/billing-retries.json",
+            ".memory/recovery/2026-04-25T14-00-00-02-00/memory/decisions/billing-retries.json",
           reason: "dirty_delete"
         },
         {
-          path: ".aictx/memory/decisions/billing-retries.md",
+          path: ".memory/memory/decisions/billing-retries.md",
           recovery_path:
-            ".aictx/recovery/2026-04-25T14-00-00-02-00/memory/decisions/billing-retries.md",
+            ".memory/recovery/2026-04-25T14-00-00-02-00/memory/decisions/billing-retries.md",
           reason: "dirty_delete"
         }
       ]);
@@ -344,19 +344,19 @@ describe("planMemoryPatch", () => {
       git: dirtyGit,
       clock: createFixedTestClock(),
       runner: createGitStatusRunner(
-        [" M .aictx/events.jsonl", ""].join("\n"),
-        new Set([".aictx/events.jsonl"])
+        [" M .memory/events.jsonl", ""].join("\n"),
+        new Set([".memory/events.jsonl"])
       )
     });
 
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.data.touchedFiles).toContain(".aictx/events.jsonl");
+      expect(result.data.touchedFiles).toContain(".memory/events.jsonl");
       expect(result.data.events_appended).toBe(1);
     }
   });
 
-  it("allows untracked first-run Aictx files to be updated before the initial memory commit", async () => {
+  it("allows untracked first-run Memory files to be updated before the initial memory commit", async () => {
     const projectRoot = await createPatchProject();
 
     const result = await planMemoryPatch({
@@ -376,7 +376,7 @@ describe("planMemoryPatch", () => {
       git: dirtyGit,
       clock: createFixedTestClock(),
       runner: createGitStatusRunner(
-        ["?? .aictx/memory/decisions/billing-retries.json", ""].join("\n"),
+        ["?? .memory/memory/decisions/billing-retries.json", ""].join("\n"),
         new Set()
       )
     });
@@ -386,18 +386,18 @@ describe("planMemoryPatch", () => {
 });
 
 async function createPatchProject(): Promise<string> {
-  const projectRoot = await mkdtemp(join(tmpdir(), "aictx-patch-plan-"));
+  const projectRoot = await mkdtemp(join(tmpdir(), "memory-patch-plan-"));
   tempRoots.push(projectRoot);
-  await mkdir(join(projectRoot, ".aictx", "schema"), { recursive: true });
+  await mkdir(join(projectRoot, ".memory", "schema"), { recursive: true });
 
   for (const schemaFile of Object.values(SCHEMA_FILES)) {
     await copyFile(
       join(repoRoot, "src", "schemas", schemaFile),
-      join(projectRoot, ".aictx", "schema", schemaFile)
+      join(projectRoot, ".memory", "schema", schemaFile)
     );
   }
 
-  await writeJsonProjectFile(projectRoot, ".aictx/config.json", validConfig);
+  await writeJsonProjectFile(projectRoot, ".memory/config.json", validConfig);
   await writeMemoryObject(projectRoot, {
     id: "decision.billing-retries",
     type: "decision",
@@ -421,7 +421,7 @@ async function createPatchProject(): Promise<string> {
     to: "constraint.webhook-idempotency",
     status: "active"
   });
-  await writeProjectFile(projectRoot, ".aictx/events.jsonl", "");
+  await writeProjectFile(projectRoot, ".memory/events.jsonl", "");
 
   return projectRoot;
 }
@@ -460,10 +460,10 @@ async function writeMemoryObject(
 
   await writeJsonProjectFile(
     projectRoot,
-    `.aictx/${fixture.bodyPath.replace(/\.md$/, ".json")}`,
+    `.memory/${fixture.bodyPath.replace(/\.md$/, ".json")}`,
     sidecar
   );
-  await writeProjectFile(projectRoot, `.aictx/${fixture.bodyPath}`, fixture.body);
+  await writeProjectFile(projectRoot, `.memory/${fixture.bodyPath}`, fixture.body);
 }
 
 async function writeRelation(
@@ -492,14 +492,14 @@ async function writeRelation(
 
   await writeJsonProjectFile(
     projectRoot,
-    `.aictx/relations/${fixture.id.slice("rel.".length)}.json`,
+    `.memory/relations/${fixture.id.slice("rel.".length)}.json`,
     relation
   );
 }
 
-async function readAictxSnapshot(projectRoot: string): Promise<Record<string, string>> {
+async function readMemorySnapshot(projectRoot: string): Promise<Record<string, string>> {
   const paths = (
-    await fg(".aictx/**", {
+    await fg(".memory/**", {
       cwd: projectRoot,
       dot: true,
       onlyFiles: true,
@@ -534,7 +534,7 @@ function createGitStatusRunner(stdout: string, trackedFiles = new Set<string>())
     expect(command).toBe("git");
 
     if (args[0] === "status") {
-      expect(args).toEqual(["status", "--porcelain=v1", "--", ".aictx"]);
+      expect(args).toEqual(["status", "--porcelain=v1", "--", ".memory"]);
       return subprocessResult(command, args, options, stdout, 0);
     }
 

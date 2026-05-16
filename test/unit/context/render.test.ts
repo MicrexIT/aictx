@@ -534,7 +534,7 @@ describe("context pack rendering", () => {
     expect(result.markdown).toContain("(constraint.large-core)");
   });
 
-  it("extracts relevant files while excluding generated aictx paths", () => {
+  it("extracts relevant files while excluding generated memory paths", () => {
     const result = renderContextPack(
       input({
         ranked: ranked({
@@ -544,7 +544,7 @@ describe("context pack rendering", () => {
               type: "decision",
               title: "Worker owns retry files",
               body:
-                "Use services/worker/src/jobs/process-stripe-event.ts and services/billing/src/webhooks/handler.ts. Ignore .aictx/memory/decisions/old-webhook.md."
+                "Use services/worker/src/jobs/process-stripe-event.ts and services/billing/src/webhooks/handler.ts. Ignore .memory/memory/decisions/old-webhook.md."
             })
           ]
         })
@@ -554,7 +554,7 @@ describe("context pack rendering", () => {
 
     expect(files).toContain("services/worker/src/jobs/process-stripe-event.ts");
     expect(files).toContain("services/billing/src/webhooks/handler.ts");
-    expect(files).not.toContain(".aictx/memory/decisions/old-webhook.md");
+    expect(files).not.toContain(".memory/memory/decisions/old-webhook.md");
   });
 
   it("renders facet-aware sections and file references from facets and evidence", () => {

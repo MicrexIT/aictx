@@ -1,6 +1,6 @@
-# Aictx Code of Conduct
+# Memory Code of Conduct
 
-Aictx is project memory for AI coding agents. The community should make it
+Memory is project memory for AI coding agents. The community should make it
 easier for people to explain, review, and improve durable project knowledge
 without harassment, gatekeeping, or pressure to expose private work.
 
@@ -30,7 +30,7 @@ Examples of unacceptable behavior:
 - trolling, insulting or derogatory comments, and personal attacks;
 - public or private harassment;
 - publishing others' private information without explicit permission;
-- pressuring people to share private `.aictx/` memory, proprietary logs,
+- pressuring people to share private `.memory/` memory, proprietary logs,
   secrets, or unreleased project details;
 - other conduct that could reasonably be considered inappropriate in a
   professional setting.
@@ -39,7 +39,7 @@ Examples of unacceptable behavior:
 
 This code applies in project spaces, including GitHub issues, pull requests,
 discussions, reviews, documentation contributions, release work, and any future
-community channels associated with Aictx.
+community channels associated with Memory.
 
 ## Enforcement
 

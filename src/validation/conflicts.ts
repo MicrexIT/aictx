@@ -1,6 +1,6 @@
 import fg from "fast-glob";
 
-import { aictxError, type AictxError, type JsonValue } from "../core/errors.js";
+import { memoryError, type MemoryError, type JsonValue } from "../core/errors.js";
 import { readUtf8FileInsideRoot } from "../core/fs.js";
 import type { ValidationIssue } from "../core/types.js";
 
@@ -41,10 +41,10 @@ export async function scanProjectConflictMarkers(
   projectRoot: string
 ): Promise<ConflictMarkerValidationResult> {
   const paths = (
-    await fg(".aictx/**/*.{json,jsonl,md}", {
+    await fg(".memory/**/*.{json,jsonl,md}", {
       cwd: projectRoot,
       dot: true,
-      ignore: [".aictx/index/**", ".aictx/context/**"],
+      ignore: [".memory/index/**", ".memory/context/**"],
       onlyFiles: true,
       unique: true
     })
@@ -70,9 +70,9 @@ export async function scanProjectConflictMarkers(
   };
 }
 
-export function conflictMarkerError(issues: readonly ValidationIssue[]): AictxError {
-  return aictxError(
-    "AICtxConflictDetected",
+export function conflictMarkerError(issues: readonly ValidationIssue[]): MemoryError {
+  return memoryError(
+    "MemoryConflictDetected",
     "Conflict markers detected.",
     validationIssuesDetails(issues)
   );
@@ -84,14 +84,14 @@ function isConflictMarker(line: string): boolean {
 
 function conflictMarkerIssue(path: string, line: number): ValidationIssue {
   return {
-    code: "AICtxConflictDetected",
+    code: "MemoryConflictDetected",
     message: "Unresolved conflict marker detected.",
     path: `${path}:${line}`,
     field: null
   };
 }
 
-function canonicalReadIssue(path: string, error: AictxError): ValidationIssue {
+function canonicalReadIssue(path: string, error: MemoryError): ValidationIssue {
   return {
     code: "CanonicalFileUnsafe",
     message: `Canonical file could not be read safely: ${error.message}`,

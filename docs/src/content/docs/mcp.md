@@ -1,18 +1,18 @@
 ---
 title: MCP guide
-description: Configure Aictx MCP and understand the CLI/MCP capability boundary.
+description: Configure Memory MCP and understand the CLI/MCP capability boundary.
 ---
 
-`aictx-mcp` is an MCP stdio server. Configure your MCP client to launch the
-global binary, or a project-local binary when the project pins Aictx.
+`memory-mcp` is an MCP stdio server. Configure your MCP client to launch the
+global binary, or a project-local binary when the project pins Memory.
 
 Use MCP when your agent client already supports MCP tools and you want routine
-Aictx memory actions inside that client. Keep setup, viewer, maintenance,
+Memory actions inside that client. Keep setup, viewer, maintenance,
 recovery, registry, docs, wiki, and other operational workflows in the CLI.
 
 :::tip
-`aictx init` creates local storage; it does not add MCP tools to a running agent
-session. Configure the client to launch `aictx-mcp`, then start a new session.
+`memory init` creates local storage; it does not add MCP tools to a running agent
+session. Configure the client to launch `memory-mcp`, then start a new session.
 :::
 
 ## Install
@@ -26,27 +26,27 @@ npm install -g @aictx/memory
 The MCP client can launch the global binary:
 
 ```bash
-aictx-mcp
+memory-mcp
 ```
 
 With a project-local package install, the client can launch through the project
 package manager:
 
 ```bash
-pnpm exec aictx-mcp
-npm exec aictx-mcp
+pnpm exec memory-mcp
+npm exec memory-mcp
 ```
 
 For one-off package resolution, name the scoped package explicitly:
 
 ```bash
-npx --package @aictx/memory -- aictx-mcp
+npx --package @aictx/memory -- memory-mcp
 ```
 
 For a local binary path, configure the client to launch:
 
 ```bash
-./node_modules/.bin/aictx-mcp
+./node_modules/.bin/memory-mcp
 ```
 
 MCP uses stdout for the protocol. Startup diagnostics and failures are written
@@ -88,31 +88,31 @@ load_memory({
 })
 ```
 
-`project_root` is for choosing an initialized local Aictx project. It is not arbitrary filesystem access;
-reads and writes remain scoped to that project's `.aictx/` directory.
+`project_root` is for choosing an initialized local Memory project. It is not arbitrary filesystem access;
+reads and writes remain scoped to that project's `.memory/` directory.
 
 ## CLI-only work
 
 These workflows stay in the CLI in v1:
 
-- Setup: `aictx init`, `aictx setup`
-- Lenses: `aictx lens`
-- Branch handoff: `aictx handoff`
-- Maintenance: `aictx check`, `aictx rebuild`, `aictx reset`, `aictx upgrade`
-- Recovery: `aictx history`, `aictx restore`, `aictx rewind`
-- Export: `aictx export obsidian`
-- Registry: `aictx projects`
-- Viewer: `aictx view`
-- Docs: `aictx docs`
-- Suggest and audit: `aictx suggest`, `aictx audit`
-- Wiki workflow: `aictx wiki`
-- Stale inspection: `aictx stale`
-- Graph inspection: `aictx graph`, `aictx view` graph screen
+- Setup: `memory init`, `memory setup`
+- Lenses: `memory lens`
+- Branch handoff: `memory handoff`
+- Maintenance: `memory check`, `memory rebuild`, `memory reset`, `memory upgrade`
+- Recovery: `memory history`, `memory restore`, `memory rewind`
+- Export: `memory export obsidian`
+- Registry: `memory projects`
+- Viewer: `memory view`
+- Docs: `memory docs`
+- Suggest and audit: `memory suggest`, `memory audit`
+- Wiki workflow: `memory wiki`
+- Stale inspection: `memory stale`
+- Graph inspection: `memory graph`, `memory view` graph screen
 
-Local viewing remains a browser inspection surface, so `aictx view` has no MCP
+Local viewing remains a browser inspection surface, so `memory view` has no MCP
 equivalent. Graph inspection is available in the CLI and local viewer, but not
 as a local MCP tool.
 
-Future host adapters may expose generic `search` and `fetch` names over Aictx
-search and inspect behavior. The local MCP server exposes the six Aictx-specific
+Future host adapters may expose generic `search` and `fetch` names over Memory
+search and inspect behavior. The local MCP server exposes the six Memory-specific
 tools above.

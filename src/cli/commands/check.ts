@@ -27,7 +27,7 @@ export function registerCheckCommand(
 ): void {
   program
     .command("check")
-    .description("Validate Aictx canonical storage and generated index health.")
+    .description("Validate Memory canonical storage and generated index health.")
     .action(async (_commandOptions: unknown, command: Command) => {
       const result = await checkProject(checkProjectOptions(options));
       const rendered = renderAppResult(result, {
@@ -42,8 +42,8 @@ export function registerCheckCommand(
       if (exitCode !== CLI_EXIT_SUCCESS) {
         throw new CommanderError(
           exitCode,
-          "aictx.command.failed",
-          "Aictx command failed."
+          "memory.command.failed",
+          "Memory command failed."
         );
       }
     });
@@ -73,7 +73,7 @@ function isJsonMode(command: Command): boolean {
 
 function renderCheckData(data: CheckProjectData): string {
   const lines = [
-    data.valid ? "Aictx check passed." : "Aictx check failed.",
+    data.valid ? "Memory check passed." : "Memory check failed.",
     ...renderIssues("Errors", data.errors),
     ...renderIssues("Warnings", data.warnings)
   ];

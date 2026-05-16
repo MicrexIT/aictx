@@ -8,7 +8,7 @@ are called out in the release notes.
 ## Unreleased
 
 - Added storage v4 source `origin` metadata, `supports`/`challenges` relation
-  predicates, and the CLI-only `aictx wiki` workflow for source-backed ingest,
+  predicates, and the CLI-only `memory wiki` workflow for source-backed ingest,
   filing, linting, and event logs.
 - Added open source community health files and issue/PR templates.
 - Added CI, CodeQL, OpenSSF Scorecard, Dependabot, and npm provenance release

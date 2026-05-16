@@ -6,8 +6,8 @@ import fg from "fast-glob";
 import { afterEach, describe, expect, it } from "vitest";
 
 import {
-  restoreAictxFromCommit,
-  showAictxFileAtCommit
+  restoreMemoryFromCommit,
+  showMemoryFileAtCommit
 } from "../../../src/core/git.js";
 import {
   writeTextAtomic
@@ -49,18 +49,18 @@ describe("unit security regression guardrails", () => {
     const { calls, runner } = createRunner();
     const revision = "main;touch-pwn";
 
-    const restored = await restoreAictxFromCommit("/repo", revision, { runner });
+    const restored = await restoreMemoryFromCommit("/repo", revision, { runner });
 
     expect(restored.ok).toBe(true);
     expect(calls).toHaveLength(1);
     expect(calls[0]).toMatchObject({
       command: "git",
-      args: ["restore", "--source", revision, "--", ".aictx"]
+      args: ["restore", "--source", revision, "--", ".memory"]
     });
     expect(calls[0]?.args).toContain(revision);
   });
 
-  it("rejects unsafe Git revisions and Aictx paths before subprocess execution", async () => {
+  it("rejects unsafe Git revisions and Memory paths before subprocess execution", async () => {
     const { calls, runner } = createRunner();
     const invalidRevisions = ["--force", "main:evil", "main feature", "main\0evil"];
     const invalidPaths = [
@@ -72,18 +72,18 @@ describe("unit security regression guardrails", () => {
     ];
 
     for (const revision of invalidRevisions) {
-      const result = await restoreAictxFromCommit("/repo", revision, { runner });
+      const result = await restoreMemoryFromCommit("/repo", revision, { runner });
       expect(result.ok).toBe(false);
       if (!result.ok) {
-        expect(result.error.code).toBe("AICtxValidationFailed");
+        expect(result.error.code).toBe("MemoryValidationFailed");
       }
     }
 
     for (const path of invalidPaths) {
-      const result = await showAictxFileAtCommit("/repo", "abcdef", path, { runner });
+      const result = await showMemoryFileAtCommit("/repo", "abcdef", path, { runner });
       expect(result.ok, path).toBe(false);
       if (!result.ok) {
-        expect(result.error.code).toBe("AICtxValidationFailed");
+        expect(result.error.code).toBe("MemoryValidationFailed");
       }
     }
 
@@ -108,7 +108,7 @@ describe("unit security regression guardrails", () => {
     for (const result of [relativeEscape, absoluteEscape, symlinkEscape]) {
       expect(result.ok).toBe(false);
       if (!result.ok) {
-        expect(result.error.code).toBe("AICtxValidationFailed");
+        expect(result.error.code).toBe("MemoryValidationFailed");
       }
     }
 
@@ -166,8 +166,8 @@ async function createFilesystemSandbox(): Promise<{
   sandboxRoot: string;
   allowedRoot: string;
 }> {
-  const sandboxRoot = await mkdtemp(join(tmpdir(), "aictx-security-fs-"));
-  const allowedRoot = join(sandboxRoot, ".aictx");
+  const sandboxRoot = await mkdtemp(join(tmpdir(), "memory-security-fs-"));
+  const allowedRoot = join(sandboxRoot, ".memory");
 
   tempRoots.push(sandboxRoot);
   await mkdir(allowedRoot);

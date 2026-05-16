@@ -1,6 +1,6 @@
 ---
 title: "Keeping AGENTS.md and CLAUDE.md small"
-description: "How I keep agent instruction files short, readable, and focused by moving changing project knowledge into Aictx memory."
+description: "How I keep agent instruction files short, readable, and focused by moving changing project knowledge into Memory."
 publishedAt: 2026-05-14
 tags:
   - Use cases
@@ -21,29 +21,29 @@ After a while, the instruction file was no longer an operating manual. It was a
 project encyclopedia that every agent had to skim before doing even a small
 task.
 
-The way I use Aictx is to draw a hard line between behavior and knowledge.
+The way I use Memory is to draw a hard line between behavior and knowledge.
 
-![Short AGENTS.md file beside reviewable Aictx memory objects](/assets/use-case-agent-files.png)
+![Short AGENTS.md file beside reviewable Memory objects](/assets/use-case-agent-files.png)
 
 `AGENTS.md` and `CLAUDE.md` tell the agent how to work in the repo. They say to
 load memory before non-trivial work, save durable knowledge after meaningful
-work, avoid editing `.aictx/` directly when a supported command exists, and tell
+work, avoid editing `.memory/` directly when a supported command exists, and tell
 me whether memory changed.
 
-The changing project knowledge lives in Aictx memory.
+The changing project knowledge lives in Memory.
 
 That means product intent, architecture summaries, conventions, workflows,
-known traps, source records, and open questions can live under `.aictx/` as
+known traps, source records, and open questions can live under `.memory/` as
 local, reviewable memory. The instruction file stays short because it only has
 to teach the agent how to retrieve the right facts.
 
 The daily loop I want the agent to follow is:
 
 ```bash
-aictx load "the task I am about to do"
+memory load "the task I am about to do"
 # work with the loaded project memory
-aictx remember --stdin
-aictx diff
+memory remember --stdin
+memory diff
 ```
 
 This became especially useful once I started switching between Claude Code and
@@ -52,9 +52,9 @@ another in `AGENTS.md`, and a third version in some copied prompt. One file
 drifts, another says the same thing differently, and then different agents start
 from subtly different assumptions.
 
-With Aictx, the durable project context has one normal home. `aictx setup` can
-initialize storage, create or update the marked Aictx sections in instruction
-files, and apply a conservative bootstrap memory patch. After that, `.aictx/`
+With Memory, the durable project context has one normal home. `memory setup` can
+initialize storage, create or update the marked Memory sections in instruction
+files, and apply a conservative bootstrap memory patch. After that, `.memory/`
 stores the knowledge that keeps evolving.
 
 That gives me two practical benefits.
@@ -72,6 +72,6 @@ The instruction file still matters. It is where I teach the agent the memory
 discipline. But I want it short enough that I can audit it quickly.
 
 The project deserves richer memory than an instruction file should carry.
-Aictx keeps that richer context local, typed, searchable, and reviewable, so
+Memory keeps that richer context local, typed, searchable, and reviewable, so
 agent-specific files can stay focused on behavior instead of becoming stale
 project encyclopedias.

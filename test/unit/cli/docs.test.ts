@@ -5,18 +5,18 @@ import { describe, expect, it } from "vitest";
 
 import { main, type CliOutputWriter } from "../../../src/cli/main.js";
 
-describe("aictx docs", () => {
+describe("memory docs", () => {
   it("lists bundled public docs topics", async () => {
     const output = createCapturedOutput();
 
-    const exitCode = await main(["node", "aictx", "docs"], output.writers);
+    const exitCode = await main(["node", "memory", "docs"], output.writers);
 
     expect(exitCode).toBe(0);
     expect(output.stderr()).toBe("");
-    expect(output.stdout()).toContain("Aictx docs: https://docs.aictx.dev/");
+    expect(output.stdout()).toContain("Memory docs: https://docs.aictx.dev/");
     expect(output.stdout()).toContain("- getting-started:");
     expect(output.stdout()).toContain("- capabilities:");
-    expect(output.stdout()).toContain("- specializing-aictx:");
+    expect(output.stdout()).toContain("- specializing-memory:");
     expect(output.stdout()).toContain("- demand-driven-memory:");
     expect(output.stdout()).toContain("- wiki-workflow:");
     expect(output.stdout()).toContain("- agent-integration:");
@@ -27,7 +27,7 @@ describe("aictx docs", () => {
   it("keeps the topic list aligned with bundled docs pages", async () => {
     const output = createCapturedOutput();
 
-    const exitCode = await main(["node", "aictx", "--json", "docs"], output.writers);
+    const exitCode = await main(["node", "memory", "--json", "docs"], output.writers);
 
     expect(exitCode).toBe(0);
     expect(output.stderr()).toBe("");
@@ -56,12 +56,12 @@ describe("aictx docs", () => {
   it("prints a bundled topic without Starlight frontmatter", async () => {
     const output = createCapturedOutput();
 
-    const exitCode = await main(["node", "aictx", "docs", "quickstart"], output.writers);
+    const exitCode = await main(["node", "memory", "docs", "quickstart"], output.writers);
 
     expect(exitCode).toBe(0);
     expect(output.stderr()).toBe("");
     expect(output.stdout()).toContain("# Getting started");
-    expect(output.stdout()).toContain("aictx setup");
+    expect(output.stdout()).toContain("memory setup");
     expect(output.stdout()).not.toMatch(/^---\n/u);
   });
 
@@ -69,7 +69,7 @@ describe("aictx docs", () => {
     const output = createCapturedOutput();
 
     const exitCode = await main(
-      ["node", "aictx", "--json", "docs", "agents"],
+      ["node", "memory", "--json", "docs", "agents"],
       output.writers
     );
 
@@ -95,7 +95,7 @@ describe("aictx docs", () => {
   it("prints the bundled demand-driven memory topic", async () => {
     const output = createCapturedOutput();
 
-    const exitCode = await main(["node", "aictx", "docs", "memory-quality"], output.writers);
+    const exitCode = await main(["node", "memory", "docs", "memory-quality"], output.writers);
 
     expect(exitCode).toBe(0);
     expect(output.stderr()).toBe("");
@@ -106,7 +106,7 @@ describe("aictx docs", () => {
   it("prints the bundled capabilities topic", async () => {
     const output = createCapturedOutput();
 
-    const exitCode = await main(["node", "aictx", "docs", "features"], output.writers);
+    const exitCode = await main(["node", "memory", "docs", "features"], output.writers);
 
     expect(exitCode).toBe(0);
     expect(output.stderr()).toBe("");
@@ -117,33 +117,33 @@ describe("aictx docs", () => {
   it("prints the bundled wiki workflow topic", async () => {
     const output = createCapturedOutput();
 
-    const exitCode = await main(["node", "aictx", "docs", "wiki"], output.writers);
+    const exitCode = await main(["node", "memory", "docs", "wiki"], output.writers);
 
     expect(exitCode).toBe(0);
     expect(output.stderr()).toBe("");
     expect(output.stdout()).toContain("# Wiki workflow");
-    expect(output.stdout()).toContain("aictx wiki ingest");
+    expect(output.stdout()).toContain("memory wiki ingest");
     expect(output.stdout()).toContain("source records");
   });
 
   it("prints the bundled agent recipes topic", async () => {
     const output = createCapturedOutput();
 
-    const exitCode = await main(["node", "aictx", "docs", "agent-recipes"], output.writers);
+    const exitCode = await main(["node", "memory", "docs", "agent-recipes"], output.writers);
 
     expect(exitCode).toBe(0);
     expect(output.stderr()).toBe("");
     expect(output.stdout()).toContain("# Agent recipes");
     expect(output.stdout()).toContain("Codex");
     expect(output.stdout()).toContain("Cursor");
-    expect(output.stdout()).toContain("aictx setup");
-    expect(output.stdout()).toContain("aictx diff");
+    expect(output.stdout()).toContain("memory setup");
+    expect(output.stdout()).toContain("memory diff");
   });
 
   it("prints the bundled plugin publishing topic", async () => {
     const output = createCapturedOutput();
 
-    const exitCode = await main(["node", "aictx", "docs", "plugin-publishing"], output.writers);
+    const exitCode = await main(["node", "memory", "docs", "plugin-publishing"], output.writers);
 
     expect(exitCode).toBe(0);
     expect(output.stderr()).toBe("");
@@ -156,7 +156,7 @@ describe("aictx docs", () => {
     const output = createCapturedOutput();
     const openedUrls: string[] = [];
 
-    const exitCode = await main(["node", "aictx", "docs", "reference", "--open"], {
+    const exitCode = await main(["node", "memory", "docs", "reference", "--open"], {
       ...output.writers,
       docs: {
         opener: (url) => {
@@ -174,7 +174,7 @@ describe("aictx docs", () => {
   it("fails clearly for an unknown topic", async () => {
     const output = createCapturedOutput();
 
-    const exitCode = await main(["node", "aictx", "docs", "does-not-exist"], output.writers);
+    const exitCode = await main(["node", "memory", "docs", "does-not-exist"], output.writers);
 
     expect(exitCode).toBe(1);
     expect(output.stdout()).toBe("");

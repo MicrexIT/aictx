@@ -1,0 +1,12 @@
+{
+  "name": "memory",
+  "description": "Use Memory local project memory in AI coding agents.",
+  "version": "0.1.39",
+  "author": {
+    "name": "Memory",
+    "url": "https://github.com/aictx/memory"
+  },
+  "homepage": "https://aictx.dev",
+  "repository": "https://github.com/aictx/memory",
+  "license": "MIT"
+}

@@ -16,18 +16,18 @@ feature before opening the repository to a coding agent. Sometimes I want to ask
 why a project is shaped a certain way, but I do not want to paste the README,
 `AGENTS.md`, package manifests, docs, and a dozen old decisions into a chat.
 
-This is one of the directions I care about for Aictx: let a ChatGPT-style
+This is one of the directions I care about for Memory: let a ChatGPT-style
 assistant talk to the project through durable memory instead of broad source
 access by default.
 
-The local Aictx model already has the useful pieces. Project memory is stored
-as reviewable local files. `aictx load` compiles a task-focused context pack.
+The local Memory model already has the useful pieces. Project memory is stored
+as reviewable local files. `memory load` compiles a task-focused context pack.
 Local MCP can expose memory tools for loading, searching, inspecting, saving,
-and diffing memory when the client has launched and connected to `aictx-mcp`.
+and diffing memory when the client has launched and connected to `memory-mcp`.
 
 The difference is subtle but important.
 
-Without Aictx, my project conversation often starts with a context dump:
+Without Memory, my project conversation often starts with a context dump:
 
 ```text
 Here is the product brief, the architecture summary, the agent instructions,
@@ -38,7 +38,7 @@ the codebase I think matters.
 That is expensive, noisy, and easy to get wrong. It also nudges me to hand over
 more source than the conversation actually needs.
 
-With Aictx, I want the assistant to start from a smaller question:
+With Memory, I want the assistant to start from a smaller question:
 
 ```text
 What durable project memory is relevant to "plan the billing integration"?
@@ -51,22 +51,22 @@ that task.
 For routine CLI use, I can get that pack directly:
 
 ```bash
-aictx load "plan the billing integration"
+memory load "plan the billing integration"
 ```
 
-![Conversation panel beside an Aictx context pack](/assets/use-case-chat-memory.png)
+![Conversation panel beside an Memory context pack](/assets/use-case-chat-memory.png)
 
 If the conversation needs more detail, the assistant can search or inspect
 memory objects instead of asking for the whole repository.
 
-That does not mean Aictx replaces code review or implementation access. Some
+That does not mean Memory replaces code review or implementation access. Some
 tasks still need source files. But many conversations do not. Product planning,
 architecture discussion, onboarding, roadmap review, risk analysis, and
 handoff cleanup often need project knowledge more than raw code.
 
 This is also why I keep the boundary clear between the current local workflow
 and future hosted surfaces. Today, the CLI is the default routine path, and
-local MCP is available when an MCP-capable client already exposes the Aictx
+local MCP is available when an MCP-capable client already exposes the Memory
 tools. Remote MCP endpoints, hosted sync, cloud auth, and ChatGPT App SDK UI are
 not the v1 promise.
 
@@ -79,5 +79,5 @@ lives. It can become another client that talks to the project memory layer. I
 get a conversation that understands the project, while keeping source access
 explicit and proportional to the work.
 
-That is the direction Aictx is built for: not bigger prompts, but better
+That is the direction Memory is built for: not bigger prompts, but better
 project memory.

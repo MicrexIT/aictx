@@ -12,7 +12,7 @@ import { readCanonicalStorage } from "../../src/storage/read.js";
 import { validateProject } from "../../src/validation/validate.js";
 
 const fixtureRoot = join(process.cwd(), "test", "fixtures", "golden-storage");
-const missingBodyHashExclusion = "invalid-missing-body/.aictx/memory/project.json";
+const missingBodyHashExclusion = "invalid-missing-body/.memory/memory/project.json";
 
 const validFixtures = [
   {
@@ -37,35 +37,35 @@ const invalidFixtures = [
   ["invalid-jsonl", "EventJsonlInvalid"],
   ["invalid-missing-body", "ObjectBodyMissing"],
   ["invalid-bad-relation", "RelationEndpointMissing"],
-  ["invalid-conflict-marker", "AICtxConflictDetected"]
+  ["invalid-conflict-marker", "MemoryConflictDetected"]
 ] as const;
 
 const expectedHashes = {
-  "invalid-bad-relation/.aictx/memory/project.json":
+  "invalid-bad-relation/.memory/memory/project.json":
     "sha256:2f2cdbcf05fae78f8d4de7ef87a2b996841f3e623973147133068eef6809d867",
-  "invalid-bad-relation/.aictx/relations/project-mentions-missing-note.json":
+  "invalid-bad-relation/.memory/relations/project-mentions-missing-note.json":
     "sha256:9c1e6e96eb27cbac863ac4c000be3c9c0b6e138b33bb68633874f71fae848896",
-  "invalid-conflict-marker/.aictx/memory/project.json":
+  "invalid-conflict-marker/.memory/memory/project.json":
     "sha256:05d3f50fff04f3ecbcbb79d56fc625a85234a40f7d353b37fae1eba8ae905014",
-  "invalid-jsonl/.aictx/memory/project.json":
+  "invalid-jsonl/.memory/memory/project.json":
     "sha256:91969cac20e117f500b27d97c8cbfa49742ed6c627a7c149321bb6865f978ea2",
-  "minimal-valid/.aictx/memory/project.json":
+  "minimal-valid/.memory/memory/project.json":
     "sha256:30153f876a0f023778d256e5056c4aa70860d7c9f845011a4a0959682ec59b2c",
-  "rich-valid/.aictx/memory/architecture.json":
-    "sha256:585be58a9a9f35eac8a32fd3208817c99c0c48600c699c86ddd33b0e1253fb44",
-  "rich-valid/.aictx/memory/constraints/hashes-deterministic.json":
+  "rich-valid/.memory/memory/architecture.json":
+    "sha256:926082d2792d7d2111fd4a2f09745ef5960307c3553d044ded787dd07c158feb",
+  "rich-valid/.memory/memory/constraints/hashes-deterministic.json":
     "sha256:9d92cb730f2eb8693dbe0cd1f7a07618efb9fc3f4548767d1e291ec3df84c04a",
-  "rich-valid/.aictx/memory/decisions/storage-fixtures.json":
+  "rich-valid/.memory/memory/decisions/storage-fixtures.json":
     "sha256:057bc3780887291a5a13a959dbc8fdaab20db1ee1ec2081fc21b906c407c92c0",
-  "rich-valid/.aictx/memory/project.json":
+  "rich-valid/.memory/memory/project.json":
     "sha256:4ac3c49a8500a447001c309840ac7f37ca3673d8d2ccb40480ab9a753bda943b",
-  "rich-valid/.aictx/memory/questions/fixture-refresh.json":
+  "rich-valid/.memory/memory/questions/fixture-refresh.json":
     "sha256:a4ca66c8f4d7e1fbd6666328905a86118bc29a16ff74cdf27ed8f4908dd00efb",
-  "rich-valid/.aictx/relations/architecture-mentions-decision.json":
+  "rich-valid/.memory/relations/architecture-mentions-decision.json":
     "sha256:b3a53094f208c6d4b1dd2bc54e5b134d3b6447fcc46c75da9e9ecadfa603c1b7",
-  "rich-valid/.aictx/relations/question-related-to-decision.json":
+  "rich-valid/.memory/relations/question-related-to-decision.json":
     "sha256:dc1cd26eb708f9ad0ffb2077c54e026729506df6424f5dc571f219fbffefbf96",
-  "rich-valid/.aictx/relations/storage-fixtures-requires-hashes.json":
+  "rich-valid/.memory/relations/storage-fixtures-requires-hashes.json":
     "sha256:2e4d55a556a1efadf038d79fa4f1006bd2ed45726c2c79b3ad2df914d3d59fd5"
 } as const satisfies Record<string, string>;
 
@@ -115,7 +115,7 @@ function projectFixtureRoot(name: string): string {
 
 async function collectFixtureHashes(): Promise<Record<string, string>> {
   const paths = (
-    await fg("**/.aictx/{memory,relations}/**/*.json", {
+    await fg("**/.memory/{memory,relations}/**/*.json", {
       cwd: fixtureRoot,
       dot: true,
       onlyFiles: true,
@@ -130,7 +130,7 @@ async function collectFixtureHashes(): Promise<Record<string, string>> {
     }
 
     const value = await readJsonObject(path);
-    const computedHash = path.includes("/.aictx/memory/")
+    const computedHash = path.includes("/.memory/memory/")
       ? await computeFixtureObjectHash(path, value)
       : computeFixtureRelationHash(path, value);
 
@@ -147,7 +147,7 @@ async function computeFixtureObjectHash(
 ): Promise<string> {
   const bodyPath = readStringField(sidecar, "body_path", sidecarPath);
   const fixture = fixtureNameForPath(sidecarPath);
-  const body = await readFile(join(fixtureRoot, fixture, ".aictx", bodyPath), "utf8");
+  const body = await readFile(join(fixtureRoot, fixture, ".memory", bodyPath), "utf8");
 
   return computeObjectContentHash(sidecar, body);
 }
@@ -162,10 +162,10 @@ function computeFixtureRelationHash(
 }
 
 function fixtureNameForPath(path: string): string {
-  const [fixture] = path.split("/.aictx/", 1);
+  const [fixture] = path.split("/.memory/", 1);
 
   if (fixture === undefined || fixture.length === 0) {
-    throw new Error(`Fixture path is not inside a .aictx tree: ${path}`);
+    throw new Error(`Fixture path is not inside a .memory tree: ${path}`);
   }
 
   return fixture;

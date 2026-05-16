@@ -1,4 +1,4 @@
-import { aictxError, type JsonValue } from "../core/errors.js";
+import { memoryError, type JsonValue } from "../core/errors.js";
 import { err, ok, type Result } from "../core/result.js";
 
 export const LOAD_MEMORY_MODES = [
@@ -21,7 +21,7 @@ export function normalizeLoadMemoryMode(mode?: string): Result<LoadMemoryMode> {
   }
 
   return err(
-    aictxError("AICtxValidationFailed", "Load mode is not supported.", {
+    memoryError("MemoryValidationFailed", "Load mode is not supported.", {
       field: "mode",
       allowed: [...LOAD_MEMORY_MODES],
       actual: stringDetail(value)

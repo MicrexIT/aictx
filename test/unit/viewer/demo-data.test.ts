@@ -41,7 +41,7 @@ afterEach(async () => {
 
 describe("viewer demo data seed", () => {
   it("generates deterministic sanitized data from the curated memory allowlist", async () => {
-    const tempRoot = await mkdtemp(join(tmpdir(), "aictx-demo-data-"));
+    const tempRoot = await mkdtemp(join(tmpdir(), "memory-demo-data-"));
     tempRoots.push(tempRoot);
     const outFile = join(tempRoot, "demo-data.json");
 
@@ -58,7 +58,7 @@ describe("viewer demo data seed", () => {
 
     const second = await readFile(outFile, "utf8");
     const data = JSON.parse(second) as {
-      meta: { project_root: string; aictx_root: string };
+      meta: { project_root: string; memory_root: string };
       seed: { memory_ids: string[]; source: string };
       projects: { projects: Array<{ registry_id: string; project_root: string }> };
       bootstrap: {
@@ -102,7 +102,7 @@ describe("viewer demo data seed", () => {
       type: "project",
       facets: { category: "project-description" }
     });
-    expect(data.bootstrap.objects.some((object) => object.id === "project.aictx")).toBe(false);
+    expect(data.bootstrap.objects.some((object) => object.id === "project.memory")).toBe(false);
     expect(sourceObjects.length).toBeGreaterThan(0);
     for (const source of sourceObjects) {
       expect(source.origin).toMatchObject({
@@ -118,7 +118,7 @@ describe("viewer demo data seed", () => {
     expect(predicates).toContain("supports");
     expect(predicates).toContain("challenges");
     expect(data.meta.project_root).toBe("demo://todo-app");
-    expect(data.meta.aictx_root).toBe("demo://todo-app/.aictx");
+    expect(data.meta.memory_root).toBe("demo://todo-app/.memory");
     expect(data.projects.projects).toHaveLength(1);
     expect(data.projects.projects[0]).toMatchObject({
       registry_id: "demo",
@@ -144,7 +144,7 @@ describe("viewer demo data seed", () => {
     expect(serialized).not.toContain(repoRoot);
     expect(serialized).not.toMatch(/\/Users\//);
     expect(serialized).not.toMatch(/\/home\//);
-    expect(serialized).not.toMatch(/\.aictx\/(?:index|context|\.backup|\.lock|exports|recovery)\b/);
+    expect(serialized).not.toMatch(/\.memory\/(?:index|context|\.backup|\.lock|exports|recovery)\b/);
     expect(serialized).not.toMatch(/sk_(?:live|test)_[A-Za-z0-9]{16,}/);
     expect(serialized).not.toMatch(/ghp_[A-Za-z0-9_]{20,}/);
     expect(serialized).not.toMatch(

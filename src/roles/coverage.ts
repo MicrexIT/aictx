@@ -160,7 +160,7 @@ export function roleDefinitionForKey(key: MemoryRoleKey): MemoryRoleDefinition {
   const definition = MEMORY_ROLE_DEFINITIONS.find((role) => role.key === key);
 
   if (definition === undefined) {
-    throw new Error(`Unknown Aictx memory role: ${key}`);
+    throw new Error(`Unknown Memory role: ${key}`);
   }
 
   return definition;
@@ -248,9 +248,9 @@ function gapForRole(
       case "missing":
         return null;
       case "thin":
-        return "Branch Handoff exists but is thin. Update it with `aictx handoff update --stdin` so the current goal, state, verification, and next action are clear.";
+        return "Branch Handoff exists but is thin. Update it with `memory handoff update --stdin` so the current goal, state, verification, and next action are clear.";
       case "stale":
-        return "Branch Handoff is closed or stale. Run `aictx handoff update --stdin` if branch work resumes.";
+        return "Branch Handoff is closed or stale. Run `memory handoff update --stdin` if branch work resumes.";
       case "conflicted":
         return "Branch Handoff has active conflicting memory. Prefer current branch evidence and update the handoff before continuing.";
       case "populated":

@@ -12,7 +12,7 @@ import { REMEMBER_MEMORY_KINDS } from "../../remember/types.js";
 import {
   PROJECT_ROOT_ARGUMENT_DESCRIPTION,
   resolveMcpProjectCwd,
-  type AictxMcpContext,
+  type MemoryMcpContext,
   type ProjectScopedMcpArgs
 } from "../context.js";
 import {
@@ -121,16 +121,16 @@ type RememberMemoryArgs = z.infer<typeof REMEMBER_MEMORY_INPUT_SCHEMA> &
 
 export const rememberMemoryTool = {
   name: "remember_memory",
-  title: "Remember Aictx Memory",
+  title: "Remember Memory",
   description:
-    "Create or repair Aictx memory, including durable workflows/how-tos, from intent-first agent input. Converts to a structured patch internally.",
+    "Create or repair Memory, including durable workflows/how-tos, from intent-first agent input. Converts to a structured patch internally.",
   inputSchema: REMEMBER_MEMORY_INPUT_SCHEMA,
   annotations: WRITE_TOOL_ANNOTATIONS,
   call: callRememberMemoryTool
 };
 
 async function callRememberMemoryTool(
-  context: AictxMcpContext,
+  context: MemoryMcpContext,
   args: RememberMemoryArgs
 ): Promise<CallToolResult> {
   const cwd = resolveMcpProjectCwd(context, args);

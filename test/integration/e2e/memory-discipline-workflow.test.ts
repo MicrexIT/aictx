@@ -19,7 +19,7 @@ interface CliRunResult {
 
 interface ResponseMeta {
   project_root: string;
-  aictx_root: string;
+  memory_root: string;
   git: {
     available: boolean;
     branch: string | null;
@@ -108,11 +108,11 @@ afterEach(async () => {
   );
 });
 
-describe("aictx memory discipline e2e workflow", () => {
+describe("memory discipline e2e workflow", () => {
   it("covers bootstrap, save, mode-aware load, suggest, audit, stale/supersede, and async inspection", async () => {
-    const repo = await createRepo("aictx-e2e-memory-discipline-");
+    const repo = await createRepo("memory-e2e-memory-discipline-");
     const init = parseSuccessEnvelope<InitData>(
-      (await expectSuccessfulCli(["node", "aictx", "init", "--json"], repo)).stdout
+      (await expectSuccessfulCli(["node", "memory", "init", "--json"], repo)).stdout
     );
 
     expect(init.data).toMatchObject({
@@ -126,7 +126,7 @@ describe("aictx memory discipline e2e workflow", () => {
       (
         await expectSuccessfulCli([
           "node",
-          "aictx",
+          "memory",
           "suggest",
           "--bootstrap",
           "--json"
@@ -138,7 +138,7 @@ describe("aictx memory discipline e2e workflow", () => {
     expect(bootstrap.data.changed_files).toEqual(
       expect.arrayContaining(["README.md", "package.json", "src/release.ts"])
     );
-    expect(bootstrap.data.changed_files).not.toContain(".aictx/config.json");
+    expect(bootstrap.data.changed_files).not.toContain(".memory/config.json");
     expect(bootstrap.data.recommended_memory).toEqual(
       expect.arrayContaining(["workflow", "gotcha"])
     );
@@ -147,17 +147,17 @@ describe("aictx memory discipline e2e workflow", () => {
     );
     await expect(readCanonicalSnapshot(repo)).resolves.toEqual(beforeBootstrap);
 
-    await commit(repo, "Initialize Aictx", "2026-04-25T14:00:00+02:00", [
+    await commit(repo, "Initialize Memory", "2026-04-25T14:00:00+02:00", [
       ".gitignore",
       "AGENTS.md",
       "CLAUDE.md",
-      ".aictx"
+      ".memory"
     ]);
 
     const seedSave = parseSuccessEnvelope<SaveData>(
       (
         await expectSuccessfulCli(
-          ["node", "aictx", "save", "--stdin", "--json"],
+          ["node", "memory", "save", "--stdin", "--json"],
           repo,
           JSON.stringify(createSeedPatch())
         )
@@ -180,7 +180,7 @@ describe("aictx memory discipline e2e workflow", () => {
       (
         await expectSuccessfulCli([
           "node",
-          "aictx",
+          "memory",
           "load",
           "release discipline workflow gotcha",
           "--mode",
@@ -193,7 +193,7 @@ describe("aictx memory discipline e2e workflow", () => {
       (
         await expectSuccessfulCli([
           "node",
-          "aictx",
+          "memory",
           "load",
           "release discipline workflow gotcha",
           "--mode",
@@ -211,7 +211,7 @@ describe("aictx memory discipline e2e workflow", () => {
     expect(onboarding.data.included_ids).toContain("workflow.release-old-checklist");
 
     await commit(repo, "Seed memory discipline entries", "2026-04-25T14:01:00+02:00", [
-      ".aictx"
+      ".memory"
     ]);
     await writeProjectFile(
       repo,
@@ -223,7 +223,7 @@ describe("aictx memory discipline e2e workflow", () => {
       (
         await expectSuccessfulCli([
           "node",
-          "aictx",
+          "memory",
           "suggest",
           "--from-diff",
           "--json"
@@ -251,7 +251,7 @@ describe("aictx memory discipline e2e workflow", () => {
     );
 
     const audit = parseSuccessEnvelope<AuditData>(
-      (await expectSuccessfulCli(["node", "aictx", "audit", "--json"], repo)).stdout
+      (await expectSuccessfulCli(["node", "memory", "audit", "--json"], repo)).stdout
     );
     const auditRules = new Set(audit.data.findings.map((finding) => finding.rule));
 
@@ -273,7 +273,7 @@ describe("aictx memory discipline e2e workflow", () => {
     const lifecycleSave = parseSuccessEnvelope<SaveData>(
       (
         await expectSuccessfulCli(
-          ["node", "aictx", "save", "--stdin", "--json"],
+          ["node", "memory", "save", "--stdin", "--json"],
           repo,
           JSON.stringify(createLifecyclePatch())
         )
@@ -293,7 +293,7 @@ describe("aictx memory discipline e2e workflow", () => {
       (
         await expectSuccessfulCli([
           "node",
-          "aictx",
+          "memory",
           "load",
           "release discipline workflow gotcha",
           "--mode",
@@ -318,23 +318,23 @@ describe("aictx memory discipline e2e workflow", () => {
     await git(repo, [
       "add",
       "--intent-to-add",
-      ".aictx/relations/workflow-release-current-checklist-supersedes-workflow-release-old-checklist.json"
+      ".memory/relations/workflow-release-current-checklist-supersedes-workflow-release-old-checklist.json"
     ]);
 
     const finalDiff = parseSuccessEnvelope<DiffData>(
-      (await expectSuccessfulCli(["node", "aictx", "diff", "--json"], repo)).stdout
+      (await expectSuccessfulCli(["node", "memory", "diff", "--json"], repo)).stdout
     );
 
     expect(finalDiff.data.changed_files.length).toBeGreaterThan(0);
-    expect(finalDiff.data.changed_files.every((file) => file.startsWith(".aictx/"))).toBe(
+    expect(finalDiff.data.changed_files.every((file) => file.startsWith(".memory/"))).toBe(
       true
     );
     expect(finalDiff.data.changed_files).toEqual(
       expect.arrayContaining([
-        ".aictx/events.jsonl",
-        ".aictx/memory/gotchas/release-env-trap.json",
-        ".aictx/memory/workflows/release-old-checklist.json",
-        ".aictx/relations/workflow-release-current-checklist-supersedes-workflow-release-old-checklist.json"
+        ".memory/events.jsonl",
+        ".memory/memory/gotchas/release-env-trap.json",
+        ".memory/memory/workflows/release-old-checklist.json",
+        ".memory/relations/workflow-release-current-checklist-supersedes-workflow-release-old-checklist.json"
       ])
     );
     expect(finalDiff.data.changed_memory_ids).toEqual(
@@ -348,9 +348,9 @@ describe("aictx memory discipline e2e workflow", () => {
     );
     expect(finalDiff.data.diff).not.toContain("src/release.ts");
 
-    const humanDiff = await expectSuccessfulCli(["node", "aictx", "diff"], repo);
+    const humanDiff = await expectSuccessfulCli(["node", "memory", "diff"], repo);
 
-    expect(humanDiff.stdout).toContain(".aictx/memory/gotchas/release-env-trap.json");
+    expect(humanDiff.stdout).toContain(".memory/memory/gotchas/release-env-trap.json");
     expect(humanDiff.stdout).toContain("memory.marked_stale");
     expect(humanDiff.stdout).toContain("memory.superseded");
     expect(humanDiff.stdout).not.toContain("src/release.ts");
@@ -512,7 +512,7 @@ async function createRepo(prefix: string): Promise<string> {
 
   await git(repo, ["init", "--initial-branch=main"]);
   await git(repo, ["config", "user.email", "test@example.com"]);
-  await git(repo, ["config", "user.name", "Aictx Test"]);
+  await git(repo, ["config", "user.name", "Memory Test"]);
   await writeProjectFile(repo, "README.md", "# Release Test\n");
   await writeProjectFile(repo, "package.json", '{ "version": "1.2.3" }\n');
   await writeProjectFile(repo, "src/release.ts", "export const releaseMode = 'manual';\n");
@@ -537,10 +537,10 @@ async function createTempRoot(prefix: string): Promise<string> {
 async function readCanonicalSnapshot(projectRoot: string): Promise<Record<string, string>> {
   const paths = await fg(
     [
-      ".aictx/config.json",
-      ".aictx/events.jsonl",
-      ".aictx/memory/**",
-      ".aictx/relations/**"
+      ".memory/config.json",
+      ".memory/events.jsonl",
+      ".memory/memory/**",
+      ".memory/relations/**"
     ],
     {
       cwd: projectRoot,

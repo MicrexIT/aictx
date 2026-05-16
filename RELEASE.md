@@ -1,6 +1,6 @@
 # Release Policy
 
-Aictx publishes the npm package `@aictx/memory`.
+Memory publishes the npm package `@aictx/memory`.
 
 ## Versioning
 

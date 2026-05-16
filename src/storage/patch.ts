@@ -2,10 +2,10 @@ import { lstat } from "node:fs/promises";
 import { resolve } from "node:path";
 
 import type { Clock } from "../core/clock.js";
-import { aictxError, type AictxErrorCode } from "../core/errors.js";
+import { memoryError, type MemoryErrorCode } from "../core/errors.js";
 import {
   filterTrackedFiles,
-  getAictxDirtyState,
+  getMemoryDirtyState,
   type GitWrapperOptions
 } from "../core/git.js";
 import {
@@ -50,7 +50,7 @@ import {
 } from "./read.js";
 
 const PATCH_PATH = "<patch>";
-const EVENTS_PATH = ".aictx/events.jsonl";
+const EVENTS_PATH = ".memory/events.jsonl";
 const QUESTION_STATUSES = new Set<ObjectStatus>([
   "stale",
   "superseded",
@@ -74,7 +74,7 @@ export interface PlanMemoryPatchOptions extends GitWrapperOptions {
 
 export interface PatchPlan {
   projectRoot: string;
-  aictxRoot: string;
+  memoryRoot: string;
   source: Source;
   changes: NormalizedPatchChange[];
   fileWrites: PatchPlannedFileWrite[];
@@ -372,7 +372,7 @@ export async function planMemoryPatch(
 
   if (unknownOperation !== null) {
     return err(
-      aictxError("AICtxUnknownPatchOperation", "Unknown patch operation.", {
+      memoryError("MemoryUnknownPatchOperation", "Unknown patch operation.", {
         op: unknownOperation.op,
         path: PATCH_PATH,
         field: `/changes/${unknownOperation.index}/op`
@@ -448,7 +448,7 @@ function createPlanningState(
   const relationsById = new Map<RelationId, RelationPlanningRecord>();
   const reservedObjectIds = new Set<ObjectId>();
   const reservedRelationIds = new Set<RelationId>();
-  const existingPaths = new Set<string>([".aictx/config.json", EVENTS_PATH]);
+  const existingPaths = new Set<string>([".memory/config.json", EVENTS_PATH]);
 
   for (const object of snapshot.objects) {
     const record = objectRecordFromStoredObject(object);
@@ -493,10 +493,10 @@ function createPlanningState(
 }
 
 function isPartialRecoverablePlanningError(
-  code: AictxErrorCode,
+  code: MemoryErrorCode,
   change: RawPatchChange
 ): boolean {
-  if (code !== "AICtxObjectNotFound" && code !== "AICtxRelationNotFound") {
+  if (code !== "MemoryObjectNotFound" && code !== "MemoryRelationNotFound") {
     return false;
   }
 
@@ -1181,7 +1181,7 @@ async function recordDirtyTouchedRecoveries(
     return ok(undefined);
   }
 
-  const dirtyState = await getAictxDirtyState(projectRoot, options);
+  const dirtyState = await getMemoryDirtyState(projectRoot, options);
 
   if (!dirtyState.ok) {
     return dirtyState;
@@ -1218,7 +1218,7 @@ async function recordDirtyTouchedRecoveries(
   return ok(
     undefined,
     trackedDirtyOverwriteFiles.map(
-      (file) => `Dirty Aictx file will be backed up before save: ${file}`
+      (file) => `Dirty Memory file will be backed up before save: ${file}`
     )
   );
 }
@@ -1240,9 +1240,9 @@ function dirtyRecoveryReason(state: PlanningState, path: string): PatchRecoveryR
 
 export function recoveryPathForDirtyFile(timestamp: IsoDateTime, path: string): string {
   const safeTimestamp = timestamp.replace(/[^0-9A-Za-z.-]/g, "-");
-  const relativePath = path.startsWith(".aictx/") ? path.slice(".aictx/".length) : path;
+  const relativePath = path.startsWith(".memory/") ? path.slice(".memory/".length) : path;
 
-  return `.aictx/recovery/${safeTimestamp}/${relativePath}`;
+  return `.memory/recovery/${safeTimestamp}/${relativePath}`;
 }
 
 function buildPlan(state: PlanningState): PatchPlan {
@@ -1250,7 +1250,7 @@ function buildPlan(state: PlanningState): PatchPlan {
 
   return {
     projectRoot: state.snapshot.projectRoot,
-    aictxRoot: state.snapshot.aictxRoot,
+    memoryRoot: state.snapshot.memoryRoot,
     source: state.source,
     changes: state.normalizedChanges,
     fileWrites: state.fileWrites,
@@ -1299,8 +1299,8 @@ function objectPaths(type: ObjectType, id: ObjectId): ObjectPaths {
       : `${objectDirectory(type)}/${idSlug}`;
 
   return {
-    sidecarPath: `.aictx/memory/${basename}.json`,
-    bodyPath: `.aictx/memory/${basename}.md`
+    sidecarPath: `.memory/memory/${basename}.json`,
+    bodyPath: `.memory/memory/${basename}.md`
   };
 }
 
@@ -1333,7 +1333,7 @@ function objectDirectory(type: ObjectType): string {
 }
 
 function relationPath(id: RelationId): string {
-  return `.aictx/relations/${id.slice("rel.".length)}.json`;
+  return `.memory/relations/${id.slice("rel.".length)}.json`;
 }
 
 function objectIdType(id: ObjectId): string {
@@ -1509,21 +1509,21 @@ function findUnknownOperation(value: unknown): UnknownOperation | null {
 }
 
 function objectNotFound<T>(id: ObjectId, field: string): Result<T> {
-  return codeError("AICtxObjectNotFound", "Memory object was not found.", {
+  return codeError("MemoryObjectNotFound", "Memory object was not found.", {
     id,
     field
   });
 }
 
 function relationNotFound<T>(id: RelationId, field: string): Result<T> {
-  return codeError("AICtxRelationNotFound", "Memory relation was not found.", {
+  return codeError("MemoryRelationNotFound", "Memory relation was not found.", {
     id,
     field
   });
 }
 
 function duplicateId<T>(id: string, field: string): Result<T> {
-  return codeError("AICtxDuplicateId", "Patch would create a duplicate canonical id.", {
+  return codeError("MemoryDuplicateId", "Patch would create a duplicate canonical id.", {
     id,
     field
   });
@@ -1538,7 +1538,7 @@ function invalidRelation<T>(
   }
 ): Result<T> {
   return err(
-    aictxError("AICtxInvalidRelation", message, {
+    memoryError("MemoryInvalidRelation", message, {
       path: PATCH_PATH,
       id: details.id,
       field: details.field,
@@ -1548,7 +1548,7 @@ function invalidRelation<T>(
 }
 
 function codeError<T>(
-  code: AictxErrorCode,
+  code: MemoryErrorCode,
   message: string,
   details: {
     id: string;
@@ -1556,7 +1556,7 @@ function codeError<T>(
   }
 ): Result<T> {
   return err(
-    aictxError(code, message, {
+    memoryError(code, message, {
       path: PATCH_PATH,
       id: details.id,
       field: details.field
@@ -1565,7 +1565,7 @@ function codeError<T>(
 }
 
 function patchInvalid<T>(message: string, issue: ValidationIssue): Result<T> {
-  return err(aictxError("AICtxPatchInvalid", message, validationIssuesDetails([issue])));
+  return err(memoryError("MemoryPatchInvalid", message, validationIssuesDetails([issue])));
 }
 
 function validationIssuesDetails(issues: readonly ValidationIssue[]) {

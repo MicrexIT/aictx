@@ -26,7 +26,7 @@ export function registerExportCommand(
 ): void {
   const exportCommand = program
     .command("export")
-    .description("Export generated Aictx projections.")
+    .description("Export generated Memory projections.")
     .action((_commandOptions: unknown, command: Command) => {
       command.outputHelp();
     });
@@ -91,7 +91,7 @@ function renderFiles(label: string, files: readonly string[]): string[] {
 function throwCommandFailed(exitCode: CliExitCode): never {
   throw new CommanderError(
     exitCode,
-    "aictx.command.failed",
-    "Aictx command failed."
+    "memory.command.failed",
+    "Memory command failed."
   );
 }

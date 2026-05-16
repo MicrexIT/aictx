@@ -66,7 +66,7 @@ export interface CliMainOptions {
   };
   registry?: {
     enabled?: boolean;
-    aictxHome?: string;
+    memoryHome?: string;
   };
 }
 
@@ -76,8 +76,8 @@ export function createCliProgram(options: CliMainOptions = {}): Command {
   const writeErr = options.stderr ?? ((text: string) => process.stderr.write(text));
 
   program
-    .name("aictx")
-    .description("Aictx project memory CLI")
+    .name("memory")
+    .description("Local project memory CLI")
     .configureOutput({
       writeOut,
       writeErr
@@ -151,9 +151,9 @@ export function createCliProgram(options: CliMainOptions = {}): Command {
     cwd: options.cwd ?? process.cwd(),
     stdout: writeOut,
     stderr: writeErr,
-    ...(options.registry?.aictxHome === undefined
+    ...(options.registry?.memoryHome === undefined
       ? {}
-      : { aictxHome: options.registry.aictxHome })
+      : { memoryHome: options.registry.memoryHome })
   });
   registerSetupCommand(program, {
     cwd: options.cwd ?? process.cwd(),
@@ -192,9 +192,9 @@ export function createCliProgram(options: CliMainOptions = {}): Command {
     cwd: options.cwd ?? process.cwd(),
     stdout: writeOut,
     stderr: writeErr,
-    ...(options.registry?.aictxHome === undefined
+    ...(options.registry?.memoryHome === undefined
       ? {}
-      : { aictxHome: options.registry.aictxHome }),
+      : { memoryHome: options.registry.memoryHome }),
     ...(options.viewer?.assetsDir === undefined
       ? {}
       : { assetsDir: options.viewer.assetsDir }),
@@ -229,9 +229,9 @@ export function createCliProgram(options: CliMainOptions = {}): Command {
     stdout: writeOut,
     stderr: writeErr,
     registryEnabled: registryAutoRegistrationEnabled(options),
-    ...(options.registry?.aictxHome === undefined
+    ...(options.registry?.memoryHome === undefined
       ? {}
-      : { aictxHome: options.registry.aictxHome })
+      : { memoryHome: options.registry.memoryHome })
   });
   registerSaveCommand(program, {
     cwd: options.cwd ?? process.cwd(),
@@ -256,9 +256,9 @@ export function createCliProgram(options: CliMainOptions = {}): Command {
     cwd: options.cwd ?? process.cwd(),
     stderr: writeErr,
     enabled: registryAutoRegistrationEnabled(options),
-    ...(options.registry?.aictxHome === undefined
+    ...(options.registry?.memoryHome === undefined
       ? {}
-      : { aictxHome: options.registry.aictxHome })
+      : { memoryHome: options.registry.memoryHome })
   });
 
   return program;
@@ -285,7 +285,7 @@ function exitCodeForCommanderError(error: CommanderError): CliExitCode {
     return CLI_EXIT_SUCCESS;
   }
 
-  if (error.code === "aictx.command.failed" && isCliExitCode(error.exitCode)) {
+  if (error.code === "memory.command.failed" && isCliExitCode(error.exitCode)) {
     return error.exitCode;
   }
 
@@ -300,7 +300,7 @@ interface ProjectRegistryHookOptions {
   cwd: string;
   stderr: CliOutputWriter;
   enabled: boolean;
-  aictxHome?: string;
+  memoryHome?: string;
 }
 
 function installProjectRegistryHook(
@@ -318,10 +318,10 @@ function installProjectRegistryHook(
 
     const registered = await registerCurrentProject({
       cwd: options.cwd,
-      ...(options.aictxHome === undefined ? {} : { aictxHome: options.aictxHome })
+      ...(options.memoryHome === undefined ? {} : { memoryHome: options.memoryHome })
     });
 
-    if (!registered.ok && registered.error.code !== "AICtxNotInitialized") {
+    if (!registered.ok && registered.error.code !== "MemoryNotInitialized") {
       options.stderr(`warning: Project registry was not updated: ${registered.error.message}\n`);
     }
   });
@@ -337,7 +337,7 @@ function commandPath(command: Command): string {
   const names: string[] = [];
   let current: Command | null = command;
 
-  while (current !== null && current.name() !== "aictx") {
+  while (current !== null && current.name() !== "memory") {
     names.unshift(current.name());
     current = current.parent ?? null;
   }

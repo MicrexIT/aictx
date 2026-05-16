@@ -1,7 +1,7 @@
 import { lstat, mkdir, readdir, readFile, rm } from "node:fs/promises";
 import { isAbsolute, join, posix, relative, resolve, sep } from "node:path";
 
-import { aictxError, type JsonValue } from "../core/errors.js";
+import { memoryError, type JsonValue } from "../core/errors.js";
 import { stableJsonStringify, writeTextAtomic } from "../core/fs.js";
 import { err, ok, type Result } from "../core/result.js";
 import type { ObjectId, Predicate } from "../core/types.js";
@@ -10,8 +10,8 @@ import type { CanonicalStorageSnapshot } from "../storage/read.js";
 import type { StoredMemoryRelation } from "../storage/relations.js";
 
 export const OBSIDIAN_EXPORT_FORMAT = "obsidian";
-export const DEFAULT_OBSIDIAN_EXPORT_DIR = ".aictx/exports/obsidian";
-export const OBSIDIAN_EXPORT_MANIFEST_FILENAME = ".aictx-obsidian-export.json";
+export const DEFAULT_OBSIDIAN_EXPORT_DIR = ".memory/exports/obsidian";
+export const OBSIDIAN_EXPORT_MANIFEST_FILENAME = ".memory-obsidian-export.json";
 
 const MANIFEST_VERSION = 1;
 const INDEX_NOTE_PATH = "index.md";
@@ -157,8 +157,8 @@ function resolveOutputTarget(
 
   const relativePath = relativeProjectPath(root, absolutePath);
 
-  if (isUnsafeAictxTarget(relativePath)) {
-    return invalidTarget("Obsidian export target cannot overlap canonical Aictx storage.", {
+  if (isUnsafeMemoryTarget(relativePath)) {
+    return invalidTarget("Obsidian export target cannot overlap canonical Memory storage.", {
       target: relativePath
     });
   }
@@ -218,7 +218,7 @@ async function prepareOutputTarget(
   if (!hasManifest) {
     if (entries.length > 0) {
       return invalidTarget(
-        "Obsidian export target is non-empty and does not contain an Aictx export manifest.",
+        "Obsidian export target is non-empty and does not contain an Memory export manifest.",
         {
           target: output.relativePath
         }
@@ -433,13 +433,13 @@ function renderIndexNote(
   objects: readonly StoredMemoryObject[]
 ): string {
   const frontmatter: JsonValue = {
-    aictx_export_format: OBSIDIAN_EXPORT_FORMAT,
-    aictx_project: storage.config.project.id,
-    aliases: ["Aictx Memory"],
-    tags: ["aictx"]
+    memory_export_format: OBSIDIAN_EXPORT_FORMAT,
+    memory_project: storage.config.project.id,
+    aliases: ["Memory"],
+    tags: ["memory"]
   };
   const body = [
-    "# Aictx Memory",
+    "# Memory",
     "",
     `Project: ${storage.config.project.name}`,
     "",
@@ -473,45 +473,45 @@ function objectFrontmatter(
 ): JsonValue {
   const sidecar = object.sidecar;
   const frontmatter: Record<string, JsonValue> = {
-    aictx_id: sidecar.id,
-    aictx_title: sidecar.title,
-    aictx_type: sidecar.type,
-    aictx_status: sidecar.status,
-    aictx_scope_kind: sidecar.scope.kind,
-    aictx_scope_project: sidecar.scope.project,
-    aictx_created_at: sidecar.created_at,
-    aictx_updated_at: sidecar.updated_at,
+    memory_id: sidecar.id,
+    memory_title: sidecar.title,
+    memory_type: sidecar.type,
+    memory_status: sidecar.status,
+    memory_scope_kind: sidecar.scope.kind,
+    memory_scope_project: sidecar.scope.project,
+    memory_created_at: sidecar.created_at,
+    memory_updated_at: sidecar.updated_at,
     aliases: [sidecar.title],
     tags: [...(sidecar.tags ?? [])]
   };
 
   if (sidecar.scope.branch !== null) {
-    frontmatter.aictx_scope_branch = sidecar.scope.branch;
+    frontmatter.memory_scope_branch = sidecar.scope.branch;
   }
 
   if (sidecar.scope.task !== null) {
-    frontmatter.aictx_scope_task = sidecar.scope.task;
+    frontmatter.memory_scope_task = sidecar.scope.task;
   }
 
   if (sidecar.origin !== undefined) {
-    frontmatter.aictx_origin_kind = sidecar.origin.kind;
-    frontmatter.aictx_origin_locator = sidecar.origin.locator;
+    frontmatter.memory_origin_kind = sidecar.origin.kind;
+    frontmatter.memory_origin_locator = sidecar.origin.locator;
 
     if (sidecar.origin.captured_at !== undefined) {
-      frontmatter.aictx_origin_captured_at = sidecar.origin.captured_at;
+      frontmatter.memory_origin_captured_at = sidecar.origin.captured_at;
     }
 
     if (sidecar.origin.digest !== undefined) {
-      frontmatter.aictx_origin_digest = sidecar.origin.digest;
+      frontmatter.memory_origin_digest = sidecar.origin.digest;
     }
 
     if (sidecar.origin.media_type !== undefined) {
-      frontmatter.aictx_origin_media_type = sidecar.origin.media_type;
+      frontmatter.memory_origin_media_type = sidecar.origin.media_type;
     }
   }
 
   for (const [predicate, relations] of groupRelationsByPredicate(outgoingRelations)) {
-    frontmatter[`aictx_rel_${predicate}`] = relations.map((relation) =>
+    frontmatter[`memory_rel_${predicate}`] = relations.map((relation) =>
       wikilink(relation.relation.to)
     );
   }
@@ -521,11 +521,11 @@ function objectFrontmatter(
 
 function renderRelationsSection(outgoingRelations: readonly StoredMemoryRelation[]): string {
   if (outgoingRelations.length === 0) {
-    return "## Aictx Relations\n\nNo active outgoing relations.\n";
+    return "## Memory Relations\n\nNo active outgoing relations.\n";
   }
 
   return [
-    "## Aictx Relations",
+    "## Memory Relations",
     "",
     ...outgoingRelations.map(
       (relation) => `- ${relation.relation.predicate}: ${wikilink(relation.relation.to)}`
@@ -634,12 +634,12 @@ function isInsideOrEqual(root: string, target: string): boolean {
   return relativePath === "" || (!relativePath.startsWith("..") && !isAbsolute(relativePath));
 }
 
-function isUnsafeAictxTarget(relativePath: string): boolean {
-  if (relativePath === ".aictx" || relativePath === ".aictx/exports") {
+function isUnsafeMemoryTarget(relativePath: string): boolean {
+  if (relativePath === ".memory" || relativePath === ".memory/exports") {
     return true;
   }
 
-  return relativePath.startsWith(".aictx/") && !relativePath.startsWith(".aictx/exports/");
+  return relativePath.startsWith(".memory/") && !relativePath.startsWith(".memory/exports/");
 }
 
 function isSafeManifestFile(file: string): boolean {
@@ -675,7 +675,7 @@ function manifestToJson(manifest: ObsidianExportManifest): JsonValue {
 }
 
 function invalidTarget<T>(message: string, details: JsonValue): Result<T> {
-  return err(aictxError("AICtxExportTargetInvalid", message, details));
+  return err(memoryError("MemoryExportTargetInvalid", message, details));
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

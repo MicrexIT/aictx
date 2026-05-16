@@ -1,11 +1,11 @@
-# Contributing to Aictx
+# Contributing to Memory
 
-Thanks for helping improve Aictx. This project is the npm package
+Thanks for helping improve Memory. This project is the npm package
 `@aictx/memory`: local-first, reviewable project memory for AI coding agents.
 
-Aictx is not a chat transcript archive, always-on capture server, hosted memory
+Memory is not a chat transcript archive, always-on capture server, hosted memory
 service, vector DB, or prompt template. Contributions should preserve that
-shape: typed memory in `.aictx/`, local indexing, explicit validation, and
+shape: typed memory in `.memory/`, local indexing, explicit validation, and
 normal Git review.
 
 ## First contribution paths
@@ -26,7 +26,7 @@ areas, describe the review order in the pull request so maintainers can check
 the riskiest part first.
 
 Please do not include secrets, private project memory, proprietary logs, or
-unredacted `.aictx/` content from another project in issues or pull requests.
+unredacted `.memory/` content from another project in issues or pull requests.
 
 ## Before opening an issue
 
@@ -36,8 +36,8 @@ memory. Include:
 - the command or workflow you ran;
 - what you expected to happen;
 - what actually happened;
-- `node --version`, `pnpm --version`, and `aictx --version` when relevant;
-- a minimal redacted `.aictx/` sample only when the issue depends on storage
+- `node --version`, `pnpm --version`, and `memory --version` when relevant;
+- a minimal redacted `.memory/` sample only when the issue depends on storage
   contents;
 - screenshots for viewer or README visual problems.
 
@@ -47,7 +47,7 @@ project memory.
 
 ## Development setup
 
-Aictx requires Node.js `>=22` and uses pnpm.
+Memory requires Node.js `>=22` and uses pnpm.
 
 ```bash
 pnpm install
@@ -131,10 +131,10 @@ If you use an AI coding agent for git management, give it this prompt before it
 starts changing files:
 
 ```text
-You are working in the Aictx repository.
+You are working in the Memory repository.
 
 Before non-trivial work, run:
-aictx load "<task summary>"
+memory load "<task summary>"
 
 Never push directly to main. Start from latest main, create a feature branch,
 commit only the intended files, push that branch, and open a pull request
@@ -142,9 +142,9 @@ targeting main. Required checks are Node 22, Node 24, and Analyze JavaScript and
 TypeScript. Wait for checks to pass before merging. If the branch is behind
 main, update it and wait for checks again.
 
-Do not edit .aictx canonical memory files directly when the Aictx CLI can make
+Do not edit .memory canonical memory files directly when the Memory CLI can make
 the change. After meaningful work, decide whether durable memory should change;
-use aictx suggest when useful, save with aictx remember --stdin, and report
+use memory suggest when useful, save with memory remember --stdin, and report
 whether memory changed.
 ```
 
@@ -178,7 +178,7 @@ preserve its commits.
 - Keep generated guidance files in sync by running `pnpm build:guidance` when
   editing `integrations/templates/agent-guidance.md`; generated integration
   artifacts live under `integrations/`.
-- Do not edit `.aictx/` canonical memory files directly when the Aictx CLI can
+- Do not edit `.memory/` canonical memory files directly when the Memory CLI can
   make the change.
 
 ## Memory model changes
@@ -189,7 +189,7 @@ agent memory discipline need extra care. A good proposal should explain:
 - the user or agent problem;
 - the new or changed CLI/MCP surface;
 - storage and migration impact;
-- how older `.aictx/` projects behave;
+- how older `.memory/` projects behave;
 - docs and tests required before release.
 
 ## Community standards

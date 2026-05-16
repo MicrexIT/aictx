@@ -1,6 +1,6 @@
 import path from "node:path";
 
-import { aictxError } from "./errors.js";
+import { memoryError } from "./errors.js";
 import { readUtf8FileInsideRoot } from "./fs.js";
 import { err, ok, type Result } from "./result.js";
 import {
@@ -10,16 +10,16 @@ import {
 } from "./subprocess.js";
 import type { GitState } from "./types.js";
 
-const AICTX_PATHSPEC = ".aictx";
+const MEMORY_PATHSPEC = ".memory";
 const IGNORED_DIRTY_PATHS = [
-  ".aictx/index/",
-  ".aictx/context/",
-  ".aictx/exports/",
-  ".aictx/recovery/"
+  ".memory/index/",
+  ".memory/context/",
+  ".memory/exports/",
+  ".memory/recovery/"
 ] as const;
-const IGNORED_DIRTY_FILES = [".aictx/.lock"] as const;
+const IGNORED_DIRTY_FILES = [".memory/.lock"] as const;
 const IGNORED_PROJECT_CHANGE_PREFIXES = [
-  ".aictx/",
+  ".memory/",
   ".cache/",
   ".next/",
   ".svelte-kit/",
@@ -35,7 +35,7 @@ const IGNORED_PROJECT_CHANGE_PREFIXES = [
   "temp/",
   "tmp/"
 ] as const;
-const IGNORED_PROJECT_CHANGE_FILES = [".aictx"] as const;
+const IGNORED_PROJECT_CHANGE_FILES = [".memory"] as const;
 const LOG_FIELD_SEPARATOR = "\u001f";
 
 export interface GitWrapperOptions {
@@ -47,13 +47,13 @@ export interface GitRootStatus {
   root: string | null;
 }
 
-export interface AictxDirtyState {
+export interface MemoryDirtyState {
   dirty: boolean;
   files: string[];
   unmergedFiles: string[];
 }
 
-export interface AictxDiff {
+export interface MemoryDiff {
   diff: string;
   changedFiles: string[];
   untrackedFiles: string[];
@@ -63,18 +63,18 @@ export interface ProjectChangedFiles {
   changedFiles: string[];
 }
 
-export interface TrackedAictxDirtyFiles {
+export interface TrackedMemoryDirtyFiles {
   files: string[];
 }
 
-export interface AictxLogEntry {
+export interface MemoryLogEntry {
   commit: string;
   shortCommit: string;
   unixTimestamp: number;
   subject: string;
 }
 
-export interface AictxFileAtCommit {
+export interface MemoryFileAtCommit {
   commit: string;
   path: string;
   contents: string;
@@ -145,7 +145,7 @@ export async function getGitState(
   const [branchResult, commitResult, dirtyResult] = await Promise.all([
     getCurrentGitBranch(projectRoot, options),
     getCurrentCommit(projectRoot, options),
-    getAictxDirtyState(projectRoot, options)
+    getMemoryDirtyState(projectRoot, options)
   ]);
 
   if (!branchResult.ok) {
@@ -168,12 +168,12 @@ export async function getGitState(
   });
 }
 
-export async function getAictxDirtyState(
+export async function getMemoryDirtyState(
   projectRoot: string,
   options: GitWrapperOptions = {}
-): Promise<Result<AictxDirtyState>> {
+): Promise<Result<MemoryDirtyState>> {
   const result = await runGit(
-    ["status", "--porcelain=v1", "--", AICTX_PATHSPEC],
+    ["status", "--porcelain=v1", "--", MEMORY_PATHSPEC],
     projectRoot,
     options
   );
@@ -204,11 +204,11 @@ export async function getAictxDirtyState(
   });
 }
 
-export async function getTrackedAictxDirtyFiles(
+export async function getTrackedMemoryDirtyFiles(
   projectRoot: string,
   options: GitWrapperOptions = {}
-): Promise<Result<TrackedAictxDirtyFiles>> {
-  const dirtyState = await getAictxDirtyState(projectRoot, options);
+): Promise<Result<TrackedMemoryDirtyFiles>> {
+  const dirtyState = await getMemoryDirtyState(projectRoot, options);
 
   if (!dirtyState.ok) {
     return dirtyState;
@@ -247,11 +247,11 @@ export async function filterTrackedFiles(
   return ok(tracked);
 }
 
-export async function getAictxDiff(
+export async function getMemoryDiff(
   projectRoot: string,
   options: GitWrapperOptions = {}
-): Promise<Result<AictxDiff>> {
-  const result = await runGit(["diff", "--", AICTX_PATHSPEC], projectRoot, options);
+): Promise<Result<MemoryDiff>> {
+  const result = await runGit(["diff", "--", MEMORY_PATHSPEC], projectRoot, options);
 
   if (!result.ok) {
     return result;
@@ -261,13 +261,13 @@ export async function getAictxDiff(
     return gitCommandFailed("Git diff failed.", result.data);
   }
 
-  const untrackedFiles = await getUntrackedAictxFiles(projectRoot, options);
+  const untrackedFiles = await getUntrackedMemoryFiles(projectRoot, options);
 
   if (!untrackedFiles.ok) {
     return untrackedFiles;
   }
 
-  const untrackedDiff = await renderUntrackedAictxDiff(
+  const untrackedDiff = await renderUntrackedMemoryDiff(
     projectRoot,
     untrackedFiles.data
   );
@@ -314,12 +314,12 @@ export async function getChangedProjectFiles(
   });
 }
 
-async function getUntrackedAictxFiles(
+async function getUntrackedMemoryFiles(
   projectRoot: string,
   options: GitWrapperOptions = {}
 ): Promise<Result<string[]>> {
   const result = await runGit(
-    ["status", "--porcelain=v1", "--untracked-files=all", "--", AICTX_PATHSPEC],
+    ["status", "--porcelain=v1", "--untracked-files=all", "--", MEMORY_PATHSPEC],
     projectRoot,
     options
   );
@@ -338,14 +338,14 @@ async function getUntrackedAictxFiles(
     .filter((entry): entry is PorcelainStatusEntry => entry !== null)
     .filter((entry) => entry.status === "??")
     .map((entry) => entry.path)
-    .filter((file) => file.startsWith(".aictx/"))
+    .filter((file) => file.startsWith(".memory/"))
     .filter((file) => !file.endsWith("/"))
     .filter((file) => !isIgnoredDirtyPath(file));
 
   return ok(uniqueSorted(files));
 }
 
-async function renderUntrackedAictxDiff(
+async function renderUntrackedMemoryDiff(
   projectRoot: string,
   files: readonly string[]
 ): Promise<Result<string>> {
@@ -414,16 +414,16 @@ function appendDiff(trackedDiff: string, untrackedDiff: string): string {
     : `${trackedDiff}\n${untrackedDiff}`;
 }
 
-export async function getAictxLog(
+export async function getMemoryLog(
   projectRoot: string,
   options: GitWrapperOptions = {}
-): Promise<Result<AictxLogEntry[]>> {
+): Promise<Result<MemoryLogEntry[]>> {
   const result = await runGit(
     [
       "log",
       `--format=%H${LOG_FIELD_SEPARATOR}%h${LOG_FIELD_SEPARATOR}%ct${LOG_FIELD_SEPARATOR}%s`,
       "--",
-      AICTX_PATHSPEC
+      MEMORY_PATHSPEC
     ],
     projectRoot,
     options
@@ -440,19 +440,19 @@ export async function getAictxLog(
   return ok(parseLogEntries(result.data.stdout));
 }
 
-export async function showAictxFileAtCommit(
+export async function showMemoryFileAtCommit(
   projectRoot: string,
   commit: string,
   filePath: string,
   options: GitWrapperOptions = {}
-): Promise<Result<AictxFileAtCommit>> {
+): Promise<Result<MemoryFileAtCommit>> {
   const revision = validateGitRevision(commit);
 
   if (!revision.ok) {
     return revision;
   }
 
-  const normalizedPath = normalizeAictxFilePath(filePath);
+  const normalizedPath = normalizeMemoryFilePath(filePath);
 
   if (!normalizedPath.ok) {
     return normalizedPath;
@@ -497,7 +497,7 @@ export async function getRecentProjectFileChanges(
 
   if (!Number.isSafeInteger(limit) || limit < 1) {
     return err(
-      aictxError("AICtxValidationFailed", "Git file history limit must be positive.", {
+      memoryError("MemoryValidationFailed", "Git file history limit must be positive.", {
         field: "limit",
         actual: limit
       })
@@ -528,7 +528,7 @@ export async function getRecentProjectFileChanges(
   });
 }
 
-export async function restoreAictxFromCommit(
+export async function restoreMemoryFromCommit(
   projectRoot: string,
   commit: string,
   options: GitWrapperOptions = {}
@@ -540,7 +540,7 @@ export async function restoreAictxFromCommit(
   }
 
   const result = await runGit(
-    ["restore", "--source", revision.data, "--", AICTX_PATHSPEC],
+    ["restore", "--source", revision.data, "--", MEMORY_PATHSPEC],
     projectRoot,
     options
   );
@@ -610,7 +610,7 @@ async function runGit(
 
   if (!result.ok) {
     return err(
-      aictxError("AICtxGitOperationFailed", "Git operation failed.", {
+      memoryError("MemoryGitOperationFailed", "Git operation failed.", {
         message: result.error.message
       })
     );
@@ -621,7 +621,7 @@ async function runGit(
     options.gitUnavailableOk !== true &&
     isGitUnavailableResult(result.data)
   ) {
-    return err(aictxError("AICtxGitRequired", "Git is required for this operation."));
+    return err(memoryError("MemoryGitRequired", "Git is required for this operation."));
   }
 
   return result;
@@ -636,7 +636,7 @@ function parsePorcelainStatusLine(line: string): PorcelainStatusEntry | null {
   const status = line.slice(0, 2);
   const path = parseStatusChangedPath(line);
 
-  if (path === null || (!path.startsWith(".aictx/") && path !== ".aictx")) {
+  if (path === null || (!path.startsWith(".memory/") && path !== ".memory")) {
     return null;
   }
 
@@ -683,7 +683,7 @@ function parseDiffChangedFiles(diff: string): string[] {
 
     const match = /^diff --git a\/(.+?) b\/(.+)$/.exec(line);
 
-    if (match?.[2] !== undefined && match[2].startsWith(".aictx/")) {
+    if (match?.[2] !== undefined && match[2].startsWith(".memory/")) {
       files.push(unquoteGitPath(match[2]));
     }
   }
@@ -691,7 +691,7 @@ function parseDiffChangedFiles(diff: string): string[] {
   return uniqueSorted(files);
 }
 
-function parseLogEntries(stdout: string): AictxLogEntry[] {
+function parseLogEntries(stdout: string): MemoryLogEntry[] {
   return stdout
     .split("\n")
     .filter((line) => line.length > 0)
@@ -826,22 +826,22 @@ async function isTrackedFile(
   return gitCommandFailed("Git tracked-file detection failed.", result.data);
 }
 
-function normalizeAictxFilePath(filePath: string): Result<string> {
+function normalizeMemoryFilePath(filePath: string): Result<string> {
   const slashPath = filePath.replaceAll("\\", "/");
 
   if (path.posix.isAbsolute(slashPath)) {
-    return invalidAictxPath(filePath);
+    return invalidMemoryPath(filePath);
   }
 
-  const prefixedPath = slashPath.startsWith(".aictx/") ? slashPath : `.aictx/${slashPath}`;
+  const prefixedPath = slashPath.startsWith(".memory/") ? slashPath : `.memory/${slashPath}`;
   const normalizedPath = path.posix.normalize(prefixedPath);
 
   if (
-    normalizedPath === ".aictx" ||
-    !normalizedPath.startsWith(".aictx/") ||
+    normalizedPath === ".memory" ||
+    !normalizedPath.startsWith(".memory/") ||
     normalizedPath.includes("\0")
   ) {
-    return invalidAictxPath(filePath);
+    return invalidMemoryPath(filePath);
   }
 
   return ok(normalizedPath);
@@ -856,7 +856,7 @@ function validateGitRevision(revision: string): Result<string> {
     /\s/.test(revision)
   ) {
     return err(
-      aictxError("AICtxValidationFailed", "Git revision is not a safe commit or ref.", {
+      memoryError("MemoryValidationFailed", "Git revision is not a safe commit or ref.", {
         revision
       })
     );
@@ -865,9 +865,9 @@ function validateGitRevision(revision: string): Result<string> {
   return ok(revision);
 }
 
-function invalidAictxPath(filePath: string): Result<string> {
+function invalidMemoryPath(filePath: string): Result<string> {
   return err(
-    aictxError("AICtxValidationFailed", "Git file path must stay inside .aictx/.", {
+    memoryError("MemoryValidationFailed", "Git file path must stay inside .memory/.", {
       path: filePath
     })
   );
@@ -875,7 +875,7 @@ function invalidAictxPath(filePath: string): Result<string> {
 
 function gitCommandFailed<T>(message: string, result: SubprocessResult): Result<T> {
   return err(
-    aictxError("AICtxGitOperationFailed", message, {
+    memoryError("MemoryGitOperationFailed", message, {
       command: result.command,
       args: [...result.args],
       exitCode: result.exitCode,

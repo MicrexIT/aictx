@@ -1,4 +1,4 @@
-import { aictxError, type JsonValue } from "../core/errors.js";
+import { memoryError, type JsonValue } from "../core/errors.js";
 import { err, ok, type Result } from "../core/result.js";
 
 const MAX_HINT_ITEMS = 50;
@@ -158,7 +158,7 @@ function normalizePathHint(value: string): string | null {
     normalized.includes("/../") ||
     normalized.includes("\0") ||
     normalized.includes("://") ||
-    normalized.startsWith(".aictx/")
+    normalized.startsWith(".memory/")
   ) {
     return null;
   }
@@ -207,7 +207,7 @@ function normalizeHistoryWindow(value: unknown): Result<string | null> {
 }
 
 function invalidHints<T>(message: string, details: JsonValue): Result<T> {
-  return err(aictxError("AICtxValidationFailed", message, details));
+  return err(memoryError("MemoryValidationFailed", message, details));
 }
 
 function uniqueSorted(values: readonly string[]): string[] {

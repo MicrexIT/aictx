@@ -1,9 +1,9 @@
 ---
 title: Agent integration
-description: How Aictx fits into a coding-agent workflow.
+description: How Memory fits into a coding-agent workflow.
 ---
 
-Aictx gives coding agents a local project-memory loop:
+Memory gives coding agents a local project-memory loop:
 
 ```text
 load memory -> work -> save durable memory
@@ -11,7 +11,7 @@ load memory -> work -> save durable memory
 
 The v1 agent model is CLI-first and MCP-compatible. Use the CLI by default. Use
 MCP only when the agent client has already launched and connected to
-`aictx-mcp`.
+`memory-mcp`.
 
 The agent still makes the judgment call. It reads the task, loaded memory, repo
 state, tests, and conversation, then decides what future agents should
@@ -23,12 +23,12 @@ Before non-trivial coding, architecture, debugging, dependency, or
 configuration work:
 
 ```bash
-aictx load "<task summary>"
-aictx load "<task summary>" --mode debugging
-aictx load "<task summary>" --file src/context/rank.ts --changed-file src/index/search.ts --history-window 30d
+memory load "<task summary>"
+memory load "<task summary>" --mode debugging
+memory load "<task summary>" --file src/context/rank.ts --changed-file src/index/search.ts --history-window 30d
 ```
 
-MCP equivalents are available only when the client already exposes Aictx MCP
+MCP equivalents are available only when the client already exposes Memory MCP
 tools:
 
 ```text
@@ -51,7 +51,7 @@ Load modes are `coding`, `debugging`, `review`, `architecture`, and
 After meaningful work, save durable knowledge:
 
 ```bash
-aictx remember --stdin
+memory remember --stdin
 ```
 
 MCP equivalent when available:
@@ -61,40 +61,40 @@ remember_memory({ task, memories, updates, stale, supersede, relations })
 ```
 
 `remember` is the normal intent-first write path. It converts semantic agent
-input into a structured patch internally. Use `aictx save --stdin` or
+input into a structured patch internally. Use `memory save --stdin` or
 `save_memory_patch({ patch })` only for advanced patch-shaped writes.
 
-Saved memory is active after Aictx validates and writes it. Dirty or untracked
-`.aictx/` files are not by themselves a reason to skip saving durable memory.
-When a save overwrites or deletes a dirty touched file, Aictx first backs it up
-under `.aictx/recovery/`.
+Saved memory is active after Memory validates and writes it. Dirty or untracked
+`.memory/` files are not by themselves a reason to skip saving durable memory.
+When a save overwrites or deletes a dirty touched file, Memory first backs it up
+under `.memory/recovery/`.
 
 Accepted memory can be inspected later:
 
 ```bash
-aictx view
-aictx diff
+memory view
+memory diff
 ```
 
-`aictx diff` includes tracked and untracked Aictx memory changes in Git
-projects. Aictx writes local files and never commits automatically.
+`memory diff` includes tracked and untracked Memory changes in Git
+projects. Memory writes local files and never commits automatically.
 
-When `aictx` is not on `PATH`, run through the project package manager or local
+When `memory` is not on `PATH`, run through the project package manager or local
 binary:
 
 ```bash
-pnpm exec aictx load "<task summary>"
-npm exec aictx load "<task summary>"
-./node_modules/.bin/aictx load "<task summary>"
-npx --package @aictx/memory -- aictx load "<task summary>"
-pnpm exec aictx-mcp
-npm exec aictx-mcp
-./node_modules/.bin/aictx-mcp
-npx --package @aictx/memory -- aictx-mcp
+pnpm exec memory load "<task summary>"
+npm exec memory load "<task summary>"
+./node_modules/.bin/memory load "<task summary>"
+npx --package @aictx/memory -- memory load "<task summary>"
+pnpm exec memory-mcp
+npm exec memory-mcp
+./node_modules/.bin/memory-mcp
+npx --package @aictx/memory -- memory-mcp
 ```
 
 :::tip
-Save nothing when the task produced no durable future value. Aictx is meant to
+Save nothing when the task produced no durable future value. Memory is meant to
 reduce repeated context work, not record every step an agent took.
 :::
 
@@ -102,32 +102,32 @@ reduce repeated context work, not record every step an agent took.
 
 | Capability | MCP | CLI |
 | --- | --- | --- |
-| Load task context | `load_memory` | `aictx load` |
-| Search memory | `search_memory` | `aictx search` |
-| Inspect object | `inspect_memory` | `aictx inspect` |
-| Remember durable context | `remember_memory` | `aictx remember` |
-| Save structured patch | `save_memory_patch` | `aictx save` |
-| Show memory diff | `diff_memory` | `aictx diff` |
-| Initialize storage | none | `aictx init`, `aictx setup` |
-| Review patch file | none | `aictx patch review` |
-| Validate storage | none | `aictx check` |
-| Rebuild generated index | none | `aictx rebuild` |
-| Reset local storage | none | `aictx reset` |
-| Upgrade storage schema | none | `aictx upgrade` |
-| Show memory history | none | `aictx history` |
-| Restore memory | none | `aictx restore` |
-| Rewind memory | none | `aictx rewind` |
-| List stale memory | none | `aictx stale` |
-| Show graph neighborhood | none | `aictx graph`, `aictx view` graph screen |
-| Show memory lens | none | `aictx lens` |
-| Manage branch handoff | none | `aictx handoff` |
-| Export Obsidian projection | none | `aictx export obsidian` |
-| Manage project registry | none | `aictx projects` |
-| View local memory | none | `aictx view` |
-| Suggest memory decision packet | none | `aictx suggest` |
-| Audit memory hygiene | none | `aictx audit` |
-| Wiki source workflow | none | `aictx wiki` |
-| Read public docs | none | `aictx docs` |
+| Load task context | `load_memory` | `memory load` |
+| Search memory | `search_memory` | `memory search` |
+| Inspect object | `inspect_memory` | `memory inspect` |
+| Remember durable context | `remember_memory` | `memory remember` |
+| Save structured patch | `save_memory_patch` | `memory save` |
+| Show memory diff | `diff_memory` | `memory diff` |
+| Initialize storage | none | `memory init`, `memory setup` |
+| Review patch file | none | `memory patch review` |
+| Validate storage | none | `memory check` |
+| Rebuild generated index | none | `memory rebuild` |
+| Reset local storage | none | `memory reset` |
+| Upgrade storage schema | none | `memory upgrade` |
+| Show memory history | none | `memory history` |
+| Restore memory | none | `memory restore` |
+| Rewind memory | none | `memory rewind` |
+| List stale memory | none | `memory stale` |
+| Show graph neighborhood | none | `memory graph`, `memory view` graph screen |
+| Show memory lens | none | `memory lens` |
+| Manage branch handoff | none | `memory handoff` |
+| Export Obsidian projection | none | `memory export obsidian` |
+| Manage project registry | none | `memory projects` |
+| View local memory | none | `memory view` |
+| Suggest memory decision packet | none | `memory suggest` |
+| Audit memory hygiene | none | `memory audit` |
+| Wiki source workflow | none | `memory wiki` |
+| Read public docs | none | `memory docs` |
 
 For MCP setup details, see the [MCP guide](/mcp/). For compact command and patch
 syntax, see [Reference](/reference/).
@@ -143,7 +143,7 @@ Good memory stays narrow, durable, and current:
 - Delete memory that should not persist.
 - Prefer current code and user requests over loaded memory when they conflict.
 - Report whether memory changed; async inspection is available through
-  `aictx view`, `aictx diff`, or Git tools.
+  `memory view`, `memory diff`, or Git tools.
 - Save nothing when the task produced no durable future value.
 
 After failure or correction, treat the event as a memory-quality signal:
@@ -226,31 +226,31 @@ requests, or safety rules.
 
 ## Bootstrap and suggestion packets
 
-`aictx setup` provides guided first-run onboarding. It initializes storage if
+`memory setup` provides guided first-run onboarding. It initializes storage if
 needed, writes conservative evidence-backed bootstrap memory by default, runs
 checks, prints role coverage, and starts the local viewer unless told not to.
 
-For the agent-led first-run path, use `aictx setup`, then run
-`aictx lens project-map` for a readable overview or
-`aictx load "onboard to this repository"` to verify retrieval.
+For the agent-led first-run path, use `memory setup`, then run
+`memory lens project-map` for a readable overview or
+`memory load "onboard to this repository"` to verify retrieval.
 
-Use `aictx handoff update --stdin` only for unfinished branch continuity that
+Use `memory handoff update --stdin` only for unfinished branch continuity that
 should not become project truth yet.
 
 ```bash
-aictx suggest --bootstrap --json
-aictx suggest --bootstrap --patch > bootstrap-memory.json
-aictx patch review bootstrap-memory.json
-aictx save --file bootstrap-memory.json
-aictx check
+memory suggest --bootstrap --json
+memory suggest --bootstrap --patch > bootstrap-memory.json
+memory patch review bootstrap-memory.json
+memory save --file bootstrap-memory.json
+memory check
 ```
 
-`aictx suggest --from-diff --json` creates a memory suggestion packet from
-current code changes. `aictx suggest --after-task --json` includes ranked
+`memory suggest --from-diff --json` creates a memory suggestion packet from
+current code changes. `memory suggest --after-task --json` includes ranked
 `recommended_actions`; treat them as advisory defaults, not authoritative
 semantic memory. Agents still fill in durable `title`, `body`, and `reason`
-fields from current evidence. `aictx audit --json` reports grouped, actionable
-memory hygiene issues and role coverage gaps. Missing roles are not `aictx
+fields from current evidence. `memory audit --json` reports grouped, actionable
+memory hygiene issues and role coverage gaps. Missing roles are not `memory
 check` failures.
 
 For the full memory-quality loop, see [Demand-driven memory](/demand-driven-memory/).

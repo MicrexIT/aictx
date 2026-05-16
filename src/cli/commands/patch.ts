@@ -4,10 +4,10 @@ import { resolve } from "node:path";
 import { CommanderError, type Command } from "commander";
 
 import { systemClock } from "../../core/clock.js";
-import { aictxError } from "../../core/errors.js";
+import { memoryError } from "../../core/errors.js";
 import { getGitState } from "../../core/git.js";
 import { resolveProjectPaths } from "../../core/paths.js";
-import type { AictxMeta, ObjectId, RelationId } from "../../core/types.js";
+import type { MemoryMeta, ObjectId, RelationId } from "../../core/types.js";
 import { planMemoryPatch } from "../../storage/patch.js";
 import { detectSecretsInPatch } from "../../validation/secrets.js";
 import {
@@ -42,7 +42,7 @@ export function registerPatchCommand(
   program: Command,
   options: RegisterPatchCommandOptions
 ): void {
-  const patch = program.command("patch").description("Review structured Aictx patch files.");
+  const patch = program.command("patch").description("Review structured Memory patch files.");
 
   patch
     .command("review <file>")
@@ -60,8 +60,8 @@ export function registerPatchCommand(
       if (rendered.exitCode !== CLI_EXIT_SUCCESS) {
         throw new CommanderError(
           rendered.exitCode,
-          "aictx.command.failed",
-          "Aictx command failed."
+          "memory.command.failed",
+          "Memory command failed."
         );
       }
     });
@@ -108,9 +108,9 @@ async function reviewPatchFile(cwd: string, file: string) {
     };
   }
 
-  const meta: AictxMeta = {
+  const meta: MemoryMeta = {
     project_root: paths.data.projectRoot,
-    aictx_root: paths.data.aictxRoot,
+    memory_root: paths.data.memoryRoot,
     git: git.data
   };
   const secrets = detectSecretsInPatch(patch.data);
@@ -178,7 +178,7 @@ async function readPatchFile(cwd: string, file: string) {
   } catch (error) {
     return {
       ok: false as const,
-      error: aictxError("AICtxInvalidJson", "Patch review file could not be read as JSON.", {
+      error: memoryError("MemoryInvalidJson", "Patch review file could not be read as JSON.", {
         path: file,
         message: error instanceof Error ? error.message : String(error)
       }),
@@ -245,7 +245,7 @@ function emptyReview(proposed: boolean, reason: string | null): PatchReviewData 
 
 function renderPatchReviewData(data: PatchReviewData): string {
   return [
-    data.proposed ? "Aictx patch review:" : "No patch to apply.",
+    data.proposed ? "Memory patch review:" : "No patch to apply.",
     ...(data.reason === null ? [] : [`Reason: ${data.reason}`]),
     ...renderList("Operations", data.operations),
     ...renderList("Memory IDs", data.memory_ids),
@@ -270,12 +270,12 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function fallbackMeta(cwd: string): AictxMeta {
+function fallbackMeta(cwd: string): MemoryMeta {
   const projectRoot = resolve(cwd);
 
   return {
     project_root: projectRoot,
-    aictx_root: resolve(projectRoot, ".aictx"),
+    memory_root: resolve(projectRoot, ".memory"),
     git: {
       available: false,
       branch: null,

@@ -1,12 +1,12 @@
 import { CommanderError, type Command } from "commander";
 
 import {
-  resetAllAictx,
-  resetAictx,
+  resetAllMemory,
+  resetMemory,
   unregisterProjectRoot,
-  type ResetAllAictxData,
-  type ResetAictxData,
-  type ResetAictxOptions
+  type ResetAllMemoryData,
+  type ResetMemoryData,
+  type ResetMemoryOptions
 } from "../../app/operations.js";
 import { CLI_EXIT_SUCCESS } from "../exit.js";
 import { renderAppResult } from "../render.js";
@@ -17,7 +17,7 @@ export interface RegisterResetCommandOptions {
   cwd: string;
   stdout: CliOutputWriter;
   stderr: CliOutputWriter;
-  aictxHome?: string;
+  memoryHome?: string;
   registryEnabled?: boolean;
 }
 
@@ -27,15 +27,15 @@ export function registerResetCommand(
 ): void {
   program
     .command("reset")
-    .description("Back up and clear local Aictx storage.")
-    .option("--all", "Reset every project in the user-level Aictx project registry.")
-    .option("--destroy", "Delete the entire .aictx directory without creating a backup.")
+    .description("Back up and clear local Memory storage.")
+    .option("--all", "Reset every project in the user-level Memory project registry.")
+    .option("--destroy", "Delete the entire .memory directory without creating a backup.")
     .action(async (commandOptions: ResetCommandOptions, command: Command) => {
       if (commandOptions.all === true) {
-        const result = await resetAllAictx(resetAictxOptions(options, commandOptions));
+        const result = await resetAllMemory(resetMemoryOptions(options, commandOptions));
         const rendered = renderAppResult(result, {
           json: isJsonMode(command),
-          renderData: renderResetAllAictxData
+          renderData: renderResetAllMemoryData
         });
 
         options.stdout(rendered.stdout);
@@ -44,18 +44,18 @@ export function registerResetCommand(
         if (rendered.exitCode !== CLI_EXIT_SUCCESS) {
           throw new CommanderError(
             rendered.exitCode,
-            "aictx.command.failed",
-            "Aictx command failed."
+            "memory.command.failed",
+            "Memory command failed."
           );
         }
 
         return;
       }
 
-      const result = await resetAictx(resetAictxOptions(options, commandOptions));
+      const result = await resetMemory(resetMemoryOptions(options, commandOptions));
       const rendered = renderAppResult(result, {
         json: isJsonMode(command),
-        renderData: renderResetAictxData
+        renderData: renderResetMemoryData
       });
 
       options.stdout(rendered.stdout);
@@ -64,8 +64,8 @@ export function registerResetCommand(
       if (rendered.exitCode !== CLI_EXIT_SUCCESS) {
         throw new CommanderError(
           rendered.exitCode,
-          "aictx.command.failed",
-          "Aictx command failed."
+          "memory.command.failed",
+          "Memory command failed."
         );
       }
 
@@ -73,7 +73,7 @@ export function registerResetCommand(
         const unregistered = await unregisterProjectRoot({
           cwd: options.cwd,
           projectRoot: result.meta.project_root,
-          ...(options.aictxHome === undefined ? {} : { aictxHome: options.aictxHome })
+          ...(options.memoryHome === undefined ? {} : { memoryHome: options.memoryHome })
         });
 
         if (!unregistered.ok) {
@@ -88,14 +88,14 @@ interface ResetCommandOptions {
   destroy?: boolean;
 }
 
-function resetAictxOptions(
+function resetMemoryOptions(
   options: RegisterResetCommandOptions,
   commandOptions: ResetCommandOptions
-): ResetAictxOptions {
+): ResetMemoryOptions {
   return {
     cwd: options.cwd,
     destroy: commandOptions.destroy === true,
-    ...(options.aictxHome === undefined ? {} : { aictxHome: options.aictxHome })
+    ...(options.memoryHome === undefined ? {} : { memoryHome: options.memoryHome })
   };
 }
 
@@ -104,23 +104,23 @@ function isJsonMode(command: Command): boolean {
   return options.json === true;
 }
 
-function renderResetAictxData(data: ResetAictxData): string {
+function renderResetMemoryData(data: ResetMemoryData): string {
   if (data.destroyed) {
-    return "Deleted .aictx.";
+    return "Deleted .memory.";
   }
 
   return [
-    "Backed up and cleared .aictx.",
+    "Backed up and cleared .memory.",
     `Backup: ${data.backup_path ?? "none"}`,
     ...renderList("Removed entries", data.entries_removed)
   ].join("\n");
 }
 
-function renderResetAllAictxData(data: ResetAllAictxData): string {
+function renderResetAllMemoryData(data: ResetAllMemoryData): string {
   return [
     data.destroyed
-      ? "Deleted .aictx for registered projects."
-      : "Backed up and cleared .aictx for registered projects.",
+      ? "Deleted .memory for registered projects."
+      : "Backed up and cleared .memory for registered projects.",
     `Registry: ${data.registry_path}`,
     `Projects reset: ${data.projects_reset.length}`,
     `Projects skipped: ${data.projects_skipped.length}`,
@@ -131,7 +131,7 @@ function renderResetAllAictxData(data: ResetAllAictxData): string {
   ].join("\n");
 }
 
-function renderResetAllProject(project: ResetAllAictxData["projects_reset"][number]): string {
+function renderResetAllProject(project: ResetAllMemoryData["projects_reset"][number]): string {
   return [
     `- reset: ${project.project.name} (${project.project.id})`,
     `  project_root: ${project.project_root}`,
@@ -140,7 +140,7 @@ function renderResetAllProject(project: ResetAllAictxData["projects_reset"][numb
   ].join("\n");
 }
 
-function renderSkippedProject(project: ResetAllAictxData["projects_skipped"][number]): string {
+function renderSkippedProject(project: ResetAllMemoryData["projects_skipped"][number]): string {
   return [
     `- skipped: ${project.project.name} (${project.project.id})`,
     `  project_root: ${project.project_root}`,
@@ -148,7 +148,7 @@ function renderSkippedProject(project: ResetAllAictxData["projects_skipped"][num
   ].join("\n");
 }
 
-function renderFailedProject(project: ResetAllAictxData["projects_failed"][number]): string {
+function renderFailedProject(project: ResetAllMemoryData["projects_failed"][number]): string {
   return [
     `- failed: ${project.project.name} (${project.project.id})`,
     `  project_root: ${project.project_root}`,

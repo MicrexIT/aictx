@@ -27,12 +27,12 @@ afterEach(async () => {
 });
 
 describe("restore and rewind services", () => {
-  it("restores only .aictx from a prior commit, rebuilds the index, and leaves HEAD unchanged", async () => {
-    const repo = await createInitializedGitProject("aictx-restore-service-");
-    const initialAictxCommit = (await git(repo, ["rev-parse", "HEAD"])).trim();
+  it("restores only .memory from a prior commit, rebuilds the index, and leaves HEAD unchanged", async () => {
+    const repo = await createInitializedGitProject("memory-restore-service-");
+    const initialMemoryCommit = (await git(repo, ["rev-parse", "HEAD"])).trim();
     const saved = await saveRestoreNote(repo);
 
-    await commit(repo, "Add restore note", "2026-04-25T14:02:00+02:00", [".aictx"]);
+    await commit(repo, "Add restore note", "2026-04-25T14:02:00+02:00", [".memory"]);
     await writeFile(join(repo, "src.ts"), "code after memory commit\n", "utf8");
     await commit(repo, "Update app code only", "2026-04-25T14:03:00+02:00", ["src.ts"]);
 
@@ -40,7 +40,7 @@ describe("restore and rewind services", () => {
     const sourceBeforeRestore = await readFile(join(repo, "src.ts"), "utf8");
     const result = await restoreMemory({
       cwd: repo,
-      commit: initialAictxCommit,
+      commit: initialMemoryCommit,
       clock: createFixedTestClock(FIXED_TIMESTAMP_NEXT_MINUTE)
     });
 
@@ -49,13 +49,13 @@ describe("restore and rewind services", () => {
       return;
     }
 
-    expect(result.data.restored_from).toBe(initialAictxCommit);
+    expect(result.data.restored_from).toBe(initialMemoryCommit);
     expect(result.data.index_rebuilt).toBe(true);
     expect(result.data.files_changed).toEqual(
       expect.arrayContaining([
-        ".aictx/events.jsonl",
-        ".aictx/memory/notes/restore-only-memory.json",
-        ".aictx/memory/notes/restore-only-memory.md"
+        ".memory/events.jsonl",
+        ".memory/memory/notes/restore-only-memory.json",
+        ".memory/memory/notes/restore-only-memory.md"
       ])
     );
     expect((await git(repo, ["rev-parse", "HEAD"])).trim()).toBe(headBeforeRestore);
@@ -80,10 +80,10 @@ describe("restore and rewind services", () => {
     }
   });
 
-  it("blocks restore when canonical .aictx files are dirty", async () => {
-    const repo = await createInitializedGitProject("aictx-restore-dirty-");
+  it("blocks restore when canonical .memory files are dirty", async () => {
+    const repo = await createInitializedGitProject("memory-restore-dirty-");
     const targetCommit = (await git(repo, ["rev-parse", "HEAD"])).trim();
-    const projectPath = join(repo, ".aictx", "memory", "project.md");
+    const projectPath = join(repo, ".memory", "memory", "project.md");
     const dirtyContents = "# Dirty Project\n\nUncommitted memory edit.\n";
 
     await writeFile(projectPath, dirtyContents, "utf8");
@@ -95,14 +95,14 @@ describe("restore and rewind services", () => {
 
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.error.code).toBe("AICtxDirtyMemory");
+      expect(result.error.code).toBe("MemoryDirtyMemory");
     }
     expect(await readFile(projectPath, "utf8")).toBe(dirtyContents);
     expect((await git(repo, ["rev-parse", "HEAD"])).trim()).toBe(targetCommit);
   });
 
-  it("returns AICtxGitRequired outside Git", async () => {
-    const projectRoot = await createInitializedLocalProject("aictx-restore-local-");
+  it("returns MemoryGitRequired outside Git", async () => {
+    const projectRoot = await createInitializedLocalProject("memory-restore-local-");
     const result = await restoreMemory({
       cwd: projectRoot,
       commit: "HEAD",
@@ -111,16 +111,16 @@ describe("restore and rewind services", () => {
 
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.error.code).toBe("AICtxGitRequired");
+      expect(result.error.code).toBe("MemoryGitRequired");
     }
   });
 
-  it("rewinds to the previous committed .aictx state without moving HEAD", async () => {
-    const repo = await createInitializedGitProject("aictx-rewind-service-");
-    const initialAictxCommit = (await git(repo, ["rev-parse", "HEAD"])).trim();
+  it("rewinds to the previous committed .memory state without moving HEAD", async () => {
+    const repo = await createInitializedGitProject("memory-rewind-service-");
+    const initialMemoryCommit = (await git(repo, ["rev-parse", "HEAD"])).trim();
     const saved = await saveRestoreNote(repo);
 
-    await commit(repo, "Add restore note", "2026-04-25T14:02:00+02:00", [".aictx"]);
+    await commit(repo, "Add restore note", "2026-04-25T14:02:00+02:00", [".memory"]);
     const headBeforeRewind = (await git(repo, ["rev-parse", "HEAD"])).trim();
     const result = await rewindMemory({
       cwd: repo,
@@ -132,7 +132,7 @@ describe("restore and rewind services", () => {
       return;
     }
 
-    expect(result.data.restored_from).toBe(initialAictxCommit);
+    expect(result.data.restored_from).toBe(initialMemoryCommit);
     expect(result.data.index_rebuilt).toBe(true);
     expect((await git(repo, ["rev-parse", "HEAD"])).trim()).toBe(headBeforeRewind);
     await expect(access(join(repo, saved.noteMarkdownPath))).rejects.toMatchObject({
@@ -140,10 +140,10 @@ describe("restore and rewind services", () => {
     });
   });
 
-  it("fails rewind when no previous committed .aictx state exists", async () => {
-    const repo = await createInitializedGitProject("aictx-rewind-no-previous-");
+  it("fails rewind when no previous committed .memory state exists", async () => {
+    const repo = await createInitializedGitProject("memory-rewind-no-previous-");
     const headBeforeRewind = (await git(repo, ["rev-parse", "HEAD"])).trim();
-    const projectPath = join(repo, ".aictx", "memory", "project.md");
+    const projectPath = join(repo, ".memory", "memory", "project.md");
     const projectBeforeRewind = await readFile(projectPath, "utf8");
     const result = await rewindMemory({
       cwd: repo,
@@ -152,7 +152,7 @@ describe("restore and rewind services", () => {
 
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.error.code).toBe("AICtxValidationFailed");
+      expect(result.error.code).toBe("MemoryValidationFailed");
     }
     expect((await git(repo, ["rev-parse", "HEAD"])).trim()).toBe(headBeforeRewind);
     expect(await readFile(projectPath, "utf8")).toBe(projectBeforeRewind);
@@ -188,7 +188,7 @@ async function saveRestoreNote(
 
   return {
     noteId: result.data.memory_created[0] ?? "note.restore-only-memory",
-    noteMarkdownPath: ".aictx/memory/notes/restore-only-memory.md"
+    noteMarkdownPath: ".memory/memory/notes/restore-only-memory.md"
   };
 }
 
@@ -204,9 +204,9 @@ async function createInitializedGitProject(prefix: string): Promise<string> {
     throw new Error(initialized.error.message);
   }
 
-  await commit(repo, "Initialize aictx", "2026-04-25T14:00:00+02:00", [
+  await commit(repo, "Initialize memory", "2026-04-25T14:00:00+02:00", [
     ".gitignore",
-    ".aictx"
+    ".memory"
   ]);
 
   return repo;
@@ -231,7 +231,7 @@ async function createRepo(prefix: string): Promise<string> {
   const repo = await createTempRoot(prefix);
   await git(repo, ["init", "--initial-branch=main"]);
   await git(repo, ["config", "user.email", "test@example.com"]);
-  await git(repo, ["config", "user.name", "Aictx Test"]);
+  await git(repo, ["config", "user.name", "Memory Test"]);
   await writeFile(join(repo, "README.md"), "# Test\n", "utf8");
   await writeFile(join(repo, "src.ts"), "initial\n", "utf8");
   await commit(repo, "Initial commit", "2026-04-25T13:59:00+02:00", [

@@ -44,19 +44,19 @@ afterEach(async () => {
   );
 });
 
-describe("aictx save CLI", () => {
+describe("memory save CLI", () => {
   it("saves equivalent patches from stdin and file through the shared write path", async () => {
     const patch = createNotePatch(
       "Shared save note",
       "Both CLI input sources should reach the same save service."
     );
-    const stdinProject = await createInitializedProject("aictx-cli-save-stdin-");
-    const fileProject = await createInitializedProject("aictx-cli-save-file-");
+    const stdinProject = await createInitializedProject("memory-cli-save-stdin-");
+    const fileProject = await createInitializedProject("memory-cli-save-file-");
     const stdinOutput = createCapturedOutput();
     const fileOutput = createCapturedOutput();
     const applyPatch = vi.spyOn(dataAccessService, "applyPatch");
 
-    const stdinExitCode = await main(["node", "aictx", "save", "--stdin", "--json"], {
+    const stdinExitCode = await main(["node", "memory", "save", "--stdin", "--json"], {
       ...stdinOutput.writers,
       cwd: stdinProject,
       stdin: Readable.from([JSON.stringify(patch)])
@@ -64,7 +64,7 @@ describe("aictx save CLI", () => {
     const patchFile = join(fileProject, "patch.json");
     await writeFile(patchFile, JSON.stringify(patch), "utf8");
     const fileExitCode = await main(
-      ["node", "aictx", "save", "--file", "patch.json", "--json"],
+      ["node", "memory", "save", "--file", "patch.json", "--json"],
       {
         ...fileOutput.writers,
         cwd: fileProject
@@ -97,9 +97,9 @@ describe("aictx save CLI", () => {
     expect(fileEnvelope.data).toEqual(stdinEnvelope.data);
     expect(stdinEnvelope.data).toEqual({
       files_changed: [
-        ".aictx/events.jsonl",
-        ".aictx/memory/notes/shared-save-note.json",
-        ".aictx/memory/notes/shared-save-note.md"
+        ".memory/events.jsonl",
+        ".memory/memory/notes/shared-save-note.json",
+        ".memory/memory/notes/shared-save-note.md"
       ],
       memory_created: ["note.shared-save-note"],
       memory_updated: [],
@@ -117,12 +117,12 @@ describe("aictx save CLI", () => {
   });
 
   it.each([
-    ["stdin", ["node", "aictx", "save", "--stdin", "--json"]] as const,
-    ["file", ["node", "aictx", "save", "--file", "patch.json", "--json"]] as const
+    ["stdin", ["node", "memory", "save", "--stdin", "--json"]] as const,
+    ["file", ["node", "memory", "save", "--file", "patch.json", "--json"]] as const
   ])("exits 1 for invalid JSON from %s", async (source, argv) => {
-    const projectRoot = await createInitializedProject(`aictx-cli-save-invalid-${source}-`);
+    const projectRoot = await createInitializedProject(`memory-cli-save-invalid-${source}-`);
     const output = createCapturedOutput();
-    const eventsBefore = await readFile(join(projectRoot, ".aictx", "events.jsonl"), "utf8");
+    const eventsBefore = await readFile(join(projectRoot, ".memory", "events.jsonl"), "utf8");
 
     if (source === "file") {
       await writeFile(join(projectRoot, "patch.json"), "{bad json\n", "utf8");
@@ -138,17 +138,17 @@ describe("aictx save CLI", () => {
     expect(output.stderr()).toBe("");
     const envelope = JSON.parse(output.stdout()) as SaveErrorEnvelope;
     expect(envelope.ok).toBe(false);
-    expect(envelope.error.code).toBe("AICtxInvalidJson");
-    await expect(readFile(join(projectRoot, ".aictx", "events.jsonl"), "utf8")).resolves.toBe(
+    expect(envelope.error.code).toBe("MemoryInvalidJson");
+    await expect(readFile(join(projectRoot, ".memory", "events.jsonl"), "utf8")).resolves.toBe(
       eventsBefore
     );
   });
 
   it("exits 2 when no input source is provided", async () => {
-    const projectRoot = await createInitializedProject("aictx-cli-save-missing-source-");
+    const projectRoot = await createInitializedProject("memory-cli-save-missing-source-");
     const output = createCapturedOutput();
 
-    const exitCode = await main(["node", "aictx", "save"], {
+    const exitCode = await main(["node", "memory", "save"], {
       ...output.writers,
       cwd: projectRoot
     });
@@ -159,10 +159,10 @@ describe("aictx save CLI", () => {
   });
 
   it("exits 2 when both input sources are provided", async () => {
-    const projectRoot = await createInitializedProject("aictx-cli-save-duplicate-source-");
+    const projectRoot = await createInitializedProject("memory-cli-save-duplicate-source-");
     const output = createCapturedOutput();
 
-    const exitCode = await main(["node", "aictx", "save", "--stdin", "--file", "patch.json"], {
+    const exitCode = await main(["node", "memory", "save", "--stdin", "--file", "patch.json"], {
       ...output.writers,
       cwd: projectRoot,
       stdin: Readable.from([JSON.stringify(createNotePatch("Ignored", "Should not be read."))])
@@ -207,7 +207,7 @@ async function expectSavedNote(projectRoot: string, id: string): Promise<void> {
 async function createInitializedProject(prefix: string): Promise<string> {
   const projectRoot = await createTempRoot(prefix);
   const output = createCapturedOutput();
-  const exitCode = await main(["node", "aictx", "init", "--json"], {
+  const exitCode = await main(["node", "memory", "init", "--json"], {
     ...output.writers,
     cwd: projectRoot
   });

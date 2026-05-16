@@ -19,16 +19,16 @@ afterEach(async () => {
 
 describe("SQLite index connection and migrations", () => {
   it("opens an empty database and migrates it to the current schema version", async () => {
-    const aictxRoot = await createAictxRoot();
+    const memoryRoot = await createMemoryRoot();
 
-    const opened = await openIndexDatabase({ aictxRoot });
+    const opened = await openIndexDatabase({ memoryRoot });
 
     expect(opened.ok).toBe(true);
     if (!opened.ok) {
       return;
     }
 
-    expect(opened.data.path).toBe(join(aictxRoot, "index", "aictx.sqlite"));
+    expect(opened.data.path).toBe(join(memoryRoot, "index", "memory.sqlite"));
     expect((await stat(opened.data.path)).isFile()).toBe(true);
 
     const version = getIndexSchemaVersion(opened.data.db);
@@ -115,7 +115,7 @@ describe("SQLite index connection and migrations", () => {
 
     expect(transaction.ok).toBe(false);
     if (!transaction.ok) {
-      expect(transaction.error.code).toBe("AICtxIndexUnavailable");
+      expect(transaction.error.code).toBe("MemoryIndexUnavailable");
     }
     expect(readMeta(connection.db).built_at).toBe("");
 
@@ -140,8 +140,8 @@ interface MetaRow {
 }
 
 async function openMigratedConnection(): Promise<IndexDatabaseConnection> {
-  const aictxRoot = await createAictxRoot();
-  const opened = await openIndexDatabase({ aictxRoot });
+  const memoryRoot = await createMemoryRoot();
+  const opened = await openIndexDatabase({ memoryRoot });
 
   expect(opened.ok).toBe(true);
   if (!opened.ok) {
@@ -151,14 +151,14 @@ async function openMigratedConnection(): Promise<IndexDatabaseConnection> {
   return opened.data;
 }
 
-async function createAictxRoot(): Promise<string> {
-  const root = await mkdtemp(join(tmpdir(), "aictx-sqlite-"));
+async function createMemoryRoot(): Promise<string> {
+  const root = await mkdtemp(join(tmpdir(), "memory-sqlite-"));
   tempRoots.push(root);
 
-  const aictxRoot = join(root, ".aictx");
-  await mkdir(aictxRoot);
+  const memoryRoot = join(root, ".memory");
+  await mkdir(memoryRoot);
 
-  return aictxRoot;
+  return memoryRoot;
 }
 
 function listTables(db: IndexDatabaseConnection["db"]): string[] {

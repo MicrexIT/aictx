@@ -115,15 +115,15 @@ describe("applyMemoryPatch relation operations", () => {
     expect(result.data.relations_deleted).toEqual(["rel.billing-retries-mentions-idempotency"]);
     expect(result.data.events_appended).toBe(3);
     expect(result.data.files_changed).toEqual([
-      ".aictx/events.jsonl",
-      ".aictx/relations/billing-retries-mentions-idempotency.json",
-      ".aictx/relations/billing-retries-requires-idempotency.json",
-      ".aictx/relations/constraint-webhook-idempotency-affects-decision-billing-retries.json"
+      ".memory/events.jsonl",
+      ".memory/relations/billing-retries-mentions-idempotency.json",
+      ".memory/relations/billing-retries-requires-idempotency.json",
+      ".memory/relations/constraint-webhook-idempotency-affects-decision-billing-retries.json"
     ]);
 
     const created = await readJsonProjectFile(
       projectRoot,
-      ".aictx/relations/constraint-webhook-idempotency-affects-decision-billing-retries.json"
+      ".memory/relations/constraint-webhook-idempotency-affects-decision-billing-retries.json"
     );
     expect(created).toEqual(
       expect.objectContaining({
@@ -147,7 +147,7 @@ describe("applyMemoryPatch relation operations", () => {
 
     const updated = await readJsonProjectFile(
       projectRoot,
-      ".aictx/relations/billing-retries-requires-idempotency.json"
+      ".memory/relations/billing-retries-requires-idempotency.json"
     );
     expect(updated).toEqual(
       expect.objectContaining({
@@ -170,7 +170,7 @@ describe("applyMemoryPatch relation operations", () => {
     expectRelationHash(updated);
     await expectPathMissing(
       projectRoot,
-      ".aictx/relations/billing-retries-mentions-idempotency.json"
+      ".memory/relations/billing-retries-mentions-idempotency.json"
     );
 
     const events = await readEvents(projectRoot);
@@ -219,7 +219,7 @@ describe("applyMemoryPatch relation operations", () => {
     }
   ])("rejects missing $name endpoints before disk mutation", async ({ change, field }) => {
     const projectRoot = await createRelationPatchProject();
-    const before = await readAictxSnapshot(projectRoot);
+    const before = await readMemorySnapshot(projectRoot);
 
     const result = await applyMemoryPatch({
       projectRoot,
@@ -235,15 +235,15 @@ describe("applyMemoryPatch relation operations", () => {
 
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.error.code).toBe("AICtxObjectNotFound");
+      expect(result.error.code).toBe("MemoryObjectNotFound");
       expect(JSON.stringify(result.error.details)).toContain(field);
     }
-    await expect(readAictxSnapshot(projectRoot)).resolves.toEqual(before);
+    await expect(readMemorySnapshot(projectRoot)).resolves.toEqual(before);
   });
 
   it("rejects duplicate equivalent relations before disk mutation", async () => {
     const projectRoot = await createRelationPatchProject();
-    const before = await readAictxSnapshot(projectRoot);
+    const before = await readMemorySnapshot(projectRoot);
 
     const result = await applyMemoryPatch({
       projectRoot,
@@ -267,14 +267,14 @@ describe("applyMemoryPatch relation operations", () => {
 
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.error.code).toBe("AICtxInvalidRelation");
+      expect(result.error.code).toBe("MemoryInvalidRelation");
     }
-    await expect(readAictxSnapshot(projectRoot)).resolves.toEqual(before);
+    await expect(readMemorySnapshot(projectRoot)).resolves.toEqual(before);
   });
 
   it("rejects immutable relation endpoint updates before disk mutation", async () => {
     const projectRoot = await createRelationPatchProject();
-    const before = await readAictxSnapshot(projectRoot);
+    const before = await readMemorySnapshot(projectRoot);
 
     const result = await applyMemoryPatch({
       projectRoot,
@@ -296,14 +296,14 @@ describe("applyMemoryPatch relation operations", () => {
 
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.error.code).toBe("AICtxSchemaValidationFailed");
+      expect(result.error.code).toBe("MemorySchemaValidationFailed");
     }
-    await expect(readAictxSnapshot(projectRoot)).resolves.toEqual(before);
+    await expect(readMemorySnapshot(projectRoot)).resolves.toEqual(before);
   });
 
   it("treats relation updates without mutable fields as no-ops", async () => {
     const projectRoot = await createRelationPatchProject();
-    const before = await readAictxSnapshot(projectRoot);
+    const before = await readMemorySnapshot(projectRoot);
 
     const result = await applyMemoryPatch({
       projectRoot,
@@ -330,23 +330,23 @@ describe("applyMemoryPatch relation operations", () => {
     expect(result.data.relations_updated).toEqual([]);
     expect(result.data.events_appended).toBe(0);
     expect(result.data.files_changed).toEqual([]);
-    await expect(readAictxSnapshot(projectRoot)).resolves.toEqual(before);
+    await expect(readMemorySnapshot(projectRoot)).resolves.toEqual(before);
   });
 });
 
 async function createRelationPatchProject(): Promise<string> {
-  const projectRoot = await mkdtemp(join(tmpdir(), "aictx-relation-patch-"));
+  const projectRoot = await mkdtemp(join(tmpdir(), "memory-relation-patch-"));
   tempRoots.push(projectRoot);
-  await mkdir(join(projectRoot, ".aictx", "schema"), { recursive: true });
+  await mkdir(join(projectRoot, ".memory", "schema"), { recursive: true });
 
   for (const schemaFile of Object.values(SCHEMA_FILES)) {
     await copyFile(
       join(repoRoot, "src", "schemas", schemaFile),
-      join(projectRoot, ".aictx", "schema", schemaFile)
+      join(projectRoot, ".memory", "schema", schemaFile)
     );
   }
 
-  await writeJsonProjectFile(projectRoot, ".aictx/config.json", validConfig);
+  await writeJsonProjectFile(projectRoot, ".memory/config.json", validConfig);
   await writeMemoryObject(projectRoot, {
     id: "decision.billing-retries",
     type: "decision",
@@ -378,7 +378,7 @@ async function createRelationPatchProject(): Promise<string> {
     to: "constraint.webhook-idempotency",
     status: "active"
   });
-  await writeProjectFile(projectRoot, ".aictx/events.jsonl", "");
+  await writeProjectFile(projectRoot, ".memory/events.jsonl", "");
 
   return projectRoot;
 }
@@ -417,10 +417,10 @@ async function writeMemoryObject(
 
   await writeJsonProjectFile(
     projectRoot,
-    `.aictx/${fixture.bodyPath.replace(/\.md$/, ".json")}`,
+    `.memory/${fixture.bodyPath.replace(/\.md$/, ".json")}`,
     sidecar
   );
-  await writeProjectFile(projectRoot, `.aictx/${fixture.bodyPath}`, fixture.body);
+  await writeProjectFile(projectRoot, `.memory/${fixture.bodyPath}`, fixture.body);
 }
 
 async function writeRelation(
@@ -451,7 +451,7 @@ async function writeRelation(
 
   await writeJsonProjectFile(
     projectRoot,
-    `.aictx/relations/${fixture.id.slice("rel.".length)}.json`,
+    `.memory/relations/${fixture.id.slice("rel.".length)}.json`,
     relation
   );
 }
@@ -464,7 +464,7 @@ async function readJsonProjectFile(
 }
 
 async function readEvents(projectRoot: string): Promise<Record<string, unknown>[]> {
-  const contents = await readFile(join(projectRoot, ".aictx/events.jsonl"), "utf8");
+  const contents = await readFile(join(projectRoot, ".memory/events.jsonl"), "utf8");
 
   return contents
     .split("\n")
@@ -472,9 +472,9 @@ async function readEvents(projectRoot: string): Promise<Record<string, unknown>[
     .map((line) => JSON.parse(line) as Record<string, unknown>);
 }
 
-async function readAictxSnapshot(projectRoot: string): Promise<Record<string, string>> {
+async function readMemorySnapshot(projectRoot: string): Promise<Record<string, string>> {
   const paths = (
-    await fg(".aictx/**", {
+    await fg(".memory/**", {
       cwd: projectRoot,
       dot: true,
       onlyFiles: true,

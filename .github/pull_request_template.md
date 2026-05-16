@@ -20,7 +20,7 @@ Acceptance criteria:
 
 Verification commands:
 
-Aictx memory decision:
+Memory decision:
 ```
 
 ## Verification
@@ -35,4 +35,4 @@ Aictx memory decision:
 - [ ] The prompt is specific enough for a coding agent to act without guessing.
 - [ ] Public docs or README updated when behavior changed.
 - [ ] Package contents considered when release files changed.
-- [ ] Aictx memory save/no-save decision made after meaningful work.
+- [ ] Memory save/no-save decision made after meaningful work.

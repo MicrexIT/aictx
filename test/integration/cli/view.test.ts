@@ -18,7 +18,7 @@ afterEach(async () => {
   );
 });
 
-describe("aictx view CLI", () => {
+describe("memory view CLI", () => {
   it("resolves the detached child entrypoint from bundled and unbundled CLI modules", () => {
     expect(resolveDetachedCliPath(
       pathToFileURL("/package/dist/cli/main.js").href
@@ -29,12 +29,12 @@ describe("aictx view CLI", () => {
   });
 
   it("prints a usable local URL and keeps running until shutdown", async () => {
-    const projectRoot = await createInitializedProject("aictx-cli-view-project-");
-    const assetsDir = await createViewerAssets("aictx-cli-view-assets-");
-    const aictxHome = await createTempRoot("aictx-cli-view-home-");
+    const projectRoot = await createInitializedProject("memory-cli-view-project-");
+    const assetsDir = await createViewerAssets("memory-cli-view-assets-");
+    const memoryHome = await createTempRoot("memory-cli-view-home-");
     const output = createCapturedOutput();
     const shutdown = new AbortController();
-    const running = main(["node", "aictx", "view"], {
+    const running = main(["node", "memory", "view"], {
       ...output.writers,
       cwd: projectRoot,
       viewer: {
@@ -43,7 +43,7 @@ describe("aictx view CLI", () => {
       },
       registry: {
         enabled: false,
-        aictxHome
+        memoryHome
       }
     });
     const url = await waitForHumanViewerUrl(output.stdout);
@@ -59,12 +59,12 @@ describe("aictx view CLI", () => {
   });
 
   it("prints the JSON startup envelope and protects API requests with the token", async () => {
-    const projectRoot = await createInitializedProject("aictx-cli-view-json-project-");
-    const assetsDir = await createViewerAssets("aictx-cli-view-json-assets-");
-    const aictxHome = await createTempRoot("aictx-cli-view-json-home-");
+    const projectRoot = await createInitializedProject("memory-cli-view-json-project-");
+    const assetsDir = await createViewerAssets("memory-cli-view-json-assets-");
+    const memoryHome = await createTempRoot("memory-cli-view-json-home-");
     const output = createCapturedOutput();
     const shutdown = new AbortController();
-    const running = main(["node", "aictx", "view", "--json"], {
+    const running = main(["node", "memory", "view", "--json"], {
       ...output.writers,
       cwd: projectRoot,
       viewer: {
@@ -73,7 +73,7 @@ describe("aictx view CLI", () => {
       },
       registry: {
         enabled: false,
-        aictxHome
+        memoryHome
       }
     });
     const envelope = await waitForJsonOutput<{
@@ -109,13 +109,13 @@ describe("aictx view CLI", () => {
   });
 
   it("starts on an explicit available loopback port", async () => {
-    const projectRoot = await createInitializedProject("aictx-cli-view-port-project-");
-    const assetsDir = await createViewerAssets("aictx-cli-view-port-assets-");
-    const aictxHome = await createTempRoot("aictx-cli-view-port-home-");
+    const projectRoot = await createInitializedProject("memory-cli-view-port-project-");
+    const assetsDir = await createViewerAssets("memory-cli-view-port-assets-");
+    const memoryHome = await createTempRoot("memory-cli-view-port-home-");
     const port = await getAvailableLoopbackPort();
     const output = createCapturedOutput();
     const shutdown = new AbortController();
-    const running = main(["node", "aictx", "view", "--port", String(port), "--json"], {
+    const running = main(["node", "memory", "view", "--port", String(port), "--json"], {
       ...output.writers,
       cwd: projectRoot,
       viewer: {
@@ -124,7 +124,7 @@ describe("aictx view CLI", () => {
       },
       registry: {
         enabled: false,
-        aictxHome
+        memoryHome
       }
     });
     const envelope = await waitForJsonOutput<{
@@ -151,9 +151,9 @@ describe("aictx view CLI", () => {
   });
 
   it("fails clearly for an unavailable explicit port", async () => {
-    const projectRoot = await createInitializedProject("aictx-cli-view-busy-project-");
-    const assetsDir = await createViewerAssets("aictx-cli-view-busy-assets-");
-    const aictxHome = await createTempRoot("aictx-cli-view-busy-home-");
+    const projectRoot = await createInitializedProject("memory-cli-view-busy-project-");
+    const assetsDir = await createViewerAssets("memory-cli-view-busy-assets-");
+    const memoryHome = await createTempRoot("memory-cli-view-busy-home-");
     const busy = createServer();
     const output = createCapturedOutput();
 
@@ -163,7 +163,7 @@ describe("aictx view CLI", () => {
       const address = busy.address();
       const port = typeof address === "object" && address !== null ? address.port : 0;
       const exitCode = await main(
-        ["node", "aictx", "view", "--port", String(port), "--json"],
+        ["node", "memory", "view", "--port", String(port), "--json"],
         {
           ...output.writers,
           cwd: projectRoot,
@@ -173,7 +173,7 @@ describe("aictx view CLI", () => {
           },
           registry: {
             enabled: false,
-            aictxHome
+            memoryHome
           }
         }
       );
@@ -192,7 +192,7 @@ describe("aictx view CLI", () => {
       expect(exitCode).toBe(1);
       expect(output.stderr()).toBe("");
       expect(envelope.ok).toBe(false);
-      expect(envelope.error.code).toBe("AICtxValidationFailed");
+      expect(envelope.error.code).toBe("MemoryValidationFailed");
       expect(envelope.error.message).toContain("could not bind");
       expect(envelope.error.details).toMatchObject({
         host: LOOPBACK_HOST,
@@ -204,10 +204,10 @@ describe("aictx view CLI", () => {
   });
 
   it("prints a detached viewer URL and exits", async () => {
-    const projectRoot = await createInitializedProject("aictx-cli-view-detach-project-");
-    const aictxHome = await createTempRoot("aictx-cli-view-detach-home-");
+    const projectRoot = await createInitializedProject("memory-cli-view-detach-project-");
+    const memoryHome = await createTempRoot("memory-cli-view-detach-home-");
     const output = createCapturedOutput();
-    const exitCode = await main(["node", "aictx", "view", "--detach", "--open", "--json"], {
+    const exitCode = await main(["node", "memory", "view", "--detach", "--open", "--json"], {
       ...output.writers,
       cwd: projectRoot,
       viewer: {
@@ -215,7 +215,7 @@ describe("aictx view CLI", () => {
           expect(options).toMatchObject({
             cwd: projectRoot,
             open: true,
-            aictxHome
+            memoryHome
           });
 
           return {
@@ -224,7 +224,7 @@ describe("aictx view CLI", () => {
               url: "http://127.0.0.1:49152/?token=test",
               host: LOOPBACK_HOST,
               port: 49152,
-              log_path: "/tmp/aictx-viewer-test.log"
+              log_path: "/tmp/memory-viewer-test.log"
             },
             warnings: []
           };
@@ -232,7 +232,7 @@ describe("aictx view CLI", () => {
       },
       registry: {
         enabled: false,
-        aictxHome
+        memoryHome
       }
     });
     const envelope = JSON.parse(output.stdout()) as {
@@ -251,7 +251,7 @@ describe("aictx view CLI", () => {
       url: "http://127.0.0.1:49152/?token=test",
       detached: true,
       open_attempted: true,
-      log_path: "/tmp/aictx-viewer-test.log"
+      log_path: "/tmp/memory-viewer-test.log"
     });
   });
 });
@@ -259,7 +259,7 @@ describe("aictx view CLI", () => {
 async function createInitializedProject(prefix: string): Promise<string> {
   const projectRoot = await createTempRoot(prefix);
   const output = createCapturedOutput();
-  const exitCode = await main(["node", "aictx", "init", "--json"], {
+  const exitCode = await main(["node", "memory", "init", "--json"], {
     ...output.writers,
     cwd: projectRoot
   });
@@ -283,8 +283,8 @@ async function createViewerAssets(prefix: string): Promise<string> {
 }
 
 async function waitForHumanViewerUrl(readStdout: () => string): Promise<URL> {
-  const output = await waitForOutput(readStdout, (text) => text.includes("Aictx viewer:"));
-  const match = output.match(/Aictx viewer: (?<url>http:\/\/127\.0\.0\.1:\d+\/\?token=\S+)/);
+  const output = await waitForOutput(readStdout, (text) => text.includes("Memory viewer:"));
+  const match = output.match(/Memory viewer: (?<url>http:\/\/127\.0\.0\.1:\d+\/\?token=\S+)/);
 
   if (match?.groups?.url === undefined) {
     throw new Error(`Viewer URL was not printed. Output: ${output}`);

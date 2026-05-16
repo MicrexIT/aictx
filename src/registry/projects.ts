@@ -5,7 +5,7 @@ import { homedir } from "node:os";
 import { isAbsolute, join, resolve } from "node:path";
 
 import { systemClock, type Clock } from "../core/clock.js";
-import { aictxError, type JsonValue } from "../core/errors.js";
+import { memoryError, type JsonValue } from "../core/errors.js";
 import { stableJsonStringify, writeJsonAtomic } from "../core/fs.js";
 import { resolveProjectPaths, type ProjectPaths } from "../core/paths.js";
 import { err, ok, type Result } from "../core/result.js";
@@ -28,7 +28,7 @@ export interface ProjectRegistryEntry {
   registry_id: string;
   project: ProjectRegistryProject;
   project_root: string;
-  aictx_root: string;
+  memory_root: string;
   source: ProjectRegistrySource;
   registered_at: IsoDateTime;
   last_seen_at: IsoDateTime;
@@ -45,13 +45,13 @@ export interface ProjectRegistry {
 }
 
 export interface ProjectRegistryLocation {
-  aictxHome: string;
+  memoryHome: string;
   registryPath: string;
   lockPath: string;
 }
 
 export interface ProjectRegistryOptions extends GitWrapperOptions {
-  aictxHome?: string;
+  memoryHome?: string;
   clock?: Clock;
 }
 
@@ -82,14 +82,14 @@ interface RegistryRecovery {
 type RegistryMutation<T> = (registry: ProjectRegistry) => Promise<Result<T>> | Result<T>;
 
 export function resolveProjectRegistryLocation(
-  options: Pick<ProjectRegistryOptions, "aictxHome"> = {}
+  options: Pick<ProjectRegistryOptions, "memoryHome"> = {}
 ): ProjectRegistryLocation {
-  const aictxHome = resolve(options.aictxHome ?? process.env.AICTX_HOME ?? join(homedir(), ".aictx"));
+  const memoryHome = resolve(options.memoryHome ?? process.env.MEMORY_HOME ?? join(homedir(), ".memory"));
 
   return {
-    aictxHome,
-    registryPath: join(aictxHome, PROJECT_REGISTRY_FILENAME),
-    lockPath: join(aictxHome, PROJECT_REGISTRY_LOCK_FILENAME)
+    memoryHome,
+    registryPath: join(memoryHome, PROJECT_REGISTRY_FILENAME),
+    lockPath: join(memoryHome, PROJECT_REGISTRY_LOCK_FILENAME)
   };
 }
 
@@ -150,7 +150,7 @@ export async function upsertCurrentProjectInRegistry(
       ...existing,
       project: project.data.entry.project,
       project_root: project.data.entry.project_root,
-      aictx_root: project.data.entry.aictx_root,
+      memory_root: project.data.entry.memory_root,
       source: existing.source === "manual" ? "manual" : options.source,
       last_seen_at: now
     };
@@ -173,7 +173,7 @@ export async function removeProjectFromRegistry(
 
     if (matched.data.length === 0) {
       return err(
-        aictxError("AICtxValidationFailed", "No registered Aictx project matched the identifier.", {
+        memoryError("MemoryValidationFailed", "No registered Memory project matched the identifier.", {
           identifier: options.identifier
         })
       );
@@ -181,7 +181,7 @@ export async function removeProjectFromRegistry(
 
     if (matched.data.length > 1) {
       return err(
-        aictxError("AICtxValidationFailed", "Multiple registered projects matched the identifier.", {
+        memoryError("MemoryValidationFailed", "Multiple registered projects matched the identifier.", {
           identifier: options.identifier,
           matches: matched.data.map((entry) => ({
             registry_id: entry.registry_id,
@@ -196,7 +196,7 @@ export async function removeProjectFromRegistry(
 
     if (removed === undefined) {
       return err(
-        aictxError("AICtxInternalError", "Project registry match disappeared before removal.")
+        memoryError("MemoryInternalError", "Project registry match disappeared before removal.")
       );
     }
 
@@ -298,7 +298,7 @@ export async function currentProjectRegistryEntry(
   const project = await resolveInitializedProject(options);
 
   if (!project.ok) {
-    if (project.error.code === "AICtxNotInitialized") {
+    if (project.error.code === "MemoryNotInitialized") {
       return ok(null, project.warnings);
     }
 
@@ -380,7 +380,7 @@ async function resolveInitializedProject(
   }
 
   const projectRoot = await canonicalProjectRoot(paths.data.projectRoot);
-  const aictxRoot = join(projectRoot, ".aictx");
+  const memoryRoot = join(projectRoot, ".memory");
 
   return ok(
     {
@@ -392,7 +392,7 @@ async function resolveInitializedProject(
           name: storage.data.config.project.name
         },
         project_root: projectRoot,
-        aictx_root: aictxRoot
+        memory_root: memoryRoot
       }
     },
     [...paths.warnings, ...storage.warnings]
@@ -443,7 +443,7 @@ async function readProjectRegistryFile(
     }
 
     return err(
-      aictxError("AICtxValidationFailed", "Project registry could not be read.", {
+      memoryError("MemoryValidationFailed", "Project registry could not be read.", {
         path: location.registryPath,
         message: messageFromUnknown(error)
       })
@@ -455,7 +455,7 @@ async function writeProjectRegistryFile(
   location: ProjectRegistryLocation,
   registry: ProjectRegistry
 ): Promise<Result<void>> {
-  return writeJsonAtomic(location.aictxHome, PROJECT_REGISTRY_FILENAME, registryToJson(registry));
+  return writeJsonAtomic(location.memoryHome, PROJECT_REGISTRY_FILENAME, registryToJson(registry));
 }
 
 async function recoverInvalidRegistry(
@@ -480,11 +480,11 @@ async function withRegistryLock<T>(
   callback: () => Promise<Result<T>>
 ): Promise<Result<T>> {
   try {
-    await mkdir(location.aictxHome, { recursive: true });
+    await mkdir(location.memoryHome, { recursive: true });
   } catch (error) {
     return err(
-      aictxError("AICtxValidationFailed", "Aictx home could not be created for the project registry.", {
-        aictxHome: location.aictxHome,
+      memoryError("MemoryValidationFailed", "Memory home could not be created for the project registry.", {
+        memoryHome: location.memoryHome,
         message: messageFromUnknown(error)
       })
     );
@@ -513,14 +513,14 @@ async function withRegistryLock<T>(
 
     if (errorCode(error) === "EEXIST") {
       return err(
-        aictxError("AICtxLockBusy", "Project registry lock is already held.", {
+        memoryError("MemoryLockBusy", "Project registry lock is already held.", {
           lockPath: location.lockPath
         })
       );
     }
 
     return err(
-      aictxError("AICtxValidationFailed", "Project registry lock could not be acquired.", {
+      memoryError("MemoryValidationFailed", "Project registry lock could not be acquired.", {
         lockPath: location.lockPath,
         message: messageFromUnknown(error)
       })
@@ -542,7 +542,7 @@ async function withRegistryLock<T>(
     throw thrown;
   }
 
-  return result ?? err(aictxError("AICtxInternalError", "Project registry callback returned no result."));
+  return result ?? err(memoryError("MemoryInternalError", "Project registry callback returned no result."));
 }
 
 function emptyRegistry(): ProjectRegistry {
@@ -596,7 +596,7 @@ function parseProjectRegistryEntry(value: unknown, index: number): Result<Projec
   const projectId = value.project.id;
   const projectName = value.project.name;
   const projectRoot = value.project_root;
-  const aictxRoot = value.aictx_root;
+  const memoryRoot = value.memory_root;
   const sourceValue = value.source;
   const registeredAt = value.registered_at;
   const lastSeenAt = value.last_seen_at;
@@ -616,8 +616,8 @@ function parseProjectRegistryEntry(value: unknown, index: number): Result<Projec
     return invalidRegistry(`Project registry entry ${index} field project_root must be a non-empty string.`);
   }
 
-  if (typeof aictxRoot !== "string" || aictxRoot.trim() === "") {
-    return invalidRegistry(`Project registry entry ${index} field aictx_root must be a non-empty string.`);
+  if (typeof memoryRoot !== "string" || memoryRoot.trim() === "") {
+    return invalidRegistry(`Project registry entry ${index} field memory_root must be a non-empty string.`);
   }
 
   if (typeof registeredAt !== "string" || registeredAt.trim() === "") {
@@ -640,7 +640,7 @@ function parseProjectRegistryEntry(value: unknown, index: number): Result<Projec
       name: projectName
     },
     project_root: resolve(projectRoot),
-    aictx_root: resolve(aictxRoot),
+    memory_root: resolve(memoryRoot),
     source,
     registered_at: registeredAt,
     last_seen_at: lastSeenAt
@@ -657,7 +657,7 @@ function registryToJson(registry: ProjectRegistry): JsonValue {
         name: entry.project.name
       },
       project_root: entry.project_root,
-      aictx_root: entry.aictx_root,
+      memory_root: entry.memory_root,
       source: entry.source,
       registered_at: entry.registered_at,
       last_seen_at: entry.last_seen_at
@@ -695,7 +695,7 @@ async function identifierPathCandidate(identifier: string, cwd: string): Promise
 }
 
 async function isRegisteredProjectAvailable(entry: ProjectRegistryEntry): Promise<boolean> {
-  const configPath = join(entry.project_root, ".aictx", "config.json");
+  const configPath = join(entry.project_root, ".memory", "config.json");
 
   try {
     const stat = await lstat(configPath);
@@ -733,7 +733,7 @@ function canonicalProjectRootSync(projectRoot: string): string {
 
 function recoveryPathFor(location: ProjectRegistryLocation, clock: Clock): string {
   const timestamp = clock.nowIso().replace(/[^0-9A-Za-z-]/g, "-");
-  return join(location.aictxHome, `projects.invalid-${timestamp}-${process.pid}.json`);
+  return join(location.memoryHome, `projects.invalid-${timestamp}-${process.pid}.json`);
 }
 
 function compareRegistryEntries(left: ProjectRegistryEntry, right: ProjectRegistryEntry): number {
@@ -743,7 +743,7 @@ function compareRegistryEntries(left: ProjectRegistryEntry, right: ProjectRegist
 }
 
 function invalidRegistry<T>(message: string): Result<T> {
-  return err(aictxError("AICtxInvalidJson", message));
+  return err(memoryError("MemoryInvalidJson", message));
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

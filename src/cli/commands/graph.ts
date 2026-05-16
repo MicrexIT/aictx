@@ -24,7 +24,7 @@ export function registerGraphCommand(
 ): void {
   program
     .command("graph")
-    .description("Show a one-hop Aictx relation neighborhood for debugging.")
+    .description("Show a one-hop Memory relation neighborhood for debugging.")
     .argument("<id>", "Memory object ID at the center of the graph.")
     .action(async (id: string, _commandOptions: unknown, command: Command) => {
       const result = await graphMemory(graphMemoryOptions(options, id));
@@ -92,7 +92,7 @@ function renderRelation(relation: MemoryRelationSummary): string {
 function throwCommandFailed(exitCode: CliExitCode): never {
   throw new CommanderError(
     exitCode,
-    "aictx.command.failed",
-    "Aictx command failed."
+    "memory.command.failed",
+    "Memory command failed."
   );
 }

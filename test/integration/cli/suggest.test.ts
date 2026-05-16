@@ -175,9 +175,9 @@ afterEach(async () => {
   );
 });
 
-describe("aictx suggest CLI", () => {
-  it("builds from-diff packets from Git project changes without mutating Aictx files", async () => {
-    const repo = await createInitializedSuggestGitProject("aictx-cli-suggest-diff-");
+describe("memory suggest CLI", () => {
+  it("builds from-diff packets from Git project changes without mutating Memory files", async () => {
+    const repo = await createInitializedSuggestGitProject("memory-cli-suggest-diff-");
     await writeProjectFile(
       repo,
       "src/billing/webhook.ts",
@@ -191,7 +191,7 @@ describe("aictx suggest CLI", () => {
     await writeProjectFile(repo, "dist/generated.ts", "ignored\n");
     const before = await readCanonicalSnapshot(repo);
 
-    const output = await runCli(["node", "aictx", "suggest", "--from-diff", "--json"], repo);
+    const output = await runCli(["node", "memory", "suggest", "--from-diff", "--json"], repo);
 
     expect(output.exitCode).toBe(0);
     expect(output.stderr).toBe("");
@@ -231,14 +231,14 @@ describe("aictx suggest CLI", () => {
   });
 
   it("does not render empty recommended action sections for from-diff text output", async () => {
-    const repo = await createInitializedSuggestGitProject("aictx-cli-suggest-diff-text-");
+    const repo = await createInitializedSuggestGitProject("memory-cli-suggest-diff-text-");
     await writeProjectFile(
       repo,
       "src/billing/webhook.ts",
       "export function handleWebhook() { return 'changed'; }\n"
     );
 
-    const output = await runCli(["node", "aictx", "suggest", "--from-diff"], repo);
+    const output = await runCli(["node", "memory", "suggest", "--from-diff"], repo);
 
     expect(output.exitCode).toBe(0);
     expect(output.stdout).not.toContain("Top recommendation:");
@@ -246,10 +246,10 @@ describe("aictx suggest CLI", () => {
   });
 
   it("renders after-task top recommendations in non-JSON output", async () => {
-    const projectRoot = await createInitializedLocalProject("aictx-cli-after-text-");
+    const projectRoot = await createInitializedLocalProject("memory-cli-after-text-");
 
     const output = await runCli(
-      ["node", "aictx", "suggest", "--after-task", "Summarize recent discussion"],
+      ["node", "memory", "suggest", "--after-task", "Summarize recent discussion"],
       projectRoot
     );
 
@@ -262,10 +262,10 @@ describe("aictx suggest CLI", () => {
   });
 
   it("includes additive recommended_actions in after-task JSON output", async () => {
-    const projectRoot = await createInitializedLocalProject("aictx-cli-after-json-");
+    const projectRoot = await createInitializedLocalProject("memory-cli-after-json-");
 
     const output = await runCli(
-      ["node", "aictx", "suggest", "--after-task", "Document release smoke test checklist", "--json"],
+      ["node", "memory", "suggest", "--after-task", "Document release smoke test checklist", "--json"],
       projectRoot
     );
 
@@ -297,12 +297,12 @@ describe("aictx suggest CLI", () => {
     );
   });
 
-  it("returns AICtxGitRequired for from-diff outside Git", async () => {
-    const projectRoot = await createInitializedLocalProject("aictx-cli-suggest-local-diff-");
+  it("returns MemoryGitRequired for from-diff outside Git", async () => {
+    const projectRoot = await createInitializedLocalProject("memory-cli-suggest-local-diff-");
     const before = await readCanonicalSnapshot(projectRoot);
 
     const output = await runCli(
-      ["node", "aictx", "suggest", "--from-diff", "--json"],
+      ["node", "memory", "suggest", "--from-diff", "--json"],
       projectRoot
     );
 
@@ -310,16 +310,16 @@ describe("aictx suggest CLI", () => {
     expect(output.stderr).toBe("");
     const envelope = JSON.parse(output.stdout) as SuggestErrorEnvelope;
     expect(envelope.ok).toBe(false);
-    expect(envelope.error.code).toBe("AICtxGitRequired");
+    expect(envelope.error.code).toBe("MemoryGitRequired");
     await expect(readCanonicalSnapshot(projectRoot)).resolves.toEqual(before);
   });
 
-  it("builds bootstrap packets outside Git without mutating Aictx files", async () => {
-    const projectRoot = await createLocalProjectWithFiles("aictx-cli-suggest-bootstrap-");
+  it("builds bootstrap packets outside Git without mutating Memory files", async () => {
+    const projectRoot = await createLocalProjectWithFiles("memory-cli-suggest-bootstrap-");
     const before = await readCanonicalSnapshot(projectRoot);
 
     const output = await runCli(
-      ["node", "aictx", "suggest", "--bootstrap", "--json"],
+      ["node", "memory", "suggest", "--bootstrap", "--json"],
       projectRoot
     );
 
@@ -331,7 +331,7 @@ describe("aictx suggest CLI", () => {
     expect(envelope.data.changed_files).toEqual(
       expect.arrayContaining(["README.md", "package.json", "src/index.ts"])
     );
-    expect(envelope.data.changed_files).not.toContain(".aictx/config.json");
+    expect(envelope.data.changed_files).not.toContain(".memory/config.json");
     expect(envelope.data.recommended_memory).toEqual([
       "project",
       "architecture",
@@ -347,11 +347,11 @@ describe("aictx suggest CLI", () => {
     await expect(readCanonicalSnapshot(projectRoot)).resolves.toEqual(before);
   });
 
-  it("prints a raw bootstrap patch that can be reviewed, saved, checked, and diffed before the first Aictx commit", async () => {
-    const repo = await createBootstrapPatchGitProject("aictx-cli-suggest-bootstrap-patch-");
+  it("prints a raw bootstrap patch that can be reviewed, saved, checked, and diffed before the first Memory commit", async () => {
+    const repo = await createBootstrapPatchGitProject("memory-cli-suggest-bootstrap-patch-");
 
     const patchOutput = await runCli(
-      ["node", "aictx", "suggest", "--bootstrap", "--patch"],
+      ["node", "memory", "suggest", "--bootstrap", "--patch"],
       repo
     );
 
@@ -373,7 +373,7 @@ describe("aictx suggest CLI", () => {
 
     await writeProjectFile(repo, "bootstrap-memory.json", JSON.stringify(patch));
     const saveOutput = await runCli(
-      ["node", "aictx", "save", "--file", "bootstrap-memory.json", "--json"],
+      ["node", "memory", "save", "--file", "bootstrap-memory.json", "--json"],
       repo
     );
     const saveEnvelope = JSON.parse(saveOutput.stdout) as SaveSuccessEnvelope;
@@ -392,23 +392,23 @@ describe("aictx suggest CLI", () => {
       ])
     );
 
-    const checkOutput = await runCli(["node", "aictx", "check", "--json"], repo);
+    const checkOutput = await runCli(["node", "memory", "check", "--json"], repo);
     const checkEnvelope = JSON.parse(checkOutput.stdout) as CheckSuccessEnvelope;
 
     expect(checkOutput.exitCode).toBe(0);
     expect(checkOutput.stderr).toBe("");
     expect(checkEnvelope.data.valid).toBe(true);
 
-    const diffOutput = await runCli(["node", "aictx", "diff", "--json"], repo);
+    const diffOutput = await runCli(["node", "memory", "diff", "--json"], repo);
     expect(diffOutput.exitCode).toBe(0);
     expect(diffOutput.stderr).toBe("");
   });
 
   it("prints bootstrap patch proposals in the standard JSON envelope", async () => {
-    const repo = await createBootstrapPatchGitProject("aictx-cli-suggest-bootstrap-json-patch-");
+    const repo = await createBootstrapPatchGitProject("memory-cli-suggest-bootstrap-json-patch-");
 
     const output = await runCli(
-      ["node", "aictx", "suggest", "--bootstrap", "--patch", "--json"],
+      ["node", "memory", "suggest", "--bootstrap", "--patch", "--json"],
       repo
     );
 
@@ -423,9 +423,9 @@ describe("aictx suggest CLI", () => {
   });
 
   it("runs setup with bootstrap apply, check, and diff summary", async () => {
-    const repo = await createBootstrapPatchGitProject("aictx-cli-setup-apply-");
+    const repo = await createBootstrapPatchGitProject("memory-cli-setup-apply-");
 
-    const output = await runCli(["node", "aictx", "setup", "--json"], repo);
+    const output = await runCli(["node", "memory", "setup", "--json"], repo);
 
     expect(output.exitCode).toBe(0);
     expect(output.stderr).toBe("");
@@ -455,7 +455,7 @@ describe("aictx suggest CLI", () => {
       ])
     );
     expect(envelope.data.check?.valid).toBe(true);
-    expect(envelope.data.next_step).toContain("aictx lens project-map");
+    expect(envelope.data.next_step).toContain("memory lens project-map");
 
     const storage = await readCanonicalStorage(repo);
     expect(storage.ok).toBe(true);
@@ -483,7 +483,7 @@ describe("aictx suggest CLI", () => {
     expect(packageSource?.sidecar.origin?.digest).toMatch(/^sha256:[a-f0-9]{64}$/u);
     expect(packageSource?.sidecar.origin?.captured_at).toBeUndefined();
 
-    const lintOutput = await runCli(["node", "aictx", "wiki", "lint", "--json"], repo);
+    const lintOutput = await runCli(["node", "memory", "wiki", "lint", "--json"], repo);
     expect(lintOutput.exitCode).toBe(0);
     const lint = JSON.parse(lintOutput.stdout) as {
       ok: true;
@@ -495,9 +495,9 @@ describe("aictx suggest CLI", () => {
   });
 
   it("does not start the setup viewer by default in JSON mode", async () => {
-    const repo = await createBootstrapPatchGitProject("aictx-cli-setup-json-no-view-");
+    const repo = await createBootstrapPatchGitProject("memory-cli-setup-json-no-view-");
 
-    const output = await runCli(["node", "aictx", "setup", "--json"], repo, {
+    const output = await runCli(["node", "memory", "setup", "--json"], repo, {
       viewer: {
         detacher: async () => {
           throw new Error("detacher should not run for default JSON setup");
@@ -513,9 +513,9 @@ describe("aictx suggest CLI", () => {
   });
 
   it("starts a detached viewer by default for human setup output", async () => {
-    const repo = await createBootstrapPatchGitRepo("aictx-cli-setup-default-view-");
+    const repo = await createBootstrapPatchGitRepo("memory-cli-setup-default-view-");
 
-    const output = await runCli(["node", "aictx", "setup"], repo, {
+    const output = await runCli(["node", "memory", "setup"], repo, {
       viewer: {
         detacher: async (options) => {
           expect(options).toMatchObject({
@@ -529,7 +529,7 @@ describe("aictx suggest CLI", () => {
               url: "http://127.0.0.1:7778/?token=default-token",
               host: "127.0.0.1",
               port: 7778,
-              log_path: "/tmp/aictx-viewer-default-test.log"
+              log_path: "/tmp/memory-viewer-default-test.log"
             },
             warnings: options.open ? ["opened viewer"] : []
           };
@@ -539,14 +539,14 @@ describe("aictx suggest CLI", () => {
 
     expect(output.exitCode).toBe(0);
     expect(output.stderr).toBe("");
-    expect(output.stdout).toContain("Aictx viewer: http://127.0.0.1:7778/?token=default-token");
-    expect(output.stdout).toContain("Aictx viewer log: /tmp/aictx-viewer-default-test.log");
+    expect(output.stdout).toContain("Memory viewer: http://127.0.0.1:7778/?token=default-token");
+    expect(output.stdout).toContain("Memory viewer log: /tmp/memory-viewer-default-test.log");
   });
 
   it("skips the default setup viewer when --no-view is passed", async () => {
-    const repo = await createBootstrapPatchGitRepo("aictx-cli-setup-no-view-");
+    const repo = await createBootstrapPatchGitRepo("memory-cli-setup-no-view-");
 
-    const output = await runCli(["node", "aictx", "setup", "--no-view"], repo, {
+    const output = await runCli(["node", "memory", "setup", "--no-view"], repo, {
       viewer: {
         detacher: async () => {
           throw new Error("detacher should not run when --no-view is passed");
@@ -556,15 +556,15 @@ describe("aictx suggest CLI", () => {
 
     expect(output.exitCode).toBe(0);
     expect(output.stderr).toBe("");
-    expect(output.stdout).not.toContain("Aictx viewer:");
+    expect(output.stdout).not.toContain("Memory viewer:");
   });
 
-  it("runs setup after reset when tracked Aictx files are dirty deletions", async () => {
-    const repo = await createBootstrapPatchGitProject("aictx-cli-setup-after-reset-");
-    await git(repo, ["add", ".gitignore", "AGENTS.md", "CLAUDE.md", ".aictx"]);
-    await git(repo, ["commit", "-m", "Track Aictx memory"]);
+  it("runs setup after reset when tracked Memory files are dirty deletions", async () => {
+    const repo = await createBootstrapPatchGitProject("memory-cli-setup-after-reset-");
+    await git(repo, ["add", ".gitignore", "AGENTS.md", "CLAUDE.md", ".memory"]);
+    await git(repo, ["commit", "-m", "Track Memory"]);
 
-    const reset = await runCli(["node", "aictx", "reset", "--json"], repo);
+    const reset = await runCli(["node", "memory", "reset", "--json"], repo);
 
     expect(reset.exitCode).toBe(0);
     expect(reset.stderr).toBe("");
@@ -575,11 +575,11 @@ describe("aictx suggest CLI", () => {
     expect(resetEnvelope.ok).toBe(true);
     expect(resetEnvelope.data.backup_path).not.toBeNull();
     await expect(pathExists(join(repo, resetEnvelope.data.backup_path ?? ""))).resolves.toBe(true);
-    await expect(git(repo, ["status", "--short", "--", ".aictx"])).resolves.toContain(
-      ".aictx/config.json"
+    await expect(git(repo, ["status", "--short", "--", ".memory"])).resolves.toContain(
+      ".memory/config.json"
     );
 
-    const output = await runCli(["node", "aictx", "setup", "--json"], repo);
+    const output = await runCli(["node", "memory", "setup", "--json"], repo);
 
     expect(output.exitCode).toBe(0);
     expect(output.stderr).toBe("");
@@ -593,10 +593,10 @@ describe("aictx suggest CLI", () => {
 
   it("applies explicit README product features as a source-backed feature-map synthesis during setup", async () => {
     const repo = await createProductFeatureBootstrapGitProject(
-      "aictx-cli-setup-product-features-"
+      "memory-cli-setup-product-features-"
     );
 
-    const output = await runCli(["node", "aictx", "setup", "--apply", "--json"], repo);
+    const output = await runCli(["node", "memory", "setup", "--apply", "--json"], repo);
 
     expect(output.exitCode).toBe(0);
     expect(output.stderr).toBe("");
@@ -647,9 +647,9 @@ describe("aictx suggest CLI", () => {
   });
 
   it("applies agent guidance, verification commands, and code-derived features during setup", async () => {
-    const repo = await createRichBootstrapGitProject("aictx-cli-setup-rich-bootstrap-");
+    const repo = await createRichBootstrapGitProject("memory-cli-setup-rich-bootstrap-");
 
-    const output = await runCli(["node", "aictx", "setup", "--apply", "--json"], repo);
+    const output = await runCli(["node", "memory", "setup", "--apply", "--json"], repo);
 
     expect(output.exitCode).toBe(0);
     expect(output.stderr).toBe("");
@@ -733,9 +733,9 @@ describe("aictx suggest CLI", () => {
   });
 
   it("previews setup without applying the bootstrap patch", async () => {
-    const repo = await createBootstrapPatchGitProject("aictx-cli-setup-preview-");
+    const repo = await createBootstrapPatchGitProject("memory-cli-setup-preview-");
 
-    const output = await runCli(["node", "aictx", "setup", "--dry-run"], repo);
+    const output = await runCli(["node", "memory", "setup", "--dry-run"], repo);
 
     expect(output.exitCode).toBe(0);
     expect(output.stderr).toBe("");
@@ -745,8 +745,8 @@ describe("aictx suggest CLI", () => {
     expect(output.stdout).toContain("Bootstrap patch applied: no");
     expect(output.stdout).toContain("Role coverage:");
     expect(output.stdout).toContain("Check: skipped");
-    expect(output.stdout).toContain("Aictx diff: skipped");
-    expect(output.stdout).toContain("Next: Run `aictx setup`");
+    expect(output.stdout).toContain("Memory diff: skipped");
+    expect(output.stdout).toContain("Next: Run `memory setup`");
     const storage = await readCanonicalStorage(repo);
     expect(storage.ok).toBe(true);
     if (storage.ok) {
@@ -755,10 +755,10 @@ describe("aictx suggest CLI", () => {
   });
 
   it("previews setup on a fresh repo without initializing storage or writing files", async () => {
-    const repo = await createBootstrapPatchGitRepo("aictx-cli-setup-fresh-preview-");
+    const repo = await createBootstrapPatchGitRepo("memory-cli-setup-fresh-preview-");
     const beforeStatus = await git(repo, ["status", "--short"]);
 
-    const output = await runCli(["node", "aictx", "setup", "--dry-run", "--json"], repo);
+    const output = await runCli(["node", "memory", "setup", "--dry-run", "--json"], repo);
 
     expect(output.exitCode).toBe(0);
     expect(output.stderr).toBe("");
@@ -779,7 +779,7 @@ describe("aictx suggest CLI", () => {
     expect(envelope.data.diff).toBeNull();
     expect(envelope.data.diff_skipped_reason).toContain("Dry run did not write storage");
     expect(envelope.data.role_coverage.roles.length).toBeGreaterThan(0);
-    await expect(pathExists(join(repo, ".aictx"))).resolves.toBe(false);
+    await expect(pathExists(join(repo, ".memory"))).resolves.toBe(false);
     await expect(pathExists(join(repo, ".gitignore"))).resolves.toBe(false);
     await expect(pathExists(join(repo, "AGENTS.md"))).resolves.toBe(false);
     await expect(pathExists(join(repo, "CLAUDE.md"))).resolves.toBe(false);
@@ -787,10 +787,10 @@ describe("aictx suggest CLI", () => {
   });
 
   it("previews forced setup without deleting or rewriting existing storage", async () => {
-    const repo = await createBootstrapPatchGitProject("aictx-cli-setup-force-preview-");
+    const repo = await createBootstrapPatchGitProject("memory-cli-setup-force-preview-");
     const before = await readCanonicalSnapshot(repo);
 
-    const output = await runCli(["node", "aictx", "setup", "--force", "--dry-run", "--json"], repo);
+    const output = await runCli(["node", "memory", "setup", "--force", "--dry-run", "--json"], repo);
 
     expect(output.exitCode).toBe(0);
     expect(output.stderr).toBe("");
@@ -806,9 +806,9 @@ describe("aictx suggest CLI", () => {
   });
 
   it("skips viewer startup during setup dry-run", async () => {
-    const repo = await createBootstrapPatchGitProject("aictx-cli-setup-dry-run-view-");
+    const repo = await createBootstrapPatchGitProject("memory-cli-setup-dry-run-view-");
 
-    const output = await runCli(["node", "aictx", "setup", "--dry-run", "--view", "--json"], repo, {
+    const output = await runCli(["node", "memory", "setup", "--dry-run", "--view", "--json"], repo, {
       viewer: {
         detacher: async () => {
           throw new Error("detacher should not run during setup dry-run");
@@ -821,14 +821,14 @@ describe("aictx suggest CLI", () => {
     expect(envelope.ok).toBe(true);
     expect(envelope.data.viewer_url).toBeNull();
     expect(envelope.warnings).toContain(
-      "Viewer startup skipped because setup --dry-run does not write storage. Run `aictx setup` to start the viewer after applying setup."
+      "Viewer startup skipped because setup --dry-run does not write storage. Run `memory setup` to start the viewer after applying setup."
     );
   });
 
   it("starts a detached viewer from setup when requested", async () => {
-    const repo = await createBootstrapPatchGitProject("aictx-cli-setup-view-");
+    const repo = await createBootstrapPatchGitProject("memory-cli-setup-view-");
 
-    const output = await runCli(["node", "aictx", "setup", "--view", "--open", "--json"], repo, {
+    const output = await runCli(["node", "memory", "setup", "--view", "--open", "--json"], repo, {
       viewer: {
         detacher: async (options) => {
           expect(options).toMatchObject({
@@ -842,7 +842,7 @@ describe("aictx suggest CLI", () => {
               url: "http://127.0.0.1:7777/?token=test-token",
               host: "127.0.0.1",
               port: 7777,
-              log_path: "/tmp/aictx-viewer-test.log"
+              log_path: "/tmp/memory-viewer-test.log"
             },
             warnings: options.open ? ["opened viewer"] : []
           };
@@ -854,20 +854,20 @@ describe("aictx suggest CLI", () => {
     const envelope = JSON.parse(output.stdout) as SetupSuccessEnvelope;
     expect(envelope.ok).toBe(true);
     expect(envelope.data.viewer_url).toBe("http://127.0.0.1:7777/?token=test-token");
-    expect(envelope.data.viewer_log_path).toBe("/tmp/aictx-viewer-test.log");
+    expect(envelope.data.viewer_log_path).toBe("/tmp/memory-viewer-test.log");
     expect(envelope.warnings).toContain("opened viewer");
   });
 
   it("reviews real and no-op patch files without writing memory", async () => {
-    const repo = await createBootstrapPatchGitProject("aictx-cli-patch-review-");
+    const repo = await createBootstrapPatchGitProject("memory-cli-patch-review-");
     const patchOutput = await runCli(
-      ["node", "aictx", "suggest", "--bootstrap", "--patch"],
+      ["node", "memory", "suggest", "--bootstrap", "--patch"],
       repo
     );
     await writeProjectFile(repo, "bootstrap-memory.json", patchOutput.stdout);
 
     const reviewOutput = await runCli(
-      ["node", "aictx", "patch", "review", "bootstrap-memory.json", "--json"],
+      ["node", "memory", "patch", "review", "bootstrap-memory.json", "--json"],
       repo
     );
     const review = JSON.parse(reviewOutput.stdout) as PatchReviewEnvelope;
@@ -879,7 +879,7 @@ describe("aictx suggest CLI", () => {
       expect.arrayContaining(["create_object", "update_object"])
     );
     expect(review.data.memory_ids).toContain("workflow.package-scripts");
-    expect(review.data.touched_files).toContain(".aictx/events.jsonl");
+    expect(review.data.touched_files).toContain(".memory/events.jsonl");
     expect(review.data.validation_findings).toEqual([]);
     expect(review.data.secret_findings).toEqual([]);
 
@@ -893,7 +893,7 @@ describe("aictx suggest CLI", () => {
       })
     );
     const noopOutput = await runCli(
-      ["node", "aictx", "patch", "review", "noop-memory.json", "--json"],
+      ["node", "memory", "patch", "review", "noop-memory.json", "--json"],
       repo
     );
     const noop = JSON.parse(noopOutput.stdout) as PatchReviewEnvelope;
@@ -903,15 +903,15 @@ describe("aictx suggest CLI", () => {
   });
 
   it("returns validation errors when mode selection is invalid", async () => {
-    const projectRoot = await createInitializedLocalProject("aictx-cli-suggest-invalid-");
+    const projectRoot = await createInitializedLocalProject("memory-cli-suggest-invalid-");
 
-    const missingMode = await runCli(["node", "aictx", "suggest", "--json"], projectRoot);
+    const missingMode = await runCli(["node", "memory", "suggest", "--json"], projectRoot);
     const duplicateMode = await runCli(
-      ["node", "aictx", "suggest", "--from-diff", "--bootstrap", "--json"],
+      ["node", "memory", "suggest", "--from-diff", "--bootstrap", "--json"],
       projectRoot
     );
     const fromDiffPatch = await runCli(
-      ["node", "aictx", "suggest", "--from-diff", "--patch", "--json"],
+      ["node", "memory", "suggest", "--from-diff", "--patch", "--json"],
       projectRoot
     );
 
@@ -919,20 +919,20 @@ describe("aictx suggest CLI", () => {
     expect(duplicateMode.exitCode).toBe(1);
     expect(fromDiffPatch.exitCode).toBe(1);
     expect((JSON.parse(missingMode.stdout) as SuggestErrorEnvelope).error.code).toBe(
-      "AICtxValidationFailed"
+      "MemoryValidationFailed"
     );
     expect((JSON.parse(duplicateMode.stdout) as SuggestErrorEnvelope).error.code).toBe(
-      "AICtxValidationFailed"
+      "MemoryValidationFailed"
     );
     expect((JSON.parse(fromDiffPatch.stdout) as SuggestErrorEnvelope).error.code).toBe(
-      "AICtxValidationFailed"
+      "MemoryValidationFailed"
     );
   });
 });
 
 async function createInitializedSuggestGitProject(prefix: string): Promise<string> {
   const repo = await createRepo(prefix);
-  const output = await runCli(["node", "aictx", "init", "--json"], repo);
+  const output = await runCli(["node", "memory", "init", "--json"], repo);
 
   expect(output.exitCode).toBe(0);
   expect(output.stderr).toBe("");
@@ -974,15 +974,15 @@ async function createInitializedSuggestGitProject(prefix: string): Promise<strin
     confidence: "medium",
     fileEvidence: "src/billing/worker.ts"
   });
-  await git(repo, ["add", ".gitignore", "AGENTS.md", "CLAUDE.md", ".aictx"]);
-  await git(repo, ["commit", "-m", "Initialize Aictx memory"]);
+  await git(repo, ["add", ".gitignore", "AGENTS.md", "CLAUDE.md", ".memory"]);
+  await git(repo, ["commit", "-m", "Initialize Memory"]);
 
   return repo;
 }
 
 async function createInitializedLocalProject(prefix: string): Promise<string> {
   const projectRoot = await createTempRoot(prefix);
-  const output = await runCli(["node", "aictx", "init", "--json"], projectRoot);
+  const output = await runCli(["node", "memory", "init", "--json"], projectRoot);
 
   expect(output.exitCode).toBe(0);
   expect(output.stderr).toBe("");
@@ -992,7 +992,7 @@ async function createInitializedLocalProject(prefix: string): Promise<string> {
 
 async function createBootstrapPatchGitProject(prefix: string): Promise<string> {
   const repo = await createBootstrapPatchGitRepo(prefix);
-  const output = await runCli(["node", "aictx", "init", "--json"], repo);
+  const output = await runCli(["node", "memory", "init", "--json"], repo);
 
   expect(output.exitCode).toBe(0);
   expect(output.stderr).toBe("");
@@ -1004,7 +1004,7 @@ async function createBootstrapPatchGitRepo(prefix: string): Promise<string> {
   const repo = await createTempRoot(prefix);
   await git(repo, ["init", "--initial-branch=main"]);
   await git(repo, ["config", "user.email", "test@example.com"]);
-  await git(repo, ["config", "user.name", "Aictx Test"]);
+  await git(repo, ["config", "user.name", "Memory Test"]);
   await writeProjectFile(
     repo,
     "README.md",
@@ -1039,7 +1039,7 @@ async function createProductFeatureBootstrapGitProject(prefix: string): Promise<
   const repo = await createTempRoot(prefix);
   await git(repo, ["init", "--initial-branch=main"]);
   await git(repo, ["config", "user.email", "test@example.com"]);
-  await git(repo, ["config", "user.name", "Aictx Test"]);
+  await git(repo, ["config", "user.name", "Memory Test"]);
   await writeProjectFile(
     repo,
     "README.md",
@@ -1066,7 +1066,7 @@ async function createProductFeatureBootstrapGitProject(prefix: string): Promise<
   await git(repo, ["add", "."]);
   await git(repo, ["commit", "-m", "Initial project files"]);
 
-  const output = await runCli(["node", "aictx", "init", "--json"], repo);
+  const output = await runCli(["node", "memory", "init", "--json"], repo);
 
   expect(output.exitCode).toBe(0);
   expect(output.stderr).toBe("");
@@ -1078,7 +1078,7 @@ async function createRichBootstrapGitProject(prefix: string): Promise<string> {
   const repo = await createTempRoot(prefix);
   await git(repo, ["init", "--initial-branch=main"]);
   await git(repo, ["config", "user.email", "test@example.com"]);
-  await git(repo, ["config", "user.name", "Aictx Test"]);
+  await git(repo, ["config", "user.name", "Memory Test"]);
   await writeProjectFile(
     repo,
     "README.md",
@@ -1096,11 +1096,11 @@ async function createRichBootstrapGitProject(prefix: string): Promise<string> {
       "- Avoid default exports in source files.",
       "- After changes, run `pnpm run lint`.",
       "",
-      "<!-- aictx-memory:start -->",
-      "## Aictx Memory",
+      "<!-- memory:start -->",
+      "## Memory",
       "- Never use generated convention text.",
       "- Run `pnpm run generated`.",
-      "<!-- aictx-memory:end -->",
+      "<!-- memory:end -->",
       ""
     ].join("\n")
   );
@@ -1130,7 +1130,7 @@ async function createRichBootstrapGitProject(prefix: string): Promise<string> {
   await git(repo, ["add", "."]);
   await git(repo, ["commit", "-m", "Initial project files"]);
 
-  const output = await runCli(["node", "aictx", "init", "--json"], repo);
+  const output = await runCli(["node", "memory", "init", "--json"], repo);
 
   expect(output.exitCode).toBe(0);
   expect(output.stderr).toBe("");
@@ -1144,7 +1144,7 @@ async function createLocalProjectWithFiles(prefix: string): Promise<string> {
   await writeProjectFile(projectRoot, "package.json", "{}\n");
   await writeProjectFile(projectRoot, "src/index.ts", "export const value = 1;\n");
   await writeProjectFile(projectRoot, "dist/generated.ts", "ignored\n");
-  const output = await runCli(["node", "aictx", "init", "--json"], projectRoot);
+  const output = await runCli(["node", "memory", "init", "--json"], projectRoot);
 
   expect(output.exitCode).toBe(0);
   expect(output.stderr).toBe("");
@@ -1156,7 +1156,7 @@ async function createRepo(prefix: string): Promise<string> {
   const repo = await createTempRoot(prefix);
   await git(repo, ["init", "--initial-branch=main"]);
   await git(repo, ["config", "user.email", "test@example.com"]);
-  await git(repo, ["config", "user.name", "Aictx Test"]);
+  await git(repo, ["config", "user.name", "Memory Test"]);
   await writeProjectFile(repo, "README.md", "# Test\n");
   await writeProjectFile(
     repo,
@@ -1244,10 +1244,10 @@ async function writeMemoryObject(projectRoot: string, fixture: MemoryFixture): P
     content_hash: computeObjectContentHash(sidecarWithoutHash, fixture.body)
   };
 
-  await writeProjectFile(projectRoot, `.aictx/${bodyPath}`, fixture.body);
+  await writeProjectFile(projectRoot, `.memory/${bodyPath}`, fixture.body);
   await writeJsonProjectFile(
     projectRoot,
-    `.aictx/${bodyPath.replace(/\.md$/u, ".json")}`,
+    `.memory/${bodyPath.replace(/\.md$/u, ".json")}`,
     sidecar
   );
 }
@@ -1276,7 +1276,7 @@ async function writeRelation(projectRoot: string, fixture: RelationFixture): Pro
 
   await writeJsonProjectFile(
     projectRoot,
-    `.aictx/relations/${fixture.id.replace(/^rel\./u, "")}.json`,
+    `.memory/relations/${fixture.id.replace(/^rel\./u, "")}.json`,
     relation
   );
 }
@@ -1346,10 +1346,10 @@ async function writeProjectFile(
 
 async function readCanonicalSnapshot(projectRoot: string): Promise<Record<string, string>> {
   const paths = (
-    await fg(".aictx/**/*.{json,jsonl,md}", {
+    await fg(".memory/**/*.{json,jsonl,md}", {
       cwd: projectRoot,
       dot: true,
-      ignore: [".aictx/index/**", ".aictx/context/**"],
+      ignore: [".memory/index/**", ".memory/context/**"],
       onlyFiles: true,
       unique: true
     })

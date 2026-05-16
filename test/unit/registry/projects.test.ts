@@ -22,21 +22,41 @@ afterEach(async () => {
 });
 
 describe("project registry", () => {
+  it("uses MEMORY_HOME as the default registry home", async () => {
+    const memoryHome = await createTempRoot("memory-registry-env-home-");
+    const previousMemoryHome = process.env.MEMORY_HOME;
+    process.env.MEMORY_HOME = memoryHome;
+
+    try {
+      expect(resolveProjectRegistryLocation()).toEqual({
+        memoryHome,
+        registryPath: join(memoryHome, "projects.json"),
+        lockPath: join(memoryHome, "projects.lock")
+      });
+    } finally {
+      if (previousMemoryHome === undefined) {
+        delete process.env.MEMORY_HOME;
+      } else {
+        process.env.MEMORY_HOME = previousMemoryHome;
+      }
+    }
+  });
+
   it("deduplicates projects by canonical project root", async () => {
-    const aictxHome = await createTempRoot("aictx-registry-home-");
-    const projectRoot = await createInitializedProject("aictx-registry-project-");
+    const memoryHome = await createTempRoot("memory-registry-home-");
+    const projectRoot = await createInitializedProject("memory-registry-project-");
 
     const first = await upsertCurrentProjectInRegistry({
       cwd: projectRoot,
-      aictxHome,
+      memoryHome,
       source: "auto"
     });
     const second = await upsertCurrentProjectInRegistry({
       cwd: join(projectRoot, "."),
-      aictxHome,
+      memoryHome,
       source: "manual"
     });
-    const registry = await readProjectRegistry({ aictxHome });
+    const registry = await readProjectRegistry({ memoryHome });
 
     expect(first.ok).toBe(true);
     expect(second.ok).toBe(true);
@@ -52,17 +72,17 @@ describe("project registry", () => {
   });
 
   it("recovers an invalid registry file on the next write", async () => {
-    const aictxHome = await createTempRoot("aictx-registry-invalid-home-");
-    const projectRoot = await createInitializedProject("aictx-registry-invalid-project-");
-    await writeProjectFile(aictxHome, "projects.json", "{not-json\n");
+    const memoryHome = await createTempRoot("memory-registry-invalid-home-");
+    const projectRoot = await createInitializedProject("memory-registry-invalid-project-");
+    await writeProjectFile(memoryHome, "projects.json", "{not-json\n");
 
     const registered = await upsertCurrentProjectInRegistry({
       cwd: projectRoot,
-      aictxHome,
+      memoryHome,
       source: "manual"
     });
-    const entries = await readdir(aictxHome);
-    const contents = JSON.parse(await readFile(join(aictxHome, "projects.json"), "utf8")) as {
+    const entries = await readdir(memoryHome);
+    const contents = JSON.parse(await readFile(join(memoryHome, "projects.json"), "utf8")) as {
       projects: unknown[];
     };
 
@@ -73,56 +93,56 @@ describe("project registry", () => {
   });
 
   it("returns lock busy when another registry writer holds the lock", async () => {
-    const aictxHome = await createTempRoot("aictx-registry-lock-home-");
-    const projectRoot = await createInitializedProject("aictx-registry-lock-project-");
-    const location = resolveProjectRegistryLocation({ aictxHome });
+    const memoryHome = await createTempRoot("memory-registry-lock-home-");
+    const projectRoot = await createInitializedProject("memory-registry-lock-project-");
+    const location = resolveProjectRegistryLocation({ memoryHome });
 
-    await writeProjectFile(aictxHome, "projects.lock", "{}\n");
+    await writeProjectFile(memoryHome, "projects.lock", "{}\n");
 
     const registered = await upsertCurrentProjectInRegistry({
       cwd: projectRoot,
-      aictxHome,
+      memoryHome,
       source: "auto"
     });
 
     expect(registered.ok).toBe(false);
     if (!registered.ok) {
-      expect(registered.error.code).toBe("AICtxLockBusy");
+      expect(registered.error.code).toBe("MemoryLockBusy");
       expect(registered.error.details).toMatchObject({ lockPath: location.lockPath });
     }
   });
 
   it("rejects ambiguous remove by project id", async () => {
-    const aictxHome = await createTempRoot("aictx-registry-ambiguous-home-");
-    const firstProject = await createInitializedProject("aictx-registry-first-project-");
-    const secondProject = await createInitializedProject("aictx-registry-second-project-");
+    const memoryHome = await createTempRoot("memory-registry-ambiguous-home-");
+    const firstProject = await createInitializedProject("memory-registry-first-project-");
+    const secondProject = await createInitializedProject("memory-registry-second-project-");
     await setProjectId(firstProject, "project.same");
     await setProjectId(secondProject, "project.same");
 
-    await upsertCurrentProjectInRegistry({ cwd: firstProject, aictxHome, source: "manual" });
-    await upsertCurrentProjectInRegistry({ cwd: secondProject, aictxHome, source: "manual" });
+    await upsertCurrentProjectInRegistry({ cwd: firstProject, memoryHome, source: "manual" });
+    await upsertCurrentProjectInRegistry({ cwd: secondProject, memoryHome, source: "manual" });
 
     const removed = await removeProjectFromRegistry({
       cwd: firstProject,
-      aictxHome,
+      memoryHome,
       identifier: "project.same"
     });
 
     expect(removed.ok).toBe(false);
     if (!removed.ok) {
-      expect(removed.error.code).toBe("AICtxValidationFailed");
+      expect(removed.error.code).toBe("MemoryValidationFailed");
       expect(removed.error.message).toContain("Multiple");
     }
   });
 
   it("prunes unavailable project roots", async () => {
-    const aictxHome = await createTempRoot("aictx-registry-prune-home-");
-    const projectRoot = await createInitializedProject("aictx-registry-prune-project-");
+    const memoryHome = await createTempRoot("memory-registry-prune-home-");
+    const projectRoot = await createInitializedProject("memory-registry-prune-project-");
 
-    await upsertCurrentProjectInRegistry({ cwd: projectRoot, aictxHome, source: "auto" });
-    await rm(join(projectRoot, ".aictx"), { recursive: true, force: true });
+    await upsertCurrentProjectInRegistry({ cwd: projectRoot, memoryHome, source: "auto" });
+    await rm(join(projectRoot, ".memory"), { recursive: true, force: true });
 
-    const pruned = await pruneProjectRegistry({ aictxHome });
+    const pruned = await pruneProjectRegistry({ memoryHome });
 
     expect(pruned.ok).toBe(true);
     if (!pruned.ok) {
@@ -134,20 +154,20 @@ describe("project registry", () => {
   });
 
   it("removes multiple projects by canonical project root", async () => {
-    const aictxHome = await createTempRoot("aictx-registry-bulk-remove-home-");
-    const firstProject = await createInitializedProject("aictx-registry-bulk-first-project-");
-    const secondProject = await createInitializedProject("aictx-registry-bulk-second-project-");
-    const thirdProject = await createInitializedProject("aictx-registry-bulk-third-project-");
+    const memoryHome = await createTempRoot("memory-registry-bulk-remove-home-");
+    const firstProject = await createInitializedProject("memory-registry-bulk-first-project-");
+    const secondProject = await createInitializedProject("memory-registry-bulk-second-project-");
+    const thirdProject = await createInitializedProject("memory-registry-bulk-third-project-");
 
-    await upsertCurrentProjectInRegistry({ cwd: firstProject, aictxHome, source: "manual" });
-    await upsertCurrentProjectInRegistry({ cwd: secondProject, aictxHome, source: "manual" });
-    await upsertCurrentProjectInRegistry({ cwd: thirdProject, aictxHome, source: "manual" });
+    await upsertCurrentProjectInRegistry({ cwd: firstProject, memoryHome, source: "manual" });
+    await upsertCurrentProjectInRegistry({ cwd: secondProject, memoryHome, source: "manual" });
+    await upsertCurrentProjectInRegistry({ cwd: thirdProject, memoryHome, source: "manual" });
 
     const removed = await removeProjectRootsFromRegistry({
-      aictxHome,
+      memoryHome,
       projectRoots: [join(firstProject, "."), secondProject]
     });
-    const registry = await readProjectRegistry({ aictxHome });
+    const registry = await readProjectRegistry({ memoryHome });
 
     expect(removed.ok).toBe(true);
     expect(registry.ok).toBe(true);
@@ -168,7 +188,7 @@ describe("project registry", () => {
 async function createInitializedProject(prefix: string): Promise<string> {
   const projectRoot = await createTempRoot(prefix);
   const output = createCapturedOutput();
-  const exitCode = await main(["node", "aictx", "init", "--json"], {
+  const exitCode = await main(["node", "memory", "init", "--json"], {
     ...output.writers,
     cwd: projectRoot,
     registry: { enabled: false }
@@ -181,7 +201,7 @@ async function createInitializedProject(prefix: string): Promise<string> {
 }
 
 async function setProjectId(projectRoot: string, projectId: string): Promise<void> {
-  const configPath = join(projectRoot, ".aictx", "config.json");
+  const configPath = join(projectRoot, ".memory", "config.json");
   const config = JSON.parse(await readFile(configPath, "utf8")) as {
     project: { id: string };
   };

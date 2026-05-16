@@ -22,7 +22,7 @@ import type { Clock } from "../core/clock.js";
 import { getGitState, type GitWrapperOptions } from "../core/git.js";
 import { resolveProjectPaths, type ProjectPaths } from "../core/paths.js";
 import type { Result } from "../core/result.js";
-import type { AictxMeta, ObjectId } from "../core/types.js";
+import type { MemoryMeta, ObjectId } from "../core/types.js";
 import type { LoadMemoryData, LoadMemoryInput } from "../context/compile.js";
 import type { SearchMemoryData, SearchMemoryInput } from "../index/search.js";
 
@@ -202,7 +202,7 @@ function clockOption(input: { clock?: Clock }): { clock?: Clock } {
   return input.clock === undefined ? {} : { clock: input.clock };
 }
 
-async function buildBestEffortMeta(input: DataAccessBaseInput): Promise<AictxMeta> {
+async function buildBestEffortMeta(input: DataAccessBaseInput): Promise<MemoryMeta> {
   const cwd = resolve(targetCwd(input.target));
   const paths = await resolveProjectPaths({
     cwd,
@@ -213,7 +213,7 @@ async function buildBestEffortMeta(input: DataAccessBaseInput): Promise<AictxMet
   if (!paths.ok) {
     return {
       project_root: cwd,
-      aictx_root: resolve(cwd, ".aictx"),
+      memory_root: resolve(cwd, ".memory"),
       git: {
         available: false,
         branch: null,
@@ -231,15 +231,15 @@ async function buildBestEffortMeta(input: DataAccessBaseInput): Promise<AictxMet
 
   return {
     project_root: paths.data.projectRoot,
-    aictx_root: paths.data.aictxRoot,
+    memory_root: paths.data.memoryRoot,
     git: git.data
   };
 }
 
-function fallbackMeta(paths: ProjectPaths): AictxMeta {
+function fallbackMeta(paths: ProjectPaths): MemoryMeta {
   return {
     project_root: paths.projectRoot,
-    aictx_root: paths.aictxRoot,
+    memory_root: paths.memoryRoot,
     git: {
       available: paths.git.available,
       branch: null,

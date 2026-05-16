@@ -98,14 +98,14 @@ describe("readCanonicalStorage", () => {
     expect(result.data.config).toEqual(validConfig);
     expect(result.data.objects).toHaveLength(1);
     expect(result.data.objects[0]).toEqual({
-      path: ".aictx/memory/decisions/billing-retries.json",
-      bodyPath: ".aictx/memory/decisions/billing-retries.md",
+      path: ".memory/memory/decisions/billing-retries.json",
+      bodyPath: ".memory/memory/decisions/billing-retries.md",
       sidecar: validObject,
       body: "# Billing retries moved to queue worker\n\nRetries run in the queue worker."
     });
     expect(result.data.relations).toEqual([
       {
-        path: ".aictx/relations/billing-retries-requires-idempotency.json",
+        path: ".memory/relations/billing-retries-requires-idempotency.json",
         relation: validRelation
       }
     ]);
@@ -118,28 +118,28 @@ describe("readCanonicalStorage", () => {
 
   it("reports invalid config JSON", async () => {
     const projectRoot = await createReadableProject();
-    await writeProjectFile(projectRoot, ".aictx/config.json", "{bad json");
+    await writeProjectFile(projectRoot, ".memory/config.json", "{bad json");
 
     const result = await readCanonicalStorage(projectRoot);
 
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.error.code).toBe("AICtxInvalidJson");
-      expect(JSON.stringify(result.error.details)).toContain(".aictx/config.json");
+      expect(result.error.code).toBe("MemoryInvalidJson");
+      expect(JSON.stringify(result.error.details)).toContain(".memory/config.json");
     }
   });
 
   it("reports invalid object JSON", async () => {
     const projectRoot = await createReadableProject();
-    await writeProjectFile(projectRoot, ".aictx/memory/decisions/billing-retries.json", "{bad json");
+    await writeProjectFile(projectRoot, ".memory/memory/decisions/billing-retries.json", "{bad json");
 
     const result = await readCanonicalStorage(projectRoot);
 
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.error.code).toBe("AICtxInvalidJson");
+      expect(result.error.code).toBe("MemoryInvalidJson");
       expect(JSON.stringify(result.error.details)).toContain(
-        ".aictx/memory/decisions/billing-retries.json"
+        ".memory/memory/decisions/billing-retries.json"
       );
     }
   });
@@ -148,7 +148,7 @@ describe("readCanonicalStorage", () => {
     const projectRoot = await createReadableProject();
     await writeProjectFile(
       projectRoot,
-      ".aictx/relations/billing-retries-requires-idempotency.json",
+      ".memory/relations/billing-retries-requires-idempotency.json",
       "{bad json"
     );
 
@@ -156,23 +156,23 @@ describe("readCanonicalStorage", () => {
 
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.error.code).toBe("AICtxInvalidJson");
+      expect(result.error.code).toBe("MemoryInvalidJson");
       expect(JSON.stringify(result.error.details)).toContain(
-        ".aictx/relations/billing-retries-requires-idempotency.json"
+        ".memory/relations/billing-retries-requires-idempotency.json"
       );
     }
   });
 
   it("reports invalid JSONL syntax with the event line path", async () => {
     const projectRoot = await createReadableProject();
-    await writeProjectFile(projectRoot, ".aictx/events.jsonl", `${JSON.stringify(createdEvent)}\n{bad json\n`);
+    await writeProjectFile(projectRoot, ".memory/events.jsonl", `${JSON.stringify(createdEvent)}\n{bad json\n`);
 
     const result = await readCanonicalStorage(projectRoot);
 
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.error.code).toBe("AICtxInvalidJsonl");
-      expect(JSON.stringify(result.error.details)).toContain(".aictx/events.jsonl:2");
+      expect(result.error.code).toBe("MemoryInvalidJsonl");
+      expect(JSON.stringify(result.error.details)).toContain(".memory/events.jsonl:2");
     }
   });
 
@@ -180,7 +180,7 @@ describe("readCanonicalStorage", () => {
     const projectRoot = await createReadableProject();
     await writeProjectFile(
       projectRoot,
-      ".aictx/events.jsonl",
+      ".memory/events.jsonl",
       `${JSON.stringify(createdEvent)}\n\n${JSON.stringify(relationEvent)}\n`
     );
 
@@ -188,27 +188,27 @@ describe("readCanonicalStorage", () => {
 
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.error.code).toBe("AICtxInvalidJsonl");
-      expect(JSON.stringify(result.error.details)).toContain(".aictx/events.jsonl:2");
+      expect(result.error.code).toBe("MemoryInvalidJsonl");
+      expect(JSON.stringify(result.error.details)).toContain(".memory/events.jsonl:2");
     }
   });
 
   it("reports non-object JSONL lines as errors", async () => {
     const projectRoot = await createReadableProject();
-    await writeProjectFile(projectRoot, ".aictx/events.jsonl", `"not an event object"\n`);
+    await writeProjectFile(projectRoot, ".memory/events.jsonl", `"not an event object"\n`);
 
     const result = await readCanonicalStorage(projectRoot);
 
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.error.code).toBe("AICtxInvalidJsonl");
-      expect(JSON.stringify(result.error.details)).toContain(".aictx/events.jsonl:1");
+      expect(result.error.code).toBe("MemoryInvalidJsonl");
+      expect(JSON.stringify(result.error.details)).toContain(".memory/events.jsonl:1");
     }
   });
 
   it("accepts an empty events file", async () => {
     const projectRoot = await createReadableProject();
-    await writeProjectFile(projectRoot, ".aictx/events.jsonl", "");
+    await writeProjectFile(projectRoot, ".memory/events.jsonl", "");
 
     const result = await readCanonicalStorage(projectRoot);
 
@@ -220,7 +220,7 @@ describe("readCanonicalStorage", () => {
 
   it("accepts a trailing newline after the last JSONL event", async () => {
     const projectRoot = await createReadableProject();
-    await writeProjectFile(projectRoot, ".aictx/events.jsonl", `${JSON.stringify(createdEvent)}\n`);
+    await writeProjectFile(projectRoot, ".memory/events.jsonl", `${JSON.stringify(createdEvent)}\n`);
 
     const result = await readCanonicalStorage(projectRoot);
 
@@ -232,7 +232,7 @@ describe("readCanonicalStorage", () => {
 
   it("rejects symlinked Markdown bodies", async () => {
     const projectRoot = await createReadableProject();
-    const bodyPath = join(projectRoot, ".aictx/memory/decisions/billing-retries.md");
+    const bodyPath = join(projectRoot, ".memory/memory/decisions/billing-retries.md");
     const outsidePath = join(projectRoot, "outside.md");
     await writeProjectFile(projectRoot, "outside.md", "# Outside\n\nOutside body.\n");
     await rm(bodyPath);
@@ -242,13 +242,13 @@ describe("readCanonicalStorage", () => {
 
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.error.code).toBe("AICtxValidationFailed");
+      expect(result.error.code).toBe("MemoryValidationFailed");
     }
   });
 
   it("rejects symlinked canonical JSON files", async () => {
     const projectRoot = await createReadableProject();
-    const objectPath = join(projectRoot, ".aictx/memory/decisions/billing-retries.json");
+    const objectPath = join(projectRoot, ".memory/memory/decisions/billing-retries.json");
     const outsidePath = join(projectRoot, "outside-object.json");
     await writeJsonProjectFile(projectRoot, "outside-object.json", validObject);
     await rm(objectPath);
@@ -258,7 +258,7 @@ describe("readCanonicalStorage", () => {
 
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.error.code).toBe("AICtxValidationFailed");
+      expect(result.error.code).toBe("MemoryValidationFailed");
     }
   });
 
@@ -266,7 +266,7 @@ describe("readCanonicalStorage", () => {
     const projectRoot = await createReadableProject();
     await writeProjectFile(
       projectRoot,
-      ".aictx/events.jsonl",
+      ".memory/events.jsonl",
       `${JSON.stringify({ event: "memory.created", actor: "agent", timestamp })}\n`
     );
 
@@ -274,15 +274,15 @@ describe("readCanonicalStorage", () => {
 
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.error.code).toBe("AICtxSchemaValidationFailed");
-      expect(JSON.stringify(result.error.details)).toContain(".aictx/events.jsonl:1");
+      expect(result.error.code).toBe("MemorySchemaValidationFailed");
+      expect(JSON.stringify(result.error.details)).toContain(".memory/events.jsonl:1");
     }
   });
 
   it("ignores generated directories", async () => {
     const projectRoot = await createReadableProject();
-    await writeProjectFile(projectRoot, ".aictx/index/generated.json", "{bad json");
-    await writeProjectFile(projectRoot, ".aictx/context/generated.json", "{bad json");
+    await writeProjectFile(projectRoot, ".memory/index/generated.json", "{bad json");
+    await writeProjectFile(projectRoot, ".memory/context/generated.json", "{bad json");
 
     const result = await readCanonicalStorage(projectRoot);
 
@@ -295,32 +295,32 @@ describe("readCanonicalStorage", () => {
 });
 
 async function createReadableProject(): Promise<string> {
-  const projectRoot = await mkdtemp(join(tmpdir(), "aictx-read-"));
+  const projectRoot = await mkdtemp(join(tmpdir(), "memory-read-"));
   tempRoots.push(projectRoot);
-  await mkdir(join(projectRoot, ".aictx", "schema"), { recursive: true });
+  await mkdir(join(projectRoot, ".memory", "schema"), { recursive: true });
 
   for (const schemaFile of Object.values(SCHEMA_FILES)) {
     await copyFile(
       join(repoRoot, "src", "schemas", schemaFile),
-      join(projectRoot, ".aictx", "schema", schemaFile)
+      join(projectRoot, ".memory", "schema", schemaFile)
     );
   }
 
-  await writeJsonProjectFile(projectRoot, ".aictx/config.json", validConfig);
-  await writeJsonProjectFile(projectRoot, ".aictx/memory/decisions/billing-retries.json", validObject);
+  await writeJsonProjectFile(projectRoot, ".memory/config.json", validConfig);
+  await writeJsonProjectFile(projectRoot, ".memory/memory/decisions/billing-retries.json", validObject);
   await writeProjectFile(
     projectRoot,
-    ".aictx/memory/decisions/billing-retries.md",
+    ".memory/memory/decisions/billing-retries.md",
     "# Billing retries moved to queue worker\r\n\r\nRetries run in the queue worker."
   );
   await writeJsonProjectFile(
     projectRoot,
-    ".aictx/relations/billing-retries-requires-idempotency.json",
+    ".memory/relations/billing-retries-requires-idempotency.json",
     validRelation
   );
   await writeProjectFile(
     projectRoot,
-    ".aictx/events.jsonl",
+    ".memory/events.jsonl",
     `${JSON.stringify(createdEvent)}\n${JSON.stringify(relationEvent)}\n`
   );
 

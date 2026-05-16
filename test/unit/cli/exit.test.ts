@@ -5,9 +5,9 @@ import {
   CLI_EXIT_PRECONDITION,
   CLI_EXIT_SUCCESS,
   CLI_EXIT_USAGE,
-  exitCodeForAictxError
+  exitCodeForMemoryError
 } from "../../../src/cli/exit.js";
-import { aictxError, type AictxErrorCode } from "../../../src/core/errors.js";
+import { memoryError, type MemoryErrorCode } from "../../../src/core/errors.js";
 
 describe("CLI exit codes", () => {
   it("exports the API-specified numeric codes", () => {
@@ -18,56 +18,56 @@ describe("CLI exit codes", () => {
   });
 
   it("maps Git and storage precondition errors to exit 3", () => {
-    const codes: AictxErrorCode[] = [
-      "AICtxGitRequired",
-      "AICtxNotInitialized",
-      "AICtxAlreadyInitializedInvalid",
-      "AICtxUnsupportedStorageVersion",
-      "AICtxConflictDetected",
-      "AICtxDirtyMemory",
-      "AICtxIndexUnavailable",
-      "AICtxLockBusy",
-      "AICtxGitOperationFailed"
+    const codes: MemoryErrorCode[] = [
+      "MemoryGitRequired",
+      "MemoryNotInitialized",
+      "MemoryAlreadyInitializedInvalid",
+      "MemoryUnsupportedStorageVersion",
+      "MemoryConflictDetected",
+      "MemoryDirtyMemory",
+      "MemoryIndexUnavailable",
+      "MemoryLockBusy",
+      "MemoryGitOperationFailed"
     ];
 
     for (const code of codes) {
-      expect(exitCodeForAictxError(aictxError(code, "precondition failed"))).toBe(
+      expect(exitCodeForMemoryError(memoryError(code, "precondition failed"))).toBe(
         CLI_EXIT_PRECONDITION
       );
     }
   });
 
   it("maps validation and patch errors to exit 1", () => {
-    const codes: AictxErrorCode[] = [
-      "AICtxInvalidJson",
-      "AICtxInvalidJsonl",
-      "AICtxSchemaValidationFailed",
-      "AICtxValidationFailed",
-      "AICtxPatchRequired",
-      "AICtxPatchInvalid",
-      "AICtxUnknownPatchOperation"
+    const codes: MemoryErrorCode[] = [
+      "MemoryInvalidJson",
+      "MemoryInvalidJsonl",
+      "MemorySchemaValidationFailed",
+      "MemoryValidationFailed",
+      "MemoryPatchRequired",
+      "MemoryPatchInvalid",
+      "MemoryUnknownPatchOperation"
     ];
 
     for (const code of codes) {
-      expect(exitCodeForAictxError(aictxError(code, "user-correctable error"))).toBe(
+      expect(exitCodeForMemoryError(memoryError(code, "user-correctable error"))).toBe(
         CLI_EXIT_ERROR
       );
     }
   });
 
   it("maps config, object, relation, secret, and internal errors to exit 1", () => {
-    const codes: AictxErrorCode[] = [
-      "AICtxInvalidConfig",
-      "AICtxObjectNotFound",
-      "AICtxRelationNotFound",
-      "AICtxDuplicateId",
-      "AICtxInvalidRelation",
-      "AICtxSecretDetected",
-      "AICtxInternalError"
+    const codes: MemoryErrorCode[] = [
+      "MemoryInvalidConfig",
+      "MemoryObjectNotFound",
+      "MemoryRelationNotFound",
+      "MemoryDuplicateId",
+      "MemoryInvalidRelation",
+      "MemorySecretDetected",
+      "MemoryInternalError"
     ];
 
     for (const code of codes) {
-      expect(exitCodeForAictxError(aictxError(code, "operation failed"))).toBe(
+      expect(exitCodeForMemoryError(memoryError(code, "operation failed"))).toBe(
         CLI_EXIT_ERROR
       );
     }

@@ -10,7 +10,7 @@ import {
 import { extname, isAbsolute, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { aictxError } from "../core/errors.js";
+import { memoryError } from "../core/errors.js";
 import { err, ok, type Result } from "../core/result.js";
 import {
   handleViewerApiRequest,
@@ -25,7 +25,7 @@ export interface StartViewerServerOptions {
   port?: number;
   assetsDir?: string;
   token?: string;
-  aictxHome?: string;
+  memoryHome?: string;
 }
 
 export interface StartedViewerServer {
@@ -40,7 +40,7 @@ interface ViewerRequestContext {
   cwd: string;
   assetsDir: string;
   token: string;
-  aictxHome?: string;
+  memoryHome?: string;
 }
 
 export async function startViewerServer(
@@ -51,7 +51,7 @@ export async function startViewerServer(
 
   if (!Number.isInteger(port) || port < 0 || port > 65535) {
     return err(
-      aictxError("AICtxValidationFailed", "Viewer port must be an integer from 0 to 65535.", {
+      memoryError("MemoryValidationFailed", "Viewer port must be an integer from 0 to 65535.", {
         port
       })
     );
@@ -68,12 +68,12 @@ export async function startViewerServer(
     cwd: options.cwd,
     assetsDir,
     token,
-    ...(options.aictxHome === undefined ? {} : { aictxHome: options.aictxHome })
+    ...(options.memoryHome === undefined ? {} : { memoryHome: options.memoryHome })
   };
   const server = createServer((request, response) => {
     void handleViewerRequest(request, response, context).catch((error: unknown) => {
       writeViewerJsonResponse(response, 500, viewerErrorBody(
-        aictxError("AICtxInternalError", "Viewer request failed.", {
+        memoryError("MemoryInternalError", "Viewer request failed.", {
           message: messageFromUnknown(error)
         })
       ));
@@ -109,7 +109,7 @@ async function validateViewerAssetsDir(assetsDir: string): Promise<Result<void>>
 
     if (!stat.isFile()) {
       return err(
-        aictxError("AICtxValidationFailed", "Viewer assets are missing index.html.", {
+        memoryError("MemoryValidationFailed", "Viewer assets are missing index.html.", {
           assetsDir
         })
       );
@@ -118,7 +118,7 @@ async function validateViewerAssetsDir(assetsDir: string): Promise<Result<void>>
     return ok(undefined);
   } catch (error) {
     return err(
-      aictxError("AICtxValidationFailed", "Viewer assets are not available.", {
+      memoryError("MemoryValidationFailed", "Viewer assets are not available.", {
         assetsDir,
         message: messageFromUnknown(error)
       })
@@ -139,7 +139,7 @@ function listen(server: Server, port: number): Promise<Result<number>> {
 
     server.once("error", (error: NodeJS.ErrnoException) => {
       settle(err(
-        aictxError("AICtxValidationFailed", "Viewer server could not bind the requested port.", {
+        memoryError("MemoryValidationFailed", "Viewer server could not bind the requested port.", {
           host: VIEWER_LOOPBACK_HOST,
           port,
           code: error.code ?? null,
@@ -157,7 +157,7 @@ function listen(server: Server, port: number): Promise<Result<number>> {
       }
 
       settle(err(
-        aictxError("AICtxInternalError", "Viewer server did not report a TCP address.")
+        memoryError("MemoryInternalError", "Viewer server did not report a TCP address.")
       ));
     });
   });
@@ -172,7 +172,7 @@ async function handleViewerRequest(
 
   if (url === null) {
     writeViewerJsonResponse(response, 400, viewerErrorBody(
-      aictxError("AICtxValidationFailed", "Request URL is invalid.")
+      memoryError("MemoryValidationFailed", "Request URL is invalid.")
     ));
     return;
   }
@@ -181,7 +181,7 @@ async function handleViewerRequest(
     await handleViewerApiRequest(request, response, url, {
       cwd: context.cwd,
       token: context.token,
-      ...(context.aictxHome === undefined ? {} : { aictxHome: context.aictxHome })
+      ...(context.memoryHome === undefined ? {} : { memoryHome: context.memoryHome })
     });
     return;
   }
@@ -206,7 +206,7 @@ async function handleStaticRequest(
   if (request.method !== "GET" && request.method !== "HEAD") {
     response.setHeader("Allow", "GET, HEAD");
     writeViewerJsonResponse(response, 405, viewerErrorBody(
-      aictxError("AICtxValidationFailed", "HTTP method is not supported for static assets.", {
+      memoryError("MemoryValidationFailed", "HTTP method is not supported for static assets.", {
         allow: "GET, HEAD"
       })
     ));
@@ -217,7 +217,7 @@ async function handleStaticRequest(
 
   if (assetPath === null) {
     writeViewerJsonResponse(response, 404, viewerErrorBody(
-      aictxError("AICtxValidationFailed", "Viewer asset was not found.")
+      memoryError("MemoryValidationFailed", "Viewer asset was not found.")
     ));
     return;
   }
@@ -268,7 +268,7 @@ async function readableAsset(
 
     if (stat.isSymbolicLink() || !stat.isFile()) {
       return err(
-        aictxError("AICtxValidationFailed", "Viewer asset was not found.")
+        memoryError("MemoryValidationFailed", "Viewer asset was not found.")
       );
     }
 
@@ -276,14 +276,14 @@ async function readableAsset(
 
     if (!isInsideOrEqual(rootRealPath, targetRealPath)) {
       return err(
-        aictxError("AICtxValidationFailed", "Viewer asset was not found.")
+        memoryError("MemoryValidationFailed", "Viewer asset was not found.")
       );
     }
 
     return ok(undefined);
   } catch {
     return err(
-      aictxError("AICtxValidationFailed", "Viewer asset was not found.")
+      memoryError("MemoryValidationFailed", "Viewer asset was not found.")
     );
   }
 }

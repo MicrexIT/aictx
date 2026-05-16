@@ -14,7 +14,7 @@ import {
   type RoleCoverageResultData,
   type SaveMemoryData
 } from "../../app/operations.js";
-import type { AictxError } from "../../core/errors.js";
+import type { MemoryError } from "../../core/errors.js";
 import type { ObjectId, RelationId } from "../../core/types.js";
 import type { SuggestBootstrapPatchProposal } from "../../discipline/suggest.js";
 import { CLI_EXIT_SUCCESS } from "../exit.js";
@@ -78,8 +78,8 @@ export function registerSetupCommand(
 ): void {
   program
     .command("setup")
-    .description("Run the guided first-run Aictx setup workflow.")
-    .option("--force", "Discard existing Aictx state before setup.")
+    .description("Run the guided first-run Memory setup workflow.")
+    .option("--force", "Discard existing Memory state before setup.")
     .option("--apply", "Apply the conservative bootstrap memory patch (accepted for compatibility; setup applies by default).")
     .option("--dry-run", "Preview setup role coverage and bootstrap patch without initializing storage or writing repo files.")
     .option("--view", "Start the local viewer after setup (default for human output).")
@@ -99,8 +99,8 @@ export function registerSetupCommand(
       if (rendered.exitCode !== CLI_EXIT_SUCCESS) {
         throw new CommanderError(
           rendered.exitCode,
-          "aictx.command.failed",
-          "Aictx command failed."
+          "memory.command.failed",
+          "Memory command failed."
         );
       }
     });
@@ -119,7 +119,7 @@ async function runSetup(
   const initialized = await initProject({
     cwd,
     force: flags.force === true,
-    allowTrackedAictxDeletions: true
+    allowTrackedMemoryDeletions: true
   });
 
   if (!initialized.ok) {
@@ -207,7 +207,7 @@ async function runSetup(
       viewer_log_path: viewer.data?.log_path ?? null,
       next_step:
         save !== null
-          ? "Run `aictx lens project-map` for a readable project view, or `aictx load \"onboard to this repository\"` for task-focused context."
+          ? "Run `memory lens project-map` for a readable project view, or `memory load \"onboard to this repository\"` for task-focused context."
           : "No bootstrap memory patch to apply."
     },
     warnings,
@@ -231,12 +231,12 @@ async function runSetupDryRun(
   const proposal = preview.data.proposal;
   const summary = patchSummary(proposal);
   const checkSkippedReason =
-    "Dry run did not write storage; run `aictx setup` before checking the result.";
+    "Dry run did not write storage; run `memory setup` before checking the result.";
   const diffSkippedReason =
-    "Dry run did not write storage; no Aictx diff was produced.";
+    "Dry run did not write storage; no Memory diff was produced.";
   const viewerWarning = isViewerExplicitlyRequested(flags)
     ? [
-        "Viewer startup skipped because setup --dry-run does not write storage. Run `aictx setup` to start the viewer after applying setup."
+        "Viewer startup skipped because setup --dry-run does not write storage. Run `memory setup` to start the viewer after applying setup."
       ]
     : [];
 
@@ -260,7 +260,7 @@ async function runSetupDryRun(
       viewer_url: null,
       viewer_log_path: null,
       next_step: proposal.proposed
-        ? "Run `aictx setup` to apply the proposed bootstrap memory patch."
+        ? "Run `memory setup` to apply the proposed bootstrap memory patch."
         : "No bootstrap memory patch to apply."
     },
     warnings: [...preview.warnings, ...viewerWarning],
@@ -281,7 +281,7 @@ async function maybeStartViewer(
     }
   | {
       ok: false;
-      error: AictxError;
+      error: MemoryError;
       warnings: string[];
     }
 > {
@@ -334,7 +334,7 @@ function patchSummary(proposal: SuggestBootstrapPatchProposal): SetupPatchSummar
 
 function renderSetupData(data: SetupData): string {
   return [
-    "Aictx setup complete.",
+    "Memory setup complete.",
     `Initialized: ${renderInitialized(data)}`,
     `Dry run: ${data.dry_run ? "yes" : "no"}`,
     `Would initialize storage: ${data.would_initialize ? "yes" : "no"}`,
@@ -352,10 +352,10 @@ function renderSetupData(data: SetupData): string {
     ...(data.diff === null
       ? data.diff_skipped_reason === null
         ? []
-        : [`Aictx diff: skipped (${data.diff_skipped_reason})`]
-      : [`Aictx diff files changed: ${data.diff.changed_files.length}`]),
-    ...(data.viewer_url === null ? [] : [`Aictx viewer: ${data.viewer_url}`]),
-    ...(data.viewer_log_path === null ? [] : [`Aictx viewer log: ${data.viewer_log_path}`]),
+        : [`Memory diff: skipped (${data.diff_skipped_reason})`]
+      : [`Memory diff files changed: ${data.diff.changed_files.length}`]),
+    ...(data.viewer_url === null ? [] : [`Memory viewer: ${data.viewer_url}`]),
+    ...(data.viewer_log_path === null ? [] : [`Memory viewer log: ${data.viewer_log_path}`]),
     ...(data.next_step === null ? [] : [`Next: ${data.next_step}`])
   ].join("\n");
 }

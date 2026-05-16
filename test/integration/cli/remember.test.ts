@@ -32,9 +32,9 @@ afterEach(async () => {
   );
 });
 
-describe("aictx remember CLI", () => {
+describe("memory remember CLI", () => {
   it("saves intent-first memory through the shared write path and makes it immediately loadable", async () => {
-    const projectRoot = await createInitializedProject("aictx-cli-remember-");
+    const projectRoot = await createInitializedProject("memory-cli-remember-");
     const output = createCapturedOutput();
     const input = {
       task: "Document billing retry location",
@@ -51,7 +51,7 @@ describe("aictx remember CLI", () => {
       ]
     };
 
-    const exitCode = await main(["node", "aictx", "remember", "--stdin", "--json"], {
+    const exitCode = await main(["node", "memory", "remember", "--stdin", "--json"], {
       ...output.writers,
       cwd: projectRoot,
       stdin: Readable.from([JSON.stringify(input)])
@@ -92,9 +92,9 @@ describe("aictx remember CLI", () => {
   });
 
   it("dry-runs the generated patch without writing canonical memory", async () => {
-    const projectRoot = await createInitializedProject("aictx-cli-remember-dry-run-");
+    const projectRoot = await createInitializedProject("memory-cli-remember-dry-run-");
     const output = createCapturedOutput();
-    const eventsBefore = await readFile(join(projectRoot, ".aictx", "events.jsonl"), "utf8");
+    const eventsBefore = await readFile(join(projectRoot, ".memory", "events.jsonl"), "utf8");
     const input = {
       task: "Preview durable memory",
       memories: [
@@ -107,7 +107,7 @@ describe("aictx remember CLI", () => {
     };
 
     const exitCode = await main(
-      ["node", "aictx", "remember", "--stdin", "--dry-run", "--json"],
+      ["node", "memory", "remember", "--stdin", "--dry-run", "--json"],
       {
         ...output.writers,
         cwd: projectRoot,
@@ -120,7 +120,7 @@ describe("aictx remember CLI", () => {
     expect(envelope.data.dry_run).toBe(true);
     expect(envelope.data.memory_created).toEqual(["fact.preview-fact"]);
     expect(envelope.data.index_updated).toBe(false);
-    await expect(readFile(join(projectRoot, ".aictx", "events.jsonl"), "utf8")).resolves.toBe(
+    await expect(readFile(join(projectRoot, ".memory", "events.jsonl"), "utf8")).resolves.toBe(
       eventsBefore
     );
   });
@@ -129,7 +129,7 @@ describe("aictx remember CLI", () => {
 async function createInitializedProject(prefix: string): Promise<string> {
   const projectRoot = await createTempRoot(prefix);
   const output = createCapturedOutput();
-  const exitCode = await main(["node", "aictx", "init", "--json"], {
+  const exitCode = await main(["node", "memory", "init", "--json"], {
     ...output.writers,
     cwd: projectRoot
   });

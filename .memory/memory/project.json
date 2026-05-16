@@ -1,0 +1,27 @@
+{
+  "body_path": "memory/project.md",
+  "content_hash": "sha256:048ab9176ca12628e3d2c007210d90aafe59929007f32ea2b72978c0c48d130e",
+  "created_at": "2026-05-16T18:52:43+02:00",
+  "evidence": [],
+  "facets": {
+    "category": "project-description"
+  },
+  "id": "project.memory",
+  "scope": {
+    "branch": null,
+    "kind": "project",
+    "project": "project.memory",
+    "task": null
+  },
+  "source": {
+    "kind": "cli",
+    "task": "Proposed bootstrap memory patch from deterministic repository analysis"
+  },
+  "status": "active",
+  "tags": [
+    "project"
+  ],
+  "title": "Memory",
+  "type": "project",
+  "updated_at": "2026-05-16T18:52:44+02:00"
+}

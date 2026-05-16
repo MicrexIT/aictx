@@ -1,6 +1,6 @@
-# Aictx
+# Memory
 
-![Stop re-explaining your repo to AI agents. Aictx saves durable project knowledge as reviewable repo memory.](site/public/assets/readme-value-header.png)
+![Stop re-explaining your repo to AI agents. Memory saves durable project knowledge as reviewable repo memory.](site/public/assets/readme-value-header.png)
 
 <p align="center">
   <a href="https://aictx.dev"><img alt="Website" src="https://img.shields.io/badge/website-aictx.dev-111214?style=for-the-badge"></a>
@@ -15,13 +15,13 @@
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-yellow.svg"></a>
 </p>
 
-Aictx is local-first project memory for AI coding agents, inspired by
+Memory is local-first project memory for AI coding agents, inspired by
 [Andrej Karpathy's LLM Wiki pattern](https://gist.githubusercontent.com/karpathy/442a6bf555914893e9891c11519de94f/raw/ac46de1ad27f92b28ac95459c782c07f6b8c964a/llm-wiki.md):
 durable, human-editable project knowledge that models can read before work.
 
 Stop re-explaining the same product intent, architecture decisions, repo
 conventions, setup steps, and known traps every time a new AI coding session
-starts. Activate Aictx once in a repo: it saves durable knowledge as local,
+starts. Activate Memory once in a repo: it saves durable knowledge as local,
 reviewable memory, wires short agent guidance into the project, and loads only
 the pieces that matter for the current task.
 
@@ -36,34 +36,34 @@ Use it when you want:
 This repository publishes the npm package `@aictx/memory`. It is unrelated to
 similarly named packages in other ecosystems.
 
-## Why Aictx?
+## Why Memory?
 
-Aictx is for durable project context that should survive between agents,
+Memory is for durable project context that should survive between agents,
 sessions, branches, and reviews without making you re-teach the repo each time.
 
 - Why not `AGENTS.md` only? Agent instruction files are good operating manuals,
   but they become too broad and static when they also try to hold product
   intent, decisions, gotchas, workflows, and source-backed summaries.
 - Why not a vector DB or RAG stack? Those are useful for large retrieval
-  systems. Aictx keeps v1 project memory local, inspectable, Git-aware, and
+  systems. Memory keeps v1 project memory local, inspectable, Git-aware, and
   usable without embeddings, hosted infrastructure, or a model API.
 - Why not long context? Long context helps inside one session. It does not make
   memory reviewable, current, reusable across future sessions, or easy to clean
   up when facts go stale.
-- Why local files? Plain files are reviewable and portable. Aictx builds on that
+- Why local files? Plain files are reviewable and portable. Memory builds on that
   foundation with validation, typed memory, a local index, task-focused loading,
   relation-aware inspection, and a save/no-save discipline.
 
 ### Inspect the Memory
 
-Aictx is not just a hidden context file for agents. The visual memory viewer is
+Memory is not just a hidden context file for agents. The visual memory viewer is
 part of the product: a local review surface where humans can inspect the same
 schema, objects, facets, relations, provenance, and graph context agents load.
 
 <p align="center">
   <a href="https://demo.aictx.dev/?token=demo">
     <img
-      alt="Aictx viewer showing the memory schema graph with relation overview and canonical storage navigation."
+      alt="Memory viewer showing the memory schema graph with relation overview and canonical storage navigation."
       src="site/public/assets/readme-visual-memory.png"
       width="940"
     >
@@ -85,13 +85,13 @@ schema, objects, facets, relations, provenance, and graph context agents load.
 The full object taxonomy, facets, and write contracts live in the
 [reference docs](https://docs.aictx.dev/reference/).
 
-Aictx does not require a cloud account, embeddings, hosted sync, an external
+Memory does not require a cloud account, embeddings, hosted sync, an external
 model API, or network access for core memory commands. Saved memory is active
-immediately after Aictx validates and writes it.
+immediately after Memory validates and writes it.
 
 ## How It Works
 
-![Aictx workflow: load relevant memory, do work, and remember durable knowledge.](site/public/assets/readme-how-it-works.png)
+![Memory workflow: load relevant memory, do work, and remember durable knowledge.](site/public/assets/readme-how-it-works.png)
 
 ```text
 set up once -> agents load relevant reminders -> save durable discoveries
@@ -103,24 +103,24 @@ knowledge that should survive future sessions, branches, and reviews.
 
 ## Get Started Quickly
 
-Aictx requires Node.js `>=22`. Core commands run locally; no cloud account,
+Memory requires Node.js `>=22`. Core commands run locally; no cloud account,
 model API, embeddings, or hosted sync are required.
 
 ```bash
 npm install -g @aictx/memory
 cd path/to/your/repo
-aictx setup
-aictx load "onboard to this repository"
-aictx view
+memory setup
+memory load "onboard to this repository"
+memory view
 ```
 
-`aictx setup` activates Aictx in the current repo. It creates local `.aictx/`
-memory, updates the marked Aictx sections in `AGENTS.md` and `CLAUDE.md`, writes
+`memory setup` activates Memory in the current repo. It creates local `.memory/`
+memory, updates the marked Memory sections in `AGENTS.md` and `CLAUDE.md`, writes
 conservative first-run memory, runs checks, and starts the local viewer. Use
-`aictx setup --no-view` when you do not want the viewer to start, or
-`aictx setup --dry-run` to preview before writing.
+`memory setup --no-view` when you do not want the viewer to start, or
+`memory setup --dry-run` to preview before writing.
 
-Aictx writes local files and never commits automatically.
+Memory writes local files and never commits automatically.
 
 ## Ask an Agent to Activate It
 
@@ -128,30 +128,30 @@ Paste this into Codex, Claude Code, OpenCode, Cursor, Cline, or another
 CLI-capable coding agent from the project root:
 
 ```text
-Set up Aictx memory for this repository.
+Set up Memory for this repository.
 
 Run:
 npm install -g @aictx/memory
-aictx setup
-aictx check
-aictx load "onboard to this repository"
+memory setup
+memory check
+memory load "onboard to this repository"
 
 When this is done, report:
 - whether setup wrote memory
 - whether check passed
-- how I can inspect the result with `aictx view` or `aictx diff`
+- how I can inspect the result with `memory view` or `memory diff`
 ```
 
 After setup, the normal agent loop is small:
 
 ```bash
-aictx load "<task summary>"
+memory load "<task summary>"
 # do the work
-aictx remember --stdin
-aictx diff
+memory remember --stdin
+memory diff
 ```
 
-Save only durable project knowledge. Aictx is meant to reduce repeated context
+Save only durable project knowledge. Memory is meant to reduce repeated context
 work, not archive every task transcript.
 
 ## What You Get
@@ -160,21 +160,21 @@ Four surfaces ship today. Each one works locally and fits normal Git review.
 
 | Surface | What it gives agents and humans | Try |
 | --- | --- | --- |
-| One-time setup | Creates local memory and short repo guidance so future agents know when to load and save context. | `aictx setup` |
-| Task-focused loading | Pulls relevant project memory before coding, debugging, review, architecture, or onboarding work. | `aictx load "change auth routes"` |
-| Visual memory viewer | Opens a local browser for the memory schema, canonical objects, facets, relation overview, provenance, and graph context. | `aictx view` |
-| Save discipline | Saves only durable facts, decisions, workflows, gotchas, source records, and syntheses. | `aictx remember --stdin` |
+| One-time setup | Creates local memory and short repo guidance so future agents know when to load and save context. | `memory setup` |
+| Task-focused loading | Pulls relevant project memory before coding, debugging, review, architecture, or onboarding work. | `memory load "change auth routes"` |
+| Visual memory viewer | Opens a local browser for the memory schema, canonical objects, facets, relation overview, provenance, and graph context. | `memory view` |
+| Save discipline | Saves only durable facts, decisions, workflows, gotchas, source records, and syntheses. | `memory remember --stdin` |
 
 ## Works With Your Agent
 
 | Agent or client | Fastest path |
 | --- | --- |
-| Codex | `aictx setup` writes `AGENTS.md`; use the CLI loop by default. |
-| Claude Code | `aictx setup` writes `CLAUDE.md`; use the CLI loop by default. |
+| Codex | `memory setup` writes `AGENTS.md`; use the CLI loop by default. |
+| Claude Code | `memory setup` writes `CLAUDE.md`; use the CLI loop by default. |
 | OpenCode | Uses the root `AGENTS.md` guidance created by setup. |
-| Cursor | Copy `integrations/cursor/aictx.mdc` into `.cursor/rules/aictx.mdc`, then run setup. |
-| Cline | Copy `integrations/cline/aictx.md` into `.clinerules/aictx.md`, then run setup. |
-| MCP-capable clients | Start with the CLI; configure `aictx-mcp` later when the client exposes MCP tools. |
+| Cursor | Copy `integrations/cursor/memory.mdc` into `.cursor/rules/memory.mdc`, then run setup. |
+| Cline | Copy `integrations/cline/memory.md` into `.clinerules/memory.md`, then run setup. |
+| MCP-capable clients | Start with the CLI; configure `memory-mcp` later when the client exposes MCP tools. |
 
 ## Distribution Artifacts
 
@@ -188,14 +188,14 @@ Codex users can add this repo's marketplace with one command:
 codex plugin marketplace add aictx/memory
 ```
 
-Then open Codex Plugins and install **Aictx Memory**.
+Then open Codex Plugins and install **Memory**.
 
 Claude Code users can add the marketplace and install the plugin from inside
 Claude Code:
 
 ```text
 /plugin marketplace add aictx/memory
-/plugin install aictx-memory@aictx
+/plugin install memory@aictx
 ```
 
 For official listing paths and release prep, see
@@ -212,7 +212,7 @@ For official listing paths and release prep, see
 
 ## Contribute
 
-Aictx is MIT-licensed and built in the open. Issues, docs fixes, examples,
+Memory is MIT-licensed and built in the open. Issues, docs fixes, examples,
 agent recipes, and pull requests are welcome.
 
 [Contribute on GitHub](https://github.com/aictx/memory/blob/main/CONTRIBUTING.md)

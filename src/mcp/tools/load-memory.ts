@@ -13,7 +13,7 @@ import type { RetrievalHints } from "../../retrieval/hints.js";
 import {
   PROJECT_ROOT_ARGUMENT_DESCRIPTION,
   resolveMcpProjectCwd,
-  type AictxMcpContext,
+  type MemoryMcpContext,
   type ProjectScopedMcpArgs
 } from "../context.js";
 import {
@@ -73,15 +73,15 @@ type LoadMemoryArgs = z.infer<typeof LOAD_MEMORY_INPUT_SCHEMA> & ProjectScopedMc
 
 export const loadMemoryTool = {
   name: "load_memory",
-  title: "Load Aictx Memory",
-  description: "Compile task-specific Aictx memory into a context pack.",
+  title: "Load Memory",
+  description: "Compile task-specific Memory into a context pack.",
   inputSchema: LOAD_MEMORY_INPUT_SCHEMA,
   annotations: READ_ONLY_TOOL_ANNOTATIONS,
   call: callLoadMemoryTool
 };
 
 async function callLoadMemoryTool(
-  context: AictxMcpContext,
+  context: MemoryMcpContext,
   args: LoadMemoryArgs
 ): Promise<CallToolResult> {
   const parsed = parseLoadMemoryArgs(context, args);
@@ -91,7 +91,7 @@ async function callLoadMemoryTool(
 }
 
 function parseLoadMemoryArgs(
-  context: AictxMcpContext,
+  context: MemoryMcpContext,
   args: LoadMemoryArgs
 ): {
   options: DataAccessLoadInput;

@@ -1,6 +1,6 @@
 # Roadmap
 
-Aictx is local-first project memory for AI coding agents. The public roadmap is
+Memory is local-first project memory for AI coding agents. The public roadmap is
 focused on making that workflow reliable before expanding into hosted or remote
 services.
 
@@ -18,7 +18,7 @@ services.
 - Strengthen storage validation, migrations, and recovery.
 - Keep CLI and MCP contracts clear instead of mirroring every CLI command in MCP.
 - Make the local viewer more useful for reviewing memory and relations.
-- Continue dogfooding Aictx memory in this repository.
+- Continue dogfooding Memory in this repository.
 
 ## Not in v1
 

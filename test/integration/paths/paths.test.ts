@@ -28,7 +28,7 @@ describe("project path resolution integration", () => {
       ok: true,
       data: {
         projectRoot: repo,
-        aictxRoot: join(repo, ".aictx"),
+        memoryRoot: join(repo, ".memory"),
         git: {
           available: true,
           root: repo
@@ -38,16 +38,16 @@ describe("project path resolution integration", () => {
     });
   });
 
-  it("resolves nested cwd outside Git by walking to the nearest .aictx/config.json", async () => {
-    const sandbox = await createTempRoot("aictx-paths-nongit-");
+  it("resolves nested cwd outside Git by walking to the nearest .memory/config.json", async () => {
+    const sandbox = await createTempRoot("memory-paths-nongit-");
     const outer = join(sandbox, "outer");
     const inner = join(outer, "inner");
     const nested = join(inner, "src", "feature");
-    await mkdir(join(outer, ".aictx"), { recursive: true });
-    await mkdir(join(inner, ".aictx"), { recursive: true });
+    await mkdir(join(outer, ".memory"), { recursive: true });
+    await mkdir(join(inner, ".memory"), { recursive: true });
     await mkdir(nested, { recursive: true });
-    await writeFile(join(outer, ".aictx", "config.json"), "{}\n");
-    await writeFile(join(inner, ".aictx", "config.json"), "{}\n");
+    await writeFile(join(outer, ".memory", "config.json"), "{}\n");
+    await writeFile(join(inner, ".memory", "config.json"), "{}\n");
 
     const resolved = await resolveProjectPaths({
       cwd: nested,
@@ -58,7 +58,7 @@ describe("project path resolution integration", () => {
       ok: true,
       data: {
         projectRoot: inner,
-        aictxRoot: join(inner, ".aictx"),
+        memoryRoot: join(inner, ".memory"),
         git: {
           available: false,
           root: null
@@ -69,7 +69,7 @@ describe("project path resolution integration", () => {
   });
 
   it("resolves non-Git init from a nested cwd to that cwd", async () => {
-    const sandbox = await createTempRoot("aictx-paths-init-");
+    const sandbox = await createTempRoot("memory-paths-init-");
     const nested = join(sandbox, "new-project", "nested");
     await mkdir(nested, { recursive: true });
 
@@ -82,7 +82,7 @@ describe("project path resolution integration", () => {
       ok: true,
       data: {
         projectRoot: nested,
-        aictxRoot: join(nested, ".aictx"),
+        memoryRoot: join(nested, ".memory"),
         git: {
           available: false,
           root: null
@@ -92,8 +92,8 @@ describe("project path resolution integration", () => {
     });
   });
 
-  it("fails non-init outside Git when no .aictx/config.json is present", async () => {
-    const cwd = await createTempRoot("aictx-paths-missing-");
+  it("fails non-init outside Git when no .memory/config.json is present", async () => {
+    const cwd = await createTempRoot("memory-paths-missing-");
 
     const resolved = await resolveProjectPaths({
       cwd,
@@ -102,18 +102,18 @@ describe("project path resolution integration", () => {
 
     expect(resolved.ok).toBe(false);
     if (!resolved.ok) {
-      expect(resolved.error.code).toBe("AICtxNotInitialized");
+      expect(resolved.error.code).toBe("MemoryNotInitialized");
     }
   });
 });
 
 async function createRepo(): Promise<string> {
-  const repo = await createTempRoot("aictx-paths-repo-");
+  const repo = await createTempRoot("memory-paths-repo-");
   await git(repo, ["init", "--initial-branch=main"]);
   await git(repo, ["config", "user.email", "test@example.com"]);
-  await git(repo, ["config", "user.name", "Aictx Test"]);
-  await mkdir(join(repo, ".aictx"), { recursive: true });
-  await writeFile(join(repo, ".aictx", "config.json"), "{}\n");
+  await git(repo, ["config", "user.name", "Memory Test"]);
+  await mkdir(join(repo, ".memory"), { recursive: true });
+  await writeFile(join(repo, ".memory", "config.json"), "{}\n");
   await writeFile(join(repo, "README.md"), "# Test\n");
   await git(repo, ["add", "."]);
   await git(repo, ["commit", "-m", "Initial commit"]);

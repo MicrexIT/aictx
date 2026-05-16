@@ -24,7 +24,7 @@ export function registerAuditCommand(
 ): void {
   program
     .command("audit")
-    .description("Report deterministic Aictx memory hygiene findings.")
+    .description("Report deterministic Memory hygiene findings.")
     .action(async (_commandOptions: unknown, command: Command) => {
       const result = await auditMemory(auditMemoryOptions(options));
       const rendered = renderAppResult(result, {
@@ -56,13 +56,13 @@ function isJsonMode(command: Command): boolean {
 
 function renderAuditData(data: AuditMemoryData): string {
   if (data.findings.length === 0 && data.role_gaps.length === 0) {
-    return "No Aictx audit findings.";
+    return "No Memory audit findings.";
   }
 
   return [
     ...(data.findings.length === 0
       ? []
-      : ["Aictx audit findings:", ...data.findings.map(renderFinding)]),
+      : ["Memory audit findings:", ...data.findings.map(renderFinding)]),
     ...(data.role_gaps.length === 0
       ? []
       : [
@@ -97,7 +97,7 @@ function renderRoleGap(gap: RoleCoverageGapData): string {
 function throwCommandFailed(exitCode: CliExitCode): never {
   throw new CommanderError(
     exitCode,
-    "aictx.command.failed",
-    "Aictx command failed."
+    "memory.command.failed",
+    "Memory command failed."
   );
 }

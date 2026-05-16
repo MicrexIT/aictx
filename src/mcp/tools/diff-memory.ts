@@ -5,7 +5,7 @@ import { dataAccessService } from "../../data-access/index.js";
 import {
   PROJECT_ROOT_ARGUMENT_DESCRIPTION,
   resolveMcpProjectCwd,
-  type AictxMcpContext,
+  type MemoryMcpContext,
   type ProjectScopedMcpArgs
 } from "../context.js";
 import {
@@ -26,15 +26,15 @@ type DiffMemoryArgs = z.infer<typeof DIFF_MEMORY_INPUT_SCHEMA> & ProjectScopedMc
 
 export const diffMemoryTool = {
   name: "diff_memory",
-  title: "Diff Aictx Memory",
-  description: "Show Aictx memory changes, including untracked memory files.",
+  title: "Diff Memory",
+  description: "Show Memory changes, including untracked memory files.",
   inputSchema: DIFF_MEMORY_INPUT_SCHEMA,
   annotations: READ_ONLY_TOOL_ANNOTATIONS,
   call: callDiffMemoryTool
 };
 
 async function callDiffMemoryTool(
-  context: AictxMcpContext,
+  context: MemoryMcpContext,
   args: DiffMemoryArgs
 ): Promise<CallToolResult> {
   const result = await dataAccessService.diff({

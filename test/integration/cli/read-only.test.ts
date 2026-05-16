@@ -124,12 +124,12 @@ afterEach(async () => {
   );
 });
 
-describe("aictx read-only CLI commands", () => {
+describe("memory read-only CLI commands", () => {
   it("inspects one object with incoming and outgoing direct relations", async () => {
-    const projectRoot = await createReadOnlyFixtureProject("aictx-cli-inspect-");
+    const projectRoot = await createReadOnlyFixtureProject("memory-cli-inspect-");
 
     const output = await runCli(
-      ["node", "aictx", "inspect", "decision.billing-retries", "--json"],
+      ["node", "memory", "inspect", "decision.billing-retries", "--json"],
       projectRoot
     );
 
@@ -143,8 +143,8 @@ describe("aictx read-only CLI commands", () => {
       type: "decision",
       status: "active",
       title: "Billing retries",
-      body_path: ".aictx/memory/decisions/billing-retries.md",
-      json_path: ".aictx/memory/decisions/billing-retries.json"
+      body_path: ".memory/memory/decisions/billing-retries.md",
+      json_path: ".memory/memory/decisions/billing-retries.json"
     });
     expect(envelope.data.object.body).toContain("Billing retries run in the worker.");
     expect(envelope.data.relations.outgoing.map((relation) => relation.id)).toEqual([
@@ -156,9 +156,9 @@ describe("aictx read-only CLI commands", () => {
   });
 
   it("lists stale and superseded memory only", async () => {
-    const projectRoot = await createReadOnlyFixtureProject("aictx-cli-stale-");
+    const projectRoot = await createReadOnlyFixtureProject("memory-cli-stale-");
 
-    const output = await runCli(["node", "aictx", "stale", "--json"], projectRoot);
+    const output = await runCli(["node", "memory", "stale", "--json"], projectRoot);
 
     expect(output.exitCode).toBe(0);
     expect(output.stderr).toBe("");
@@ -178,10 +178,10 @@ describe("aictx read-only CLI commands", () => {
   });
 
   it("returns a one-hop relation neighborhood for graph debugging", async () => {
-    const projectRoot = await createReadOnlyFixtureProject("aictx-cli-graph-");
+    const projectRoot = await createReadOnlyFixtureProject("memory-cli-graph-");
 
     const output = await runCli(
-      ["node", "aictx", "graph", "decision.billing-retries", "--json"],
+      ["node", "memory", "graph", "decision.billing-retries", "--json"],
       projectRoot
     );
 
@@ -207,14 +207,14 @@ describe("aictx read-only CLI commands", () => {
   });
 
   it("prints compact human output for inspect, stale, and graph", async () => {
-    const projectRoot = await createReadOnlyFixtureProject("aictx-cli-readonly-human-");
+    const projectRoot = await createReadOnlyFixtureProject("memory-cli-readonly-human-");
     const inspect = await runCli(
-      ["node", "aictx", "inspect", "decision.billing-retries"],
+      ["node", "memory", "inspect", "decision.billing-retries"],
       projectRoot
     );
-    const stale = await runCli(["node", "aictx", "stale"], projectRoot);
+    const stale = await runCli(["node", "memory", "stale"], projectRoot);
     const graph = await runCli(
-      ["node", "aictx", "graph", "decision.billing-retries"],
+      ["node", "memory", "graph", "decision.billing-retries"],
       projectRoot
     );
 
@@ -232,14 +232,14 @@ describe("aictx read-only CLI commands", () => {
     expect(() => JSON.parse(graph.stdout) as unknown).toThrow();
   });
 
-  it("returns AICtxObjectNotFound for missing inspect and graph roots", async () => {
-    const projectRoot = await createReadOnlyFixtureProject("aictx-cli-readonly-missing-");
+  it("returns MemoryObjectNotFound for missing inspect and graph roots", async () => {
+    const projectRoot = await createReadOnlyFixtureProject("memory-cli-readonly-missing-");
     const inspect = await runCli(
-      ["node", "aictx", "inspect", "decision.missing", "--json"],
+      ["node", "memory", "inspect", "decision.missing", "--json"],
       projectRoot
     );
     const graph = await runCli(
-      ["node", "aictx", "graph", "decision.missing", "--json"],
+      ["node", "memory", "graph", "decision.missing", "--json"],
       projectRoot
     );
 
@@ -249,31 +249,31 @@ describe("aictx read-only CLI commands", () => {
     const graphEnvelope = JSON.parse(graph.stdout) as ErrorEnvelope;
 
     expect(inspectEnvelope.error).toMatchObject({
-      code: "AICtxObjectNotFound",
+      code: "MemoryObjectNotFound",
       details: {
         id: "decision.missing"
       }
     });
     expect(graphEnvelope.error).toMatchObject({
-      code: "AICtxObjectNotFound",
+      code: "MemoryObjectNotFound",
       details: {
         id: "decision.missing"
       }
     });
   });
 
-  it("does not mutate canonical Aictx files", async () => {
-    const projectRoot = await createReadOnlyFixtureProject("aictx-cli-readonly-mutation-");
+  it("does not mutate canonical Memory files", async () => {
+    const projectRoot = await createReadOnlyFixtureProject("memory-cli-readonly-mutation-");
     const before = await readCanonicalFiles(projectRoot);
 
     await expect(
-      runCli(["node", "aictx", "inspect", "decision.billing-retries", "--json"], projectRoot)
+      runCli(["node", "memory", "inspect", "decision.billing-retries", "--json"], projectRoot)
     ).resolves.toMatchObject({ exitCode: 0 });
-    await expect(runCli(["node", "aictx", "stale", "--json"], projectRoot)).resolves.toMatchObject({
+    await expect(runCli(["node", "memory", "stale", "--json"], projectRoot)).resolves.toMatchObject({
       exitCode: 0
     });
     await expect(
-      runCli(["node", "aictx", "graph", "decision.billing-retries", "--json"], projectRoot)
+      runCli(["node", "memory", "graph", "decision.billing-retries", "--json"], projectRoot)
     ).resolves.toMatchObject({ exitCode: 0 });
 
     await expect(readCanonicalFiles(projectRoot)).resolves.toEqual(before);
@@ -385,7 +385,7 @@ async function createReadOnlyFixtureProject(prefix: string): Promise<string> {
 
 async function createInitializedProject(prefix: string): Promise<string> {
   const projectRoot = await createTempRoot(prefix);
-  const output = await runCli(["node", "aictx", "init", "--json"], projectRoot);
+  const output = await runCli(["node", "memory", "init", "--json"], projectRoot);
 
   expect(output.exitCode).toBe(0);
   expect(output.stderr).toBe("");
@@ -464,10 +464,10 @@ async function writeMemoryObject(projectRoot: string, fixture: MemoryFixture): P
     content_hash: computeObjectContentHash(sidecarWithoutHash, fixture.body)
   };
 
-  await writeProjectFile(projectRoot, `.aictx/${bodyPath}`, fixture.body);
+  await writeProjectFile(projectRoot, `.memory/${bodyPath}`, fixture.body);
   await writeJsonProjectFile(
     projectRoot,
-    `.aictx/${bodyPath.replace(/\.md$/, ".json")}`,
+    `.memory/${bodyPath.replace(/\.md$/, ".json")}`,
     sidecar
   );
 }
@@ -496,7 +496,7 @@ async function writeRelation(projectRoot: string, fixture: RelationFixture): Pro
 
   await writeJsonProjectFile(
     projectRoot,
-    `.aictx/relations/${fixture.id.replace(/^rel\./, "")}.json`,
+    `.memory/relations/${fixture.id.replace(/^rel\./, "")}.json`,
     relation
   );
 }
@@ -568,11 +568,11 @@ async function readCanonicalFiles(projectRoot: string): Promise<Record<string, s
   const files: Record<string, string> = {};
 
   for (const root of [
-    ".aictx/config.json",
-    ".aictx/events.jsonl",
-    ".aictx/memory",
-    ".aictx/relations",
-    ".aictx/schema"
+    ".memory/config.json",
+    ".memory/events.jsonl",
+    ".memory/memory",
+    ".memory/relations",
+    ".memory/schema"
   ]) {
     const absoluteRoot = join(projectRoot, root);
     const entries = await readFilesRecursively(projectRoot, absoluteRoot);

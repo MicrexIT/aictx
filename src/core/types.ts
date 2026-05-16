@@ -144,9 +144,9 @@ export interface GitState {
   dirty: boolean | null;
 }
 
-export interface AictxMeta {
+export interface MemoryMeta {
   project_root: string;
-  aictx_root: string;
+  memory_root: string;
   git: GitState;
 }
 

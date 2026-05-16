@@ -11,7 +11,7 @@ import type {
   SourceOrigin
 } from "../core/types.js";
 
-export interface AictxConfig {
+export interface MemoryConfig {
   version: 1 | 2 | 3 | 4;
   project: {
     id: string;
@@ -52,7 +52,7 @@ export interface StoredMemoryObject {
   body: string;
 }
 
-export function isAictxConfig(value: unknown): value is AictxConfig {
+export function isMemoryConfig(value: unknown): value is MemoryConfig {
   if (!isRecord(value)) {
     return false;
   }

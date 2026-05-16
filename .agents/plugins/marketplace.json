@@ -1,14 +1,14 @@
 {
-  "name": "aictx",
+  "name": "memory",
   "interface": {
-    "displayName": "Aictx"
+    "displayName": "Memory"
   },
   "plugins": [
     {
-      "name": "aictx-memory",
+      "name": "memory",
       "source": {
         "source": "local",
-        "path": "./integrations/codex/plugins/aictx-memory"
+        "path": "./integrations/codex/plugins/memory"
       },
       "policy": {
         "installation": "AVAILABLE",

@@ -31,7 +31,7 @@ export function registerSearchCommand(
 ): void {
   program
     .command("search")
-    .description("Search local Aictx memory using the generated SQLite index.")
+    .description("Search local Memory using the generated SQLite index.")
     .argument("<query>", "Search query.")
     .option("--limit <number>", "Maximum number of matches to return.")
     .option("--file <path>", "File path retrieval hint.", collectRepeated, [])
@@ -54,8 +54,8 @@ export function registerSearchCommand(
       if (rendered.exitCode !== CLI_EXIT_SUCCESS) {
         throw new CommanderError(
           rendered.exitCode,
-          "aictx.command.failed",
-          "Aictx command failed."
+          "memory.command.failed",
+          "Memory command failed."
         );
       }
     });
@@ -106,7 +106,7 @@ function isJsonMode(command: Command): boolean {
 
 function renderSearchData(data: SearchMemoryData): string {
   if (data.matches.length === 0) {
-    return "No matching Aictx memory.";
+    return "No matching Memory.";
   }
 
   return data.matches.map(renderSearchResult).join("\n\n");

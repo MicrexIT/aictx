@@ -1,8 +1,8 @@
 blank_issues_enabled: false
 contact_links:
   - name: Questions and support
-    url: https://github.com/MicrexIT/aictx/discussions
+    url: https://github.com/MicrexIT/memory/discussions
     about: Ask usage questions or discuss ideas before opening a focused issue.
   - name: Security reports
-    url: https://github.com/MicrexIT/aictx/security/advisories/new
+    url: https://github.com/MicrexIT/memory/security/advisories/new
     about: Report suspected vulnerabilities privately.

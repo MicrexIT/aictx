@@ -1,5 +1,5 @@
 import type { Clock } from "../core/clock.js";
-import { aictxError, type JsonValue } from "../core/errors.js";
+import { memoryError, type JsonValue } from "../core/errors.js";
 import type { ProjectFileChange } from "../core/git.js";
 import { writeMarkdownAtomic } from "../core/fs.js";
 import { slugify } from "../core/ids.js";
@@ -175,7 +175,7 @@ export async function compileContextPack(
   }
 
   const searched = await searchIndex({
-    aictxRoot: options.paths.aictxRoot,
+    memoryRoot: options.paths.memoryRoot,
     query: task.data,
     limit: SEARCH_SEED_LIMIT,
     ...(options.hints === undefined ? {} : { hints: options.hints })
@@ -185,7 +185,7 @@ export async function compileContextPack(
     return err(searched.error, [...storage.warnings, ...searched.warnings]);
   }
 
-  const fresh = await requireFreshIndex(options.paths.aictxRoot, storage.data);
+  const fresh = await requireFreshIndex(options.paths.memoryRoot, storage.data);
 
   if (!fresh.ok) {
     return err(fresh.error, [...storage.warnings, ...searched.warnings, ...fresh.warnings]);
@@ -288,7 +288,7 @@ function normalizeTask(task: string): Result<string> {
 
   if (normalized === "") {
     return err(
-      aictxError("AICtxValidationFailed", "Task must be non-empty after trimming whitespace.", {
+      memoryError("MemoryValidationFailed", "Task must be non-empty after trimming whitespace.", {
         field: "task"
       })
     );
@@ -307,7 +307,7 @@ function resolveTokenTarget(input: TokenTargetInput): Result<TokenTarget> {
 
     if (normalized.data.tokenTarget === null) {
       return err(
-        aictxError("AICtxInternalError", "Explicit token budget did not produce a token target.")
+        memoryError("MemoryInternalError", "Explicit token budget did not produce a token target.")
       );
     }
 
@@ -338,11 +338,11 @@ function isValidConfiguredDefaultBudget(value: number): boolean {
 }
 
 async function requireFreshIndex(
-  aictxRoot: string,
+  memoryRoot: string,
   storage: CanonicalStorageSnapshot
 ): Promise<Result<void>> {
   const opened = await openIndexDatabase({
-    aictxRoot,
+    memoryRoot,
     migrate: false
   });
 
@@ -447,7 +447,7 @@ function checkIndexFresh(
     return ok(undefined);
   } catch (error) {
     return err(
-      aictxError("AICtxIndexUnavailable", "SQLite index freshness could not be checked.", {
+      memoryError("MemoryIndexUnavailable", "SQLite index freshness could not be checked.", {
         message: messageFromUnknown(error)
       })
     );
@@ -940,7 +940,7 @@ function normalizeProjectFileReference(value: string): string | null {
     normalized.includes("/../") ||
     normalized.includes("://") ||
     normalized.includes("\0") ||
-    normalized.startsWith(".aictx/")
+    normalized.startsWith(".memory/")
   ) {
     return null;
   }
@@ -990,13 +990,13 @@ async function saveGeneratedContextPack(options: {
 
   return writeMarkdownAtomic(
     options.projectRoot,
-    `.aictx/context/${timestampSlug}-${taskSlug}.md`,
+    `.memory/context/${timestampSlug}-${taskSlug}.md`,
     options.markdown
   );
 }
 
 function staleIndex(details: JsonValue): Result<void> {
-  return err(aictxError("AICtxIndexUnavailable", "SQLite index is stale.", details));
+  return err(memoryError("MemoryIndexUnavailable", "SQLite index is stale.", details));
 }
 
 function messageFromUnknown(error: unknown): string {

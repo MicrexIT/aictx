@@ -9,7 +9,7 @@ import {
   getViewerProjects,
   type AppResult
 } from "../../app/operations.js";
-import { aictxError, type AictxError } from "../../core/errors.js";
+import { memoryError, type MemoryError } from "../../core/errors.js";
 import { err, ok, type Result } from "../../core/result.js";
 import { runSubprocess } from "../../core/subprocess.js";
 import {
@@ -28,7 +28,7 @@ export interface DetachViewerOptions {
   cwd: string;
   port?: number;
   open: boolean;
-  aictxHome?: string;
+  memoryHome?: string;
 }
 
 export interface DetachedViewer {
@@ -43,7 +43,7 @@ export interface RegisterViewCommandOptions {
   stdout: CliOutputWriter;
   stderr: CliOutputWriter;
   assetsDir?: string;
-  aictxHome?: string;
+  memoryHome?: string;
   opener?: ViewerUrlOpener;
   detacher?: ViewerDetacher;
   shutdownSignal?: AbortSignal;
@@ -74,14 +74,14 @@ export function registerViewCommand(
 ): void {
   program
     .command("view")
-    .description("Start the local Aictx memory viewer.")
+    .description("Start the local Memory viewer.")
     .option("--port <number>", "Port to bind on 127.0.0.1.")
     .option("--open", "Open the viewer URL in the default browser.")
     .option("--detach", "Start the viewer in a background process and print its URL.")
     .action(async (flags: ViewCommandFlags, command: Command) => {
       const preflight = await getViewerProjects({
         cwd: options.cwd,
-        ...(options.aictxHome === undefined ? {} : { aictxHome: options.aictxHome })
+        ...(options.memoryHome === undefined ? {} : { memoryHome: options.memoryHome })
       });
 
       if (!preflight.ok) {
@@ -102,7 +102,7 @@ export function registerViewCommand(
             cwd: options.cwd,
             ...(port.data === undefined ? {} : { port: port.data }),
             open: flags.open === true,
-            ...(options.aictxHome === undefined ? {} : { aictxHome: options.aictxHome })
+            ...(options.memoryHome === undefined ? {} : { memoryHome: options.memoryHome })
           },
           options.detacher
         );
@@ -143,7 +143,7 @@ export function registerViewCommand(
         cwd: options.cwd,
         ...(port.data === undefined ? {} : { port: port.data }),
         ...(options.assetsDir === undefined ? {} : { assetsDir: options.assetsDir }),
-        ...(options.aictxHome === undefined ? {} : { aictxHome: options.aictxHome })
+        ...(options.memoryHome === undefined ? {} : { memoryHome: options.memoryHome })
       });
 
       if (!started.ok) {
@@ -202,7 +202,7 @@ function renderAndThrowOnFailure(
 }
 
 function errorResult(
-  error: AictxError,
+  error: MemoryError,
   preflight: Extract<AppResult<unknown>, { ok: true }>
 ): AppResult<ViewServerData> {
   return {
@@ -222,7 +222,7 @@ function parsePort(value: string | undefined): Result<number | undefined> {
 
   if (!Number.isInteger(parsed) || parsed < 1 || parsed > 65535) {
     return err(
-      aictxError("AICtxValidationFailed", "Viewer port must be an integer from 1 to 65535.", {
+      memoryError("MemoryValidationFailed", "Viewer port must be an integer from 1 to 65535.", {
         port: value
       })
     );
@@ -233,10 +233,10 @@ function parsePort(value: string | undefined): Result<number | undefined> {
 
 function renderViewData(data: ViewServerData): string {
   return [
-    `Aictx viewer: ${data.url}`,
-    `Aictx project registry: ${data.registry_path}`,
-    `Aictx viewer projects: ${data.projects_count}`,
-    ...(data.log_path === null ? [] : [`Aictx viewer log: ${data.log_path}`])
+    `Memory viewer: ${data.url}`,
+    `Memory project registry: ${data.registry_path}`,
+    `Memory viewer projects: ${data.projects_count}`,
+    ...(data.log_path === null ? [] : [`Memory viewer log: ${data.log_path}`])
   ].join("\n");
 }
 
@@ -283,7 +283,7 @@ export async function detachViewer(
     return detacher(options);
   }
 
-  const logPath = join(tmpdir(), `aictx-viewer-${process.pid}-${Date.now()}.log`);
+  const logPath = join(tmpdir(), `memory-viewer-${process.pid}-${Date.now()}.log`);
   const log = await openFile(logPath, "a");
   const cliPath = resolveDetachedCliPath(import.meta.url);
   const args = [
@@ -298,7 +298,7 @@ export async function detachViewer(
     stdio: ["ignore", log.fd, log.fd],
     env: {
       ...process.env,
-      ...(options.aictxHome === undefined ? {} : { AICTX_HOME: options.aictxHome })
+      ...(options.memoryHome === undefined ? {} : { MEMORY_HOME: options.memoryHome })
     }
   });
 
@@ -336,7 +336,7 @@ async function waitForDetachedViewerUrl(logPath: string): Promise<Result<string>
 
   while (Date.now() - startedAt < 5_000) {
     const contents = await readFile(logPath, "utf8").catch(() => "");
-    const match = contents.match(/Aictx viewer: (?<url>http:\/\/127\.0\.0\.1:\d+\/\?token=\S+)/);
+    const match = contents.match(/Memory viewer: (?<url>http:\/\/127\.0\.0\.1:\d+\/\?token=\S+)/);
 
     if (match?.groups?.url !== undefined) {
       return ok(match.groups.url);
@@ -346,7 +346,7 @@ async function waitForDetachedViewerUrl(logPath: string): Promise<Result<string>
   }
 
   return err(
-    aictxError("AICtxValidationFailed", "Detached viewer did not report a URL.", {
+    memoryError("MemoryValidationFailed", "Detached viewer did not report a URL.", {
       log_path: logPath
     })
   );
@@ -392,8 +392,8 @@ function waitForShutdown(
 function throwCommandFailed(exitCode: CliExitCode): never {
   throw new CommanderError(
     exitCode,
-    "aictx.command.failed",
-    "Aictx command failed."
+    "memory.command.failed",
+    "Memory command failed."
   );
 }
 

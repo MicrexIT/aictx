@@ -1,4 +1,4 @@
-import type { AictxError, AictxErrorCode } from "../core/errors.js";
+import type { MemoryError, MemoryErrorCode } from "../core/errors.js";
 
 export const CLI_EXIT_SUCCESS = 0;
 export const CLI_EXIT_ERROR = 1;
@@ -11,22 +11,22 @@ export type CliExitCode =
   | typeof CLI_EXIT_USAGE
   | typeof CLI_EXIT_PRECONDITION;
 
-const PRECONDITION_ERROR_CODES = new Set<AictxErrorCode>([
-  "AICtxGitRequired",
-  "AICtxNotInitialized",
-  "AICtxAlreadyInitializedInvalid",
-  "AICtxUnsupportedStorageVersion",
-  "AICtxConflictDetected",
-  "AICtxDirtyMemory",
-  "AICtxIndexUnavailable",
-  "AICtxLockBusy",
-  "AICtxGitOperationFailed"
+const PRECONDITION_ERROR_CODES = new Set<MemoryErrorCode>([
+  "MemoryGitRequired",
+  "MemoryNotInitialized",
+  "MemoryAlreadyInitializedInvalid",
+  "MemoryUnsupportedStorageVersion",
+  "MemoryConflictDetected",
+  "MemoryDirtyMemory",
+  "MemoryIndexUnavailable",
+  "MemoryLockBusy",
+  "MemoryGitOperationFailed"
 ]);
 
-export function isPreconditionErrorCode(code: AictxErrorCode): boolean {
+export function isPreconditionErrorCode(code: MemoryErrorCode): boolean {
   return PRECONDITION_ERROR_CODES.has(code);
 }
 
-export function exitCodeForAictxError(error: Pick<AictxError, "code">): CliExitCode {
+export function exitCodeForMemoryError(error: Pick<MemoryError, "code">): CliExitCode {
   return isPreconditionErrorCode(error.code) ? CLI_EXIT_PRECONDITION : CLI_EXIT_ERROR;
 }

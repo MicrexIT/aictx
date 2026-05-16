@@ -18,9 +18,9 @@ export function registerInitCommand(
 ): void {
   program
     .command("init")
-    .description("Initialize Aictx memory storage in this project.")
+    .description("Initialize Memory storage in this project.")
     .option("--no-agent-guidance", "Skip AGENTS.md and CLAUDE.md setup.")
-    .option("--force", "Discard existing Aictx storage and initialize from scratch.")
+    .option("--force", "Discard existing Memory storage and initialize from scratch.")
     .action(async (commandOptions: InitCommandOptions, command: Command) => {
       const result = await initProject(initProjectOptions(options, commandOptions));
       const rendered = renderAppResult(result, {
@@ -34,8 +34,8 @@ export function registerInitCommand(
       if (rendered.exitCode !== CLI_EXIT_SUCCESS) {
         throw new CommanderError(
           rendered.exitCode,
-          "aictx.command.failed",
-          "Aictx command failed."
+          "memory.command.failed",
+          "Memory command failed."
         );
       }
     });
@@ -75,7 +75,7 @@ function renderInitData(data: {
   next_steps: string[];
 }): string {
   const lines = [
-    data.created ? "Initialized Aictx." : "Aictx is already initialized.",
+    data.created ? "Initialized Memory." : "Memory is already initialized.",
     ...renderCreatedFiles(data.files_created),
     `Gitignore ${data.gitignore_updated ? "updated" : "unchanged"}.`,
     `Index ${data.index_built ? "built" : "not built"}.`,

@@ -1,16 +1,16 @@
 ---
 title: Publishing Plugins
-description: Publish the generated Aictx Codex and Claude Code plugin artifacts.
+description: Publish the generated Memory Codex and Claude Code plugin artifacts.
 ---
 
-Aictx ships generated plugin artifacts, but marketplace install and official
+Memory ships generated plugin artifacts, but marketplace install and official
 publication are different steps. Adding a marketplace registers a catalog so a
 user can browse or install from it; it does not publish the plugin to an
 official directory.
 
 The generated artifacts stay CLI-first and do not bundle MCP configuration.
 Use MCP only when the current agent client has already launched and exposed
-`aictx-mcp`.
+`memory-mcp`.
 
 ## Self-hosted marketplace
 
@@ -25,17 +25,17 @@ Once the repo is public and pushed, Codex users can add the marketplace with:
 codex plugin marketplace add aictx/memory
 ```
 
-Then they open Codex Plugins, choose the **Aictx** marketplace, and install
-**Aictx Memory**.
+Then they open Codex Plugins, choose the **Memory** marketplace, and install
+**Memory**.
 
 Claude Code users can add the marketplace and install the plugin with:
 
 ```text
 /plugin marketplace add aictx/memory
-/plugin install aictx-memory@aictx
+/plugin install memory@aictx
 ```
 
-The marketplace name is `aictx`; the plugin name is `aictx-memory`.
+The marketplace name is `memory`; the plugin name is `memory`.
 
 ## Official paths
 
@@ -46,13 +46,13 @@ PR to `openai/codex` for this plugin.
 
 Codex standalone skills are separate from Codex plugins. For skill catalog
 exposure, prepare a PR to [`openai/skills`](https://github.com/openai/skills)
-using `integrations/codex/skills/aictx-memory/` as the source directory.
+using `integrations/codex/skills/memory/` as the source directory.
 
 Claude official listing uses Anthropic's submission flow. Validate the generated
 plugin first:
 
 ```bash
-claude plugin validate integrations/claude/plugins/aictx-memory
+claude plugin validate integrations/claude/plugins/memory
 ```
 
 Then submit a public GitHub link or zip through the
@@ -67,7 +67,7 @@ An agent can prepare the repo for self-hosted distribution by running:
 
 ```bash
 pnpm build:guidance
-claude plugin validate integrations/claude/plugins/aictx-memory
+claude plugin validate integrations/claude/plugins/memory
 claude plugin validate .claude-plugin/marketplace.json
 pnpm build:docs
 ```
@@ -76,7 +76,7 @@ For an official Claude submission zip, commit the release state first, then
 package the generated plugin directory:
 
 ```bash
-git archive --format=zip --prefix=aictx-memory/ HEAD:integrations/claude/plugins/aictx-memory > aictx-memory-claude-plugin.zip
+git archive --format=zip --prefix=memory/ HEAD:integrations/claude/plugins/memory > memory-claude-plugin.zip
 ```
 
 The final form submission still requires an authenticated human account.

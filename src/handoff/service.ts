@@ -1,4 +1,4 @@
-import { aictxError, type JsonValue } from "../core/errors.js";
+import { memoryError, type JsonValue } from "../core/errors.js";
 import { slugify } from "../core/ids.js";
 import { err, ok, type Result } from "../core/result.js";
 import type {
@@ -323,7 +323,7 @@ function readStringArray(input: Record<string, unknown>, field: keyof BranchHand
 
 function invalidHandoffInput(message: string, field: string): Result<never> {
   return err(
-    aictxError("AICtxValidationFailed", message, {
+    memoryError("MemoryValidationFailed", message, {
       field
     } satisfies JsonValue)
   );

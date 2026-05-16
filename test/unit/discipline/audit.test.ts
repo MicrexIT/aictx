@@ -35,7 +35,7 @@ afterEach(async () => {
 
 describe("audit discipline findings", () => {
   it("reports each v1 audit rule with deterministic finding and evidence order", async () => {
-    const projectRoot = await createTempRoot("aictx-discipline-audit-rules-");
+    const projectRoot = await createTempRoot("memory-discipline-audit-rules-");
     await writeProjectFile(projectRoot, "package.json", '{ "version": "1.2.3" }\n');
     await writeProjectFile(projectRoot, "src/current.ts", "export const current = true;\n");
     const objects = [
@@ -164,7 +164,7 @@ describe("audit discipline findings", () => {
   });
 
   it("returns no findings for healthy deterministic memory", async () => {
-    const projectRoot = await createTempRoot("aictx-discipline-audit-healthy-");
+    const projectRoot = await createTempRoot("memory-discipline-audit-healthy-");
     await writeProjectFile(projectRoot, "package.json", '{ "version": "1.2.3" }\n');
     await writeProjectFile(projectRoot, "src/current.ts", "export const current = true;\n");
     const storage = storageSnapshot({
@@ -200,7 +200,7 @@ describe("audit discipline findings", () => {
   });
 
   it("reports facet, object evidence, task diary, oversized vague, and duplicate facet findings", async () => {
-    const projectRoot = await createTempRoot("aictx-discipline-audit-v3-");
+    const projectRoot = await createTempRoot("memory-discipline-audit-v3-");
     const storage = storageSnapshot({
       projectRoot,
       version: 3,
@@ -264,7 +264,7 @@ describe("audit discipline findings", () => {
   });
 
   it("reports active syntheses without source evidence or source provenance relations", async () => {
-    const projectRoot = await createTempRoot("aictx-discipline-audit-synthesis-source-");
+    const projectRoot = await createTempRoot("memory-discipline-audit-synthesis-source-");
     const storage = storageSnapshot({
       projectRoot,
       version: 3,
@@ -337,7 +337,7 @@ describe("audit discipline findings", () => {
   });
 
   it("reports active source objects without origin metadata", async () => {
-    const projectRoot = await createTempRoot("aictx-discipline-audit-source-origin-");
+    const projectRoot = await createTempRoot("memory-discipline-audit-source-origin-");
     const storage = storageSnapshot({
       projectRoot,
       version: 4,
@@ -381,7 +381,7 @@ describe("audit discipline findings", () => {
   });
 
   it("reports weak connectivity, unlinked applicability overlap, related_to overuse, and missing rationale gaps", async () => {
-    const projectRoot = await createTempRoot("aictx-discipline-audit-connectivity-");
+    const projectRoot = await createTempRoot("memory-discipline-audit-connectivity-");
     const storage = storageSnapshot({
       projectRoot,
       version: 3,
@@ -467,7 +467,7 @@ function storageSnapshot(options: {
 }): CanonicalStorageSnapshot {
   return {
     projectRoot: options.projectRoot,
-    aictxRoot: join(options.projectRoot, ".aictx"),
+    memoryRoot: join(options.projectRoot, ".memory"),
     config: {
       version: options.version ?? 1,
       project: {
@@ -530,8 +530,8 @@ function memoryObject(options: {
   };
 
   return {
-    path: `.aictx/${bodyPath.replace(/\.md$/u, ".json")}`,
-    bodyPath: `.aictx/${bodyPath}`,
+    path: `.memory/${bodyPath.replace(/\.md$/u, ".json")}`,
+    bodyPath: `.memory/${bodyPath}`,
     sidecar,
     body: options.body
   };
@@ -560,7 +560,7 @@ function relation(options: {
   };
 
   return {
-    path: `.aictx/relations/${options.id}.json`,
+    path: `.memory/relations/${options.id}.json`,
     relation: relationData
   };
 }

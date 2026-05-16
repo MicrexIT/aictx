@@ -1,5 +1,5 @@
 name: Bug report
-description: Report a reproducible Aictx problem.
+description: Report a reproducible Memory problem.
 title: "[Bug]: "
 labels: ["bug"]
 body:
@@ -20,8 +20,8 @@ body:
       label: Reproduction steps
       description: Include commands and a minimal fixture when possible.
       placeholder: |
-        1. Run `aictx init`
-        2. Run `aictx load "..."`
+        1. Run `memory init`
+        2. Run `memory load "..."`
         3. See error
     validations:
       required: true
@@ -34,8 +34,8 @@ body:
   - type: input
     id: version
     attributes:
-      label: Aictx version
-      placeholder: "aictx --version"
+      label: Memory version
+      placeholder: "memory --version"
     validations:
       required: true
   - type: input

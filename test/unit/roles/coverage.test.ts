@@ -135,7 +135,7 @@ describe("memory role coverage", () => {
         }),
         "branch-handoff"
       ).gap
-    ).toContain("aictx handoff update --stdin");
+    ).toContain("memory handoff update --stdin");
     expect(
       role(
         buildRoleCoverage(staleStorage, {
@@ -167,7 +167,7 @@ function snapshot(input: {
 }): CanonicalStorageSnapshot {
   return {
     projectRoot: "/tmp/project",
-    aictxRoot: "/tmp/project/.aictx",
+    memoryRoot: "/tmp/project/.memory",
     config: {
       version: 4,
       project: {
@@ -199,8 +199,8 @@ function object(
   branch: string | null = null
 ): StoredMemoryObject {
   return {
-    path: `.aictx/memory/${id}.json`,
-    bodyPath: `.aictx/memory/${id}.md`,
+    path: `.memory/memory/${id}.json`,
+    bodyPath: `.memory/memory/${id}.md`,
     body,
     sidecar: {
       id,
@@ -232,7 +232,7 @@ function relation(
   to: string
 ): StoredMemoryRelation {
   return {
-    path: `.aictx/relations/${id}.json`,
+    path: `.memory/relations/${id}.json`,
     relation: {
       id,
       from,

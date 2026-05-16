@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { aictxError } from "../../../src/core/errors.js";
+import { memoryError } from "../../../src/core/errors.js";
 import { err, ok } from "../../../src/core/result.js";
 
 describe("core result helpers", () => {
@@ -21,7 +21,7 @@ describe("core result helpers", () => {
   });
 
   it("constructs error results with default warnings", () => {
-    const error = aictxError("AICtxGitRequired", "Git is required.");
+    const error = memoryError("MemoryGitRequired", "Git is required.");
 
     expect(err(error)).toEqual({
       ok: false,

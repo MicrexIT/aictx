@@ -83,12 +83,12 @@ afterEach(async () => {
   );
 });
 
-describe("aictx export obsidian CLI", () => {
+describe("memory export obsidian CLI", () => {
   it("exports the default generated projection without mutating canonical storage or SQLite", async () => {
-    const projectRoot = await createExportFixtureProject("aictx-cli-export-obsidian-");
+    const projectRoot = await createExportFixtureProject("memory-cli-export-obsidian-");
     const before = await readCanonicalAndIndexFiles(projectRoot);
 
-    const output = await runCli(["node", "aictx", "export", "obsidian", "--json"], projectRoot);
+    const output = await runCli(["node", "memory", "export", "obsidian", "--json"], projectRoot);
 
     expect(output.exitCode).toBe(0);
     expect(output.stderr).toBe("");
@@ -97,30 +97,30 @@ describe("aictx export obsidian CLI", () => {
     expect(envelope.ok).toBe(true);
     expect(envelope.data).toMatchObject({
       format: "obsidian",
-      output_dir: ".aictx/exports/obsidian",
-      manifest_path: ".aictx/exports/obsidian/.aictx-obsidian-export.json",
+      output_dir: ".memory/exports/obsidian",
+      manifest_path: ".memory/exports/obsidian/.memory-obsidian-export.json",
       objects_exported: 5,
       relations_linked: 2
     });
     expect(envelope.data.files_written).toContain(
-      ".aictx/exports/obsidian/memory/decision.billing-retries.md"
+      ".memory/exports/obsidian/memory/decision.billing-retries.md"
     );
     expect(envelope.data.files_removed).toEqual([]);
 
     const note = await readFile(
-      join(projectRoot, ".aictx/exports/obsidian/memory/decision.billing-retries.md"),
+      join(projectRoot, ".memory/exports/obsidian/memory/decision.billing-retries.md"),
       "utf8"
     );
     const frontmatter = parseJsonFrontmatter(note);
 
     expect(frontmatter).toMatchObject({
-      aictx_id: "decision.billing-retries",
-      aictx_title: "Billing retries",
+      memory_id: "decision.billing-retries",
+      memory_title: "Billing retries",
       aliases: ["Billing retries"],
       tags: ["billing", "retries"],
-      aictx_rel_requires: ["[[memory/constraint.webhook-idempotency]]"]
+      memory_rel_requires: ["[[memory/constraint.webhook-idempotency]]"]
     });
-    expect(frontmatter).not.toHaveProperty("aictx_rel_mentions");
+    expect(frontmatter).not.toHaveProperty("memory_rel_mentions");
     expect(note).toContain("# Billing retries\n\nRetries run in the queue worker.\n");
     expect(note).toContain(
       "- requires: [[memory/constraint.webhook-idempotency]]"
@@ -129,30 +129,30 @@ describe("aictx export obsidian CLI", () => {
   });
 
   it("supports a custom manifest-owned output directory and preserves unmanifested files", async () => {
-    const projectRoot = await createExportFixtureProject("aictx-cli-export-obsidian-custom-");
+    const projectRoot = await createExportFixtureProject("memory-cli-export-obsidian-custom-");
 
     const first = await runCli(
-      ["node", "aictx", "export", "obsidian", "--out", "aictx-obsidian"],
+      ["node", "memory", "export", "obsidian", "--out", "memory-obsidian"],
       projectRoot
     );
 
     expect(first.exitCode).toBe(0);
     expect(first.stderr).toBe("");
     expect(first.stdout).toContain("Exported Obsidian projection.");
-    expect(first.stdout).toContain("Output: aictx-obsidian");
+    expect(first.stdout).toContain("Output: memory-obsidian");
 
-    await writeProjectFile(projectRoot, "aictx-obsidian/user-note.md", "# User note\n");
-    await rm(join(projectRoot, ".aictx/memory/notes/worker-details.md"));
-    await rm(join(projectRoot, ".aictx/memory/notes/worker-details.json"));
+    await writeProjectFile(projectRoot, "memory-obsidian/user-note.md", "# User note\n");
+    await rm(join(projectRoot, ".memory/memory/notes/worker-details.md"));
+    await rm(join(projectRoot, ".memory/memory/notes/worker-details.json"));
 
     const second = await runCli(
       [
         "node",
-        "aictx",
+        "memory",
         "export",
         "obsidian",
         "--out",
-        "aictx-obsidian",
+        "memory-obsidian",
         "--json"
       ],
       projectRoot
@@ -162,30 +162,30 @@ describe("aictx export obsidian CLI", () => {
     expect(second.stderr).toBe("");
     const envelope = JSON.parse(second.stdout) as ExportEnvelope;
 
-    expect(envelope.data.output_dir).toBe("aictx-obsidian");
+    expect(envelope.data.output_dir).toBe("memory-obsidian");
     expect(envelope.data.files_removed).toEqual([
-      "aictx-obsidian/memory/note.worker-details.md"
+      "memory-obsidian/memory/note.worker-details.md"
     ]);
     await expect(
-      readFile(join(projectRoot, "aictx-obsidian/user-note.md"), "utf8")
+      readFile(join(projectRoot, "memory-obsidian/user-note.md"), "utf8")
     ).resolves.toBe("# User note\n");
     await expect(
-      readFile(join(projectRoot, "aictx-obsidian/memory/note.worker-details.md"), "utf8")
+      readFile(join(projectRoot, "memory-obsidian/memory/note.worker-details.md"), "utf8")
     ).rejects.toThrow();
   });
 
   it("fails for a non-empty unmanifested output directory", async () => {
-    const projectRoot = await createExportFixtureProject("aictx-cli-export-obsidian-invalid-");
-    await writeProjectFile(projectRoot, "aictx-obsidian/user-note.md", "# User note\n");
+    const projectRoot = await createExportFixtureProject("memory-cli-export-obsidian-invalid-");
+    await writeProjectFile(projectRoot, "memory-obsidian/user-note.md", "# User note\n");
 
     const output = await runCli(
       [
         "node",
-        "aictx",
+        "memory",
         "export",
         "obsidian",
         "--out",
-        "aictx-obsidian",
+        "memory-obsidian",
         "--json"
       ],
       projectRoot
@@ -196,7 +196,7 @@ describe("aictx export obsidian CLI", () => {
     const envelope = JSON.parse(output.stdout) as ErrorEnvelope;
 
     expect(envelope.ok).toBe(false);
-    expect(envelope.error.code).toBe("AICtxExportTargetInvalid");
+    expect(envelope.error.code).toBe("MemoryExportTargetInvalid");
   });
 });
 
@@ -248,7 +248,7 @@ async function createExportFixtureProject(prefix: string): Promise<string> {
 
 async function createInitializedProject(prefix: string): Promise<string> {
   const projectRoot = await createTempRoot(prefix);
-  const output = await runCli(["node", "aictx", "init", "--json"], projectRoot);
+  const output = await runCli(["node", "memory", "init", "--json"], projectRoot);
 
   expect(output.exitCode).toBe(0);
   expect(output.stderr).toBe("");
@@ -319,10 +319,10 @@ async function writeMemoryObject(projectRoot: string, fixture: MemoryFixture): P
     content_hash: computeObjectContentHash(sidecarWithoutHash, fixture.body)
   };
 
-  await writeProjectFile(projectRoot, `.aictx/${bodyPath}`, fixture.body);
+  await writeProjectFile(projectRoot, `.memory/${bodyPath}`, fixture.body);
   await writeJsonProjectFile(
     projectRoot,
-    `.aictx/${bodyPath.replace(/\.md$/, ".json")}`,
+    `.memory/${bodyPath.replace(/\.md$/, ".json")}`,
     sidecar
   );
 }
@@ -350,7 +350,7 @@ async function writeRelation(projectRoot: string, fixture: RelationFixture): Pro
 
   await writeJsonProjectFile(
     projectRoot,
-    `.aictx/relations/${fixture.id.replace(/^rel\./, "")}.json`,
+    `.memory/relations/${fixture.id.replace(/^rel\./, "")}.json`,
     relation
   );
 }
@@ -404,12 +404,12 @@ async function readCanonicalAndIndexFiles(projectRoot: string): Promise<Record<s
   const files: Record<string, string> = {};
 
   for (const root of [
-    ".aictx/config.json",
-    ".aictx/events.jsonl",
-    ".aictx/memory",
-    ".aictx/relations",
-    ".aictx/schema",
-    ".aictx/index"
+    ".memory/config.json",
+    ".memory/events.jsonl",
+    ".memory/memory",
+    ".memory/relations",
+    ".memory/schema",
+    ".memory/index"
   ]) {
     const absoluteRoot = join(projectRoot, root);
     Object.assign(files, await readFilesRecursively(projectRoot, absoluteRoot));

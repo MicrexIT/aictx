@@ -22,7 +22,7 @@ export function registerDiffCommand(
 ): void {
   program
     .command("diff")
-    .description("Show Aictx memory changes, including untracked memory files.")
+    .description("Show Memory changes, including untracked memory files.")
     .action(async (_commandOptions: unknown, command: Command) => {
       const result = await dataAccessService.diff(diffMemoryOptions(options));
       const rendered = renderAppResult(result, {
@@ -36,8 +36,8 @@ export function registerDiffCommand(
       if (rendered.exitCode !== CLI_EXIT_SUCCESS) {
         throw new CommanderError(
           rendered.exitCode,
-          "aictx.command.failed",
-          "Aictx command failed."
+          "memory.command.failed",
+          "Memory command failed."
         );
       }
     });

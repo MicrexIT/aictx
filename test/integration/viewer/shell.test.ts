@@ -67,14 +67,14 @@ describe("read-only viewer shell", () => {
 
     expect(assets.isFile()).toBe(true);
 
-    const projectRoot = await createInitializedProject("aictx-viewer-shell-project-");
+    const projectRoot = await createInitializedProject("memory-viewer-shell-project-");
     await writeViewerFixtures(projectRoot);
     await rebuildProjectIndex(projectRoot);
-    const aictxHome = await createTempRoot("aictx-viewer-shell-home-");
+    const memoryHome = await createTempRoot("memory-viewer-shell-home-");
     const started = await startViewerServer({
       cwd: projectRoot,
       assetsDir: viewerAssetsDir,
-      aictxHome,
+      memoryHome,
       token: "viewer-shell-token"
     });
 
@@ -105,7 +105,7 @@ describe("read-only viewer shell", () => {
       await expectText(page, '[data-testid="project-list"]', "Current");
       await expectCount(page, '[data-testid="memory-list-view"]', 0);
       await page.getByRole("button", { name: "Open project" }).first().click();
-      await expectText(page, '[data-testid="memory-list-view"]', "Aictx Viewer Shell Project");
+      await expectText(page, '[data-testid="memory-list-view"]', "Memory Viewer Shell Project");
       await expectText(page, '[data-testid="memory-list-view"]', "Memory Schema");
       await expectText(page, '[data-testid="memory-list-view"]', "Canonical objects");
       await expectNoText(page, '[data-testid="memory-list-view"]', "Schema projection loaded");
@@ -270,7 +270,7 @@ describe("read-only viewer shell", () => {
 
       await page.locator('[data-testid="technical-details"] summary').click();
       await expectText(page, '[data-testid="json-view"]', '"id": "constraint.viewer-markdown"');
-      await expectText(page, '[data-testid="json-view"]', '"body_path": ".aictx/memory/constraints/viewer-markdown.md"');
+      await expectText(page, '[data-testid="json-view"]', '"body_path": ".memory/memory/constraints/viewer-markdown.md"');
       await expectText(page, '[data-testid="incoming-relations"]', "Viewer Shell Layout");
 
       await page.locator('[data-testid="object-row-constraint.viewer-markdown"]').click();
@@ -284,7 +284,7 @@ describe("read-only viewer shell", () => {
       await expectText(page, '[data-testid="incoming-relations"]', "No incoming related memories.");
       await expectCount(page, '[data-testid="relation-graph"]', 0);
 
-      expect(await page.evaluate("window.__AICTX_HTML_EXECUTED")).toBeUndefined();
+      expect(await page.evaluate("window.__MEMORY_HTML_EXECUTED")).toBeUndefined();
       expect(consoleErrors()).toEqual([]);
     } finally {
       await browser?.close();
@@ -293,17 +293,17 @@ describe("read-only viewer shell", () => {
   });
 
   it("serves real read-only load previews without saving context packs or rebuilding indexes", async () => {
-    const projectRoot = await createInitializedProject("aictx-viewer-preview-route-");
+    const projectRoot = await createInitializedProject("memory-viewer-preview-route-");
     await writeViewerFixtures(projectRoot);
     await updateProjectConfig(projectRoot, (config) => {
       config.memory.saveContextPacks = true;
     });
     await rebuildProjectIndex(projectRoot);
-    const aictxHome = await createTempRoot("aictx-viewer-preview-home-");
+    const memoryHome = await createTempRoot("memory-viewer-preview-home-");
     const started = await startViewerServer({
       cwd: projectRoot,
       assetsDir: viewerAssetsDir,
-      aictxHome,
+      memoryHome,
       token: "viewer-preview-token"
     });
 
@@ -329,7 +329,7 @@ describe("read-only viewer shell", () => {
       });
       const invalidModeBody = await invalidMode.json() as { error: { code: string } };
       expect(invalidMode.status).toBe(400);
-      expect(invalidModeBody.error.code).toBe("AICtxValidationFailed");
+      expect(invalidModeBody.error.code).toBe("MemoryValidationFailed");
 
       const invalidBudget = await fetch(previewUrl, {
         method: "POST",
@@ -338,7 +338,7 @@ describe("read-only viewer shell", () => {
       });
       const invalidBudgetBody = await invalidBudget.json() as { error: { code: string } };
       expect(invalidBudget.status).toBe(400);
-      expect(invalidBudgetBody.error.code).toBe("AICtxValidationFailed");
+      expect(invalidBudgetBody.error.code).toBe("MemoryValidationFailed");
 
       const success = await fetch(previewUrl, {
         method: "POST",
@@ -361,10 +361,10 @@ describe("read-only viewer shell", () => {
       expect(successBody.data.context_pack).toContain("Viewer Shell Layout");
       expect(successBody.data.included_ids).toContain("decision.viewer-shell");
       expect(successBody.data.estimated_tokens).toBeGreaterThan(0);
-      expect(successBody.data.source.project).toContain("aictx-viewer-preview-route");
+      expect(successBody.data.source.project).toContain("memory-viewer-preview-route");
       await expect(listContextPacks(projectRoot)).resolves.toEqual([]);
 
-      await rm(join(projectRoot, ".aictx", "index"), { recursive: true, force: true });
+      await rm(join(projectRoot, ".memory", "index"), { recursive: true, force: true });
       const missingIndex = await fetch(previewUrl, {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -373,8 +373,8 @@ describe("read-only viewer shell", () => {
       const missingIndexBody = await missingIndex.json() as { error: { code: string } };
 
       expect(missingIndex.status).toBe(412);
-      expect(missingIndexBody.error.code).toBe("AICtxIndexUnavailable");
-      await expect(stat(join(projectRoot, ".aictx", "index"))).rejects.toThrow();
+      expect(missingIndexBody.error.code).toBe("MemoryIndexUnavailable");
+      await expect(stat(join(projectRoot, ".memory", "index"))).rejects.toThrow();
     } finally {
       await started.data.close();
     }
@@ -385,12 +385,12 @@ describe("read-only viewer shell", () => {
 
     expect(assets.isFile()).toBe(true);
 
-    const projectRoot = await createInitializedProject("aictx-viewer-starter-project-");
-    const aictxHome = await createTempRoot("aictx-viewer-starter-home-");
+    const projectRoot = await createInitializedProject("memory-viewer-starter-project-");
+    const memoryHome = await createTempRoot("memory-viewer-starter-home-");
     const started = await startViewerServer({
       cwd: projectRoot,
       assetsDir: viewerAssetsDir,
-      aictxHome,
+      memoryHome,
       token: "viewer-starter-token"
     });
 
@@ -417,8 +417,8 @@ describe("read-only viewer shell", () => {
       await page.getByRole("button", { name: "Open project" }).first().click();
 
       await expectText(page, '[data-testid="starter-memory-notice"]', "Starter memory only.");
-      await expectText(page, '[data-testid="starter-memory-notice"]', "aictx suggest --bootstrap --patch > bootstrap-memory.json");
-      await expectText(page, '[data-testid="starter-memory-notice"]', "aictx save --file bootstrap-memory.json");
+      await expectText(page, '[data-testid="starter-memory-notice"]', "memory suggest --bootstrap --patch > bootstrap-memory.json");
+      await expectText(page, '[data-testid="starter-memory-notice"]', "memory save --file bootstrap-memory.json");
       await expectText(page, '[data-testid="memory-list-view"]', "Memory Schema");
       await expectText(page, '[data-testid="memory-list-view"]', "Canonical objects");
       await expectNoText(page, '[data-testid="memory-list-view"]', "Schema projection loaded");
@@ -446,13 +446,13 @@ describe("read-only viewer shell", () => {
 
     expect(assets.isFile()).toBe(true);
 
-    const projectRoot = await createInitializedProject("aictx-viewer-delete-project-");
+    const projectRoot = await createInitializedProject("memory-viewer-delete-project-");
     await writeProjectFile(projectRoot, "src/app.ts", "export const kept = true;\n");
-    const aictxHome = await createTempRoot("aictx-viewer-delete-home-");
+    const memoryHome = await createTempRoot("memory-viewer-delete-home-");
     const started = await startViewerServer({
       cwd: projectRoot,
       assetsDir: viewerAssetsDir,
-      aictxHome,
+      memoryHome,
       token: "viewer-delete-token"
     });
 
@@ -497,8 +497,8 @@ describe("read-only viewer shell", () => {
         (testId) => document.querySelector(`[data-testid="${testId}"]`) === null,
         `project-card-${project.registry_id}`
       );
-      await expectText(page, '[data-testid="project-delete-status"]', "Deleted .aictx memory");
-      await expect(pathExists(join(projectRoot, ".aictx"))).resolves.toBe(false);
+      await expectText(page, '[data-testid="project-delete-status"]', "Deleted .memory");
+      await expect(pathExists(join(projectRoot, ".memory"))).resolves.toBe(false);
       await expect(readFile(join(projectRoot, "src/app.ts"), "utf8"))
         .resolves.toBe("export const kept = true;\n");
       expect(consoleErrors()).toEqual([]);
@@ -507,12 +507,12 @@ describe("read-only viewer shell", () => {
       await started.data.close();
     }
 
-    const demoProjectRoot = await createInitializedProject("aictx-viewer-demo-delete-project-");
-    const demoHome = await createTempRoot("aictx-viewer-demo-delete-home-");
+    const demoProjectRoot = await createInitializedProject("memory-viewer-demo-delete-project-");
+    const demoHome = await createTempRoot("memory-viewer-demo-delete-home-");
     const demoStarted = await startViewerServer({
       cwd: demoProjectRoot,
       assetsDir: viewerAssetsDir,
-      aictxHome: demoHome,
+      memoryHome: demoHome,
       token: "demo"
     });
 
@@ -543,8 +543,8 @@ async function assertSelectedObject(page: Page, title: string, id: string): Prom
 async function assertMarkdownIsSafe(page: Page): Promise<void> {
   const markdown = page.locator('[data-testid="markdown-view"]');
 
-  await expectText(page, '[data-testid="markdown-view"]', "<script>window.__AICTX_HTML_EXECUTED = true</script>");
-  await expectText(page, '[data-testid="markdown-view"]', "<img src=x onerror=\"window.__AICTX_HTML_EXECUTED = true\">");
+  await expectText(page, '[data-testid="markdown-view"]', "<script>window.__MEMORY_HTML_EXECUTED = true</script>");
+  await expectText(page, '[data-testid="markdown-view"]', "<img src=x onerror=\"window.__MEMORY_HTML_EXECUTED = true\">");
   await expectCount(page, '[data-testid="markdown-view"] script', 0);
   await expectCount(page, '[data-testid="markdown-view"] img', 0);
   await expect(markdown.textContent()).resolves.toContain("Verify search works");
@@ -623,7 +623,7 @@ async function writeViewerFixtures(projectRoot: string): Promise<void> {
     body: [
       "# Viewer Markdown Safety",
       "",
-      "Client-side body text includes <script>window.__AICTX_HTML_EXECUTED = true</script> and <img src=x onerror=\"window.__AICTX_HTML_EXECUTED = true\"> as inert text.",
+      "Client-side body text includes <script>window.__MEMORY_HTML_EXECUTED = true</script> and <img src=x onerror=\"window.__MEMORY_HTML_EXECUTED = true\"> as inert text.",
       "",
       "- Verify search works",
       "- Keep raw HTML inert",
@@ -827,10 +827,10 @@ async function writeMemoryObject(projectRoot: string, fixture: MemoryFixture): P
     content_hash: computeObjectContentHash(sidecarWithoutHash, fixture.body)
   };
 
-  await writeProjectFile(projectRoot, `.aictx/${fixture.bodyPath}`, fixture.body);
+  await writeProjectFile(projectRoot, `.memory/${fixture.bodyPath}`, fixture.body);
   await writeJsonProjectFile(
     projectRoot,
-    `.aictx/${fixture.bodyPath.replace(/\.md$/, ".json")}`,
+    `.memory/${fixture.bodyPath.replace(/\.md$/, ".json")}`,
     sidecar
   );
 }
@@ -859,14 +859,14 @@ async function writeRelation(projectRoot: string, fixture: RelationFixture): Pro
 
   await writeJsonProjectFile(
     projectRoot,
-    `.aictx/relations/${fixture.id.replace(/^rel\./, "")}.json`,
+    `.memory/relations/${fixture.id.replace(/^rel\./, "")}.json`,
     relation
   );
 }
 
 async function rebuildProjectIndex(projectRoot: string): Promise<void> {
   const output = createCapturedOutput();
-  const exitCode = await main(["node", "aictx", "rebuild", "--json"], {
+  const exitCode = await main(["node", "memory", "rebuild", "--json"], {
     ...output.writers,
     cwd: projectRoot
   });
@@ -879,7 +879,7 @@ async function updateProjectConfig(
   projectRoot: string,
   mutate: (config: { memory: { saveContextPacks: boolean } }) => void
 ): Promise<void> {
-  const configPath = join(projectRoot, ".aictx", "config.json");
+  const configPath = join(projectRoot, ".memory", "config.json");
   const config = JSON.parse(await readFile(configPath, "utf8")) as {
     memory: { saveContextPacks: boolean };
   };
@@ -905,7 +905,7 @@ async function currentViewerRegistryId(url: string): Promise<string> {
 }
 
 async function listContextPacks(projectRoot: string): Promise<string[]> {
-  const contextDir = join(projectRoot, ".aictx", "context");
+  const contextDir = join(projectRoot, ".memory", "context");
 
   try {
     return (await readdir(contextDir)).filter((file) => file.endsWith(".md"));
@@ -917,7 +917,7 @@ async function listContextPacks(projectRoot: string): Promise<string[]> {
 async function createInitializedProject(prefix: string): Promise<string> {
   const projectRoot = await createTempRoot(prefix);
   const output = createCapturedOutput();
-  const exitCode = await main(["node", "aictx", "init", "--json"], {
+  const exitCode = await main(["node", "memory", "init", "--json"], {
     ...output.writers,
     cwd: projectRoot
   });

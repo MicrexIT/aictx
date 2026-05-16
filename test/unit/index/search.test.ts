@@ -23,13 +23,13 @@ afterEach(async () => {
 describe("search index", () => {
   it("rejects empty queries before opening SQLite", async () => {
     const result = await searchIndex({
-      aictxRoot: "/does/not/matter",
+      memoryRoot: "/does/not/matter",
       query: " \n\t "
     });
 
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.error.code).toBe("AICtxValidationFailed");
+      expect(result.error.code).toBe("MemoryValidationFailed");
       expect(result.error.details).toMatchObject({
         field: "query"
       });
@@ -39,14 +39,14 @@ describe("search index", () => {
   it("validates limits before opening SQLite", async () => {
     for (const limit of [0, 51, 1.5, Number.NaN, Infinity]) {
       const result = await searchIndex({
-        aictxRoot: "/does/not/matter",
+        memoryRoot: "/does/not/matter",
         query: "webhook",
         limit
       });
 
       expect(result.ok).toBe(false);
       if (!result.ok) {
-        expect(result.error.code).toBe("AICtxValidationFailed");
+        expect(result.error.code).toBe("MemoryValidationFailed");
         expect(result.error.details).toMatchObject({
           field: "limit",
           minimum: 1,
@@ -70,7 +70,7 @@ describe("search index", () => {
       }
 
       const result = await searchIndex({
-        aictxRoot: connection.aictxRoot,
+        memoryRoot: connection.memoryRoot,
         query: "shared"
       });
 
@@ -91,18 +91,18 @@ describe("search index", () => {
         id: "constraint.webhook-idempotency",
         type: "constraint",
         title: "Webhook idempotency",
-        bodyPath: ".aictx/memory/constraints/webhook-idempotency.md",
+        bodyPath: ".memory/memory/constraints/webhook-idempotency.md",
         body: "Stripe may deliver duplicate webhook events.",
         tags: ["stripe", "webhooks"]
       });
 
       const byId = await searchIndex({
-        aictxRoot: connection.aictxRoot,
+        memoryRoot: connection.memoryRoot,
         query: " constraint.webhook-idempotency "
       });
       const byPath = await searchIndex({
-        aictxRoot: connection.aictxRoot,
-        query: ".aictx/memory/constraints/webhook-idempotency.md"
+        memoryRoot: connection.memoryRoot,
+        query: ".memory/memory/constraints/webhook-idempotency.md"
       });
 
       expect(byId.ok).toBe(true);
@@ -115,7 +115,7 @@ describe("search index", () => {
         });
         expect(byPath.data.matches[0]).toMatchObject({
           id: "constraint.webhook-idempotency",
-          body_path: ".aictx/memory/constraints/webhook-idempotency.md"
+          body_path: ".memory/memory/constraints/webhook-idempotency.md"
         });
       }
     } finally {
@@ -167,7 +167,7 @@ describe("search index", () => {
       });
 
       const result = await searchIndex({
-        aictxRoot: connection.aictxRoot,
+        memoryRoot: connection.memoryRoot,
         query: "webhook!!!"
       });
 
@@ -204,7 +204,7 @@ describe("search index", () => {
       });
 
       const result = await searchIndex({
-        aictxRoot: connection.aictxRoot,
+        memoryRoot: connection.memoryRoot,
         query: "webhook"
       });
 
@@ -235,7 +235,7 @@ describe("search index", () => {
         id: "gotcha.webhook-duplicates",
         type: "gotcha",
         title: "Webhook duplicates",
-        bodyPath: ".aictx/memory/gotchas/webhook-duplicates.md",
+        bodyPath: ".memory/memory/gotchas/webhook-duplicates.md",
         body: "Never assume webhook delivery is unique.",
         tags: ["webhook"]
       });
@@ -243,13 +243,13 @@ describe("search index", () => {
         id: "workflow.release-checklist",
         type: "workflow",
         title: "Release checklist",
-        bodyPath: ".aictx/memory/workflows/release-checklist.md",
+        bodyPath: ".memory/memory/workflows/release-checklist.md",
         body: "Run the release checklist before publishing.",
         tags: ["release"]
       });
 
       const result = await searchIndex({
-        aictxRoot: connection.aictxRoot,
+        memoryRoot: connection.memoryRoot,
         query: "webhook release",
         limit: 10
       });
@@ -261,12 +261,12 @@ describe("search index", () => {
             expect.objectContaining({
               id: "gotcha.webhook-duplicates",
               type: "gotcha",
-              body_path: ".aictx/memory/gotchas/webhook-duplicates.md"
+              body_path: ".memory/memory/gotchas/webhook-duplicates.md"
             }),
             expect.objectContaining({
               id: "workflow.release-checklist",
               type: "workflow",
-              body_path: ".aictx/memory/workflows/release-checklist.md"
+              body_path: ".memory/memory/workflows/release-checklist.md"
             })
           ])
         );
@@ -294,11 +294,11 @@ describe("search index", () => {
       });
 
       const byFacet = await searchIndex({
-        aictxRoot: connection.aictxRoot,
+        memoryRoot: connection.memoryRoot,
         query: "decision-rationale"
       });
       const byEvidence = await searchIndex({
-        aictxRoot: connection.aictxRoot,
+        memoryRoot: connection.memoryRoot,
         query: "migrations"
       });
 
@@ -332,7 +332,7 @@ describe("search index", () => {
       });
 
       const result = await searchIndex({
-        aictxRoot: connection.aictxRoot,
+        memoryRoot: connection.memoryRoot,
         query: "llm-wiki"
       });
 
@@ -359,7 +359,7 @@ describe("search index", () => {
       insertFacetLink(connection, "decision.hinted-ranking", "retrieval");
 
       const result = await searchIndex({
-        aictxRoot: connection.aictxRoot,
+        memoryRoot: connection.memoryRoot,
         query: "opaque",
         hints: {
           changed_files: ["src/context/rank.ts"],
@@ -384,7 +384,7 @@ describe("search index", () => {
 
     try {
       const result = await searchIndex({
-        aictxRoot: connection.aictxRoot,
+        memoryRoot: connection.memoryRoot,
         query: "ranking",
         hints: {
           history_window: "thirty-days"
@@ -393,7 +393,7 @@ describe("search index", () => {
 
       expect(result.ok).toBe(false);
       if (!result.ok) {
-        expect(result.error.code).toBe("AICtxValidationFailed");
+        expect(result.error.code).toBe("MemoryValidationFailed");
         expect(result.error.details).toMatchObject({
           field: "hints.history_window",
           actual: "thirty-days"
@@ -428,11 +428,11 @@ describe("search index", () => {
       });
 
       const first = await searchIndex({
-        aictxRoot: connection.aictxRoot,
+        memoryRoot: connection.memoryRoot,
         query: "ranking"
       });
       const second = await searchIndex({
-        aictxRoot: connection.aictxRoot,
+        memoryRoot: connection.memoryRoot,
         query: "ranking"
       });
 
@@ -470,11 +470,11 @@ describe("search index", () => {
       });
 
       const matched = await searchIndex({
-        aictxRoot: connection.aictxRoot,
+        memoryRoot: connection.memoryRoot,
         query: "needle"
       });
       const fallback = await searchIndex({
-        aictxRoot: connection.aictxRoot,
+        memoryRoot: connection.memoryRoot,
         query: "note.fallback-snippet"
       });
 
@@ -495,7 +495,7 @@ describe("search index", () => {
 });
 
 interface TestConnection extends IndexDatabaseConnection {
-  aictxRoot: string;
+  memoryRoot: string;
 }
 
 interface ObjectFixture {
@@ -513,8 +513,8 @@ interface ObjectFixture {
 }
 
 async function openMigratedConnection(): Promise<TestConnection> {
-  const aictxRoot = await createAictxRoot();
-  const opened = await openIndexDatabase({ aictxRoot });
+  const memoryRoot = await createMemoryRoot();
+  const opened = await openIndexDatabase({ memoryRoot });
 
   expect(opened.ok).toBe(true);
   if (!opened.ok) {
@@ -523,24 +523,24 @@ async function openMigratedConnection(): Promise<TestConnection> {
 
   return {
     ...opened.data,
-    aictxRoot
+    memoryRoot
   };
 }
 
-async function createAictxRoot(): Promise<string> {
-  const root = await mkdtemp(join(tmpdir(), "aictx-search-unit-"));
+async function createMemoryRoot(): Promise<string> {
+  const root = await mkdtemp(join(tmpdir(), "memory-search-unit-"));
   tempRoots.push(root);
 
-  const aictxRoot = join(root, ".aictx");
-  await mkdir(aictxRoot);
+  const memoryRoot = join(root, ".memory");
+  await mkdir(memoryRoot);
 
-  return aictxRoot;
+  return memoryRoot;
 }
 
 function insertObject(connection: TestConnection, fixture: ObjectFixture): void {
   const type = fixture.type ?? "note";
   const status = fixture.status ?? "active";
-  const bodyPath = fixture.bodyPath ?? `.aictx/memory/notes/${fixture.id.replace(".", "-")}.md`;
+  const bodyPath = fixture.bodyPath ?? `.memory/memory/notes/${fixture.id.replace(".", "-")}.md`;
   const tags = fixture.tags ?? [];
   const facets = fixture.facets ?? null;
   const evidence = fixture.evidence ?? [];

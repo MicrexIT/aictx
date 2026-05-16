@@ -4,7 +4,7 @@ import { dirname, isAbsolute, join, relative } from "node:path";
 
 import type { Clock } from "../core/clock.js";
 import { systemClock } from "../core/clock.js";
-import { aictxError, type JsonValue } from "../core/errors.js";
+import { memoryError, type JsonValue } from "../core/errors.js";
 import type { ProjectFileChange } from "../core/git.js";
 import { err, ok, type Result } from "../core/result.js";
 import type { GitState, ValidationIssue } from "../core/types.js";
@@ -22,7 +22,7 @@ import { openSqliteDatabase, type SqliteDatabase } from "./sqlite-driver.js";
 
 export interface RebuildIndexOptions {
   projectRoot: string;
-  aictxRoot: string;
+  memoryRoot: string;
   clock?: Clock;
   git?: Pick<GitState, "available" | "branch" | "commit">;
   gitFileChanges?: readonly ProjectFileChange[];
@@ -52,8 +52,8 @@ export async function rebuildIndex(
 
   if (!validation.valid) {
     return err(
-      aictxError(
-        "AICtxIndexUnavailable",
+      memoryError(
+        "MemoryIndexUnavailable",
         "Canonical files are invalid; SQLite index was not replaced.",
         validationIssuesDetails(validation.errors)
       ),
@@ -65,21 +65,21 @@ export async function rebuildIndex(
 
   if (!storage.ok) {
     return err(
-      aictxError("AICtxIndexUnavailable", "Canonical files could not be read for indexing.", {
+      memoryError("MemoryIndexUnavailable", "Canonical files could not be read for indexing.", {
         cause: errorToJson(storage.error)
       }),
       [...validationWarnings, ...storage.warnings]
     );
   }
 
-  const databasePath = await resolveIndexDatabasePath(options.aictxRoot);
+  const databasePath = await resolveIndexDatabasePath(options.memoryRoot);
 
   if (!databasePath.ok) {
     return databasePath;
   }
 
   const indexDirectory = dirname(databasePath.data);
-  const temporaryPath = join(indexDirectory, `.aictx-rebuild-${randomUUID()}.sqlite`);
+  const temporaryPath = join(indexDirectory, `.memory-rebuild-${randomUUID()}.sqlite`);
 
   try {
     await mkdir(indexDirectory, { recursive: true });
@@ -90,7 +90,7 @@ export async function rebuildIndex(
     });
   }
 
-  const validIndexDirectory = await validateIndexDirectory(options.aictxRoot, indexDirectory);
+  const validIndexDirectory = await validateIndexDirectory(options.memoryRoot, indexDirectory);
 
   if (!validIndexDirectory.ok) {
     return validIndexDirectory;
@@ -123,7 +123,7 @@ export async function rebuildIndex(
 }
 
 async function validateIndexDirectory(
-  aictxRoot: string,
+  memoryRoot: string,
   indexDirectory: string
 ): Promise<Result<void>> {
   try {
@@ -141,14 +141,14 @@ async function validateIndexDirectory(
       });
     }
 
-    const [realAictxRoot, realIndexDirectory] = await Promise.all([
-      realpath(aictxRoot),
+    const [realMemoryRoot, realIndexDirectory] = await Promise.all([
+      realpath(memoryRoot),
       realpath(indexDirectory)
     ]);
 
-    if (!isInsideOrEqual(realAictxRoot, realIndexDirectory)) {
-      return indexUnavailable("SQLite index directory resolves outside the Aictx root.", {
-        aictxRoot: realAictxRoot,
+    if (!isInsideOrEqual(realMemoryRoot, realIndexDirectory)) {
+      return indexUnavailable("SQLite index directory resolves outside the Memory root.", {
+        memoryRoot: realMemoryRoot,
         indexDirectory: realIndexDirectory
       });
     }
@@ -709,7 +709,7 @@ function normalizeProjectFileReference(value: string): string | null {
     normalized.includes("/../") ||
     normalized.includes("://") ||
     normalized.includes("\0") ||
-    normalized.startsWith(".aictx/")
+    normalized.startsWith(".memory/")
   ) {
     return null;
   }
@@ -737,7 +737,7 @@ function warningsFromValidation(issues: readonly ValidationIssue[]): string[] {
 }
 
 function indexUnavailable<T>(message: string, details: JsonValue): Result<T> {
-  return err(aictxError("AICtxIndexUnavailable", message, details));
+  return err(memoryError("MemoryIndexUnavailable", message, details));
 }
 
 function errorToJson(error: { code: string; message: string; details?: JsonValue }): JsonValue {

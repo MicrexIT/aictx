@@ -24,7 +24,7 @@ import {
   computeObjectContentHash,
   computeRelationContentHash
 } from "../../../src/storage/hashes.js";
-import type { AictxConfig, MemoryObjectSidecar } from "../../../src/storage/objects.js";
+import type { MemoryConfig, MemoryObjectSidecar } from "../../../src/storage/objects.js";
 import { readCanonicalStorage } from "../../../src/storage/read.js";
 import type { MemoryRelation } from "../../../src/storage/relations.js";
 import {
@@ -43,7 +43,7 @@ afterEach(async () => {
 
 describe("loadMemory integration", () => {
   it("loads local SQLite-backed context with provenance and token metadata", async () => {
-    const projectRoot = await createInitializedProject("aictx-load-local-");
+    const projectRoot = await createInitializedProject("memory-load-local-");
     await writeLoadFixtures(projectRoot);
     const storage = await readStorageOrThrow(projectRoot);
     const rebuilt = await rebuildIndex({
@@ -66,7 +66,7 @@ describe("loadMemory integration", () => {
 
     expect(result.meta).toEqual({
       project_root: projectRoot,
-      aictx_root: join(projectRoot, ".aictx"),
+      memory_root: join(projectRoot, ".memory"),
       git: {
         available: false,
         branch: null,
@@ -103,7 +103,7 @@ describe("loadMemory integration", () => {
   });
 
   it("loads source-backed guidance synthesis for agent memory collection questions", async () => {
-    const projectRoot = await createInitializedProject("aictx-load-agent-guidance-");
+    const projectRoot = await createInitializedProject("memory-load-agent-guidance-");
     await writeMemoryObject(projectRoot, {
       id: "source.prd-memory-guidance",
       type: "source",
@@ -145,7 +145,7 @@ describe("loadMemory integration", () => {
       title: "Agent memory guidance",
       bodyPath: "memory/syntheses/agent-memory-guidance.md",
       body:
-        "# Agent memory guidance\n\nAICTX should guide agents to right-size memory: atomic memories for precise reusable claims, source records for provenance, and syntheses for product intent, feature maps, roadmap, architecture, conventions, agent guidance, and repeated workflows. Agents save useful memory directly as active memory and save nothing when there is no durable future value.\n",
+        "# Agent memory guidance\n\nMEMORY should guide agents to right-size memory: atomic memories for precise reusable claims, source records for provenance, and syntheses for product intent, feature maps, roadmap, architecture, conventions, agent guidance, and repeated workflows. Agents save useful memory directly as active memory and save nothing when there is no durable future value.\n",
       tags: ["agents", "guidance", "memory", "synthesis"],
       facets: {
         category: "agent-guidance",
@@ -167,7 +167,7 @@ describe("loadMemory integration", () => {
 
     const result = await loadMemory({
       cwd: projectRoot,
-      task: "how should AICTX guide agents to collect memory",
+      task: "how should MEMORY guide agents to collect memory",
       mode: "architecture",
       clock: createFixedTestClock(FIXED_TIMESTAMP_NEXT_MINUTE)
     });
@@ -186,7 +186,7 @@ describe("loadMemory integration", () => {
   });
 
   it("loads source memory matched only by origin locator", async () => {
-    const projectRoot = await createInitializedProject("aictx-load-origin-source-");
+    const projectRoot = await createInitializedProject("memory-load-origin-source-");
 
     await writeMemoryObject(projectRoot, {
       id: "source.external-origin-only",
@@ -242,7 +242,7 @@ describe("loadMemory integration", () => {
   });
 
   it("surfaces active memory conflicts from conflicts_with relations", async () => {
-    const projectRoot = await createInitializedProject("aictx-load-conflicts-");
+    const projectRoot = await createInitializedProject("memory-load-conflicts-");
     await writeMemoryObject(projectRoot, {
       id: "decision.webhook-worker-retries",
       type: "decision",
@@ -316,7 +316,7 @@ describe("loadMemory integration", () => {
   });
 
   it("does not surface conflicts from out-of-scope memory endpoints", async () => {
-    const projectRoot = await createInitializedProject("aictx-load-conflicts-scope-");
+    const projectRoot = await createInitializedProject("memory-load-conflicts-scope-");
     const storage = await readStorageOrThrow(projectRoot);
 
     await writeMemoryObject(projectRoot, {
@@ -386,7 +386,7 @@ describe("loadMemory integration", () => {
   });
 
   it("applies mode-aware ranking and rendering through loadMemory", async () => {
-    const projectRoot = await createInitializedProject("aictx-load-mode-");
+    const projectRoot = await createInitializedProject("memory-load-mode-");
     await writeModeFixtures(projectRoot);
     const rebuilt = await rebuildIndex({
       cwd: projectRoot,
@@ -423,7 +423,7 @@ describe("loadMemory integration", () => {
   });
 
   it("loads task context from file and changed-file retrieval hints", async () => {
-    const projectRoot = await createInitializedProject("aictx-load-hints-");
+    const projectRoot = await createInitializedProject("memory-load-hints-");
     await writeMemoryObject(projectRoot, {
       id: "decision.hinted-retrieval",
       type: "decision",
@@ -470,8 +470,8 @@ describe("loadMemory integration", () => {
   });
 
   it("rejects invalid modes before index behavior matters", async () => {
-    const projectRoot = await createInitializedProject("aictx-load-invalid-mode-");
-    await rm(join(projectRoot, ".aictx", "index"), { recursive: true, force: true });
+    const projectRoot = await createInitializedProject("memory-load-invalid-mode-");
+    await rm(join(projectRoot, ".memory", "index"), { recursive: true, force: true });
 
     const result = await loadMemory({
       cwd: projectRoot,
@@ -482,7 +482,7 @@ describe("loadMemory integration", () => {
 
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.error.code).toBe("AICtxValidationFailed");
+      expect(result.error.code).toBe("MemoryValidationFailed");
       expect(result.error.details).toMatchObject({
         field: "mode",
         actual: "triage"
@@ -491,7 +491,7 @@ describe("loadMemory integration", () => {
   });
 
   it("does not truncate to config defaultTokenBudget when token_budget is omitted", async () => {
-    const projectRoot = await createInitializedProject("aictx-load-relaxed-budget-");
+    const projectRoot = await createInitializedProject("memory-load-relaxed-budget-");
     await updateConfig(projectRoot, (config) => {
       config.memory.defaultTokenBudget = 550;
     });
@@ -528,7 +528,7 @@ describe("loadMemory integration", () => {
   });
 
   it("enforces explicit token_budget and reports omitted IDs when content is truncated", async () => {
-    const projectRoot = await createInitializedProject("aictx-load-explicit-budget-");
+    const projectRoot = await createInitializedProject("memory-load-explicit-budget-");
     await writeManyBudgetFixtures(projectRoot, 18);
     const rebuilt = await rebuildIndex({
       cwd: projectRoot,
@@ -563,8 +563,8 @@ describe("loadMemory integration", () => {
   });
 
   it("rebuilds and retries once when the index is missing and auto-indexing is enabled", async () => {
-    const projectRoot = await createInitializedProject("aictx-load-auto-rebuild-");
-    await rm(join(projectRoot, ".aictx", "index"), { recursive: true, force: true });
+    const projectRoot = await createInitializedProject("memory-load-auto-rebuild-");
+    await rm(join(projectRoot, ".memory", "index"), { recursive: true, force: true });
 
     const result = await loadMemory({
       cwd: projectRoot,
@@ -580,7 +580,7 @@ describe("loadMemory integration", () => {
   });
 
   it("rebuilds before serving when canonical memory is newer than the index", async () => {
-    const projectRoot = await createInitializedProject("aictx-load-stale-rebuild-");
+    const projectRoot = await createInitializedProject("memory-load-stale-rebuild-");
     await writeLoadFixtures(projectRoot);
 
     const result = await loadMemory({
@@ -597,11 +597,11 @@ describe("loadMemory integration", () => {
   });
 
   it("returns index unavailable when the index is missing and auto-indexing is disabled", async () => {
-    const projectRoot = await createInitializedProject("aictx-load-auto-index-off-");
+    const projectRoot = await createInitializedProject("memory-load-auto-index-off-");
     await updateConfig(projectRoot, (config) => {
       config.memory.autoIndex = false;
     });
-    await rm(join(projectRoot, ".aictx", "index"), { recursive: true, force: true });
+    await rm(join(projectRoot, ".memory", "index"), { recursive: true, force: true });
 
     const result = await loadMemory({
       cwd: projectRoot,
@@ -611,12 +611,12 @@ describe("loadMemory integration", () => {
 
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.error.code).toBe("AICtxIndexUnavailable");
+      expect(result.error.code).toBe("MemoryIndexUnavailable");
     }
   });
 
   it("saves generated context packs without appending events when enabled", async () => {
-    const projectRoot = await createInitializedProject("aictx-load-save-pack-");
+    const projectRoot = await createInitializedProject("memory-load-save-pack-");
     await updateConfig(projectRoot, (config) => {
       config.memory.saveContextPacks = true;
     });
@@ -624,7 +624,7 @@ describe("loadMemory integration", () => {
       cwd: projectRoot,
       clock: createFixedTestClock(FIXED_TIMESTAMP_NEXT_MINUTE)
     });
-    const eventsBefore = await readFile(join(projectRoot, ".aictx", "events.jsonl"), "utf8");
+    const eventsBefore = await readFile(join(projectRoot, ".memory", "events.jsonl"), "utf8");
 
     expect(rebuilt.ok).toBe(true);
 
@@ -635,14 +635,14 @@ describe("loadMemory integration", () => {
     });
 
     expect(result.ok).toBe(true);
-    const files = await readdir(join(projectRoot, ".aictx", "context"));
+    const files = await readdir(join(projectRoot, ".memory", "context"));
     const markdownFiles = files.filter((file) => file.endsWith(".md"));
 
     expect(markdownFiles.length).toBe(1);
     await expect(
-      readFile(join(projectRoot, ".aictx", "context", markdownFiles[0] ?? ""), "utf8")
+      readFile(join(projectRoot, ".memory", "context", markdownFiles[0] ?? ""), "utf8")
     ).resolves.toContain("# AI Context Pack");
-    await expect(readFile(join(projectRoot, ".aictx", "events.jsonl"), "utf8")).resolves.toBe(
+    await expect(readFile(join(projectRoot, ".memory", "events.jsonl"), "utf8")).resolves.toBe(
       eventsBefore
     );
   });
@@ -802,10 +802,10 @@ async function writeMemoryObject(projectRoot: string, fixture: MemoryFixture): P
     content_hash: computeObjectContentHash(sidecarWithoutHash, fixture.body)
   };
 
-  await writeProjectFile(projectRoot, `.aictx/${fixture.bodyPath}`, fixture.body);
+  await writeProjectFile(projectRoot, `.memory/${fixture.bodyPath}`, fixture.body);
   await writeJsonProjectFile(
     projectRoot,
-    `.aictx/${fixture.bodyPath.replace(/\.md$/, ".json")}`,
+    `.memory/${fixture.bodyPath.replace(/\.md$/, ".json")}`,
     sidecar
   );
 }
@@ -821,17 +821,17 @@ async function writeMemoryRelation(
 
   await writeJsonProjectFile(
     projectRoot,
-    `.aictx/relations/${relation.id.replace(/^rel\./u, "")}.json`,
+    `.memory/relations/${relation.id.replace(/^rel\./u, "")}.json`,
     withHash
   );
 }
 
 async function updateConfig(
   projectRoot: string,
-  update: (config: AictxConfig) => void
+  update: (config: MemoryConfig) => void
 ): Promise<void> {
-  const configPath = join(projectRoot, ".aictx", "config.json");
-  const config = JSON.parse(await readFile(configPath, "utf8")) as AictxConfig;
+  const configPath = join(projectRoot, ".memory", "config.json");
+  const config = JSON.parse(await readFile(configPath, "utf8")) as MemoryConfig;
 
   update(config);
   await writeFile(configPath, `${JSON.stringify(config, null, 2)}\n`, "utf8");

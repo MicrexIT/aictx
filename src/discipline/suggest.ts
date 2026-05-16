@@ -194,8 +194,8 @@ const AGENT_CHECKLIST = [
 const BOOTSTRAP_PRODUCT_FEATURE_CHECKLIST_ITEM =
   "During setup, capture explicit product features in a maintained feature-map synthesis backed by source records; mark removed or replaced feature memories stale or superseded.";
 const AGENT_GUIDANCE_FILES = ["AGENTS.md", "CLAUDE.md"] as const;
-const AICTX_MEMORY_START_MARKER = "<!-- aictx-memory:start -->";
-const AICTX_MEMORY_END_MARKER = "<!-- aictx-memory:end -->";
+const MEMORY_MEMORY_START_MARKER = "<!-- memory:start -->";
+const MEMORY_MEMORY_END_MARKER = "<!-- memory:end -->";
 const SAVE_DECISION_CHECKLIST = [
   "Save memory only when the task produced durable future value.",
   "Prefer updating, marking stale, or superseding related memory over creating duplicates.",
@@ -225,7 +225,7 @@ const POST_TASK_SCRIPT_PRIORITY = [
 ] as const;
 const POST_TASK_SCRIPT_NAMES = new Set<string>(POST_TASK_SCRIPT_PRIORITY);
 const BOOTSTRAP_IGNORE = [
-  ".aictx/**",
+  ".memory/**",
   ".git/**",
   ".cache/**",
   ".next/**",
@@ -265,7 +265,7 @@ const BOOTSTRAP_PATTERNS = [
   "specs/**/*.{md,mdx}"
 ] as const;
 const TOKEN_STOP_WORDS = new Set([
-  "aictx",
+  "memory",
   "app",
   "cli",
   "cmd",
@@ -753,7 +753,7 @@ function recommendedActionsForAfterTask(
       action: "save_nothing",
       confidence: "high",
       reason: "No changed files, related memory, or durable task signals were detected.",
-      guidance: "Report that no Aictx memory changed instead of inventing a memory entry."
+      guidance: "Report that no Memory changed instead of inventing a memory entry."
     });
   }
 
@@ -1801,7 +1801,7 @@ function sourceBody(path: string, analysis: BootstrapAnalysis): string {
   return [
     `# Source: ${path}`,
     "",
-    `This source records that durable Aictx memory can be derived from \`${path}\`.`,
+    `This source records that durable Memory can be derived from \`${path}\`.`,
     ...(details.length === 0 ? [] : ["", "Captured signals:", ...details.map((detail) => `- ${detail}`)]),
     ""
   ].join("\n");
@@ -2293,7 +2293,7 @@ async function readAgentGuidance(projectRoot: string): Promise<AgentGuidanceInfo
       continue;
     }
 
-    const contents = stripAictxMemoryBlocks(raw);
+    const contents = stripMemoryMemoryBlocks(raw);
     const conventionStatements = extractConventionStatements(contents);
     const verificationCommands = extractVerificationCommands(contents, path);
 
@@ -2311,24 +2311,24 @@ async function readAgentGuidance(projectRoot: string): Promise<AgentGuidanceInfo
   return guidance;
 }
 
-function stripAictxMemoryBlocks(contents: string): string {
+function stripMemoryMemoryBlocks(contents: string): string {
   let remaining = contents;
 
   for (;;) {
-    const start = remaining.indexOf(AICTX_MEMORY_START_MARKER);
+    const start = remaining.indexOf(MEMORY_MEMORY_START_MARKER);
 
     if (start === -1) {
       return remaining;
     }
 
-    const end = remaining.indexOf(AICTX_MEMORY_END_MARKER, start);
+    const end = remaining.indexOf(MEMORY_MEMORY_END_MARKER, start);
 
     if (end === -1) {
       return remaining.slice(0, start);
     }
 
     remaining = `${remaining.slice(0, start)}${remaining.slice(
-      end + AICTX_MEMORY_END_MARKER.length
+      end + MEMORY_MEMORY_END_MARKER.length
     )}`;
   }
 }
@@ -3101,7 +3101,7 @@ function relatedMemoryIds(
 
 function recommendedFileEvidence(changedFiles: readonly string[]): Evidence[] {
   return uniqueSorted(changedFiles)
-    .filter((file) => !file.startsWith(".aictx/"))
+    .filter((file) => !file.startsWith(".memory/"))
     .slice(0, 12)
     .map((file) => ({ kind: "file", id: file }));
 }

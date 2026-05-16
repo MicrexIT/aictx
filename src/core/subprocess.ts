@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
 
-import { aictxError } from "./errors.js";
+import { memoryError } from "./errors.js";
 import { err, ok, type Result } from "./result.js";
 
 export interface SubprocessResult {
@@ -44,7 +44,7 @@ export async function runSubprocess(
     return ok(await spawnSubprocess(command, args, runnerOptions));
   } catch (error) {
     return err(
-      aictxError("AICtxInternalError", "Subprocess execution failed.", {
+      memoryError("MemoryInternalError", "Subprocess execution failed.", {
         command,
         message: messageFromUnknown(error)
       })

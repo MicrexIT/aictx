@@ -10,8 +10,8 @@ import {
   type DataAccessApplyPatchInput,
   type SaveMemoryData
 } from "../../data-access/index.js";
-import { aictxError, type AictxError } from "../../core/errors.js";
-import type { AictxMeta } from "../../core/types.js";
+import { memoryError, type MemoryError } from "../../core/errors.js";
+import type { MemoryMeta } from "../../core/types.js";
 import { err, ok, type Result } from "../../core/result.js";
 import {
   CLI_EXIT_SUCCESS,
@@ -50,7 +50,7 @@ export function registerSaveCommand(
 ): void {
   program
     .command("save")
-    .description("Write Aictx memory updates from a structured patch.")
+    .description("Write Memory updates from a structured patch.")
     .option("--file <path>", "Read the structured memory patch from a JSON file.")
     .option("--stdin", "Read the structured memory patch from stdin.")
     .action(async (commandOptions: SaveCommandFlags, command: Command) => {
@@ -131,7 +131,7 @@ async function readPatchInput(
     return ok(await readFile(source.resolvedPath, "utf8"));
   } catch (error) {
     return err(
-      aictxError("AICtxValidationFailed", "Structured memory patch file could not be read.", {
+      memoryError("MemoryValidationFailed", "Structured memory patch file could not be read.", {
         path: source.inputPath,
         message: messageFromUnknown(error)
       })
@@ -148,7 +148,7 @@ async function readPatchFromStdin(stdin: Readable): Promise<Result<string>> {
     }
   } catch (error) {
     return err(
-      aictxError("AICtxValidationFailed", "Structured memory patch could not be read from stdin.", {
+      memoryError("MemoryValidationFailed", "Structured memory patch could not be read from stdin.", {
         message: messageFromUnknown(error)
       })
     );
@@ -162,8 +162,8 @@ function parsePatchJson(contents: string, source: SaveInputSource): Result<unkno
     return ok(JSON.parse(contents) as unknown);
   } catch (error) {
     return err(
-      aictxError(
-        "AICtxInvalidJson",
+      memoryError(
+        "MemoryInvalidJson",
         "Structured memory patch contains invalid JSON.",
         jsonParseErrorDetails(source, error)
       )
@@ -217,7 +217,7 @@ function renderAndThrowOnFailure(
 }
 
 function inputErrorResult(
-  error: AictxError,
+  error: MemoryError,
   cwd: string
 ): AppResult<SaveMemoryData> {
   return {
@@ -228,12 +228,12 @@ function inputErrorResult(
   };
 }
 
-function fallbackMeta(cwd: string): AictxMeta {
+function fallbackMeta(cwd: string): MemoryMeta {
   const projectRoot = resolve(cwd);
 
   return {
     project_root: projectRoot,
-    aictx_root: resolve(projectRoot, ".aictx"),
+    memory_root: resolve(projectRoot, ".memory"),
     git: {
       available: false,
       branch: null,
@@ -246,8 +246,8 @@ function fallbackMeta(cwd: string): AictxMeta {
 function throwCommandFailed(exitCode: CliExitCode): never {
   throw new CommanderError(
     exitCode,
-    "aictx.command.failed",
-    "Aictx command failed."
+    "memory.command.failed",
+    "Memory command failed."
   );
 }
 
@@ -258,7 +258,7 @@ function isJsonMode(command: Command): boolean {
 
 function renderSaveData(data: SaveMemoryData): string {
   return [
-    "Saved Aictx memory patch.",
+    "Saved Memory patch.",
     ...renderList("Files changed", data.files_changed),
     ...renderList(
       "Recovery backups",

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { AictxConfig, MemoryObjectSidecar } from "../../../src/storage/objects.js";
+import type { MemoryConfig, MemoryObjectSidecar } from "../../../src/storage/objects.js";
 import type { CanonicalStorageSnapshot } from "../../../src/storage/read.js";
 import type { StoredMemoryRelation } from "../../../src/storage/relations.js";
 import type { ObjectType } from "../../../src/core/types.js";
@@ -8,7 +8,7 @@ import { buildRememberMemoryPatch } from "../../../src/remember/plan.js";
 import { FIXED_TIMESTAMP } from "../../fixtures/time.js";
 
 const projectId = "project.billing-api";
-const config: AictxConfig = {
+const config: MemoryConfig = {
   version: 4,
   project: {
     id: projectId,
@@ -186,7 +186,7 @@ describe("buildRememberMemoryPatch", () => {
 
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.error.code).toBe("AICtxValidationFailed");
+      expect(result.error.code).toBe("MemoryValidationFailed");
       expect(result.error.message).toContain("at least one memory action");
     }
   });
@@ -200,7 +200,7 @@ describe("buildRememberMemoryPatch", () => {
           {
             kind: "workflow",
             title: "Release smoke test",
-            body: "Before tagging a release, run package verification and inspect the Aictx memory diff.",
+            body: "Before tagging a release, run package verification and inspect the Memory diff.",
             applies_to: ["package.json"]
           }
         ]
@@ -219,7 +219,7 @@ describe("buildRememberMemoryPatch", () => {
         type: "workflow",
         title: "Release smoke test",
         body:
-          "Before tagging a release, run package verification and inspect the Aictx memory diff.",
+          "Before tagging a release, run package verification and inspect the Memory diff.",
         facets: {
           category: "workflow",
           applies_to: ["package.json"]
@@ -245,7 +245,7 @@ describe("buildRememberMemoryPatch", () => {
 
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.error.code).toBe("AICtxValidationFailed");
+      expect(result.error.code).toBe("MemoryValidationFailed");
       expect(JSON.stringify(result.error.details)).toContain("memories.0.kind");
     }
   });
@@ -254,7 +254,7 @@ describe("buildRememberMemoryPatch", () => {
 function storageSnapshot(objects: MemoryObjectFixture[]): CanonicalStorageSnapshot {
   return {
     projectRoot: "/tmp/project",
-    aictxRoot: "/tmp/project/.aictx",
+    memoryRoot: "/tmp/project/.memory",
     config,
     objects,
     relations: [] satisfies StoredMemoryRelation[],
@@ -275,8 +275,8 @@ function memoryObject(options: {
   facets?: MemoryObjectSidecar["facets"];
 }): MemoryObjectFixture {
   return {
-    path: `.aictx/memory/${options.type}s/${options.id}.json`,
-    bodyPath: `.aictx/memory/${options.type}s/${options.id}.md`,
+    path: `.memory/memory/${options.type}s/${options.id}.json`,
+    bodyPath: `.memory/memory/${options.type}s/${options.id}.md`,
     body: `${options.id} body`,
     sidecar: {
       id: options.id,

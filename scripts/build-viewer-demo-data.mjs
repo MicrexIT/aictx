@@ -10,7 +10,7 @@ const DEMO_TOKEN = "demo";
 const DEMO_PROJECT_ID = "project.todo-app";
 const DEMO_PROJECT_NAME = "Todo App";
 const DEMO_PROJECT_ROOT = "demo://todo-app";
-const DEMO_AICTX_ROOT = "demo://todo-app/.aictx";
+const DEMO_MEMORY_ROOT = "demo://todo-app/.memory";
 const DEFAULT_TOKEN_BUDGET = 6000;
 const CREATED_AT = "2026-05-12T09:00:00+02:00";
 const UPDATED_AT = "2026-05-13T15:30:00+02:00";
@@ -24,7 +24,7 @@ const SECRET_PATTERNS = [
 ];
 
 const LOCAL_STATE_PATTERNS = [
-  /\.aictx\/(?:index|context|\.backup|\.lock|exports|recovery)\b/,
+  /\.memory\/(?:index|context|\.backup|\.lock|exports|recovery)\b/,
   /\/Users\/[^"'\s`)]+/,
   /\/home\/[^"'\s`)]+/
 ];
@@ -179,7 +179,7 @@ const OBJECT_FIXTURES = [
   object("synthesis.agent-guidance", "synthesis", "active", "Agent guidance", "memory/syntheses/agent-guidance.md", [
     "# Agent guidance",
     "",
-    "Load Aictx memory before non-trivial Todo App work. Preserve the offline-first scope, keep UI behavior keyboard accessible, and verify persistence after reload."
+    "Load Memory before non-trivial Todo App work. Preserve the offline-first scope, keep UI behavior keyboard accessible, and verify persistence after reload."
   ], {
     tags: ["agents", "guidance", "synthesis"],
     facets: { category: "agent-guidance", applies_to: ["AGENTS.md"] },
@@ -349,7 +349,7 @@ function buildDemoData() {
   };
   const meta = {
     project_root: DEMO_PROJECT_ROOT,
-    aictx_root: DEMO_AICTX_ROOT,
+    memory_root: DEMO_MEMORY_ROOT,
     git: {
       available: true,
       branch: "main",
@@ -364,7 +364,7 @@ function buildDemoData() {
         registry_id: DEMO_REGISTRY_ID,
         project: bootstrap.project,
         project_root: DEMO_PROJECT_ROOT,
-        aictx_root: DEMO_AICTX_ROOT,
+        memory_root: DEMO_MEMORY_ROOT,
         source: "manual",
         registered_at: CREATED_AT,
         last_seen_at: UPDATED_AT,
@@ -495,8 +495,8 @@ function summarizeObject(fixture) {
     type: fixture.type,
     status: fixture.status,
     title: fixture.title,
-    body_path: `.aictx/${fixture.body_path}`,
-    json_path: `.aictx/${fixture.body_path.replace(/\.md$/u, ".json")}`,
+    body_path: `.memory/${fixture.body_path}`,
+    json_path: `.memory/${fixture.body_path.replace(/\.md$/u, ".json")}`,
     scope: {
       kind: "project",
       project: DEMO_PROJECT_ID,
@@ -530,7 +530,7 @@ function summarizeRelation(fixture) {
     content_hash: null,
     created_at: CREATED_AT,
     updated_at: UPDATED_AT,
-    json_path: `.aictx/relations/${fixture.id.replace(/^rel\./u, "")}.json`
+    json_path: `.memory/relations/${fixture.id.replace(/^rel\./u, "")}.json`
   };
 }
 

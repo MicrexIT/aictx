@@ -21,7 +21,7 @@ afterEach(async () => {
 
 describe("search memory integration", () => {
   it("searches rebuilt local SQLite memory through the app service", async () => {
-    const projectRoot = await createInitializedProject("aictx-search-app-");
+    const projectRoot = await createInitializedProject("memory-search-app-");
     await writeSearchFixtures(projectRoot);
 
     const rebuilt = await rebuildIndex({
@@ -50,7 +50,7 @@ describe("search memory integration", () => {
     if (first.ok && second.ok) {
       expect(first.meta).toMatchObject({
         project_root: projectRoot,
-        aictx_root: join(projectRoot, ".aictx"),
+        memory_root: join(projectRoot, ".memory"),
         git: {
           available: false,
           branch: null,
@@ -73,7 +73,7 @@ describe("search memory integration", () => {
         type: "constraint",
         status: "active",
         title: "Webhook idempotency",
-        body_path: ".aictx/memory/constraints/webhook-idempotency.md"
+        body_path: ".memory/memory/constraints/webhook-idempotency.md"
       });
       expect(typeof webhook?.score).toBe("number");
       expect(webhook?.snippet).toContain("Stripe may deliver duplicate webhook events");
@@ -81,8 +81,8 @@ describe("search memory integration", () => {
   });
 
   it("rebuilds and retries once when the index is missing and auto-indexing is enabled", async () => {
-    const projectRoot = await createInitializedProject("aictx-search-auto-rebuild-");
-    await rm(join(projectRoot, ".aictx", "index"), { recursive: true, force: true });
+    const projectRoot = await createInitializedProject("memory-search-auto-rebuild-");
+    await rm(join(projectRoot, ".memory", "index"), { recursive: true, force: true });
 
     const result = await searchMemory({
       cwd: projectRoot,
@@ -98,15 +98,15 @@ describe("search memory integration", () => {
   });
 
   it("returns index unavailable when the index is missing and auto-indexing is disabled", async () => {
-    const projectRoot = await createInitializedProject("aictx-search-auto-index-off-");
-    const configPath = join(projectRoot, ".aictx", "config.json");
+    const projectRoot = await createInitializedProject("memory-search-auto-index-off-");
+    const configPath = join(projectRoot, ".memory", "config.json");
     const config = JSON.parse(await readFile(configPath, "utf8")) as {
       memory: { autoIndex: boolean };
     };
 
     config.memory.autoIndex = false;
     await writeFile(configPath, `${JSON.stringify(config, null, 2)}\n`, "utf8");
-    await rm(join(projectRoot, ".aictx", "index"), { recursive: true, force: true });
+    await rm(join(projectRoot, ".memory", "index"), { recursive: true, force: true });
 
     const result = await searchMemory({
       cwd: projectRoot,
@@ -116,7 +116,7 @@ describe("search memory integration", () => {
 
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.error.code).toBe("AICtxIndexUnavailable");
+      expect(result.error.code).toBe("MemoryIndexUnavailable");
     }
   });
 });
@@ -219,10 +219,10 @@ async function writeMemoryObject(projectRoot: string, fixture: SearchFixture): P
     content_hash: computeObjectContentHash(sidecarWithoutHash, fixture.body)
   };
 
-  await writeProjectFile(projectRoot, `.aictx/${fixture.bodyPath}`, fixture.body);
+  await writeProjectFile(projectRoot, `.memory/${fixture.bodyPath}`, fixture.body);
   await writeJsonProjectFile(
     projectRoot,
-    `.aictx/${fixture.bodyPath.replace(/\.md$/, ".json")}`,
+    `.memory/${fixture.bodyPath.replace(/\.md$/, ".json")}`,
     sidecar
   );
 }

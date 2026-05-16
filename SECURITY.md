@@ -2,7 +2,7 @@
 
 ## Supported versions
 
-Aictx is pre-1.0 software. Security fixes are released for the latest published
+Memory is pre-1.0 software. Security fixes are released for the latest published
 `@aictx/memory` version unless a maintainer explicitly documents otherwise in a
 release note.
 
@@ -21,7 +21,7 @@ secrets.
 
 Helpful reports include:
 
-- affected Aictx version;
+- affected Memory version;
 - Node.js version and operating system;
 - affected surface: CLI, MCP, viewer, package install, docs, or workflow;
 - minimal reproduction steps;
@@ -30,10 +30,10 @@ Helpful reports include:
 
 ## Scope
 
-Aictx is local-first and reads/writes project files under `.aictx/`. Security
+Memory is local-first and reads/writes project files under `.memory/`. Security
 reports are most useful when they involve unauthorized file access, secret
 exposure, unsafe path handling, supply-chain behavior, command execution,
 viewer/MCP exposure, or package integrity.
 
 Please do not send unrelated dependency scanner output without a plausible
-Aictx exploit path.
+Memory exploit path.

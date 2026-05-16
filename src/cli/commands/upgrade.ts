@@ -22,7 +22,7 @@ export function registerUpgradeCommand(
 ): void {
   program
     .command("upgrade")
-    .description("Upgrade Aictx storage to the latest supported schema.")
+    .description("Upgrade Memory storage to the latest supported schema.")
     .action(async (_commandOptions: unknown, command: Command) => {
       const result = await upgradeStorage(upgradeStorageOptions(options));
       const rendered = renderAppResult(result, {
@@ -54,7 +54,7 @@ function isJsonMode(command: Command): boolean {
 
 function renderUpgradeData(data: UpgradeStorageData): string {
   return [
-    data.upgraded ? "Upgraded Aictx storage." : "Aictx storage is already up to date.",
+    data.upgraded ? "Upgraded Memory storage." : "Memory storage is already up to date.",
     `Storage version: ${data.from_version} -> ${data.to_version}`,
     renderList("Files changed", data.files_changed),
     renderList("Objects upgraded", data.objects_upgraded)
@@ -72,7 +72,7 @@ function renderList(label: string, values: readonly string[]): string {
 function throwCommandFailed(exitCode: CliExitCode): never {
   throw new CommanderError(
     exitCode,
-    "aictx.command.failed",
-    "Aictx command failed."
+    "memory.command.failed",
+    "Memory command failed."
   );
 }

@@ -32,7 +32,7 @@ interface CliRunResult {
 
 interface ResponseMeta {
   project_root: string;
-  aictx_root: string;
+  memory_root: string;
   git: {
     available: boolean;
     branch: string | null;
@@ -196,9 +196,9 @@ afterEach(async () => {
   );
 });
 
-describe("aictx full MCP workflow", () => {
+describe("memory full MCP workflow", () => {
   it("runs the routine MCP flow and keeps CLI-only capabilities out of MCP", async () => {
-    const repo = await createRepo("aictx-e2e-mcp-workflow-");
+    const repo = await createRepo("memory-e2e-mcp-workflow-");
     const started = await startMcpClient(repo);
 
     try {
@@ -211,7 +211,7 @@ describe("aictx full MCP workflow", () => {
       expect(toolNames).not.toEqual(expect.arrayContaining([...FORBIDDEN_MCP_TOOLS]));
 
       const init = parseCliEnvelope<InitData>(
-        await expectSuccessfulAictxCli(repo, ["init", "--json"])
+        await expectSuccessfulMemoryCli(repo, ["init", "--json"])
       );
 
       expect(init.data).toMatchObject({
@@ -221,9 +221,9 @@ describe("aictx full MCP workflow", () => {
       });
       expect(init.meta.git.available).toBe(true);
 
-      await commit(repo, "Initialize aictx", "2026-04-25T14:00:00+02:00", [
+      await commit(repo, "Initialize memory", "2026-04-25T14:00:00+02:00", [
         ".gitignore",
-        ".aictx"
+        ".memory"
       ]);
 
       const initialLoad = parseToolEnvelope<SuccessEnvelope<LoadData>>(
@@ -279,7 +279,7 @@ describe("aictx full MCP workflow", () => {
         })
       );
       const cliLoadWithoutBudget = parseCliEnvelope<LoadData>(
-        await expectSuccessfulAictxCli(repo, [
+        await expectSuccessfulMemoryCli(repo, [
           "load",
           "MCP routine workflow",
           "--json"
@@ -336,7 +336,7 @@ describe("aictx full MCP workflow", () => {
         })
       );
       const cliSearch = parseCliEnvelope<SearchData>(
-        await expectSuccessfulAictxCli(repo, [
+        await expectSuccessfulMemoryCli(repo, [
           "search",
           "MCP routine workflow",
           "--limit",
@@ -357,7 +357,7 @@ describe("aictx full MCP workflow", () => {
         })
       );
       const cliInspect = parseCliEnvelope<InspectData>(
-        await expectSuccessfulAictxCli(repo, [
+        await expectSuccessfulMemoryCli(repo, [
           "inspect",
           "decision.mcp-routine-workflow",
           "--json"
@@ -374,7 +374,7 @@ describe("aictx full MCP workflow", () => {
       expect(mcpInspect.data.object.body).toContain("inspect_memory");
 
       const checked = parseCliEnvelope<CheckData>(
-        await expectSuccessfulAictxCli(repo, ["check", "--json"])
+        await expectSuccessfulMemoryCli(repo, ["check", "--json"])
       );
 
       expect(checked.data).toMatchObject({
@@ -383,7 +383,7 @@ describe("aictx full MCP workflow", () => {
       });
 
       const rebuilt = parseCliEnvelope<RebuildData>(
-        await expectSuccessfulAictxCli(repo, ["rebuild", "--json"])
+        await expectSuccessfulMemoryCli(repo, ["rebuild", "--json"])
       );
 
       expect(rebuilt.data.index_rebuilt).toBe(true);
@@ -398,29 +398,29 @@ describe("aictx full MCP workflow", () => {
         })
       );
       const cliDiff = parseCliEnvelope<DiffData>(
-        await expectSuccessfulAictxCli(repo, ["diff", "--json"])
+        await expectSuccessfulMemoryCli(repo, ["diff", "--json"])
       );
 
       expect(mcpDiff).toEqual(cliDiff);
       expect(mcpDiff.data.changed_files.length).toBeGreaterThan(0);
       expect(
-        mcpDiff.data.changed_files.every((path) => path.startsWith(".aictx/"))
+        mcpDiff.data.changed_files.every((path) => path.startsWith(".memory/"))
       ).toBe(true);
-      expect(mcpDiff.data.changed_files).toContain(".aictx/events.jsonl");
-      expect(mcpDiff.data.diff).toContain(".aictx/events.jsonl");
+      expect(mcpDiff.data.changed_files).toContain(".memory/events.jsonl");
+      expect(mcpDiff.data.diff).toContain(".memory/events.jsonl");
       expect(mcpDiff.data.diff).not.toContain("src.ts");
 
       await commit(repo, "Save MCP workflow memory", "2026-04-25T14:01:00+02:00", [
-        ".aictx"
+        ".memory"
       ]);
 
       const history = parseCliEnvelope<HistoryData>(
-        await expectSuccessfulAictxCli(repo, ["history", "--json", "--limit", "2"])
+        await expectSuccessfulMemoryCli(repo, ["history", "--json", "--limit", "2"])
       );
 
       expect(history.data.commits.map((entry) => entry.subject)).toEqual([
         "Save MCP workflow memory",
-        "Initialize aictx"
+        "Initialize memory"
       ]);
     } finally {
       await started.close();
@@ -448,7 +448,7 @@ async function startMcpClient(cwd: string): Promise<StartedMcpClient> {
   }
 
   const client = new Client({
-    name: "aictx-mcp-workflow-test-client",
+    name: "memory-mcp-workflow-test-client",
     version: "0.0.0"
   });
 
@@ -468,7 +468,7 @@ async function createRepo(prefix: string): Promise<string> {
 
   await git(repo, ["init", "--initial-branch=main"]);
   await git(repo, ["config", "user.email", "test@example.com"]);
-  await git(repo, ["config", "user.name", "Aictx Test"]);
+  await git(repo, ["config", "user.name", "Memory Test"]);
   await writeFile(join(repo, "README.md"), "# Test\n", "utf8");
   await writeFile(join(repo, "src.ts"), "initial source\n", "utf8");
   await commit(repo, "Initial commit", "2026-04-25T13:59:00+02:00", [
@@ -488,11 +488,11 @@ async function createTempRoot(prefix: string): Promise<string> {
   return resolvedRoot;
 }
 
-async function expectSuccessfulAictxCli(
+async function expectSuccessfulMemoryCli(
   cwd: string,
   args: readonly string[]
 ): Promise<CliRunResult> {
-  const output = await runAictxCli(cwd, args);
+  const output = await runMemoryCli(cwd, args);
 
   expect(output.exitCode).toBe(0);
   expect(output.stderr).toBe("");
@@ -500,7 +500,7 @@ async function expectSuccessfulAictxCli(
   return output;
 }
 
-async function runAictxCli(
+async function runMemoryCli(
   cwd: string,
   args: readonly string[]
 ): Promise<CliRunResult> {
@@ -585,7 +585,7 @@ function createWorkflowPatch() {
         type: "constraint",
         title: "MCP does not mirror CLI-only commands",
         body:
-          "# MCP does not mirror CLI-only commands\n\nDo not expose init, check, rebuild, history, restore, stale, graph, export, shell, or filesystem operations through MCP. Agents must use the aictx binary for CLI-only capabilities.\n",
+          "# MCP does not mirror CLI-only commands\n\nDo not expose init, check, rebuild, history, restore, stale, graph, export, shell, or filesystem operations through MCP. Agents must use the memory binary for CLI-only capabilities.\n",
         tags: ["mcp", "workflow", "cli-only"]
       },
       ...Array.from({ length: 14 }, (_, index) => ({

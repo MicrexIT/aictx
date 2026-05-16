@@ -6,8 +6,8 @@
   "changes": [
     {
       "op": "update_object",
-      "id": "project.aictx",
-      "body": "# Aictx\n\nAictx is local-first project memory for AI coding agents.\n\nPackage: `@aictx/memory`.\n",
+      "id": "project.memory",
+      "body": "# Memory\n\nMemory is local-first project memory for AI coding agents.\n\nPackage: `@aictx/memory`.\n",
       "tags": [
         "project"
       ],

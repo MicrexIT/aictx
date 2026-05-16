@@ -16,8 +16,8 @@ import {
   wikiLogMemory,
   type WikiLogData
 } from "../../app/operations.js";
-import { aictxError, type AictxError } from "../../core/errors.js";
-import type { AictxMeta } from "../../core/types.js";
+import { memoryError, type MemoryError } from "../../core/errors.js";
+import type { MemoryMeta } from "../../core/types.js";
 import { err, ok, type Result } from "../../core/result.js";
 import {
   CLI_EXIT_SUCCESS,
@@ -49,7 +49,7 @@ export function registerWikiCommand(
 ): void {
   const wiki = program
     .command("wiki")
-    .description("Maintain source-backed wiki-style Aictx memory from agent-supplied synthesis.");
+    .description("Maintain source-backed wiki-style Memory from agent-supplied synthesis.");
 
   wiki
     .command("ingest")
@@ -82,7 +82,7 @@ export function registerWikiCommand(
 
   wiki
     .command("file")
-    .description("File a useful query result or synthesis back into Aictx memory.")
+    .description("File a useful query result or synthesis back into Memory.")
     .option("--stdin", "Read the wiki file input from stdin.")
     .option("--dry-run", "Validate and plan the generated patch without writing memory.")
     .action(async (commandOptions: StdinFlags, command: Command) => {
@@ -122,7 +122,7 @@ export function registerWikiCommand(
 
   wiki
     .command("log")
-    .description("Render a chronological wiki log from canonical Aictx events.")
+    .description("Render a chronological wiki log from canonical Memory events.")
     .option("--limit <n>", "Number of event entries to show.", "20")
     .action(async (commandOptions: WikiLogFlags, command: Command) => {
       const limit = parseLimit(commandOptions.limit);
@@ -150,7 +150,7 @@ async function readStdinJson(stdin: Readable, label: string): Promise<Result<unk
     }
   } catch (error) {
     return err(
-      aictxError("AICtxValidationFailed", `${label} could not be read from stdin.`, {
+      memoryError("MemoryValidationFailed", `${label} could not be read from stdin.`, {
         message: messageFromUnknown(error)
       })
     );
@@ -160,7 +160,7 @@ async function readStdinJson(stdin: Readable, label: string): Promise<Result<unk
     return ok(JSON.parse(contents) as unknown);
   } catch (error) {
     return err(
-      aictxError("AICtxInvalidJson", `${label} contains invalid JSON.`, {
+      memoryError("MemoryInvalidJson", `${label} contains invalid JSON.`, {
         source: "stdin",
         message: messageFromUnknown(error)
       })
@@ -174,7 +174,7 @@ function parseLimit(raw: string | undefined): Result<number> {
 
   if (!Number.isSafeInteger(parsed) || String(parsed) !== value || parsed < 1 || parsed > 500) {
     return err(
-      aictxError("AICtxValidationFailed", "Wiki log limit must be an integer between 1 and 500.", {
+      memoryError("MemoryValidationFailed", "Wiki log limit must be an integer between 1 and 500.", {
         field: "limit",
         minimum: 1,
         maximum: 500,
@@ -205,7 +205,7 @@ function renderAndThrowOnFailure<T>(
   }
 }
 
-function inputErrorResult(error: AictxError, cwd: string): AppResult<never> {
+function inputErrorResult(error: MemoryError, cwd: string): AppResult<never> {
   return {
     ok: false,
     error,
@@ -214,10 +214,10 @@ function inputErrorResult(error: AictxError, cwd: string): AppResult<never> {
   };
 }
 
-function fallbackMeta(cwd: string): AictxMeta {
+function fallbackMeta(cwd: string): MemoryMeta {
   return {
     project_root: cwd,
-    aictx_root: `${cwd}/.aictx`,
+    memory_root: `${cwd}/.memory`,
     git: {
       available: false,
       branch: null,
@@ -229,7 +229,7 @@ function fallbackMeta(cwd: string): AictxMeta {
 
 function renderWikiIngestData(data: WikiIngestData): string {
   return [
-    data.dry_run ? "Planned Aictx wiki ingest." : "Saved Aictx wiki ingest.",
+    data.dry_run ? "Planned Memory wiki ingest." : "Saved Memory wiki ingest.",
     `Source: ${data.source_id}`,
     ...renderSaveSummary(data)
   ].join("\n");
@@ -237,7 +237,7 @@ function renderWikiIngestData(data: WikiIngestData): string {
 
 function renderWikiFileData(data: WikiFileData): string {
   return [
-    data.dry_run ? "Planned Aictx wiki file input." : "Filed Aictx wiki memory.",
+    data.dry_run ? "Planned Memory wiki file input." : "Filed Memory wiki memory.",
     ...renderSaveSummary(data)
   ].join("\n");
 }
@@ -258,13 +258,13 @@ function renderSaveSummary(data: RememberMemoryData): string[] {
 
 function renderWikiLintData(data: AuditMemoryData): string {
   if (data.findings.length === 0 && data.role_gaps.length === 0) {
-    return "No Aictx wiki lint findings.";
+    return "No Memory wiki lint findings.";
   }
 
   return [
     ...(data.findings.length === 0
       ? []
-      : ["Aictx wiki lint findings:", ...data.findings.map(renderFinding)]),
+      : ["Memory wiki lint findings:", ...data.findings.map(renderFinding)]),
     ...(data.role_gaps.length === 0
       ? []
       : [
@@ -277,11 +277,11 @@ function renderWikiLintData(data: AuditMemoryData): string {
 
 function renderWikiLogData(data: WikiLogData): string {
   if (data.entries.length === 0) {
-    return "No Aictx wiki log entries.";
+    return "No Memory wiki log entries.";
   }
 
   return [
-    "Aictx wiki log:",
+    "Memory wiki log:",
     ...data.entries.map((entry) =>
       [
         `- [${entry.timestamp}] ${entry.event}`,
@@ -331,8 +331,8 @@ function isJsonMode(command: Command): boolean {
 function throwCommandFailed(exitCode: CliExitCode): never {
   throw new CommanderError(
     exitCode,
-    "aictx.command.failed",
-    "Aictx command failed."
+    "memory.command.failed",
+    "Memory command failed."
   );
 }
 

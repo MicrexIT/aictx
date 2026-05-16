@@ -32,7 +32,7 @@ describe("load memory mode normalization", () => {
 
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.error.code).toBe("AICtxValidationFailed");
+      expect(result.error.code).toBe("MemoryValidationFailed");
       expect(result.error.details).toMatchObject({
         field: "mode",
         allowed: [...LOAD_MEMORY_MODES],

@@ -1010,20 +1010,20 @@ h3 {
     font-size: 12px;
   }
 
-  .impact-module-single .aictx-context-pack {
+  .impact-module-single .memory-context-pack {
     gap: 5px;
     padding: 10px 11px;
   }
 
-  .impact-module-single .aictx-context-pack span {
+  .impact-module-single .memory-context-pack span {
     font-size: 12px;
   }
 
-  .impact-module-single .aictx-context-pack strong {
+  .impact-module-single .memory-context-pack strong {
     font-size: 15px;
   }
 
-  .impact-module-single .aictx-context-pack p {
+  .impact-module-single .memory-context-pack p {
     font-size: 12px;
   }
 }
@@ -1058,7 +1058,7 @@ h3 {
     gap: 7px;
   }
 
-  .impact-module-single .aictx-context-pack p,
+  .impact-module-single .memory-context-pack p,
   .impact-module-single .codex-chat-after .muted-row,
   .impact-module-single .codex-chat-after .ready-message {
     display: none;
@@ -1156,7 +1156,7 @@ h3 {
 .codex-user-bubble,
 .codex-response,
 .codex-command-row,
-.aictx-context-pack {
+.memory-context-pack {
   min-width: 0;
 }
 
@@ -1203,7 +1203,7 @@ h3 {
 }
 
 .codex-response p,
-.aictx-context-pack p {
+.memory-context-pack p {
   margin: 0;
   color: inherit;
   font-size: inherit;
@@ -1264,11 +1264,11 @@ h3 {
   color: #a1a5aa;
 }
 
-.aictx-command-row {
+.memory-command-row {
   color: #62676c;
 }
 
-.aictx-context-pack {
+.memory-context-pack {
   display: grid;
   gap: 7px;
   padding: 12px 14px;
@@ -1279,21 +1279,21 @@ h3 {
   box-shadow: 0 12px 24px rgba(37, 39, 36, 0.06);
 }
 
-.aictx-context-pack span {
+.memory-context-pack span {
   width: fit-content;
   color: #4f5f56;
   font-size: 13px;
   font-weight: 620;
 }
 
-.aictx-context-pack strong {
+.memory-context-pack strong {
   color: #202321;
   font-size: 17px;
   font-weight: 620;
   line-height: 1.2;
 }
 
-.aictx-context-pack p {
+.memory-context-pack p {
   color: #5d6369;
   font-size: 13px;
   font-weight: 470;

@@ -12,17 +12,17 @@ afterEach(async () => {
   await Promise.all(tempRoots.splice(0).map((path) => rm(path, { recursive: true, force: true })));
 });
 
-describe("aictx projects CLI", () => {
+describe("memory projects CLI", () => {
   it("adds, lists, removes, and prunes registered projects", async () => {
-    const aictxHome = await createTempRoot("aictx-cli-projects-home-");
-    const projectRoot = await createInitializedProject("aictx-cli-projects-project-", aictxHome);
+    const memoryHome = await createTempRoot("memory-cli-projects-home-");
+    const projectRoot = await createInitializedProject("memory-cli-projects-project-", memoryHome);
 
-    const empty = await runCli(["node", "aictx", "projects", "list", "--json"], projectRoot, aictxHome);
+    const empty = await runCli(["node", "memory", "projects", "list", "--json"], projectRoot, memoryHome);
     expect(empty.exitCode).toBe(0);
     expect(parseJson<{ ok: true; data: { projects: unknown[] } }>(empty.stdout).data.projects)
       .toHaveLength(0);
 
-    const added = await runCli(["node", "aictx", "projects", "add", projectRoot, "--json"], projectRoot, aictxHome);
+    const added = await runCli(["node", "memory", "projects", "add", projectRoot, "--json"], projectRoot, memoryHome);
     expect(added.exitCode).toBe(0);
     const addedEnvelope = parseJson<{
       ok: true;
@@ -30,23 +30,23 @@ describe("aictx projects CLI", () => {
     }>(added.stdout);
     expect(addedEnvelope.data.project.project_root).toBe(projectRoot);
 
-    const listed = await runCli(["node", "aictx", "projects", "list", "--json"], projectRoot, aictxHome);
+    const listed = await runCli(["node", "memory", "projects", "list", "--json"], projectRoot, memoryHome);
     expect(parseJson<{ ok: true; data: { projects: unknown[] } }>(listed.stdout).data.projects)
       .toHaveLength(1);
 
     const removed = await runCli(
-      ["node", "aictx", "projects", "remove", addedEnvelope.data.project.registry_id, "--json"],
+      ["node", "memory", "projects", "remove", addedEnvelope.data.project.registry_id, "--json"],
       projectRoot,
-      aictxHome
+      memoryHome
     );
     expect(removed.exitCode).toBe(0);
     expect(parseJson<{ ok: true; data: { removed: { registry_id: string } } }>(removed.stdout)
       .data.removed.registry_id).toBe(addedEnvelope.data.project.registry_id);
 
-    await runCli(["node", "aictx", "projects", "add", projectRoot, "--json"], projectRoot, aictxHome);
-    await rm(join(projectRoot, ".aictx"), { recursive: true, force: true });
+    await runCli(["node", "memory", "projects", "add", projectRoot, "--json"], projectRoot, memoryHome);
+    await rm(join(projectRoot, ".memory"), { recursive: true, force: true });
 
-    const pruned = await runCli(["node", "aictx", "projects", "prune", "--json"], projectRoot, aictxHome);
+    const pruned = await runCli(["node", "memory", "projects", "prune", "--json"], projectRoot, memoryHome);
     const prunedEnvelope = parseJson<{
       ok: true;
       data: { projects: unknown[]; removed: unknown[] };
@@ -58,48 +58,48 @@ describe("aictx projects CLI", () => {
   });
 
   it("auto-registers successful project-scoped commands", async () => {
-    const aictxHome = await createTempRoot("aictx-cli-auto-home-");
-    const projectRoot = await createTempRoot("aictx-cli-auto-project-");
+    const memoryHome = await createTempRoot("memory-cli-auto-home-");
+    const projectRoot = await createTempRoot("memory-cli-auto-project-");
 
-    const init = await runCli(["node", "aictx", "init", "--json"], projectRoot, aictxHome, true);
+    const init = await runCli(["node", "memory", "init", "--json"], projectRoot, memoryHome, true);
     expect(init.exitCode).toBe(0);
-    await expectRegisteredProjectCount(projectRoot, aictxHome, 1);
+    await expectRegisteredProjectCount(projectRoot, memoryHome, 1);
 
-    const listed = await runCli(["node", "aictx", "projects", "list", "--json"], projectRoot, aictxHome);
+    const listed = await runCli(["node", "memory", "projects", "list", "--json"], projectRoot, memoryHome);
     const registryId = parseJson<{
       ok: true;
       data: { projects: Array<{ registry_id: string }> };
     }>(listed.stdout).data.projects[0]?.registry_id;
 
     expect(registryId).toBeTruthy();
-    await runCli(["node", "aictx", "projects", "remove", registryId ?? "", "--json"], projectRoot, aictxHome);
-    await expectRegisteredProjectCount(projectRoot, aictxHome, 0);
+    await runCli(["node", "memory", "projects", "remove", registryId ?? "", "--json"], projectRoot, memoryHome);
+    await expectRegisteredProjectCount(projectRoot, memoryHome, 0);
 
-    const check = await runCli(["node", "aictx", "check", "--json"], projectRoot, aictxHome, true);
+    const check = await runCli(["node", "memory", "check", "--json"], projectRoot, memoryHome, true);
     expect(check.exitCode).toBe(0);
-    await expectRegisteredProjectCount(projectRoot, aictxHome, 1);
+    await expectRegisteredProjectCount(projectRoot, memoryHome, 1);
 
-    const afterCheck = await runCli(["node", "aictx", "projects", "list", "--json"], projectRoot, aictxHome);
+    const afterCheck = await runCli(["node", "memory", "projects", "list", "--json"], projectRoot, memoryHome);
     const registryIdAfterCheck = parseJson<{
       ok: true;
       data: { projects: Array<{ registry_id: string }> };
     }>(afterCheck.stdout).data.projects[0]?.registry_id;
 
-    await runCli(["node", "aictx", "projects", "remove", registryIdAfterCheck ?? "", "--json"], projectRoot, aictxHome);
-    await expectRegisteredProjectCount(projectRoot, aictxHome, 0);
+    await runCli(["node", "memory", "projects", "remove", registryIdAfterCheck ?? "", "--json"], projectRoot, memoryHome);
+    await expectRegisteredProjectCount(projectRoot, memoryHome, 0);
 
-    const load = await runCli(["node", "aictx", "load", "project context", "--json"], projectRoot, aictxHome, true);
+    const load = await runCli(["node", "memory", "load", "project context", "--json"], projectRoot, memoryHome, true);
     expect(load.exitCode).toBe(0);
-    await expectRegisteredProjectCount(projectRoot, aictxHome, 1);
+    await expectRegisteredProjectCount(projectRoot, memoryHome, 1);
 
     const registryIdAfterLoad = parseJson<{
       ok: true;
       data: { projects: Array<{ registry_id: string }> };
-    }>((await runCli(["node", "aictx", "projects", "list", "--json"], projectRoot, aictxHome)).stdout)
+    }>((await runCli(["node", "memory", "projects", "list", "--json"], projectRoot, memoryHome)).stdout)
       .data.projects[0]?.registry_id;
 
-    await runCli(["node", "aictx", "projects", "remove", registryIdAfterLoad ?? "", "--json"], projectRoot, aictxHome);
-    await expectRegisteredProjectCount(projectRoot, aictxHome, 0);
+    await runCli(["node", "memory", "projects", "remove", registryIdAfterLoad ?? "", "--json"], projectRoot, memoryHome);
+    await expectRegisteredProjectCount(projectRoot, memoryHome, 0);
 
     await writeFile(
       join(projectRoot, "noop-memory.json"),
@@ -111,19 +111,19 @@ describe("aictx projects CLI", () => {
       "utf8"
     );
     const patchReview = await runCli(
-      ["node", "aictx", "patch", "review", "noop-memory.json", "--json"],
+      ["node", "memory", "patch", "review", "noop-memory.json", "--json"],
       projectRoot,
-      aictxHome,
+      memoryHome,
       true
     );
     expect(patchReview.exitCode).toBe(0);
-    await expectRegisteredProjectCount(projectRoot, aictxHome, 1);
+    await expectRegisteredProjectCount(projectRoot, memoryHome, 1);
   });
 });
 
-async function createInitializedProject(prefix: string, aictxHome: string): Promise<string> {
+async function createInitializedProject(prefix: string, memoryHome: string): Promise<string> {
   const projectRoot = await createTempRoot(prefix);
-  const init = await runCli(["node", "aictx", "init", "--json"], projectRoot, aictxHome, false);
+  const init = await runCli(["node", "memory", "init", "--json"], projectRoot, memoryHome, false);
 
   expect(init.exitCode).toBe(0);
   return projectRoot;
@@ -131,10 +131,10 @@ async function createInitializedProject(prefix: string, aictxHome: string): Prom
 
 async function expectRegisteredProjectCount(
   cwd: string,
-  aictxHome: string,
+  memoryHome: string,
   count: number
 ): Promise<void> {
-  const listed = await runCli(["node", "aictx", "projects", "list", "--json"], cwd, aictxHome);
+  const listed = await runCli(["node", "memory", "projects", "list", "--json"], cwd, memoryHome);
 
   expect(listed.exitCode).toBe(0);
   expect(parseJson<{ ok: true; data: { projects: unknown[] } }>(listed.stdout).data.projects)
@@ -144,7 +144,7 @@ async function expectRegisteredProjectCount(
 async function runCli(
   argv: string[],
   cwd: string,
-  aictxHome: string,
+  memoryHome: string,
   autoRegister = false
 ): Promise<{ exitCode: number; stdout: string; stderr: string }> {
   const output = createCapturedOutput();
@@ -153,7 +153,7 @@ async function runCli(
     cwd,
     registry: {
       enabled: autoRegister,
-      aictxHome
+      memoryHome
     }
   });
 

@@ -1,14 +1,14 @@
 ---
-title: Aictx documentation
+title: Memory documentation
 description: Public documentation for local-first project memory for AI coding agents.
 ---
 
-Aictx gives coding agents a project memory they can return to.
+Memory gives coding agents a project memory they can return to.
 
 Use it when a new coding session should not need the same briefing again:
 product intent, architecture choices, repo conventions, setup steps, known
-traps, and useful source-backed summaries. Aictx stores that context as local,
-reviewable files under `.aictx/`, then builds a focused memory pack for the
+traps, and useful source-backed summaries. Memory stores that context as local,
+reviewable files under `.memory/`, then builds a focused memory pack for the
 task in front of the agent.
 
 The loop is small:
@@ -23,9 +23,9 @@ embeddings, hosted sync, external model API, or network access.
 This project is distributed as the npm package `@aictx/memory`. It is unrelated
 to similarly named packages in other ecosystems.
 
-## What Aictx is for
+## What Memory is for
 
-Aictx is for durable project context that should survive across agents,
+Memory is for durable project context that should survive across agents,
 sessions, branches, and reviews.
 
 It helps a coding agent answer two questions:
@@ -50,7 +50,7 @@ can inspect memory and export Obsidian projections".
 2. The agent does the work using the repo, tests, and conversation as evidence.
 3. The agent saves only durable context that should be active next time.
 
-Aictx keeps that memory local, explicit, and reviewable.
+Memory keeps that memory local, explicit, and reviewable.
 
 ## First-time setup prompt
 
@@ -60,31 +60,31 @@ Copy this prompt into [Codex](https://developers.openai.com/codex/cli),
 agent from the project root:
 
 ```text
-Set up fresh Aictx memory for this repository.
+Set up fresh Memory for this repository.
 
 Run:
 npm install -g @aictx/memory
-aictx setup
-aictx check
-aictx load "onboard to this repository"
+memory setup
+memory check
+memory load "onboard to this repository"
 
 When this is done, report:
 - whether setup wrote memory
 - whether check passed
-- how I can inspect the result with `aictx view` or `aictx diff`
+- how I can inspect the result with `memory view` or `memory diff`
 ```
 
 ## Start here
 
-- [Getting started](/getting-started/) installs Aictx, initializes a repo, and
+- [Getting started](/getting-started/) installs Memory, initializes a repo, and
   walks through the first load/save/diff loop.
 - [Capabilities](/capabilities/) maps the main commands to the jobs users and
   agents actually need to do.
 - [Mental model](/mental-model/) explains canonical memory, generated state,
-  retrieval, and how Aictx fits beside agent instruction files.
+  retrieval, and how Memory fits beside agent instruction files.
 - [Wiki workflow](/wiki-workflow/) covers source-backed ingestion and maintained
   syntheses.
-- [Specializing Aictx](/specializing-aictx/) shows how to shape memory for your
+- [Specializing Memory](/specializing-memory/) shows how to shape memory for your
   repo's product, workflows, and agent guidance.
 - [Agent integration](/agent-integration/) gives agents the concrete workflow
   and safety rules.

@@ -106,23 +106,23 @@ afterEach(async () => {
   );
 });
 
-describe("aictx audit CLI", () => {
-  it("reports deterministic findings without mutating Aictx files or Git state", async () => {
-    const repo = await createAuditGitProject("aictx-cli-audit-");
-    const beforeTree = await readAictxTreeSnapshot(repo);
+describe("memory audit CLI", () => {
+  it("reports deterministic findings without mutating Memory files or Git state", async () => {
+    const repo = await createAuditGitProject("memory-cli-audit-");
+    const beforeTree = await readMemoryTreeSnapshot(repo);
     const beforeGitStatus = await git(repo, ["status", "--short"]);
 
-    const output = await runCli(["node", "aictx", "audit", "--json"], repo);
-    const repeatOutput = await runCli(["node", "aictx", "audit", "--json"], repo);
-    const humanOutput = await runCli(["node", "aictx", "audit"], repo);
-    const checkOutput = await runCli(["node", "aictx", "check", "--json"], repo);
+    const output = await runCli(["node", "memory", "audit", "--json"], repo);
+    const repeatOutput = await runCli(["node", "memory", "audit", "--json"], repo);
+    const humanOutput = await runCli(["node", "memory", "audit"], repo);
+    const checkOutput = await runCli(["node", "memory", "check", "--json"], repo);
 
     expect(output.exitCode).toBe(0);
     expect(output.stderr).toBe("");
     expect(repeatOutput.stdout).toBe(output.stdout);
     expect(humanOutput.exitCode).toBe(0);
     expect(humanOutput.stderr).toBe("");
-    expect(humanOutput.stdout).toContain("Aictx audit findings:");
+    expect(humanOutput.stdout).toContain("Memory audit findings:");
     expect(humanOutput.stdout).toContain("[warning] duplicate_like_title_or_tags");
     expect(humanOutput.stdout).toContain("Role coverage gaps:");
     expect(checkOutput.exitCode).toBe(0);
@@ -177,26 +177,26 @@ describe("aictx audit CLI", () => {
       ])
     );
     expect(envelope.data.role_gaps.some((gap) => gap.key === "branch-handoff")).toBe(false);
-    await expect(readAictxTreeSnapshot(repo)).resolves.toEqual(beforeTree);
+    await expect(readMemoryTreeSnapshot(repo)).resolves.toEqual(beforeTree);
     await expect(git(repo, ["status", "--short"])).resolves.toBe(beforeGitStatus);
   });
 
-  it("returns AICtxNotInitialized for uninitialized projects", async () => {
-    const projectRoot = await createTempRoot("aictx-cli-audit-uninitialized-");
+  it("returns MemoryNotInitialized for uninitialized projects", async () => {
+    const projectRoot = await createTempRoot("memory-cli-audit-uninitialized-");
 
-    const output = await runCli(["node", "aictx", "audit", "--json"], projectRoot);
+    const output = await runCli(["node", "memory", "audit", "--json"], projectRoot);
 
     expect(output.exitCode).toBe(3);
     expect(output.stderr).toBe("");
     const envelope = JSON.parse(output.stdout) as AuditErrorEnvelope;
     expect(envelope.ok).toBe(false);
-    expect(envelope.error.code).toBe("AICtxNotInitialized");
+    expect(envelope.error.code).toBe("MemoryNotInitialized");
   });
 });
 
 async function createAuditGitProject(prefix: string): Promise<string> {
   const repo = await createRepo(prefix);
-  const output = await runCli(["node", "aictx", "init", "--json"], repo);
+  const output = await runCli(["node", "memory", "init", "--json"], repo);
 
   expect(output.exitCode).toBe(0);
   expect(output.stderr).toBe("");
@@ -272,8 +272,8 @@ async function createAuditGitProject(prefix: string): Promise<string> {
     to: "decision.current",
     evidence: [{ kind: "file", id: "src/relation-missing.ts" }]
   });
-  await git(repo, ["add", ".gitignore", "AGENTS.md", "CLAUDE.md", ".aictx"]);
-  await git(repo, ["commit", "-m", "Initialize Aictx audit memory"]);
+  await git(repo, ["add", ".gitignore", "AGENTS.md", "CLAUDE.md", ".memory"]);
+  await git(repo, ["commit", "-m", "Initialize Memory audit memory"]);
 
   return repo;
 }
@@ -282,7 +282,7 @@ async function createRepo(prefix: string): Promise<string> {
   const repo = await createTempRoot(prefix);
   await git(repo, ["init", "--initial-branch=main"]);
   await git(repo, ["config", "user.email", "test@example.com"]);
-  await git(repo, ["config", "user.name", "Aictx Test"]);
+  await git(repo, ["config", "user.name", "Memory Test"]);
   await writeProjectFile(repo, "package.json", '{ "version": "1.2.3" }\n');
   await writeProjectFile(repo, "README.md", "# Test\n");
   await writeProjectFile(repo, "src/current.ts", "export const current = true;\n");
@@ -363,10 +363,10 @@ async function writeMemoryObject(projectRoot: string, fixture: MemoryFixture): P
     content_hash: computeObjectContentHash(sidecarWithoutHash, fixture.body)
   };
 
-  await writeProjectFile(projectRoot, `.aictx/${bodyPath}`, fixture.body);
+  await writeProjectFile(projectRoot, `.memory/${bodyPath}`, fixture.body);
   await writeJsonProjectFile(
     projectRoot,
-    `.aictx/${bodyPath.replace(/\.md$/u, ".json")}`,
+    `.memory/${bodyPath.replace(/\.md$/u, ".json")}`,
     sidecar
   );
 }
@@ -390,7 +390,7 @@ async function writeRelation(projectRoot: string, fixture: RelationFixture): Pro
 
   await writeJsonProjectFile(
     projectRoot,
-    `.aictx/relations/${fixture.id.replace(/^rel\./u, "")}.json`,
+    `.memory/relations/${fixture.id.replace(/^rel\./u, "")}.json`,
     relation
   );
 }
@@ -463,9 +463,9 @@ async function writeProjectFile(
   await writeFile(target, contents, "utf8");
 }
 
-async function readAictxTreeSnapshot(projectRoot: string): Promise<Record<string, string>> {
+async function readMemoryTreeSnapshot(projectRoot: string): Promise<Record<string, string>> {
   const entries = (
-    await fg(".aictx/**", {
+    await fg(".memory/**", {
       cwd: projectRoot,
       dot: true,
       markDirectories: true,

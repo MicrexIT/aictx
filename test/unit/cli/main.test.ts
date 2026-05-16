@@ -7,8 +7,8 @@ describe("CLI main", () => {
   it("creates the base Commander program", () => {
     const program = createCliProgram();
 
-    expect(program.name()).toBe("aictx");
-    expect(program.description()).toBe("Aictx project memory CLI");
+    expect(program.name()).toBe("memory");
+    expect(program.description()).toBe("Local project memory CLI");
     expect(program.version()).toBe(version);
     expect(program.helpInformation()).toContain("--json");
   });
@@ -49,7 +49,7 @@ describe("CLI main", () => {
   it("returns exit 2 for unknown options", async () => {
     const output = createCapturedOutput();
 
-    const exitCode = await main(["node", "aictx", "--does-not-exist"], output.writers);
+    const exitCode = await main(["node", "memory", "--does-not-exist"], output.writers);
 
     expect(exitCode).toBe(2);
     expect(output.stdout()).toBe("");
@@ -59,7 +59,7 @@ describe("CLI main", () => {
   it("returns exit 2 for unexpected command arguments", async () => {
     const output = createCapturedOutput();
 
-    const exitCode = await main(["node", "aictx", "unknown"], output.writers);
+    const exitCode = await main(["node", "memory", "unknown"], output.writers);
 
     expect(exitCode).toBe(2);
     expect(output.stdout()).toBe("");
@@ -70,8 +70,8 @@ describe("CLI main", () => {
     const helpOutput = createCapturedOutput();
     const versionOutput = createCapturedOutput();
 
-    await expect(main(["node", "aictx", "--help"], helpOutput.writers)).resolves.toBe(0);
-    await expect(main(["node", "aictx", "--version"], versionOutput.writers)).resolves.toBe(0);
+    await expect(main(["node", "memory", "--help"], helpOutput.writers)).resolves.toBe(0);
+    await expect(main(["node", "memory", "--version"], versionOutput.writers)).resolves.toBe(0);
     expect(helpOutput.stdout()).toContain("--json");
     expect(versionOutput.stdout()).toBe(`${version}\n`);
     expect(helpOutput.stderr()).toBe("");
@@ -81,7 +81,7 @@ describe("CLI main", () => {
   it("keeps JSON usage errors out of stdout", async () => {
     const output = createCapturedOutput();
 
-    const exitCode = await main(["node", "aictx", "--json", "--does-not-exist"], output.writers);
+    const exitCode = await main(["node", "memory", "--json", "--does-not-exist"], output.writers);
 
     expect(exitCode).toBe(2);
     expect(output.stdout()).toBe("");

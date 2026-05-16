@@ -1,0 +1,21 @@
+{
+  "confidence": "high",
+  "content_hash": "sha256:1e22a35f624346c7916a68453f7725d51962bbe0d49cec32a1e868a75cae4409",
+  "created_at": "2026-05-16T18:52:43+02:00",
+  "evidence": [
+    {
+      "id": "project.memory",
+      "kind": "memory"
+    },
+    {
+      "id": "architecture.current",
+      "kind": "memory"
+    }
+  ],
+  "from": "project.memory",
+  "id": "rel.project-memory-related-to-architecture-current",
+  "predicate": "related_to",
+  "status": "active",
+  "to": "architecture.current",
+  "updated_at": "2026-05-16T18:52:43+02:00"
+}

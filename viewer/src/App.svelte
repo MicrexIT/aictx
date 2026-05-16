@@ -118,7 +118,7 @@
       name: string;
     };
     project_root: string;
-    aictx_root: string;
+    memory_root: string;
     source: "auto" | "manual";
     registered_at: string;
     last_seen_at: string;
@@ -167,7 +167,7 @@
     warnings: string[];
     meta: {
       project_root: string;
-      aictx_root: string;
+      memory_root: string;
       git: {
         available: boolean;
         branch: string | null;
@@ -712,14 +712,14 @@
   async function exportObsidian(): Promise<void> {
     if (isDemoMode) {
       exportState = "error";
-      exportErrorCode = "AICtxValidationFailed";
+      exportErrorCode = "MemoryValidationFailed";
       exportMessage = "The public demo viewer is read-only.";
       return;
     }
 
     if (selectedProjectId === null) {
       exportState = "error";
-      exportErrorCode = "AICtxValidationFailed";
+      exportErrorCode = "MemoryValidationFailed";
       exportMessage = "Select a project before exporting.";
       return;
     }
@@ -759,7 +759,7 @@
       exportManifestPath = envelope.data.manifest_path;
     } catch (error) {
       exportState = "error";
-      exportErrorCode = "AICtxInternalError";
+      exportErrorCode = "MemoryInternalError";
       exportMessage = error instanceof Error ? error.message : String(error);
     }
   }
@@ -767,7 +767,7 @@
   async function previewContext(): Promise<void> {
     if (selectedProjectId === null) {
       previewState = "error";
-      previewErrorCode = "AICtxValidationFailed";
+      previewErrorCode = "MemoryValidationFailed";
       previewMessage = "Select a project before previewing context.";
       return;
     }
@@ -776,7 +776,7 @@
 
     if (task === "") {
       previewState = "error";
-      previewErrorCode = "AICtxValidationFailed";
+      previewErrorCode = "MemoryValidationFailed";
       previewMessage = "Enter a task to preview the context an agent would load.";
       return;
     }
@@ -785,7 +785,7 @@
 
     if (!parsedBudget.ok) {
       previewState = "error";
-      previewErrorCode = "AICtxValidationFailed";
+      previewErrorCode = "MemoryValidationFailed";
       previewMessage = parsedBudget.message;
       return;
     }
@@ -828,7 +828,7 @@
     } catch (error) {
       previewState = "error";
       previewData = null;
-      previewErrorCode = "AICtxInternalError";
+      previewErrorCode = "MemoryInternalError";
       previewMessage = error instanceof Error ? error.message : String(error);
     }
   }
@@ -863,13 +863,13 @@
 
   async function deleteProjectMemory(project: ViewerProjectSummary): Promise<void> {
     if (isDemoMode) {
-      projectDeleteErrorCode = "AICtxValidationFailed";
+      projectDeleteErrorCode = "MemoryValidationFailed";
       projectDeleteMessage = "The public demo viewer is read-only.";
       return;
     }
 
     if (!projectDeleteConfirmationMatches(project)) {
-      projectDeleteErrorCode = "AICtxValidationFailed";
+      projectDeleteErrorCode = "MemoryValidationFailed";
       projectDeleteMessage = `Type ${project.project.id} to confirm memory deletion.`;
       return;
     }
@@ -905,7 +905,7 @@
       projectDeleteErrorCode = "";
       await loadProjects();
     } catch (error) {
-      projectDeleteErrorCode = "AICtxInternalError";
+      projectDeleteErrorCode = "MemoryInternalError";
       projectDeleteMessage = error instanceof Error ? error.message : String(error);
     } finally {
       if (deletingProjectId === project.registry_id) {
@@ -931,10 +931,10 @@
   }
 
   function projectDeleteSuccessMessage(data: ViewerProjectDeleteData): string {
-    const removedMemory = data.entries_removed.includes(".aictx");
+    const removedMemory = data.entries_removed.includes(".memory");
     const action = removedMemory
-      ? "Deleted .aictx memory and removed the project from the viewer."
-      : "Removed the project from the viewer; .aictx memory was already missing.";
+      ? "Deleted .memory and removed the project from the viewer."
+      : "Removed the project from the viewer; .memory was already missing.";
 
     return `${data.project.project.name}: ${action}`;
   }
@@ -1892,15 +1892,15 @@
   }
 
   function previewErrorMessage(code: string, message: string): string {
-    if (code === "AICtxIndexUnavailable") {
-      return `${code}: ${message} Run aictx rebuild, then preview again.`;
+    if (code === "MemoryIndexUnavailable") {
+      return `${code}: ${message} Run memory rebuild, then preview again.`;
     }
 
     return `${code}: ${message}`;
   }
 
   function buildPreviewCommand(task: string, mode: LoadMemoryMode, tokenBudget: string): string {
-    const parts = ["aictx", "load", shellQuote(task.trim())];
+    const parts = ["memory", "load", shellQuote(task.trim())];
 
     if (mode !== "coding") {
       parts.push("--mode", mode);
@@ -1957,7 +1957,7 @@
     }
 
     if (project.git.dirty === true) {
-      return "There are uncommitted changes under this memory root. Use aictx diff or Git before treating it as committed team state.";
+      return "There are uncommitted changes under this memory root. Use memory diff or Git before treating it as committed team state.";
     }
 
     if (project.git.dirty === false) {
@@ -2144,13 +2144,13 @@
 <main class="viewer-shell" aria-labelledby="viewer-title">
   {#if loadState === "loading"}
     <section class="system-panel" aria-live="polite">
-      <p class="eyebrow">Aictx local viewer</p>
+      <p class="eyebrow">Memory local viewer</p>
       <h1 id="viewer-title">Memory Viewer</h1>
       <p>Loading memory from the local viewer API.</p>
     </section>
   {:else if loadState === "error"}
     <section class="system-panel error-panel" role="alert">
-      <p class="eyebrow">Aictx local viewer</p>
+      <p class="eyebrow">Memory local viewer</p>
       <h1 id="viewer-title">Memory Viewer</h1>
       <h2>Viewer failed to load</h2>
       <p>{errorMessage}</p>
@@ -2300,7 +2300,7 @@
               <input
                 type="text"
                 bind:value={exportOutDir}
-                placeholder=".aictx/exports/obsidian"
+                placeholder=".memory/exports/obsidian"
                 autocomplete="off"
               />
             </label>
@@ -2393,7 +2393,7 @@
                 {#if !isDemoMode && pendingDeleteProjectId === project.registry_id}
                   <section class="project-delete-confirm" aria-label={`Confirm memory deletion for ${project.project.name}`}>
                     <p>
-                      Delete this project's <code>.aictx</code> memory directory and unregister it from the viewer.
+                      Delete this project's <code>.memory</code> memory directory and unregister it from the viewer.
                       Source files in <span class="mono">{project.project_root}</span> remain.
                     </p>
                     <label class="field">
@@ -2414,7 +2414,7 @@
                         onclick={() => void deleteProjectMemory(project)}
                         data-testid={`project-delete-submit-${project.registry_id}`}
                       >
-                        {deletingProjectId === project.registry_id ? "Deleting" : "Delete .aictx memory"}
+                        {deletingProjectId === project.registry_id ? "Deleting" : "Delete .memory"}
                       </button>
                       <button
                         type="button"
@@ -2432,7 +2432,7 @@
             {:else}
               <section class="empty-panel" data-testid="empty-projects">
                 <h3>No projects registered</h3>
-                <p>Run <code>aictx projects add</code> inside an initialized project.</p>
+                <p>Run <code>memory projects add</code> inside an initialized project.</p>
                 <p class="mono">{projectsData.registry_path}</p>
               </section>
             {/each}
@@ -2440,14 +2440,14 @@
         </section>
       {:else if projectLoadState === "error"}
         <section class="system-panel error-panel" role="alert" data-testid="project-load-error">
-          <p class="eyebrow">Aictx local viewer</p>
+          <p class="eyebrow">Memory local viewer</p>
           <h2>Project failed to load</h2>
           <p>{projectErrorMessage}</p>
           <button type="button" class="ghost-action" onclick={showProjects}>Back to projects</button>
         </section>
       {:else if projectLoadState === "loading" || bootstrap === null}
         <section class="system-panel" aria-live="polite" data-testid="project-loading">
-          <p class="eyebrow">Aictx local viewer</p>
+          <p class="eyebrow">Memory local viewer</p>
           <h2>Loading project</h2>
           <p>{selectedProject?.project.name ?? "Selected project"}</p>
         </section>
@@ -2605,7 +2605,7 @@
               <input
                 type="text"
                 bind:value={exportOutDir}
-                placeholder=".aictx/exports/obsidian"
+                placeholder=".memory/exports/obsidian"
                 autocomplete="off"
                 disabled={exportState === "running"}
                 data-testid="obsidian-export-out-dir"
@@ -2650,7 +2650,7 @@
         >
           <header class="doc-hero">
             <img class="doc-icon" src="/favicon.ico" width="46" height="46" alt="" aria-hidden="true" />
-            <p class="eyebrow">Canonical Aictx storage</p>
+            <p class="eyebrow">Canonical Memory storage</p>
             <h2 id="memory-list-title">{bootstrap.project.name} Memory Schema</h2>
             <p>
               Browse the real object types, facet categories, statuses, scopes, evidence, and relations
@@ -2686,11 +2686,6 @@
                   </button>
                 {/each}
               </div>
-              <select bind:value={objectSort} data-testid="viewer-sort" aria-label="Sort objects">
-                {#each objectSortOptions as option (option.value)}
-                  <option value={option.value}>{option.label}</option>
-                {/each}
-              </select>
               <select bind:value={typeFilter} onchange={clearPagePreset} data-testid="viewer-type-filter" aria-label="Type">
                 <option value={allOption}>All types</option>
                 {#each typeOptions as type (type)}
@@ -2846,13 +2841,27 @@
             {#if hasStarterMemoryOnly}
               <section class="onboarding-callout" aria-label="Starter memory notice" data-testid="starter-memory-notice">
                 <p><strong>Starter memory only.</strong> Seed useful repo memory with a bootstrap patch, then refresh the viewer.</p>
-                <code>aictx suggest --bootstrap --patch &gt; bootstrap-memory.json</code>
-                <code>aictx save --file bootstrap-memory.json</code>
+                <code>memory suggest --bootstrap --patch &gt; bootstrap-memory.json</code>
+                <code>memory save --file bootstrap-memory.json</code>
               </section>
             {/if}
 
             <div class="browser-workspace-grid">
             <section class="sectioned-memory" aria-label="Memory objects">
+              <div class="schema-browser-toolbar">
+                <div>
+                  <strong>Schema browser</strong>
+                  <span>{filteredObjects.length} visible objects</span>
+                </div>
+                <label class="schema-sort-field">
+                  <span>Sort</span>
+                  <select bind:value={objectSort} class="schema-sort-select" data-testid="viewer-sort" aria-label="Sort objects">
+                    {#each objectSortOptions as option (option.value)}
+                      <option value={option.value}>{option.label}</option>
+                    {/each}
+                  </select>
+                </label>
+              </div>
               {#each memorySections as section (section.id)}
                 <section id={section.id}>
                   <h3>{section.title}</h3>
@@ -5175,13 +5184,74 @@
     min-width: 160px;
   }
 
-  .list-controls [data-testid="viewer-sort"] {
-    min-width: 152px;
-  }
-
   .sectioned-memory {
     display: grid;
     gap: 36px;
+  }
+
+  .schema-browser-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    border-bottom: 1px solid #ece6dc;
+    padding-bottom: 16px;
+  }
+
+  .schema-browser-toolbar strong,
+  .schema-browser-toolbar span {
+    display: block;
+  }
+
+  .schema-browser-toolbar strong {
+    color: #202020;
+    font-size: 1.04rem;
+    font-weight: 780;
+  }
+
+  .schema-browser-toolbar span {
+    margin-top: 3px;
+    color: #77736d;
+    font-size: 0.92rem;
+  }
+
+  .schema-sort-field {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 9px;
+    color: #625d54;
+    font-size: 0.88rem;
+    font-weight: 720;
+  }
+
+  .schema-sort-field > span {
+    margin: 0;
+    color: #625d54;
+    font-size: 0.88rem;
+  }
+
+  .schema-sort-select {
+    min-width: 168px;
+    min-height: 40px;
+    border: 1px solid #dfd8cd;
+    border-radius: 999px;
+    appearance: none;
+    -webkit-appearance: none;
+    padding: 0 38px 0 14px;
+    background-color: #f4f1eb;
+    background-image:
+      linear-gradient(45deg, transparent 50%, #6c675f 50%),
+      linear-gradient(135deg, #6c675f 50%, transparent 50%);
+    background-position:
+      calc(100% - 18px) 50%,
+      calc(100% - 13px) 50%;
+    background-repeat: no-repeat;
+    background-size: 5px 5px;
+    color: #45413b;
+    font: inherit;
+    font-size: 0.92rem;
+    white-space: nowrap;
   }
 
   .sectioned-memory > section {
@@ -6554,6 +6624,20 @@
     .main-stage {
       padding-top: 88px;
     }
+
+    .schema-browser-toolbar {
+      align-items: stretch;
+      flex-direction: column;
+    }
+
+    .schema-sort-field {
+      justify-content: space-between;
+      width: 100%;
+    }
+
+    .schema-sort-select {
+      min-width: min(210px, 62vw);
+    }
   }
 
   @media (max-width: 560px) {
@@ -6571,6 +6655,17 @@
 
     .main-stage {
       padding-top: 78px;
+    }
+
+    .schema-sort-field {
+      align-items: stretch;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .schema-sort-select {
+      width: 100%;
+      min-width: 0;
     }
   }
 

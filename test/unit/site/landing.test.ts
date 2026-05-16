@@ -15,11 +15,11 @@ describe("site landing page", () => {
     expect(landing).toContain("repo to AI agents.");
     expect(landing).toContain('class="value-section context-section" id="context"');
     expect(landing).not.toContain('class="value-grid"');
-    expect(landing).toContain("Why Aictx?");
+    expect(landing).toContain("Why Memory?");
     expect(landing).toContain("Durable project memory for AI agents");
     expect(landing).toContain("load only");
     expect(landing).toContain("inspect what agents remember.");
-    expect(landing).toContain('class="comparison comparison-why" aria-label="Why use Aictx"');
+    expect(landing).toContain('class="comparison comparison-why" aria-label="Why use Memory"');
     expect(landing).toContain("<strong>Set it up once.</strong>");
     expect(landing).toContain("Give your repo durable memory for the product intent, decisions");
     expect(landing).toContain("workflows, conventions, and gotchas agents usually need you to repeat.");
@@ -31,8 +31,8 @@ describe("site landing page", () => {
     expect(landing).toContain("relations, provenance, and graph context, in a local visual viewer.");
     expect(landing).not.toContain("<strong>Review it like code.</strong>");
     expect(landing).toContain("Get started");
-    expect(landing).toContain('aria-label="Get started with Aictx"');
-    expect(landing).not.toContain("Install Aictx");
+    expect(landing).toContain('aria-label="Get started with Memory"');
+    expect(landing).not.toContain("Install Memory");
     expect(landing).toContain("Open viewer");
     expect(landing).not.toContain("Join discussions");
     expect(landing).toContain("npm install -g @aictx/memory");
@@ -47,7 +47,7 @@ describe("site landing page", () => {
       "Core memory works without a cloud account, embeddings, hosted sync, or external model API."
     );
     expect(landing).not.toContain("Durable memory beats bigger prompts.");
-    expect(landing).not.toContain("Aictx turns the README promise into a working loop");
+    expect(landing).not.toContain("Memory turns the README promise into a working loop");
     expect(landing).not.toContain("Create starter memory and short repo guidance in one first-run workflow.");
     expect(landing).not.toContain("Task-focused context");
     expect(landing).not.toContain("Reviewable repo memory");
@@ -61,7 +61,7 @@ describe("site landing page", () => {
     expect(landing).toContain("Worked for 7m 18s");
     expect(landing).toContain("AI Context Pack");
     expect(landing).toContain("Remind me: are we still avoiding dashboard-style UI here?");
-    expect(landing).toContain("aictx load \"improve viewer search UI\"");
+    expect(landing).toContain("memory load \"improve viewer search UI\"");
     expect(landing).toContain("Loaded 6 relevant memories before editing");
     expect(landing).toContain("Viewer memory page shows canonical types, facets, scopes, and relations first.");
     expect(landing).not.toContain("Inspect the memory agents will use.");
@@ -84,7 +84,7 @@ describe("site landing page", () => {
     expect(landing).not.toContain("Memory lives with the code.");
     expect(landing).not.toContain("Instructions stay readable.");
     expect(landing).not.toContain("The repo can brief the agent.");
-    expect(landing).not.toContain("Aictx keeps the everyday loop small after the first setup");
+    expect(landing).not.toContain("Memory keeps the everyday loop small after the first setup");
     expect(landing).not.toContain("set up once</span>");
     expect(landing).not.toContain("load relevant reminders");
     expect(landing).not.toContain("Create the memory layer.");
@@ -94,9 +94,9 @@ describe("site landing page", () => {
     expect(landing).not.toContain("The agent does the work with that context.");
     expect(landing).not.toContain("The agent saves what future agents should remember.");
     expect(landing).not.toContain("Load context. Save memory. Review the diff.");
-    expect(landing).not.toContain("aictx load \"change auth routes\"");
-    expect(landing).not.toContain("aictx save --stdin");
-    expect(landing).not.toContain("aictx diff");
+    expect(landing).not.toContain("memory load \"change auth routes\"");
+    expect(landing).not.toContain("memory save --stdin");
+    expect(landing).not.toContain("memory diff");
     expect(landing).not.toContain("Let agents learn under review.");
     expect(landing).not.toContain("Useful knowledge. No durable review.");
     expect(landing).not.toContain("Review, commit, or roll back.");

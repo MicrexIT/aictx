@@ -10,7 +10,7 @@ describe("memory lenses", () => {
   it("renders project-map without branch handoff project truth", () => {
     const storage = snapshot({
       objects: [
-        object("synthesis.product-intent", "synthesis", "active", "Product intent", "Aictx stores durable project memory for AI coding agents and keeps it inspectable through CLI and viewer workflows.", "product-intent"),
+        object("synthesis.product-intent", "synthesis", "active", "Product intent", "Memory stores durable project memory for AI coding agents and keeps it inspectable through CLI and viewer workflows.", "product-intent"),
         object("synthesis.repository-map", "synthesis", "active", "Repository map", "Source code, tests, docs, schemas, and viewer code are kept in predictable repository areas for quick agent onboarding.", "file-layout"),
         object("synthesis.branch-handoff-feature", "synthesis", "active", "Branch handoff", "Temporary branch work should not be treated as project truth by the project map lens.", "roadmap", "feature")
       ],
@@ -74,7 +74,7 @@ function snapshot(input: {
 }): CanonicalStorageSnapshot {
   return {
     projectRoot: "/tmp/project",
-    aictxRoot: "/tmp/project/.aictx",
+    memoryRoot: "/tmp/project/.memory",
     config: {
       version: 4,
       project: {
@@ -106,8 +106,8 @@ function object(
   branch: string | null = null
 ): StoredMemoryObject {
   return {
-    path: `.aictx/memory/${id}.json`,
-    bodyPath: `.aictx/memory/${id}.md`,
+    path: `.memory/memory/${id}.json`,
+    bodyPath: `.memory/memory/${id}.md`,
     body: `# ${title}\n\n${body}\n`,
     sidecar: {
       id,
@@ -139,7 +139,7 @@ function relation(
   to: string
 ): StoredMemoryRelation {
   return {
-    path: `.aictx/relations/${id}.json`,
+    path: `.memory/relations/${id}.json`,
     relation: {
       id,
       from,

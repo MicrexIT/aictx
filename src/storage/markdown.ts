@@ -97,7 +97,7 @@ export function validateMarkdownBody(contents: string, path: string): MarkdownVa
 
   if (hasYamlFrontmatter(contents)) {
     errors.push({
-      code: "AICtxValidationFailed",
+      code: "MemoryValidationFailed",
       message: "Markdown files must not contain YAML frontmatter.",
       path,
       field: null

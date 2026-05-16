@@ -4,7 +4,7 @@ import { basename, isAbsolute, join, relative, resolve } from "node:path";
 import type { ErrorObject } from "ajv/dist/2020.js";
 import fg from "fast-glob";
 
-import { aictxError, type AictxError, type JsonValue } from "../core/errors.js";
+import { memoryError, type MemoryError, type JsonValue } from "../core/errors.js";
 import { readUtf8FileInsideRoot } from "../core/fs.js";
 import type { GitState, ValidationIssue } from "../core/types.js";
 import {
@@ -85,7 +85,7 @@ const RELATED_TO_WARNING_MINIMUM = 5;
 export function validateConfig(
   validators: CompiledSchemaValidators,
   value: unknown,
-  path = ".aictx/config.json"
+  path = ".memory/config.json"
 ): SchemaValidationResult {
   return validateWithSchema(validators, "config", value, path);
 }
@@ -109,7 +109,7 @@ export function validateRelation(
 export function validateEvent(
   validators: CompiledSchemaValidators,
   value: unknown,
-  path = ".aictx/events.jsonl",
+  path = ".memory/events.jsonl",
   line?: number
 ): SchemaValidationResult {
   const issuePath = line === undefined ? path : `${path}:${line}`;
@@ -124,9 +124,9 @@ export function validatePatch(
   return validateWithSchema(validators, "patch", value, path);
 }
 
-export function schemaValidationError(issues: readonly ValidationIssue[]): AictxError {
-  return aictxError(
-    "AICtxSchemaValidationFailed",
+export function schemaValidationError(issues: readonly ValidationIssue[]): MemoryError {
+  return memoryError(
+    "MemorySchemaValidationFailed",
     "Schema validation failed.",
     validationIssuesDetails(issues)
   );
@@ -313,11 +313,11 @@ function validationIssuesDetails(issues: readonly ValidationIssue[]): JsonValue 
 
 async function validateRequiredStorage(state: ProjectValidationState): Promise<void> {
   await Promise.all([
-    requireFile(state, ".aictx/config.json"),
-    requireDirectory(state, ".aictx/memory"),
-    requireDirectory(state, ".aictx/relations"),
-    requireFile(state, ".aictx/events.jsonl"),
-    requireDirectory(state, ".aictx/schema")
+    requireFile(state, ".memory/config.json"),
+    requireDirectory(state, ".memory/memory"),
+    requireDirectory(state, ".memory/relations"),
+    requireFile(state, ".memory/events.jsonl"),
+    requireDirectory(state, ".memory/schema")
   ]);
 }
 
@@ -388,7 +388,7 @@ async function loadSchemas(state: ProjectValidationState): Promise<void> {
 }
 
 async function validateConfigFile(state: ProjectValidationState): Promise<void> {
-  const parsed = await readJsonObjectFile(state, ".aictx/config.json");
+  const parsed = await readJsonObjectFile(state, ".memory/config.json");
 
   if (parsed === null) {
     return;
@@ -424,7 +424,7 @@ async function validateObjectFiles(
   state: ProjectValidationState,
   options: ValidateProjectOptions
 ): Promise<void> {
-  const paths = await globProjectPaths(state.projectRoot, ".aictx/memory/**/*.json");
+  const paths = await globProjectPaths(state.projectRoot, ".memory/memory/**/*.json");
 
   for (const path of paths) {
     const parsed = await readJsonObjectFile(state, path);
@@ -451,7 +451,7 @@ async function validateObjectFiles(
 }
 
 async function validateRelationFiles(state: ProjectValidationState): Promise<void> {
-  const paths = await globProjectPaths(state.projectRoot, ".aictx/relations/**/*.json");
+  const paths = await globProjectPaths(state.projectRoot, ".memory/relations/**/*.json");
 
   for (const path of paths) {
     const parsed = await readJsonObjectFile(state, path);
@@ -480,7 +480,7 @@ async function validateRelationFiles(state: ProjectValidationState): Promise<voi
 }
 
 async function validateEventsFile(state: ProjectValidationState): Promise<void> {
-  const path = ".aictx/events.jsonl";
+  const path = ".memory/events.jsonl";
   const contents = await readRelativeFile(state.projectRoot, path);
 
   if (!contents.ok) {
@@ -566,15 +566,15 @@ async function validateObjectBody(
 
   if (resolved === null) {
     state.errors.push({
-      code: "ObjectBodyPathEscapesAictx",
-      message: "Object body path must stay inside .aictx.",
+      code: "ObjectBodyPathEscapesMemory",
+      message: "Object body path must stay inside .memory.",
       path: objectFile.path,
       field: "/body_path"
     });
     return;
   }
 
-  const markdownPath = `.aictx/${bodyPath}`;
+  const markdownPath = `.memory/${bodyPath}`;
   objectFile.markdownPath = markdownPath;
 
   if (basename(objectFile.path, ".json") !== basename(markdownPath, ".md")) {
@@ -888,7 +888,7 @@ function validateRelatedToUsage(state: ProjectValidationState): void {
     state.warnings.push({
       code: "RelationRelatedToExcessive",
       message: "related_to appears excessively and should not be overused.",
-      path: ".aictx/relations",
+      path: ".memory/relations",
       field: "/predicate"
     });
   }
@@ -966,7 +966,7 @@ async function readRelativeFile(
   };
 }
 
-function isMissingFileReadError(error: AictxError): boolean {
+function isMissingFileReadError(error: MemoryError): boolean {
   const details = error.details;
 
   return isRecord(details) && details.fsCode === "ENOENT";
@@ -977,7 +977,7 @@ async function globProjectPaths(projectRoot: string, pattern: string): Promise<s
     await fg(pattern, {
       cwd: projectRoot,
       dot: true,
-      ignore: [".aictx/index/**", ".aictx/context/**"],
+      ignore: [".memory/index/**", ".memory/context/**"],
       onlyFiles: true,
       unique: true
     })
@@ -989,9 +989,9 @@ function resolveBodyPath(projectRoot: string, bodyPath: string): string | null {
     return null;
   }
 
-  const aictxRoot = resolve(projectRoot, ".aictx");
-  const resolvedBodyPath = resolve(aictxRoot, bodyPath);
-  const relativePath = relative(aictxRoot, resolvedBodyPath);
+  const memoryRoot = resolve(projectRoot, ".memory");
+  const resolvedBodyPath = resolve(memoryRoot, bodyPath);
+  const relativePath = relative(memoryRoot, resolvedBodyPath);
 
   if (relativePath === "" || relativePath.startsWith("..") || isAbsolute(relativePath)) {
     return null;
@@ -1011,7 +1011,7 @@ function issuesFromErrorDetails(details: JsonValue | undefined): ValidationIssue
       {
         code: "SchemaValidationFailed",
         message: "Schema validation failed.",
-        path: ".aictx/schema",
+        path: ".memory/schema",
         field: null
       }
     ];

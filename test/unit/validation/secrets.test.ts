@@ -31,21 +31,21 @@ describe("secret text detection", () => {
   ])("blocks %s without exposing the value", (_label, secret, rule) => {
     const result = detectSecretsInText(
       ["# Example", `Do not save ${secret}`, "End."].join("\n"),
-      ".aictx/memory/notes/example.md"
+      ".memory/memory/notes/example.md"
     );
 
     expect(result.valid).toBe(false);
     expect(result.errors).toContainEqual({
-      code: "AICtxSecretDetected",
+      code: "MemorySecretDetected",
       message: expect.any(String),
-      path: ".aictx/memory/notes/example.md:2",
+      path: ".memory/memory/notes/example.md:2",
       field: null
     });
     expect(result.findings).toContainEqual(
       expect.objectContaining({
         severity: "block",
         rule,
-        path: ".aictx/memory/notes/example.md",
+        path: ".memory/memory/notes/example.md",
         line: 2
       })
     );
@@ -58,14 +58,14 @@ describe("secret text detection", () => {
         `Authorization: Bearer ${"a".repeat(20)}`,
         "jwt: eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJleGFtcGxlIn0.signature"
       ].join("\n"),
-      ".aictx/events.jsonl"
+      ".memory/events.jsonl"
     );
 
     expect(result.valid).toBe(true);
     expect(result.errors).toEqual([]);
     expect(result.warnings.map((issue) => issue.code)).toEqual([
-      "AICtxSecretWarning",
-      "AICtxSecretWarning"
+      "MemorySecretWarning",
+      "MemorySecretWarning"
     ]);
     expect(result.findings.map((finding) => finding.rule)).toEqual([
       "bearer_token",
@@ -76,13 +76,13 @@ describe("secret text detection", () => {
   it("warns for long high-entropy strings", () => {
     const secret = "bD82Mfs9GQ+FTuPZ7HGtrjUPRpZ5FmEZG32XLmpNKW==";
 
-    const result = detectSecretsInText(secret, ".aictx/memory/notes/example.md");
+    const result = detectSecretsInText(secret, ".memory/memory/notes/example.md");
 
     expect(result.valid).toBe(true);
     expect(result.warnings).toContainEqual(
       expect.objectContaining({
-        code: "AICtxSecretWarning",
-        path: ".aictx/memory/notes/example.md:1"
+        code: "MemorySecretWarning",
+        path: ".memory/memory/notes/example.md:1"
       })
     );
     expect(result.findings).toContainEqual(
@@ -92,7 +92,7 @@ describe("secret text detection", () => {
   });
 
   it("ignores low-entropy long strings", () => {
-    const result = detectSecretsInText("a".repeat(80), ".aictx/memory/notes/example.md");
+    const result = detectSecretsInText("a".repeat(80), ".memory/memory/notes/example.md");
 
     expect(result).toEqual({
       valid: true,
@@ -102,10 +102,10 @@ describe("secret text detection", () => {
     });
   });
 
-  it("ignores OpenAI-looking substrings inside generated Aictx relation ids", () => {
+  it("ignores OpenAI-looking substrings inside generated Memory relation ids", () => {
     const result = detectSecretsInText(
-      `"id": "rel.project-aictx-stress-236-jahosk-related-to-architecture-current"`,
-      ".aictx/relations/project-aictx-stress-236-jahosk-related-to-architecture-current.json"
+      `"id": "rel.project-memory-stress-236-jahosk-related-to-architecture-current"`,
+      ".memory/relations/project-memory-stress-236-jahosk-related-to-architecture-current.json"
     );
 
     expect(result).toEqual({
@@ -124,7 +124,7 @@ describe("secret text detection", () => {
     ["relation ID", `rel.${"a".repeat(40)}`],
     [
       "generated relation ID",
-      `"id": "rel.project-aictx-cli-init-human-s9ugyz-related-to-architecture-current"`
+      `"id": "rel.project-memory-cli-init-human-s9ugyz-related-to-architecture-current"`
     ],
     [
       "generated object ID slug",
@@ -133,7 +133,7 @@ describe("secret text detection", () => {
     ["Markdown heading", `# ${"bD82Mfs9GQ+FTuPZ7HGtrjUPRpZ5FmEZG32XLmpNKW=="}`],
     ["prose sentence", `This generated identifier ${"bD82Mfs9GQ+FTuPZ7HGtrjUPRpZ5FmEZG32XLmpNKW=="} is documented here.`]
   ])("ignores high-entropy candidates that look like %s", (_label, contents) => {
-    const result = detectSecretsInText(contents, ".aictx/memory/notes/example.md");
+    const result = detectSecretsInText(contents, ".memory/memory/notes/example.md");
 
     expect(result).toEqual({
       valid: true,
@@ -143,14 +143,14 @@ describe("secret text detection", () => {
     });
   });
 
-  it("wraps block findings in AICtxSecretDetected without exposing values", () => {
+  it("wraps block findings in MemorySecretDetected without exposing values", () => {
     const secret = `sk-${"a".repeat(20)}`;
-    const result = detectSecretsInText(secret, ".aictx/memory/notes/example.md");
+    const result = detectSecretsInText(secret, ".memory/memory/notes/example.md");
 
     const error = secretDetectionError(result.errors);
 
-    expect(error.code).toBe("AICtxSecretDetected");
-    expect(JSON.stringify(error.details)).toContain(".aictx/memory/notes/example.md:1");
+    expect(error.code).toBe("MemorySecretDetected");
+    expect(JSON.stringify(error.details)).toContain(".memory/memory/notes/example.md:1");
     expect(JSON.stringify(error.details)).not.toContain(secret);
   });
 });
@@ -174,7 +174,7 @@ describe("patch secret detection", () => {
 
     expect(result.valid).toBe(false);
     expect(result.errors).toContainEqual({
-      code: "AICtxSecretDetected",
+      code: "MemorySecretDetected",
       message: "Potential OpenAI API key detected.",
       path: "<patch>",
       field: "/changes/0/body"
@@ -208,28 +208,28 @@ describe("patch secret detection", () => {
 describe("project secret scanning", () => {
   it("scans canonical JSON, JSONL, and Markdown files", async () => {
     const projectRoot = await createProjectRoot();
-    await writeProjectFile(projectRoot, ".aictx/config.json", `{"api_key":"${"x".repeat(12)}"}`);
-    await writeProjectFile(projectRoot, ".aictx/events.jsonl", `{"reason":"Bearer ${"a".repeat(20)}"}`);
-    await writeProjectFile(projectRoot, ".aictx/memory/notes/example.md", `sk-test text\nsk-${"a".repeat(20)}`);
+    await writeProjectFile(projectRoot, ".memory/config.json", `{"api_key":"${"x".repeat(12)}"}`);
+    await writeProjectFile(projectRoot, ".memory/events.jsonl", `{"reason":"Bearer ${"a".repeat(20)}"}`);
+    await writeProjectFile(projectRoot, ".memory/memory/notes/example.md", `sk-test text\nsk-${"a".repeat(20)}`);
 
     const result = await scanProjectSecrets(projectRoot);
 
     expect(result.valid).toBe(false);
     expect(result.errors.map((issue) => issue.path).sort()).toEqual([
-      ".aictx/config.json:1",
-      ".aictx/memory/notes/example.md:2"
+      ".memory/config.json:1",
+      ".memory/memory/notes/example.md:2"
     ]);
     expect(result.warnings).toContainEqual(
-      expect.objectContaining({ path: ".aictx/events.jsonl:1" })
+      expect.objectContaining({ path: ".memory/events.jsonl:1" })
     );
   });
 
   it("ignores generated files and non-canonical extensions by default", async () => {
     const projectRoot = await createProjectRoot();
-    await writeProjectFile(projectRoot, ".aictx/index/generated.json", `sk-${"a".repeat(20)}`);
-    await writeProjectFile(projectRoot, ".aictx/context/context-pack.md", `sk-${"a".repeat(20)}`);
-    await writeProjectFile(projectRoot, ".aictx/.lock", `sk-${"a".repeat(20)}`);
-    await writeProjectFile(projectRoot, ".aictx/memory/notes/example.txt", `sk-${"a".repeat(20)}`);
+    await writeProjectFile(projectRoot, ".memory/index/generated.json", `sk-${"a".repeat(20)}`);
+    await writeProjectFile(projectRoot, ".memory/context/context-pack.md", `sk-${"a".repeat(20)}`);
+    await writeProjectFile(projectRoot, ".memory/.lock", `sk-${"a".repeat(20)}`);
+    await writeProjectFile(projectRoot, ".memory/memory/notes/example.txt", `sk-${"a".repeat(20)}`);
 
     const result = await scanProjectSecrets(projectRoot);
 
@@ -243,19 +243,19 @@ describe("project secret scanning", () => {
 
   it("can include generated context packs when requested", async () => {
     const projectRoot = await createProjectRoot();
-    await writeProjectFile(projectRoot, ".aictx/context/context-pack.md", `sk-${"a".repeat(20)}`);
+    await writeProjectFile(projectRoot, ".memory/context/context-pack.md", `sk-${"a".repeat(20)}`);
 
     const result = await scanProjectSecrets(projectRoot, { includeContextPacks: true });
 
     expect(result.valid).toBe(false);
     expect(result.errors).toContainEqual(
-      expect.objectContaining({ path: ".aictx/context/context-pack.md:1" })
+      expect.objectContaining({ path: ".memory/context/context-pack.md:1" })
     );
   });
 
   it("does not mutate files while scanning", async () => {
     const projectRoot = await createProjectRoot();
-    const path = ".aictx/memory/notes/example.md";
+    const path = ".memory/memory/notes/example.md";
     await writeProjectFile(projectRoot, path, `sk-${"a".repeat(20)}`);
     const absolutePath = join(projectRoot, path);
     const beforeContents = await readFile(absolutePath, "utf8");
@@ -271,7 +271,7 @@ describe("project secret scanning", () => {
 });
 
 async function createProjectRoot(): Promise<string> {
-  const projectRoot = await mkdtemp(join(tmpdir(), "aictx-secrets-"));
+  const projectRoot = await mkdtemp(join(tmpdir(), "memory-secrets-"));
   tempRoots.push(projectRoot);
   return projectRoot;
 }
