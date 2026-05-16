@@ -198,6 +198,7 @@
   type PreviewState = "idle" | "running" | "success" | "error";
   type LayerFilter = "all" | "memories" | "syntheses" | "sources" | "inactive";
   type PagePreset = "all" | "atomic-memory" | "syntheses" | "sources" | "inactive";
+  type ObjectSort = "type" | "updated-desc" | "updated-asc";
   type LoadMemoryMode = "coding" | "debugging" | "review" | "architecture" | "onboarding";
   type MemoryLensName = "project-map" | "current-work" | "review-risk" | "provenance" | "maintenance";
   type RoleCoverageStatus = "populated" | "thin" | "missing" | "stale" | "conflicted";
@@ -333,6 +334,7 @@
   let statusFilter = $state("all");
   let tagFilter = $state("all");
   let pagePreset = $state<PagePreset>("all");
+  let objectSort = $state<ObjectSort>("type");
   let activeLensName = $state<MemoryLensName>("project-map");
   let sidebarDrawerOpen = $state(false);
   let exportOutDir = $state("");
@@ -371,6 +373,11 @@
     { value: "syntheses", label: "Syntheses" },
     { value: "sources", label: "Sources" },
     { value: "inactive", label: "Inactive" }
+  ];
+  const objectSortOptions: Array<{ value: ObjectSort; label: string }> = [
+    { value: "type", label: "Type order" },
+    { value: "updated-desc", label: "Edited newest" },
+    { value: "updated-asc", label: "Edited oldest" }
   ];
   const loadModeOptions: Array<{ value: LoadMemoryMode; label: string }> = [
     { value: "coding", label: "Coding" },
@@ -585,7 +592,7 @@
   const trustDescription = $derived.by(() =>
     selectedProject === null ? "No project is selected." : gitDescription(selectedProject)
   );
-  const memorySections = $derived.by(() => buildMemorySections(filteredObjects));
+  const memorySections = $derived.by(() => buildMemorySections(filteredObjects, objectSort));
   const previewCommandTask = $derived.by(() => previewTask.trim() || (previewData?.task ?? ""));
   const showPreviewCommand = $derived(previewCommandTask.trim() !== "");
   const previewCommand = $derived.by(() => buildPreviewCommand(previewCommandTask, previewMode, previewTokenBudget));
@@ -913,6 +920,7 @@
     bootstrap = null;
     projectLoadState = "loading";
     currentScreen = "projects";
+    objectSort = "type";
     exportState = "idle";
     previewState = "idle";
     previewData = null;
@@ -941,6 +949,7 @@
     statusFilter = allOption;
     tagFilter = allOption;
     pagePreset = "all";
+    objectSort = "type";
     activeLensName = "project-map";
     exportState = "idle";
     previewState = "idle";
@@ -1011,21 +1020,43 @@
   }
 
   function rankedObjects(memoryObjects: MemoryObjectSummary[]): MemoryObjectSummary[] {
+    return [...memoryObjects].sort(compareObjectsByRank);
+  }
+
+  function compareObjectsByRank(left: MemoryObjectSummary, right: MemoryObjectSummary): number {
+    const leftStatus = isCurrentStatus(left.status) ? 0 : 1;
+    const rightStatus = isCurrentStatus(right.status) ? 0 : 1;
+    if (leftStatus !== rightStatus) {
+      return leftStatus - rightStatus;
+    }
+
+    const leftType = OBJECT_TYPES.indexOf(left.type);
+    const rightType = OBJECT_TYPES.indexOf(right.type);
+    if (leftType !== rightType) {
+      return leftType - rightType;
+    }
+
+    const titleComparison = left.title.localeCompare(right.title);
+    return titleComparison === 0 ? left.id.localeCompare(right.id) : titleComparison;
+  }
+
+  function sortObjects(memoryObjects: MemoryObjectSummary[], sort: ObjectSort): MemoryObjectSummary[] {
+    if (sort === "type") {
+      return rankedObjects(memoryObjects);
+    }
+
     return [...memoryObjects].sort((left, right) => {
-      const leftStatus = isCurrentStatus(left.status) ? 0 : 1;
-      const rightStatus = isCurrentStatus(right.status) ? 0 : 1;
-      if (leftStatus !== rightStatus) {
-        return leftStatus - rightStatus;
-      }
+      const direction = sort === "updated-desc" ? -1 : 1;
+      const timestampComparison =
+        (updatedAtTimestamp(left.updated_at) - updatedAtTimestamp(right.updated_at)) * direction;
 
-      const leftType = OBJECT_TYPES.indexOf(left.type);
-      const rightType = OBJECT_TYPES.indexOf(right.type);
-      if (leftType !== rightType) {
-        return leftType - rightType;
-      }
-
-      return left.title.localeCompare(right.title);
+      return timestampComparison === 0 ? compareObjectsByRank(left, right) : timestampComparison;
     });
+  }
+
+  function updatedAtTimestamp(value: string): number {
+    const timestamp = Date.parse(value);
+    return Number.isFinite(timestamp) ? timestamp : 0;
   }
 
   function objectMatchesFilters(object: MemoryObjectSummary): boolean {
@@ -1713,12 +1744,25 @@
     }
   }
 
-  function buildMemorySections(memoryObjects: MemoryObjectSummary[]): MemorySection[] {
+  function buildMemorySections(
+    memoryObjects: MemoryObjectSummary[],
+    sort: ObjectSort
+  ): MemorySection[] {
+    if (sort !== "type") {
+      return [
+        {
+          id: "edited-objects",
+          title: sort === "updated-desc" ? "Recently edited objects" : "Oldest edited objects",
+          objects: sortObjects(memoryObjects, sort)
+        }
+      ].filter((section) => section.objects.length > 0);
+    }
+
     return OBJECT_TYPES
       .map((type) => ({
         id: `type-${type}`,
         title: objectTypeLabel(type),
-        objects: rankedObjects(memoryObjects.filter((object) => object.type === type))
+        objects: sortObjects(memoryObjects.filter((object) => object.type === type), sort)
       }))
       .filter((section) => section.objects.length > 0);
   }
@@ -1771,6 +1815,15 @@
 
   function facetCategoryLabel(object: MemoryObjectSummary): string {
     return object.facets?.category ?? "no facet category";
+  }
+
+  function editedDateLabel(object: MemoryObjectSummary): string {
+    return `Edited ${compactIsoDateTime(object.updated_at)}`;
+  }
+
+  function compactIsoDateTime(value: string): string {
+    const match = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/.exec(value);
+    return match === null ? value : `${match[1]} ${match[2]}`;
   }
 
   function scopeLabel(scope: Scope): string {
@@ -2633,6 +2686,11 @@
                   </button>
                 {/each}
               </div>
+              <select bind:value={objectSort} data-testid="viewer-sort" aria-label="Sort objects">
+                {#each objectSortOptions as option (option.value)}
+                  <option value={option.value}>{option.label}</option>
+                {/each}
+              </select>
               <select bind:value={typeFilter} onchange={clearPagePreset} data-testid="viewer-type-filter" aria-label="Type">
                 <option value={allOption}>All types</option>
                 {#each typeOptions as type (type)}
@@ -2814,6 +2872,7 @@
                             <span>{object.status}</span>
                             <span>{facetCategoryLabel(object)}</span>
                             <span>{scopeLabel(object.scope)}</span>
+                            <span>{editedDateLabel(object)}</span>
                           </span>
                           <small>{bodyPreview(object)}</small>
                         </span>
@@ -5114,6 +5173,10 @@
 
   .list-controls [data-testid="viewer-facet-filter"] {
     min-width: 160px;
+  }
+
+  .list-controls [data-testid="viewer-sort"] {
+    min-width: 152px;
   }
 
   .sectioned-memory {

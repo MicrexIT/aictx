@@ -11,7 +11,7 @@ traps, and useful source-backed summaries. Aictx stores that context as local,
 reviewable files under `.aictx/`, then builds a focused memory pack for the
 task in front of the agent.
 
-The daily loop is small:
+The loop is small:
 
 ```text
 load relevant memory -> do the work -> save what future agents should remember

@@ -111,6 +111,53 @@ describe("read-only viewer shell", () => {
       await expectNoText(page, '[data-testid="memory-list-view"]', "Schema projection loaded");
       await expectCount(page, '[data-testid="guided-views-panel"]', 0);
       await expectCount(page, '[data-testid="context-preview-panel"]', 0);
+      await page.selectOption('[data-testid="viewer-tag-filter"]', "viewer");
+      await expect(objectRowIds(page)).resolves.toEqual([
+        "source.agent-integration",
+        "synthesis.agent-guidance",
+        "decision.viewer-shell",
+        "constraint.viewer-markdown",
+        "fact.viewer-unrelated-source",
+        "fact.viewer-unrelated-target",
+        "gotcha.webhook-duplicates",
+        "workflow.release-checklist",
+        "note.viewer-empty"
+      ]);
+      await expectText(page, '[data-testid="object-meta-decision.viewer-shell"]', "Edited 2026-04-25 14:01");
+
+      await page.selectOption('[data-testid="viewer-sort"]', "updated-desc");
+      await expectText(page, '[data-testid="memory-list-view"]', "Recently edited objects");
+      await expect(objectRowIds(page)).resolves.toEqual([
+        "synthesis.agent-guidance",
+        "decision.viewer-shell",
+        "constraint.viewer-markdown",
+        "source.agent-integration",
+        "fact.viewer-unrelated-source",
+        "fact.viewer-unrelated-target",
+        "gotcha.webhook-duplicates",
+        "workflow.release-checklist",
+        "note.viewer-empty"
+      ]);
+
+      await page.selectOption('[data-testid="viewer-sort"]', "updated-asc");
+      await expectText(page, '[data-testid="memory-list-view"]', "Oldest edited objects");
+      await expect(objectRowIds(page)).resolves.toEqual([
+        "source.agent-integration",
+        "fact.viewer-unrelated-source",
+        "fact.viewer-unrelated-target",
+        "gotcha.webhook-duplicates",
+        "workflow.release-checklist",
+        "note.viewer-empty",
+        "synthesis.agent-guidance",
+        "decision.viewer-shell",
+        "constraint.viewer-markdown"
+      ]);
+      await page.selectOption('[data-testid="viewer-type-filter"]', "constraint");
+      await expectCount(page, '[data-testid="object-row-constraint.viewer-markdown"]', 1);
+      await expectCount(page, '[data-testid="object-row-decision.viewer-shell"]', 0);
+      await page.selectOption('[data-testid="viewer-type-filter"]', "all");
+      await page.selectOption('[data-testid="viewer-tag-filter"]', "all");
+      await page.selectOption('[data-testid="viewer-sort"]', "type");
       await page.locator('[data-testid="object-row-decision.viewer-shell"]').click();
       await assertSelectedObject(page, "Viewer Shell Layout", "decision.viewer-shell");
 
@@ -532,6 +579,14 @@ async function expectNoText(page: Page, selector: string, expected: string): Pro
 
 async function expectCount(page: Page, selector: string, expected: number): Promise<void> {
   await expect(page.locator(selector).count()).resolves.toBe(expected);
+}
+
+async function objectRowIds(page: Page): Promise<string[]> {
+  return page.locator('[data-testid^="object-row-"]').evaluateAll((elements) =>
+    elements.map((element) =>
+      element.getAttribute("data-testid")?.replace(/^object-row-/, "") ?? ""
+    )
+  );
 }
 
 async function pathExists(path: string): Promise<boolean> {
