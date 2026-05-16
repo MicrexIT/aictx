@@ -27,3 +27,5 @@
 {"actor":"agent","event":"memory.created","id":"workflow.plugin-publishing-verification","timestamp":"2026-05-16T10:15:07+02:00"}
 {"actor":"agent","event":"memory.updated","id":"fact.aictx-ships-generated-skill-and-plugin-distribution-artifacts","timestamp":"2026-05-16T10:15:07+02:00"}
 {"actor":"agent","event":"memory.created","id":"decision.readme-stays-focused-on-activation-not-reference-contracts","timestamp":"2026-05-16T10:20:49+02:00"}
+{"actor":"agent","event":"memory.created","id":"decision.setup-prompt-installs-stay-unpinned","timestamp":"2026-05-16T10:30:23+02:00"}
+{"actor":"agent","event":"memory.updated","id":"workflow.package-scripts","timestamp":"2026-05-16T10:30:23+02:00"}
