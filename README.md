@@ -216,3 +216,9 @@ Memory is MIT-licensed and built in the open. Issues, docs fixes, examples,
 agent recipes, and pull requests are welcome.
 
 [Contribute on GitHub](https://github.com/aictx/memory/blob/main/CONTRIBUTING.md)
+
+## Non-Endorsement
+
+The Aictx organization and Memory project are independent open source efforts.
+They are not affiliated with, sponsored by, or endorsed by any other open source
+projects, organizations, products, or packages with similar names.
