@@ -153,6 +153,14 @@
     files_removed: string[];
   }
 
+  interface ViewerProjectDeleteData {
+    registry_path: string;
+    project: RegisteredProjectSummary;
+    removed: RegisteredProjectSummary | null;
+    destroyed: true;
+    entries_removed: string[];
+  }
+
   interface ViewerSuccessEnvelope<TData = ViewerBootstrapData> {
     ok: true;
     data: TData;
@@ -183,6 +191,7 @@
   type ViewerProjectsEnvelope = ViewerSuccessEnvelope<ViewerProjectsData> | ViewerErrorEnvelope;
   type ExportEnvelope = ViewerSuccessEnvelope<ExportObsidianProjectionData> | ViewerErrorEnvelope;
   type LoadPreviewEnvelope = ViewerSuccessEnvelope<LoadPreviewData> | ViewerErrorEnvelope;
+  type ProjectDeleteEnvelope = ViewerSuccessEnvelope<ViewerProjectDeleteData> | ViewerErrorEnvelope;
   type ViewerState = "loading" | "ready" | "error";
   type ViewerScreen = "projects" | "memories" | "detail" | "graph" | "export";
   type ExportState = "idle" | "running" | "success" | "error";
@@ -340,11 +349,18 @@
   let previewErrorCode = $state("");
   let previewData = $state<LoadPreviewData | null>(null);
   let copiedPreviewTarget = $state<"command" | "context" | null>(null);
+  let pendingDeleteProjectId = $state<string | null>(null);
+  let deleteConfirmText = $state("");
+  let deletingProjectId = $state<string | null>(null);
+  let projectDeleteMessage = $state("");
+  let projectDeleteErrorCode = $state("");
   let graphContainer = $state<HTMLDivElement | null>(null);
+  let memoryWorkspaceElement = $state<HTMLElement | null>(null);
   let graphInstance: cytoscape.Core | null = null;
   let graphShowInactive = $state(false);
   let selectedGraphObjectId = $state<string | null>(null);
   let selectedGraphRelationId = $state<string | null>(null);
+  let schemaContextOpen = $state(true);
 
   const allOption = "all";
   const token = viewerToken();
@@ -574,6 +590,14 @@
   const showPreviewCommand = $derived(previewCommandTask.trim() !== "");
   const previewCommand = $derived.by(() => buildPreviewCommand(previewCommandTask, previewMode, previewTokenBudget));
   const docGraphOverview = $derived.by(() => buildDocGraphOverview(graphObjects, graphRelations));
+  const docGraphPreviewRelations = $derived(docGraphOverview.relations.slice(0, 3));
+  const docGraphOverflowCount = $derived(
+    docGraphOverview.hiddenRelationCount + Math.max(0, docGraphOverview.relations.length - docGraphPreviewRelations.length)
+  );
+  const hasSelectedObject = $derived(selectedObject !== null);
+  const memoryScreenActive = $derived(
+    bootstrap !== null && (currentScreen === "memories" || currentScreen === "detail")
+  );
 
   onMount(() => {
     void loadProjects();
@@ -813,6 +837,100 @@
     copiedPreviewTarget = kind;
   }
 
+  function requestProjectDelete(registryId: string): void {
+    pendingDeleteProjectId = registryId;
+    deleteConfirmText = "";
+    projectDeleteMessage = "";
+    projectDeleteErrorCode = "";
+  }
+
+  function cancelProjectDelete(): void {
+    pendingDeleteProjectId = null;
+    deleteConfirmText = "";
+    projectDeleteErrorCode = "";
+  }
+
+  function projectDeleteConfirmationMatches(project: ViewerProjectSummary): boolean {
+    return deleteConfirmText.trim() === project.project.id;
+  }
+
+  async function deleteProjectMemory(project: ViewerProjectSummary): Promise<void> {
+    if (isDemoMode) {
+      projectDeleteErrorCode = "AICtxValidationFailed";
+      projectDeleteMessage = "The public demo viewer is read-only.";
+      return;
+    }
+
+    if (!projectDeleteConfirmationMatches(project)) {
+      projectDeleteErrorCode = "AICtxValidationFailed";
+      projectDeleteMessage = `Type ${project.project.id} to confirm memory deletion.`;
+      return;
+    }
+
+    deletingProjectId = project.registry_id;
+    projectDeleteMessage = `Deleting ${project.project.name} memory.`;
+    projectDeleteErrorCode = "";
+
+    try {
+      const response = await fetch(`/api/projects/${encodeURIComponent(project.registry_id)}?token=${encodeURIComponent(token)}`, {
+        method: "DELETE",
+        headers: { accept: "application/json" }
+      });
+      const envelope = (await response.json()) as ProjectDeleteEnvelope;
+
+      warnings = uniqueSorted([...warnings, ...(envelope.warnings ?? [])]);
+
+      if (!response.ok || !envelope.ok) {
+        projectDeleteErrorCode = envelope.ok ? "" : envelope.error.code;
+        projectDeleteMessage = envelope.ok
+          ? `Viewer delete request failed with HTTP ${response.status}.`
+          : `${envelope.error.code}: ${envelope.error.message}`;
+        return;
+      }
+
+      if (selectedProjectId === project.registry_id) {
+        clearSelectedProjectAfterDelete();
+      }
+
+      pendingDeleteProjectId = null;
+      deleteConfirmText = "";
+      projectDeleteMessage = projectDeleteSuccessMessage(envelope.data);
+      projectDeleteErrorCode = "";
+      await loadProjects();
+    } catch (error) {
+      projectDeleteErrorCode = "AICtxInternalError";
+      projectDeleteMessage = error instanceof Error ? error.message : String(error);
+    } finally {
+      if (deletingProjectId === project.registry_id) {
+        deletingProjectId = null;
+      }
+    }
+  }
+
+  function clearSelectedProjectAfterDelete(): void {
+    selectedProjectId = null;
+    selectedObjectId = null;
+    bootstrap = null;
+    projectLoadState = "loading";
+    currentScreen = "projects";
+    exportState = "idle";
+    previewState = "idle";
+    previewData = null;
+    previewMessage = "";
+    previewErrorCode = "";
+    selectedGraphObjectId = null;
+    selectedGraphRelationId = null;
+  }
+
+  function projectDeleteSuccessMessage(data: ViewerProjectDeleteData): string {
+    const removedMemory = data.entries_removed.includes(".aictx");
+    const action = removedMemory
+      ? "Deleted .aictx memory and removed the project from the viewer."
+      : "Removed the project from the viewer; .aictx memory was already missing.";
+
+    return `${data.project.project.name}: ${action}`;
+  }
+
   function selectProject(registryId: string): void {
     selectedProjectId = registryId;
     selectedObjectId = null;
@@ -844,6 +962,18 @@
 
     selectedObjectId = id;
     currentScreen = "memories";
+    focusMemoryWorkspaceStart();
+  }
+
+  function closeSelectedObject(): void {
+    selectedObjectId = null;
+    focusMemoryWorkspaceStart();
+  }
+
+  function focusMemoryWorkspaceStart(): void {
+    queueMicrotask(() => {
+      memoryWorkspaceElement?.scrollTo({ top: 0, left: 0 });
+    });
   }
 
   function showProjects(): void {
@@ -987,6 +1117,7 @@
       tagFilter = allOption;
       selectedObjectId = id;
       currentScreen = "memories";
+      focusMemoryWorkspaceStart();
     }
   }
 
@@ -2134,7 +2265,10 @@
       </div>
     </aside>
 
-    <section class="main-stage" aria-label="Read-only memory browser">
+    <section
+      class={`main-stage ${memoryScreenActive ? "memory-stage" : ""} ${hasSelectedObject ? "has-selected-object" : ""}`}
+      aria-label="Read-only memory browser"
+    >
       {#if currentScreen === "projects"}
         <section class="projects-page" aria-labelledby="projects-title" data-testid="projects-view">
           <header class="page-header">
@@ -2142,6 +2276,22 @@
             <h2 id="projects-title">Projects</h2>
             <p>{countLabel(projects.length, "registered project", "registered projects")}</p>
           </header>
+
+          {#if projectDeleteMessage !== ""}
+            <section
+              class:error={projectDeleteErrorCode !== ""}
+              class:success={projectDeleteErrorCode === ""}
+              class="project-delete-status"
+              role={projectDeleteErrorCode === "" ? "status" : "alert"}
+              aria-live="polite"
+              data-testid="project-delete-status"
+            >
+              <p>{projectDeleteMessage}</p>
+              {#if projectDeleteErrorCode !== ""}
+                <p class="mono">{projectDeleteErrorCode}</p>
+              {/if}
+            </section>
+          {/if}
 
           <div class="project-grid" data-testid="project-list">
             {#each projects as project (project.registry_id)}
@@ -2166,15 +2316,66 @@
                 {#if project.warnings.length > 0}
                   <p class="warning-copy">{project.warnings[0]}</p>
                 {/if}
-                <button
-                  type="button"
-                  class="primary-action"
-                  disabled={!project.available}
-                  onclick={() => selectProject(project.registry_id)}
-                  data-testid={`project-open-${project.registry_id}`}
-                >
-                  Open project
-                </button>
+                <div class="project-card-actions">
+                  <button
+                    type="button"
+                    class="primary-action"
+                    disabled={!project.available || deletingProjectId === project.registry_id}
+                    onclick={() => selectProject(project.registry_id)}
+                    data-testid={`project-open-${project.registry_id}`}
+                  >
+                    Open project
+                  </button>
+                  {#if !isDemoMode}
+                    <button
+                      type="button"
+                      class="danger-action"
+                      disabled={deletingProjectId !== null}
+                      onclick={() => requestProjectDelete(project.registry_id)}
+                      data-testid={`project-delete-${project.registry_id}`}
+                    >
+                      Delete memory
+                    </button>
+                  {/if}
+                </div>
+                {#if !isDemoMode && pendingDeleteProjectId === project.registry_id}
+                  <section class="project-delete-confirm" aria-label={`Confirm memory deletion for ${project.project.name}`}>
+                    <p>
+                      Delete this project's <code>.aictx</code> memory directory and unregister it from the viewer.
+                      Source files in <span class="mono">{project.project_root}</span> remain.
+                    </p>
+                    <label class="field">
+                      <span>Type <strong>{project.project.id}</strong> to confirm</span>
+                      <input
+                        type="text"
+                        bind:value={deleteConfirmText}
+                        autocomplete="off"
+                        disabled={deletingProjectId === project.registry_id}
+                        data-testid={`project-delete-confirm-${project.registry_id}`}
+                      />
+                    </label>
+                    <div class="project-card-actions">
+                      <button
+                        type="button"
+                        class="danger-action solid"
+                        disabled={!projectDeleteConfirmationMatches(project) || deletingProjectId === project.registry_id}
+                        onclick={() => void deleteProjectMemory(project)}
+                        data-testid={`project-delete-submit-${project.registry_id}`}
+                      >
+                        {deletingProjectId === project.registry_id ? "Deleting" : "Delete .aictx memory"}
+                      </button>
+                      <button
+                        type="button"
+                        class="ghost-action"
+                        disabled={deletingProjectId === project.registry_id}
+                        onclick={cancelProjectDelete}
+                        data-testid={`project-delete-cancel-${project.registry_id}`}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </section>
+                {/if}
               </article>
             {:else}
               <section class="empty-panel" data-testid="empty-projects">
@@ -2390,7 +2591,11 @@
           </form>
         </section>
       {:else}
-        <article class="memory-page" aria-labelledby="memory-list-title" data-testid="memory-list-view">
+        <article
+          class={`memory-page ${hasSelectedObject ? "has-selected-object" : ""}`}
+          aria-labelledby="memory-list-title"
+          data-testid="memory-list-view"
+        >
           <header class="doc-hero">
             <span class="doc-icon" aria-hidden="true">A</span>
             <p class="eyebrow">Canonical Aictx storage</p>
@@ -2401,145 +2606,25 @@
             </p>
           </header>
 
-          {#if docGraphOverview.hub !== null}
-            <section class="doc-relation-overview" aria-labelledby="doc-relation-title" data-testid="doc-relation-overview">
-              <div class="doc-relation-map" aria-label="Embedded relation overview">
-                <svg viewBox="0 0 360 200" role="img" aria-labelledby="doc-relation-title">
-                  <defs>
-                    <marker id="doc-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
-                      <path d="M 0 0 L 10 5 L 0 10 z"></path>
-                    </marker>
-                  </defs>
-                  {#each docGraphOverview.edges as edge (edge.id)}
-                    <line
-                      x1={edge.x1}
-                      y1={edge.y1}
-                      x2={edge.x2}
-                      y2={edge.y2}
-                      stroke={edge.color}
-                      class:muted={edge.muted}
-                      marker-end="url(#doc-arrow)"
-                    />
-                  {/each}
-                  {#each docGraphOverview.nodes as node (node.id)}
-                    <g class:hub={node.hub} class:muted={node.muted}>
-                      <circle
-                        cx={node.x}
-                        cy={node.y}
-                        r={node.radius}
-                        fill={node.color}
-                        stroke={node.borderColor}
-                      />
-                      <text x={node.x} y={node.y + node.radius + 14}>
-                        {#each node.label.split("\n") as line, lineIndex (`${node.id}-${lineIndex}`)}
-                          <tspan x={node.x} dy={lineIndex === 0 ? 0 : 11}>{line}</tspan>
-                        {/each}
-                      </text>
-                    </g>
-                  {/each}
-                </svg>
-              </div>
-
-              <div class="doc-relation-copy">
-                <div class="doc-relation-heading">
-                  <div>
-                    <p class="eyebrow">Relation overview</p>
-                    <h3 id="doc-relation-title">{docGraphOverview.hub.title}</h3>
-                    <p>{docGraphOverview.hub.id}</p>
-                  </div>
-                  <button
-                    type="button"
-                    class="doc-graph-action"
-                    onclick={showGraph}
-                    data-testid="doc-hero-graph-link"
-                  >
-                    View full graph
-                  </button>
-                </div>
-
-                <dl class="doc-relation-stats" aria-label="Visible graph counts">
-                  <div><dt>Nodes</dt><dd>{graphObjects.length}</dd></div>
-                  <div><dt>Links</dt><dd>{graphRelations.length}</dd></div>
-                </dl>
-
-                <ul class="doc-relation-list" aria-label="Visible direct relations">
-                  {#each docGraphOverview.relations as relation (relation.id)}
-                    <li>
-                      <span class="pill">{relation.predicate}</span>
-                      <strong>
-                        {relation.targetLabel}
-                      </strong>
-                      <small>{relationStatusLabel(relation)}</small>
-                    </li>
-                  {:else}
-                    <li class="empty-copy">No direct relation links.</li>
-                  {/each}
-                  {#if docGraphOverview.hiddenRelationCount > 0}
-                    <li class="doc-relation-more">
-                      {docGraphOverview.hiddenRelationCount} more linked {docGraphOverview.hiddenRelationCount === 1 ? "object" : "objects"}
-                    </li>
-                  {/if}
-                </ul>
-              </div>
-            </section>
-          {:else}
-            <div class="doc-hero-actions">
-              <button
-                type="button"
-                class="doc-graph-link"
-                onclick={showGraph}
-                data-testid="doc-hero-graph-link"
-              >
-                <span class="doc-graph-icon" aria-hidden="true">◎</span>
+          <section class="list-controls" aria-label="Memory list controls">
+            <div class="list-controls-heading">
+              <div>
+                <strong>Canonical objects</strong>
                 <span>
-                  <strong>Open relation graph</strong>
-                  <small>{graphObjects.length} visible nodes, {graphRelations.length} links</small>
+                  {filteredObjects.length} rows · {objects.length} objects · {facetCategoryCount} facets · {relations.length} links
                 </span>
-              </button>
-            </div>
-          {/if}
-
-          <section class="memory-summary" aria-label="Project memory summary">
-            <div class="summary-copy">
-              <strong>Schema projection loaded</strong>
-              <p>
-                {objects.length} objects are grouped by canonical type with {facetCategoryCount} facet categories
-                and {relations.length} stored relation links.
-              </p>
-              <p class="trust-copy">
+              </div>
+              <p class="projection-status" role="status">
                 <span>{trustLabel}</span> {trustDescription}
               </p>
-            </div>
-          </section>
-
-          {#if visibleWarnings.length > 0}
-            <section class="warnings" aria-label="Storage warnings">
-              {#each visibleWarnings as warning (warning)}
-                <p>{warning}</p>
-              {/each}
-            </section>
-          {/if}
-
-          {#if hasStarterMemoryOnly}
-            <section class="onboarding-callout" aria-label="Starter memory notice" data-testid="starter-memory-notice">
-              <p><strong>Starter memory only.</strong> Seed useful repo memory with a bootstrap patch, then refresh the viewer.</p>
-              <code>aictx suggest --bootstrap --patch &gt; bootstrap-memory.json</code>
-              <code>aictx save --file bootstrap-memory.json</code>
-            </section>
-          {/if}
-
-          <section class="list-controls" aria-label="Memory list controls">
-            <div>
-              <strong>Canonical objects</strong>
-              <span>{filteredObjects.length} rows</span>
             </div>
             <div class="controls-row">
               <div class="layer-tabs" role="group" aria-label="Memory layers">
                 {#each layerOptions as option (option.value)}
                   <button
-                      type="button"
-                      class:active={layerFilter === option.value}
-                      onclick={() => {
+                    type="button"
+                    class:active={layerFilter === option.value}
+                    onclick={() => {
                       clearPagePreset();
                       layerFilter = option.value;
                     }}
@@ -2576,7 +2661,140 @@
             </div>
           </section>
 
-          <section class="memory-workspace" class:has-preview={selectedObject !== null}>
+          <section class="schema-browser-layout">
+            <details
+              class="schema-context-panel"
+              open={schemaContextOpen}
+              ontoggle={(event) => {
+                schemaContextOpen = (event.currentTarget as HTMLDetailsElement).open;
+              }}
+            >
+              <summary data-testid="schema-context-toggle">
+                <span>
+                  <strong>Relation overview</strong>
+                  <small>
+                    {docGraphOverview.hub?.title ?? `${graphObjects.length} visible objects`}
+                  </small>
+                </span>
+              </summary>
+
+              {#if docGraphOverview.hub !== null}
+                <section class="doc-relation-overview" aria-labelledby="doc-relation-title" data-testid="doc-relation-overview">
+                  <div class="doc-relation-map" aria-label="Embedded relation overview">
+                    <svg viewBox="0 0 360 200" role="img" aria-labelledby="doc-relation-title">
+                      <defs>
+                        <marker id="doc-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+                          <path d="M 0 0 L 10 5 L 0 10 z"></path>
+                        </marker>
+                      </defs>
+                      {#each docGraphOverview.edges as edge (edge.id)}
+                        <line
+                          x1={edge.x1}
+                          y1={edge.y1}
+                          x2={edge.x2}
+                          y2={edge.y2}
+                          stroke={edge.color}
+                          class:muted={edge.muted}
+                          marker-end="url(#doc-arrow)"
+                        />
+                      {/each}
+                      {#each docGraphOverview.nodes as node (node.id)}
+                        <g class:hub={node.hub} class:muted={node.muted}>
+                          <circle
+                            cx={node.x}
+                            cy={node.y}
+                            r={node.radius}
+                            fill={node.color}
+                            stroke={node.borderColor}
+                          />
+                          <text x={node.x} y={node.y + node.radius + 14}>
+                            {#each node.label.split("\n") as line, lineIndex (`${node.id}-${lineIndex}`)}
+                              <tspan x={node.x} dy={lineIndex === 0 ? 0 : 11}>{line}</tspan>
+                            {/each}
+                          </text>
+                        </g>
+                      {/each}
+                    </svg>
+                  </div>
+
+                  <div class="doc-relation-copy">
+                    <div class="doc-relation-heading">
+                      <div>
+                        <p class="eyebrow">Relation overview</p>
+                        <h3 id="doc-relation-title">{docGraphOverview.hub.title}</h3>
+                        <p>{docGraphOverview.hub.id}</p>
+                      </div>
+                      <button
+                        type="button"
+                        class="doc-graph-action"
+                        onclick={showGraph}
+                        data-testid="doc-hero-graph-link"
+                      >
+                        View full graph
+                      </button>
+                    </div>
+
+                    <dl class="doc-relation-stats" aria-label="Visible graph counts">
+                      <div><dt>Nodes</dt><dd>{graphObjects.length}</dd></div>
+                      <div><dt>Links</dt><dd>{graphRelations.length}</dd></div>
+                    </dl>
+
+                    <ul class="doc-relation-list" aria-label="Visible direct relations">
+                      {#each docGraphPreviewRelations as relation (relation.id)}
+                        <li>
+                          <span class="pill">{relation.predicate}</span>
+                          <strong>
+                            {relation.targetLabel}
+                          </strong>
+                          <small>{relationStatusLabel(relation)}</small>
+                        </li>
+                      {:else}
+                        <li class="empty-copy">No direct relation links.</li>
+                      {/each}
+                      {#if docGraphOverflowCount > 0}
+                        <li class="doc-relation-more">
+                          {docGraphOverflowCount} more linked {docGraphOverflowCount === 1 ? "object" : "objects"}
+                        </li>
+                      {/if}
+                    </ul>
+                  </div>
+                </section>
+              {:else}
+                <div class="doc-hero-actions">
+                  <button
+                    type="button"
+                    class="doc-graph-link"
+                    onclick={showGraph}
+                    data-testid="doc-hero-graph-link"
+                  >
+                    <span class="doc-graph-icon" aria-hidden="true">◎</span>
+                    <span>
+                      <strong>Open relation graph</strong>
+                      <small>{graphObjects.length} visible nodes, {graphRelations.length} links</small>
+                    </span>
+                  </button>
+                </div>
+              {/if}
+            </details>
+
+          <section class="memory-workspace" class:has-preview={hasSelectedObject} bind:this={memoryWorkspaceElement}>
+            {#if visibleWarnings.length > 0}
+              <section class="warnings" aria-label="Storage warnings">
+                {#each visibleWarnings as warning (warning)}
+                  <p>{warning}</p>
+                {/each}
+              </section>
+            {/if}
+
+            {#if hasStarterMemoryOnly}
+              <section class="onboarding-callout" aria-label="Starter memory notice" data-testid="starter-memory-notice">
+                <p><strong>Starter memory only.</strong> Seed useful repo memory with a bootstrap patch, then refresh the viewer.</p>
+                <code>aictx suggest --bootstrap --patch &gt; bootstrap-memory.json</code>
+                <code>aictx save --file bootstrap-memory.json</code>
+              </section>
+            {/if}
+
+            <div class="browser-workspace-grid">
             <section class="sectioned-memory" aria-label="Memory objects">
               {#each memorySections as section (section.id)}
                 <section id={section.id}>
@@ -2601,190 +2819,209 @@
                           </span>
                           <small>{bodyPreview(object)}</small>
                         </span>
-                        <em aria-hidden="true">{selectedObject?.id === object.id ? "⌄" : "Open"}</em>
+                        <em aria-hidden="true">{selectedObject?.id === object.id ? "Selected" : "Open"}</em>
                       </button>
-                      {#if selectedObject?.id === object.id}
-                        <article class="memory-preview" aria-label={selectedObject.title} data-testid="selected-object">
-                          <dl class="notion-properties">
-                            <div><dt>Name</dt><dd>{selectedObject.title}</dd></div>
-                            <div><dt>ID</dt><dd class="mono">{selectedObject.id}</dd></div>
-                            <div><dt>Type</dt><dd>{selectedObject.type}</dd></div>
-                            <div><dt>Facet</dt><dd>{facetCategoryLabel(selectedObject)}</dd></div>
-                            <div><dt>Status</dt><dd>{selectedObject.status}</dd></div>
-                            <div><dt>Scope</dt><dd>{scopeLabel(selectedObject.scope)}</dd></div>
-                            <div><dt>Origin</dt><dd>{selectedObject.origin?.kind ?? "none"}</dd></div>
-                            <div><dt>Evidence</dt><dd>{selectedObject.evidence.length}</dd></div>
-                            <div><dt>Relations</dt><dd>{directRelations.length}</dd></div>
-                            <div><dt>Updated</dt><dd>{selectedObject.updated_at}</dd></div>
-                          </dl>
-
-                          <div class="notion-toggle-list">
-                            <details class="notion-toggle" open>
-                              <summary>Memory</summary>
-                              <section class="markdown-view" aria-label="Markdown body" data-testid="markdown-view">
-                                {#each markdownBlocks as block, index (`${block.kind}-${index}`)}
-                                  {#if block.kind === "heading"}
-                                    {#if block.level === 1}
-                                      <h3>{block.text}</h3>
-                                    {:else if block.level === 2}
-                                      <h4>{block.text}</h4>
-                                    {:else}
-                                      <h5>{block.text}</h5>
-                                    {/if}
-                                  {:else if block.kind === "list"}
-                                    <ul>
-                                      {#each block.items ?? [] as item, itemIndex (itemIndex)}
-                                        <li>{item}</li>
-                                      {/each}
-                                    </ul>
-                                  {:else if block.kind === "quote"}
-                                    <blockquote>{block.text}</blockquote>
-                                  {:else if block.kind === "code"}
-                                    <pre><code>{block.text}</code></pre>
-                                  {:else}
-                                    <p>{block.text}</p>
-                                  {/if}
-                                {:else}
-                                  <p class="empty-copy">This memory object has an empty Markdown body.</p>
-                                {/each}
-                              </section>
-                            </details>
-
-                            {#if selectedObject.tags.length > 0}
-                              <details class="notion-toggle" open>
-                                <summary>Tags</summary>
-                                <ul class="tag-list" aria-label="Tags">
-                                  {#each selectedObject.tags as tag (tag)}
-                                    <li>{tag}</li>
-                                  {/each}
-                                </ul>
-                              </details>
-                            {/if}
-
-                            <details class="notion-toggle" open data-testid="facet-details">
-                              <summary>Facet category</summary>
-                              {#if selectedObject.facets === null}
-                                <p class="empty-copy">No facets saved on this object.</p>
-                              {:else}
-                                <dl class="facet-grid">
-                                  <div><dt>Category</dt><dd>{selectedObject.facets.category}</dd></div>
-                                  <div><dt>Applies to</dt><dd>{selectedObject.facets.applies_to?.join(", ") || "global"}</dd></div>
-                                  <div><dt>Load modes</dt><dd>{selectedObject.facets.load_modes?.join(", ") || "all modes"}</dd></div>
-                                </dl>
-                              {/if}
-                            </details>
-
-                            <details class="notion-toggle" open data-testid="provenance-links">
-                              <summary>Provenance</summary>
-                              <ul class="relation-list">
-                                {#if selectedObject.origin !== null}
-                                  <li>
-                                    <span class="pill">{selectedObject.origin.kind}</span>
-                                    <code>{selectedObject.origin.locator}</code>
-                                  </li>
-                                  {#if selectedObject.origin.digest !== undefined}
-                                    <li>
-                                      <span class="pill">digest</span>
-                                      <code>{selectedObject.origin.digest}</code>
-                                    </li>
-                                  {/if}
-                                  {#if selectedObject.origin.media_type !== undefined}
-                                    <li>
-                                      <span class="pill">media</span>
-                                      <code>{selectedObject.origin.media_type}</code>
-                                    </li>
-                                  {/if}
-                                  {#if selectedObject.origin.captured_at !== undefined}
-                                    <li>
-                                      <span class="pill">captured</span>
-                                      <code>{selectedObject.origin.captured_at}</code>
-                                    </li>
-                                  {/if}
-                                {/if}
-                                {#each selectedObject.evidence as evidence (`${evidence.kind}-${evidence.id}`)}
-                                  <li>
-                                    <span class="pill">{evidence.kind}</span>
-                                    {#if objectById.has(evidence.id)}
-                                      <button type="button" onclick={() => selectRelated(evidence.id)}>
-                                        {objectById.get(evidence.id)?.title ?? evidence.id}
-                                      </button>
-                                    {:else}
-                                      <code>{evidence.id}</code>
-                                    {/if}
-                                  </li>
-                                {:else}
-                                  <li class="empty-copy">No evidence links.</li>
-                                {/each}
-                                {#each directRelations.filter((relation) => ["derived_from", "supports", "summarizes", "documents"].includes(relation.predicate)) as relation (relation.id)}
-                                  <li>
-                                    <span class="pill">{relation.predicate}</span>
-                                    <button type="button" onclick={() => selectRelated(relationCounterpart(relation, selectedObject.id))}>
-                                      {relationTargetLabel(relation, selectedObject.id)}
-                                    </button>
-                                  </li>
-                                {/each}
-                              </ul>
-                            </details>
-
-                            <details class="notion-toggle" open>
-                              <summary>Direct relations</summary>
-                              <section class="relation-columns">
-                                <div>
-                                  <p class="eyebrow">Outgoing</p>
-                                  <ul class="relation-list" data-testid="outgoing-relations">
-                                    {#each outgoingRelations as relation (relation.id)}
-                                      <li data-testid={`relation-card-${relation.id}`}>
-                                        <span class="pill">{relation.predicate}</span>
-                                        <button type="button" onclick={() => selectRelated(relation.to)}>
-                                          {relationTargetLabel(relation, selectedObject.id)}
-                                        </button>
-                                        <small>{relationStatusLabel(relation)}</small>
-                                      </li>
-                                    {:else}
-                                      <li class="empty-copy">No outgoing related memories.</li>
-                                    {/each}
-                                  </ul>
-                                </div>
-
-                                <div>
-                                  <p class="eyebrow">Incoming</p>
-                                  <ul class="relation-list" data-testid="incoming-relations">
-                                    {#each incomingRelations as relation (relation.id)}
-                                      <li data-testid={`relation-card-${relation.id}`}>
-                                        <span class="pill">{relation.predicate}</span>
-                                        <button type="button" onclick={() => selectRelated(relation.from)}>
-                                          {relationTargetLabel(relation, selectedObject.id)}
-                                        </button>
-                                        <small>{relationStatusLabel(relation)}</small>
-                                      </li>
-                                    {:else}
-                                      <li class="empty-copy">No incoming related memories.</li>
-                                    {/each}
-                                  </ul>
-                                </div>
-                              </section>
-                            </details>
-
-                            <details class="notion-toggle technical-details" data-testid="technical-details">
-                              <summary>Technical details</summary>
-                              <dl>
-                                <div><dt>Body</dt><dd>{selectedObject.body_path}</dd></div>
-                                <div><dt>Sidecar</dt><dd>{selectedObject.json_path}</dd></div>
-                                <div><dt>Scope</dt><dd>{selectedObject.scope.kind}</dd></div>
-                                <div><dt>Updated</dt><dd>{selectedObject.updated_at}</dd></div>
-                              </dl>
-                              <section class="json-view" aria-label="Object sidecar JSON" data-testid="json-view">
-                                <pre>{selectedJson}</pre>
-                              </section>
-                            </details>
-                          </div>
-                        </article>
-                      {/if}
                     {/each}
                   </div>
                 </section>
               {/each}
             </section>
+
+            {#if selectedObject !== null}
+              <article class="memory-preview object-detail-panel" aria-label={selectedObject.title} data-testid="selected-object">
+                <header class="memory-preview-header">
+                  <button
+                    type="button"
+                    class="selected-object-back"
+                    onclick={closeSelectedObject}
+                    data-testid="selected-object-back"
+                  >
+                    Back
+                  </button>
+                  <div>
+                    <p class="eyebrow">Selected object</p>
+                    <h3>{selectedObject.title}</h3>
+                    <p class="mono">{selectedObject.id}</p>
+                  </div>
+                </header>
+
+                <dl class="notion-properties">
+                  <div><dt>Name</dt><dd>{selectedObject.title}</dd></div>
+                  <div><dt>ID</dt><dd class="mono">{selectedObject.id}</dd></div>
+                  <div><dt>Type</dt><dd>{selectedObject.type}</dd></div>
+                  <div><dt>Facet</dt><dd>{facetCategoryLabel(selectedObject)}</dd></div>
+                  <div><dt>Status</dt><dd>{selectedObject.status}</dd></div>
+                  <div><dt>Scope</dt><dd>{scopeLabel(selectedObject.scope)}</dd></div>
+                  <div><dt>Origin</dt><dd>{selectedObject.origin?.kind ?? "none"}</dd></div>
+                  <div><dt>Evidence</dt><dd>{selectedObject.evidence.length}</dd></div>
+                  <div><dt>Relations</dt><dd>{directRelations.length}</dd></div>
+                  <div><dt>Updated</dt><dd>{selectedObject.updated_at}</dd></div>
+                </dl>
+
+                <div class="notion-toggle-list">
+                  <details class="notion-toggle" open>
+                    <summary>Memory</summary>
+                    <section class="markdown-view" aria-label="Markdown body" data-testid="markdown-view">
+                      {#each markdownBlocks as block, index (`${block.kind}-${index}`)}
+                        {#if block.kind === "heading"}
+                          {#if block.level === 1}
+                            <h3>{block.text}</h3>
+                          {:else if block.level === 2}
+                            <h4>{block.text}</h4>
+                          {:else}
+                            <h5>{block.text}</h5>
+                          {/if}
+                        {:else if block.kind === "list"}
+                          <ul>
+                            {#each block.items ?? [] as item, itemIndex (itemIndex)}
+                              <li>{item}</li>
+                            {/each}
+                          </ul>
+                        {:else if block.kind === "quote"}
+                          <blockquote>{block.text}</blockquote>
+                        {:else if block.kind === "code"}
+                          <pre><code>{block.text}</code></pre>
+                        {:else}
+                          <p>{block.text}</p>
+                        {/if}
+                      {:else}
+                        <p class="empty-copy">This memory object has an empty Markdown body.</p>
+                      {/each}
+                    </section>
+                  </details>
+
+                  {#if selectedObject.tags.length > 0}
+                    <details class="notion-toggle" open>
+                      <summary>Tags</summary>
+                      <ul class="tag-list" aria-label="Tags">
+                        {#each selectedObject.tags as tag (tag)}
+                          <li>{tag}</li>
+                        {/each}
+                      </ul>
+                    </details>
+                  {/if}
+
+                  <details class="notion-toggle" open data-testid="facet-details">
+                    <summary>Facet category</summary>
+                    {#if selectedObject.facets === null}
+                      <p class="empty-copy">No facets saved on this object.</p>
+                    {:else}
+                      <dl class="facet-grid">
+                        <div><dt>Category</dt><dd>{selectedObject.facets.category}</dd></div>
+                        <div><dt>Applies to</dt><dd>{selectedObject.facets.applies_to?.join(", ") || "global"}</dd></div>
+                        <div><dt>Load modes</dt><dd>{selectedObject.facets.load_modes?.join(", ") || "all modes"}</dd></div>
+                      </dl>
+                    {/if}
+                  </details>
+
+                  <details class="notion-toggle" open data-testid="provenance-links">
+                    <summary>Provenance</summary>
+                    <ul class="relation-list">
+                      {#if selectedObject.origin !== null}
+                        <li>
+                          <span class="pill">{selectedObject.origin.kind}</span>
+                          <code>{selectedObject.origin.locator}</code>
+                        </li>
+                        {#if selectedObject.origin.digest !== undefined}
+                          <li>
+                            <span class="pill">digest</span>
+                            <code>{selectedObject.origin.digest}</code>
+                          </li>
+                        {/if}
+                        {#if selectedObject.origin.media_type !== undefined}
+                          <li>
+                            <span class="pill">media</span>
+                            <code>{selectedObject.origin.media_type}</code>
+                          </li>
+                        {/if}
+                        {#if selectedObject.origin.captured_at !== undefined}
+                          <li>
+                            <span class="pill">captured</span>
+                            <code>{selectedObject.origin.captured_at}</code>
+                          </li>
+                        {/if}
+                      {/if}
+                      {#each selectedObject.evidence as evidence (`${evidence.kind}-${evidence.id}`)}
+                        <li>
+                          <span class="pill">{evidence.kind}</span>
+                          {#if objectById.has(evidence.id)}
+                            <button type="button" onclick={() => selectRelated(evidence.id)}>
+                              {objectById.get(evidence.id)?.title ?? evidence.id}
+                            </button>
+                          {:else}
+                            <code>{evidence.id}</code>
+                          {/if}
+                        </li>
+                      {:else}
+                        <li class="empty-copy">No evidence links.</li>
+                      {/each}
+                      {#each directRelations.filter((relation) => ["derived_from", "supports", "summarizes", "documents"].includes(relation.predicate)) as relation (relation.id)}
+                        <li>
+                          <span class="pill">{relation.predicate}</span>
+                          <button type="button" onclick={() => selectRelated(relationCounterpart(relation, selectedObject.id))}>
+                            {relationTargetLabel(relation, selectedObject.id)}
+                          </button>
+                        </li>
+                      {/each}
+                    </ul>
+                  </details>
+
+                  <details class="notion-toggle" open>
+                    <summary>Direct relations</summary>
+                    <section class="relation-columns">
+                      <div>
+                        <p class="eyebrow">Outgoing</p>
+                        <ul class="relation-list" data-testid="outgoing-relations">
+                          {#each outgoingRelations as relation (relation.id)}
+                            <li data-testid={`relation-card-${relation.id}`}>
+                              <span class="pill">{relation.predicate}</span>
+                              <button type="button" onclick={() => selectRelated(relation.to)}>
+                                {relationTargetLabel(relation, selectedObject.id)}
+                              </button>
+                              <small>{relationStatusLabel(relation)}</small>
+                            </li>
+                          {:else}
+                            <li class="empty-copy">No outgoing related memories.</li>
+                          {/each}
+                        </ul>
+                      </div>
+
+                      <div>
+                        <p class="eyebrow">Incoming</p>
+                        <ul class="relation-list" data-testid="incoming-relations">
+                          {#each incomingRelations as relation (relation.id)}
+                            <li data-testid={`relation-card-${relation.id}`}>
+                              <span class="pill">{relation.predicate}</span>
+                              <button type="button" onclick={() => selectRelated(relation.from)}>
+                                {relationTargetLabel(relation, selectedObject.id)}
+                              </button>
+                              <small>{relationStatusLabel(relation)}</small>
+                            </li>
+                          {:else}
+                            <li class="empty-copy">No incoming related memories.</li>
+                          {/each}
+                        </ul>
+                      </div>
+                    </section>
+                  </details>
+
+                  <details class="notion-toggle technical-details" data-testid="technical-details">
+                    <summary>Technical details</summary>
+                    <dl>
+                      <div><dt>Body</dt><dd>{selectedObject.body_path}</dd></div>
+                      <div><dt>Sidecar</dt><dd>{selectedObject.json_path}</dd></div>
+                      <div><dt>Scope</dt><dd>{selectedObject.scope.kind}</dd></div>
+                      <div><dt>Updated</dt><dd>{selectedObject.updated_at}</dd></div>
+                    </dl>
+                    <section class="json-view" aria-label="Object sidecar JSON" data-testid="json-view">
+                      <pre>{selectedJson}</pre>
+                    </section>
+                  </details>
+                </div>
+              </article>
+            {/if}
+            </div>
+          </section>
           </section>
         </article>
       {/if}
@@ -3001,6 +3238,7 @@
   .markdown-view,
   .object-list,
   .export-form,
+  .project-delete-status,
   .warnings,
   .onboarding-callout {
     border: 1px solid #d9ded7;
@@ -3023,6 +3261,43 @@
   .project-card.unavailable {
     border-color: #edc3b8;
     background: #fff8f5;
+  }
+
+  .project-card-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .project-delete-confirm {
+    display: grid;
+    gap: 12px;
+    border: 1px solid #efc7bd;
+    border-radius: 8px;
+    padding: 12px;
+    background: #fff8f5;
+  }
+
+  .project-delete-confirm p,
+  .project-delete-status p {
+    margin: 0;
+    color: #5f433d;
+    line-height: 1.45;
+  }
+
+  .project-delete-status {
+    margin: 0 0 14px;
+    padding: 12px 14px;
+  }
+
+  .project-delete-status.success {
+    border-color: #d8d0c3;
+    background: #fbfaf7;
+  }
+
+  .project-delete-status.error {
+    border-color: #efb5a8;
+    background: #fff1f0;
   }
 
   .card-topline {
@@ -3063,6 +3338,7 @@
   }
 
   .primary-action,
+  .danger-action,
   .ghost-action {
     border: 1px solid #2b2925;
     padding: 9px 13px;
@@ -3071,6 +3347,17 @@
   .primary-action {
     color: #ffffff;
     background: #2b2925;
+  }
+
+  .danger-action {
+    border-color: #b5473d;
+    color: #94342c;
+    background: #fff8f5;
+  }
+
+  .danger-action.solid {
+    color: #ffffff;
+    background: #b5473d;
   }
 
   .ghost-action {
@@ -3555,16 +3842,7 @@
     font-weight: 800;
   }
 
-  .memory-summary {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 18px;
-    border-bottom: 1px solid #e9e6e0;
-    padding-bottom: 18px;
-  }
-
-  .memory-summary p {
+  .projection-status {
     margin: 0;
     max-width: 640px;
     color: #666666;
@@ -3824,11 +4102,6 @@
     .doc-hero,
     .list-controls {
       grid-template-columns: 1fr;
-    }
-
-    .memory-summary {
-      align-items: flex-start;
-      flex-direction: column;
     }
 
     .memory-workspace.has-preview {
@@ -4572,40 +4845,14 @@
     line-height: 1.25;
   }
 
-  .memory-summary {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    gap: 16px;
-    max-width: none;
+  .projection-status {
     margin: 0;
-    border: 1px solid #e2ded5;
-    border-radius: 8px;
-    padding: 18px 20px;
-    background: #ffffff;
-    box-shadow: 0 10px 28px rgb(16 24 40 / 5%);
-  }
-
-  .summary-copy strong {
-    display: block;
-    color: #34332f;
-    font-size: 1.04rem;
-    font-weight: 820;
-  }
-
-  .summary-copy p {
-    margin: 4px 0 0;
-    color: #76736c;
-    font-size: 1rem;
+    color: #6f6b63;
+    font-size: 0.92rem;
     line-height: 1.45;
   }
 
-  .trust-copy {
-    margin-top: 10px !important;
-    color: #6f6b63 !important;
-    font-size: 0.92rem !important;
-  }
-
-  .trust-copy span {
+  .projection-status span {
     display: inline-flex;
     margin-right: 6px;
     border: 1px solid #d6d2ca;
@@ -5257,10 +5504,6 @@
       font-size: 2.45rem;
     }
 
-    .memory-summary {
-      margin: 0;
-    }
-
     .graph-workspace {
       grid-template-columns: 1fr;
     }
@@ -5319,8 +5562,37 @@
     padding-top: clamp(34px, 5vw, 60px);
   }
 
+  .main-stage.memory-stage {
+    height: 100vh;
+    overflow: hidden;
+    padding-bottom: 24px;
+  }
+
+  :global(body:has(.main-stage.memory-stage)) {
+    overflow: hidden;
+  }
+
   .memory-page {
     gap: 30px;
+  }
+
+  .memory-stage .memory-page {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+    gap: 18px;
+    overflow: hidden;
+  }
+
+  .memory-stage .doc-hero {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
 
   .memory-page,
@@ -5353,47 +5625,21 @@
     line-height: 1.62;
   }
 
-  .memory-summary {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 14px 18px;
-    border-color: #e7e0d4;
-    padding: 22px 24px 24px;
-    background: #fffdf9;
-    box-shadow:
-      0 1px 2px rgb(39 31 21 / 4%),
-      0 14px 36px rgb(39 31 21 / 6%);
-  }
-
-  .summary-copy strong {
-    color: #302e2a;
-    font-size: 1.05rem;
-    line-height: 1.28;
-    font-weight: 780;
-  }
-
-  .summary-copy p {
-    max-width: 74ch;
-    margin-top: 8px;
-    color: #6a655d;
-    font-size: 1rem;
-    line-height: 1.62;
-  }
-
-  .trust-copy {
+  .projection-status {
     display: flex;
     flex-wrap: nowrap;
     align-items: center;
     gap: 0;
     max-width: none;
-    color: #6c675f !important;
-    font-size: 0.95rem !important;
-    line-height: 1.62 !important;
+    color: #6c675f;
+    font-size: 0.9rem;
+    line-height: 1.45;
     white-space: nowrap;
   }
 
-  .trust-copy span {
+  .projection-status span {
     flex: 0 0 auto;
-    margin: 0 8px 4px 0;
+    margin: 0 8px 0 0;
     border-color: #d8d0c3;
     padding: 3px 10px;
     background: #faf7f1;
@@ -5401,9 +5647,25 @@
   }
 
   .list-controls {
+    position: sticky;
+    top: 0;
+    z-index: 4;
     gap: 12px;
     border-bottom-color: #ece6dc;
     padding: 2px 0 28px;
+    background: #fffefa;
+  }
+
+  .list-controls-heading {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px 18px;
+    min-width: 0;
+  }
+
+  .list-controls-heading > div {
+    min-width: 0;
   }
 
   .list-controls strong {
@@ -5417,6 +5679,13 @@
     margin-top: 2px;
     color: #858078;
     font-size: 0.93rem;
+  }
+
+  .list-controls .projection-status span {
+    display: inline-flex;
+    margin: 0 8px 0 0;
+    color: #37352f;
+    font-size: 0.78rem;
   }
 
   .controls-row {
@@ -5454,6 +5723,54 @@
 
   .sectioned-memory {
     gap: 42px;
+  }
+
+  .memory-stage .memory-workspace,
+  .memory-stage .sectioned-memory {
+    min-height: 0;
+  }
+
+  .memory-stage .doc-relation-overview {
+    max-height: 280px;
+    min-height: 0;
+    overflow: hidden;
+    padding: 14px 0 16px;
+  }
+
+  .memory-stage .doc-relation-map,
+  .memory-stage .doc-relation-map svg {
+    height: 220px;
+    min-height: 220px;
+  }
+
+  .memory-stage .doc-relation-copy {
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .memory-stage .doc-relation-list {
+    max-height: 116px;
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+
+  .memory-stage .memory-workspace {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 0;
+    gap: 18px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-right: 8px;
+    scrollbar-gutter: stable;
+  }
+
+  .memory-stage .sectioned-memory {
+    overflow: visible;
+  }
+
+  .memory-stage .sectioned-memory > section:last-child {
+    padding-bottom: 22px;
   }
 
   .sectioned-memory h3 {
@@ -5654,23 +5971,74 @@
       padding: 28px 14px 52px;
     }
 
+    .main-stage.memory-stage {
+      height: calc(100vh - 68px);
+      height: calc(100svh - 68px);
+      padding: 18px 14px 16px;
+    }
+
     .memory-page {
       gap: 22px;
     }
 
-    .memory-summary {
-      grid-template-columns: 1fr;
-      padding: 18px;
+    .memory-stage .memory-page {
+      gap: 14px;
     }
 
-    .trust-copy {
+    .memory-stage .doc-hero {
+      gap: 6px;
+    }
+
+    .memory-stage .doc-icon,
+    .memory-stage .doc-hero p:not(.eyebrow) {
+      display: none;
+    }
+
+    .memory-stage .doc-hero h2 {
+      font-size: 1.45rem;
+      line-height: 1.12;
+    }
+
+    .list-controls {
+      padding-bottom: 16px;
+    }
+
+    .list-controls-heading {
+      grid-template-columns: 1fr;
+      align-items: start;
+      gap: 8px;
+    }
+
+    .projection-status {
       align-items: flex-start;
       flex-wrap: wrap;
       white-space: normal;
     }
 
+    .memory-stage .doc-relation-overview {
+      gap: 12px;
+      padding: 12px 0 14px;
+    }
+
+    .memory-stage .doc-relation-map,
+    .memory-stage .doc-relation-map svg {
+      height: 172px;
+      min-height: 172px;
+    }
+
+    .memory-stage .doc-relation-list {
+      max-height: 118px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+
     .sectioned-memory {
       gap: 34px;
+    }
+
+    .memory-stage .memory-workspace {
+      padding-right: 0;
+      scrollbar-gutter: auto;
     }
 
     .sectioned-memory h3 {
@@ -5716,6 +6084,319 @@
 
     .memory-preview .markdown-view {
       font-size: 1rem;
+    }
+  }
+
+  .main-stage.memory-stage {
+    padding-right: clamp(24px, 3vw, 48px);
+    padding-left: clamp(24px, 3vw, 48px);
+  }
+
+  .memory-stage .memory-page {
+    width: 100%;
+    max-width: min(1500px, 100%);
+  }
+
+  .memory-stage .list-controls {
+    flex: 0 0 auto;
+  }
+
+  .schema-browser-layout {
+    display: grid;
+    grid-template-columns: minmax(300px, 0.38fr) minmax(0, 1fr);
+    gap: 24px;
+    min-height: 0;
+    flex: 1 1 0;
+    overflow: hidden;
+  }
+
+  .schema-context-panel {
+    min-width: 0;
+    min-height: 0;
+  }
+
+  .schema-context-panel > summary {
+    display: none;
+  }
+
+  .schema-context-panel:not([open]) > :not(summary) {
+    display: none;
+  }
+
+  .memory-stage .doc-relation-overview {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+    align-content: start;
+    max-height: none;
+    min-height: 0;
+    overflow: visible;
+    border-top: 0;
+    padding: 0;
+  }
+
+  .memory-stage .doc-relation-map {
+    height: min(28vh, 260px);
+    min-height: 210px;
+  }
+
+  .memory-stage .doc-relation-map svg {
+    height: 100%;
+    min-height: 210px;
+  }
+
+  .memory-stage .doc-relation-copy,
+  .memory-stage .doc-relation-list {
+    max-height: none;
+    overflow: visible;
+  }
+
+  .memory-stage .doc-relation-list {
+    padding-right: 0;
+  }
+
+  .doc-relation-more {
+    color: #817c74;
+    font-size: 0.9rem;
+    font-weight: 700;
+  }
+
+  .memory-stage .memory-workspace {
+    min-height: 0;
+    overflow-y: auto;
+    padding-right: 8px;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+  }
+
+  .browser-workspace-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 18px;
+    min-width: 0;
+  }
+
+  .memory-workspace.has-preview .browser-workspace-grid {
+    grid-template-columns: minmax(340px, 0.92fr) minmax(420px, 1.08fr);
+    align-items: start;
+  }
+
+  .object-detail-panel {
+    align-self: start;
+    margin: 0 0 24px;
+    border: 1px solid #d8cec0;
+    border-radius: 8px;
+    padding: 24px clamp(22px, 3vw, 42px) 30px;
+  }
+
+  .memory-preview-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    min-width: 0;
+  }
+
+  .memory-preview-header h3 {
+    margin: 3px 0 0;
+    color: #24231f;
+    font-size: clamp(1.4rem, 2vw, 1.75rem);
+    line-height: 1.14;
+    font-weight: 800;
+    overflow-wrap: anywhere;
+  }
+
+  .memory-preview-header .mono {
+    margin: 5px 0 0;
+    color: #6f6a62;
+    font-size: 0.86rem;
+    overflow-wrap: anywhere;
+  }
+
+  .selected-object-back {
+    display: none;
+  }
+
+  .memory-stage .object-list button.selected {
+    border-bottom-color: #d8cec0;
+    border-radius: 8px;
+  }
+
+  @media (max-width: 1180px) {
+    .schema-browser-layout {
+      grid-template-columns: minmax(280px, 0.34fr) minmax(0, 1fr);
+      gap: 18px;
+    }
+
+    .memory-workspace.has-preview .browser-workspace-grid {
+      grid-template-columns: minmax(300px, 0.85fr) minmax(360px, 1.15fr);
+    }
+  }
+
+  @media (max-width: 900px) {
+    .main-stage.memory-stage {
+      padding-right: 14px;
+      padding-left: 14px;
+    }
+
+    .schema-browser-layout {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      overflow: visible;
+    }
+
+    .schema-context-panel {
+      display: block;
+      flex: 0 0 auto;
+      overflow: visible;
+    }
+
+    .schema-context-panel[open] {
+      display: block;
+    }
+
+    .schema-context-panel > summary {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      min-height: 44px;
+      border: 1px solid #e3dfd7;
+      border-radius: 8px;
+      padding: 10px 12px;
+      background: #fffdf9;
+      color: #302e2a;
+      cursor: pointer;
+      list-style: none;
+    }
+
+    .schema-context-panel > summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .schema-context-panel > summary::after {
+      content: "View";
+      flex: 0 0 auto;
+      color: #6c675f;
+      font-size: 0.82rem;
+      font-weight: 780;
+    }
+
+    .schema-context-panel[open] > summary::after {
+      content: "Hide";
+    }
+
+    .schema-context-panel > summary strong,
+    .schema-context-panel > summary small {
+      display: block;
+      line-height: 1.2;
+    }
+
+    .schema-context-panel > summary small {
+      margin-top: 2px;
+      color: #817c74;
+      font-size: 0.8rem;
+      font-weight: 620;
+    }
+
+    .schema-context-panel[open] .doc-relation-overview,
+    .schema-context-panel[open] .doc-hero-actions {
+      margin-top: 10px;
+    }
+
+    .memory-stage .doc-relation-map,
+    .memory-stage .doc-relation-map svg {
+      height: 148px;
+      min-height: 148px;
+    }
+
+    .memory-stage .doc-relation-overview {
+      gap: 10px;
+    }
+
+    .memory-stage .doc-relation-copy {
+      display: block;
+    }
+
+    .memory-stage .doc-relation-heading {
+      display: block;
+    }
+
+    .memory-stage .doc-relation-heading > div,
+    .memory-stage .doc-relation-stats,
+    .memory-stage .doc-relation-list {
+      display: none;
+    }
+
+    .memory-stage .doc-graph-action {
+      width: 100%;
+      min-height: 38px;
+      padding: 9px 12px;
+    }
+
+    .memory-stage .doc-relation-list {
+      max-height: none;
+      overflow: visible;
+      padding-right: 0;
+    }
+
+    .browser-workspace-grid,
+    .memory-workspace.has-preview .browser-workspace-grid {
+      display: block;
+    }
+
+    .object-detail-panel {
+      margin: 0 0 18px;
+      padding: 20px 16px 28px;
+    }
+
+    .memory-preview-header {
+      display: grid;
+      gap: 12px;
+    }
+
+    .selected-object-back {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      justify-self: start;
+      min-height: 38px;
+      border: 1px solid #d8d0c3;
+      border-radius: 8px;
+      padding: 8px 13px;
+      background: #fffaf1;
+      color: #302e2a;
+      font-weight: 780;
+    }
+
+    .main-stage.memory-stage.has-selected-object {
+      height: auto;
+      min-height: calc(100vh - 68px);
+      min-height: calc(100svh - 68px);
+      overflow: visible;
+    }
+
+    :global(body:has(.main-stage.memory-stage.has-selected-object)) {
+      overflow: auto;
+    }
+
+    .memory-stage.has-selected-object .memory-page,
+    .memory-stage.has-selected-object .schema-browser-layout,
+    .memory-stage.has-selected-object .memory-workspace,
+    .memory-stage.has-selected-object .browser-workspace-grid {
+      display: block;
+      height: auto;
+      min-height: 0;
+      overflow: visible;
+    }
+
+    .memory-stage.has-selected-object .list-controls,
+    .memory-stage.has-selected-object .schema-context-panel,
+    .memory-stage.has-selected-object .warnings,
+    .memory-stage.has-selected-object .onboarding-callout,
+    .memory-stage.has-selected-object .sectioned-memory {
+      display: none;
     }
   }
 </style>

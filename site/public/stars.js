@@ -18,7 +18,7 @@ async function loadStars() {
   }
 
   try {
-    const response = await fetch("https://api.github.com/repos/MicrexIT/aictx", {
+    const response = await fetch("https://api.github.com/repos/aictx/memory", {
       headers: {
         accept: "application/vnd.github+json"
       }

@@ -14,3 +14,12 @@ It keeps Aictx usage CLI-first: load relevant memory with `aictx load` before su
 ## Distribution
 
 This directory follows the Claude Code plugin format. Submit it through Anthropic's plugin submission flow when targeting the official Claude plugin directory.
+
+Claude Code adds plugins through marketplace sources, not by adding this plugin directory directly. This repo exposes the plugin through its root marketplace catalog:
+
+```text
+/plugin marketplace add aictx/memory
+/plugin install aictx-memory@aictx
+```
+
+For official Claude listing, validate this directory with `claude plugin validate integrations/claude/plugins/aictx-memory` and use Anthropic's plugin submission flow.

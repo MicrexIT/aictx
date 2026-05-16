@@ -82,6 +82,9 @@ schema, objects, facets, relations, provenance, and graph context agents load.
 | `synthesis` | Compact summaries of product intent, architecture, feature maps, conventions, and agent guidance. |
 | `question` / `fact` / `concept` | Open scope, reusable facts, and domain ideas. |
 
+The full object taxonomy, facets, and write contracts live in the
+[reference docs](https://docs.aictx.dev/reference/).
+
 Aictx does not require a cloud account, embeddings, hosted sync, an external
 model API, or network access for core memory commands. Saved memory is active
 immediately after Aictx validates and writes it.
@@ -173,14 +176,38 @@ Four surfaces ship today. Each one works locally and fits normal Git review.
 | Cline | Copy `integrations/cline/aictx.md` into `.clinerules/aictx.md`, then run setup. |
 | MCP-capable clients | Start with the CLI; configure `aictx-mcp` later when the client exposes MCP tools. |
 
-## Documentation
+## Distribution Artifacts
 
-The README is the fast activation path. Core docs:
+The `integrations/` directory includes generated skill and plugin artifacts for
+external agent packaging. They package the same CLI-first guidance as the setup
+aids and do not add MCP configuration.
+
+Codex users can add this repo's marketplace with one command:
+
+```bash
+codex plugin marketplace add aictx/memory
+```
+
+Then open Codex Plugins and install **Aictx Memory**.
+
+Claude Code users can add the marketplace and install the plugin from inside
+Claude Code:
+
+```text
+/plugin marketplace add aictx/memory
+/plugin install aictx-memory@aictx
+```
+
+For official listing paths and release prep, see
+[Publishing agent plugins](https://docs.aictx.dev/plugin-publishing/).
+
+## Documentation
 
 - [Setup](https://docs.aictx.dev/getting-started/)
 - [Agent recipes](https://docs.aictx.dev/agent-recipes/)
 - [CLI reference](https://docs.aictx.dev/cli/)
 - [MCP](https://docs.aictx.dev/mcp/)
+- [Reference](https://docs.aictx.dev/reference/)
 - [Wiki workflow](https://docs.aictx.dev/wiki-workflow/)
 
 ## Contribute

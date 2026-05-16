@@ -42,6 +42,24 @@ continues to write the marked sections in `AGENTS.md` and `CLAUDE.md`.
 These artifacts stay CLI-first. They do not bundle `.mcp.json`; use Aictx MCP
 only when the current client has already launched and exposed `aictx-mcp`.
 
+For the self-hosted marketplace in this repo, Codex users add the marketplace,
+then install **Aictx Memory** from Codex Plugins:
+
+```bash
+codex plugin marketplace add aictx/memory
+```
+
+Claude Code users can add the marketplace and install the plugin directly:
+
+```text
+/plugin marketplace add aictx/memory
+/plugin install aictx-memory@aictx
+```
+
+See [Publishing plugins](/plugin-publishing/) for the self-hosted marketplace,
+Codex skill PR, Codex plugin listing status, and Claude official submission
+process.
+
 ## Common setup prompt
 
 Paste this prompt into the agent from the project root:
@@ -90,7 +108,8 @@ the current session. `aictx init` does not start MCP.
 
 Distribution artifacts are available at `integrations/codex/skills/aictx-memory/`
 for the standalone skill catalog and `integrations/codex/plugins/aictx-memory/`
-for Codex plugin packaging.
+for Codex plugin packaging. The self-hosted Codex marketplace in this repo is
+added with `codex plugin marketplace add aictx/memory`.
 
 ## Claude Code
 
@@ -113,7 +132,9 @@ Optional generated guidance is available at `integrations/claude/aictx.md` and
 
 The Claude Code plugin artifact is available at
 `integrations/claude/plugins/aictx-memory/` for marketplace review or official
-plugin submission.
+plugin submission. Add this repo's Claude marketplace with
+`/plugin marketplace add aictx/memory`, then install the plugin as
+`aictx-memory@aictx`.
 
 ## Cursor
 

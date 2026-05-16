@@ -116,6 +116,15 @@ describe("viewer demo Worker", () => {
     expect(response.status).toBe(403);
     expect(body.ok).toBe(false);
     expect(body.error.message).toContain("read-only");
+
+    const deleteResponse = await worker.fetch(request("/api/projects/demo?token=demo", {
+      method: "DELETE"
+    }), env);
+    const deleteBody = await deleteResponse.json() as { ok: false; error: { message: string } };
+
+    expect(deleteResponse.status).toBe(403);
+    expect(deleteBody.ok).toBe(false);
+    expect(deleteBody.error.message).toContain("read-only");
   });
 
   it("passes non-API requests through to static assets", async () => {

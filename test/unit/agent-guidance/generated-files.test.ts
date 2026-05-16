@@ -121,4 +121,20 @@ describe("generated agent guidance files", () => {
     expect(claude.description).toMatch(/Aictx local project memory/i);
     expect(claude.mcpServers).toBeUndefined();
   });
+
+  it("documents concise marketplace install commands in generated plugin readmes", async () => {
+    const codexReadme = await readProjectFile("integrations/codex/plugins/aictx-memory/README.md");
+    const claudeReadme = await readProjectFile("integrations/claude/plugins/aictx-memory/README.md");
+
+    expect(codexReadme).toContain("codex plugin marketplace add aictx/memory");
+    expect(codexReadme).toContain("install Aictx Memory");
+    expect(codexReadme).not.toContain("codex plugin marketplace upgrade");
+    expect(codexReadme).toContain("Aictx MCP setup remains an optional client-level configuration");
+
+    expect(claudeReadme).toContain("/plugin marketplace add aictx/memory");
+    expect(claudeReadme).toContain("/plugin install aictx-memory@aictx");
+    expect(claudeReadme).toContain("claude plugin validate integrations/claude/plugins/aictx-memory");
+    expect(claudeReadme).not.toContain("claude plugin marketplace list --json");
+    expect(claudeReadme).toContain("MCP equivalents only when the current Claude Code session already exposes Aictx MCP tools");
+  });
 });

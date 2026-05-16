@@ -61,7 +61,7 @@ const [template, packageJsonRaw, licenseText] = await Promise.all([
 const normalizedTemplate = template.trimEnd();
 const packageJson = JSON.parse(packageJsonRaw);
 const repositoryUrl = normalizeRepositoryUrl(packageJson.repository);
-const authorName = typeof packageJson.author === "string" ? packageJson.author : "MicrexIT";
+const authorName = typeof packageJson.author === "string" ? packageJson.author : "Aictx";
 
 const codexPluginManifest = {
   name: publicName,
@@ -157,6 +157,14 @@ It keeps Aictx usage CLI-first: load relevant memory with \`aictx load\` before 
 ## Distribution
 
 This directory follows the Codex plugin format. It intentionally does not include MCP server configuration; Aictx MCP setup remains an optional client-level configuration.
+
+Codex adds plugins through marketplace sources, not by adding this plugin directory directly. This repo exposes the plugin through its root marketplace catalog:
+
+\`\`\`bash
+codex plugin marketplace add aictx/memory
+\`\`\`
+
+Then open Codex Plugins, choose the Aictx marketplace, and install Aictx Memory.
 `;
 }
 
@@ -177,5 +185,14 @@ It keeps Aictx usage CLI-first: load relevant memory with \`aictx load\` before 
 ## Distribution
 
 This directory follows the Claude Code plugin format. Submit it through Anthropic's plugin submission flow when targeting the official Claude plugin directory.
+
+Claude Code adds plugins through marketplace sources, not by adding this plugin directory directly. This repo exposes the plugin through its root marketplace catalog:
+
+\`\`\`text
+/plugin marketplace add aictx/memory
+/plugin install aictx-memory@aictx
+\`\`\`
+
+For official Claude listing, validate this directory with \`claude plugin validate integrations/claude/plugins/aictx-memory\` and use Anthropic's plugin submission flow.
 `;
 }

@@ -65,7 +65,7 @@ export default {
       return methodGuard(request, "POST", async () => handleLoadPreview(request));
     }
 
-    if (isReadOnlyBlockedRoute(url.pathname)) {
+    if (isReadOnlyBlockedRoute(url.pathname, request.method)) {
       return jsonError(403, {
         code: "AICtxValidationFailed",
         message: "The public demo viewer is read-only."
@@ -307,8 +307,17 @@ function estimateTokens(text: string): number {
   return Math.max(1, Math.ceil(text.length / 4));
 }
 
-function isReadOnlyBlockedRoute(pathname: string): boolean {
-  return pathname === "/api/export/obsidian" || pathname.endsWith("/export/obsidian");
+function isReadOnlyBlockedRoute(pathname: string, method: string): boolean {
+  return pathname === "/api/export/obsidian" ||
+    pathname.endsWith("/export/obsidian") ||
+    (method === "DELETE" && isProjectDeleteRoute(pathname));
+}
+
+function isProjectDeleteRoute(pathname: string): boolean {
+  const prefix = "/api/projects/";
+  const projectId = pathname.startsWith(prefix) ? pathname.slice(prefix.length) : "";
+
+  return projectId !== "" && !projectId.includes("/");
 }
 
 function jsonOk(data: DemoEnvelopeData): Response {

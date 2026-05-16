@@ -122,11 +122,11 @@ describe("release package", () => {
     expect(packageJson.description).toBe("Local-first project memory for AI coding agents.");
     expect(packageJson.repository).toEqual({
       type: "git",
-      url: "git+https://github.com/MicrexIT/aictx.git"
+      url: "git+https://github.com/aictx/memory.git"
     });
     expect(packageJson.homepage).toBe("https://aictx.dev");
     expect(packageJson.bugs).toEqual({
-      url: "https://github.com/MicrexIT/aictx/issues"
+      url: "https://github.com/aictx/memory/issues"
     });
     expect(packageJson.keywords).toEqual(
       expect.arrayContaining(["coding-agents", "project-memory", "local-first", "mcp"])
@@ -141,7 +141,6 @@ describe("release package", () => {
     expect(packageJson.scripts?.build).toContain("pnpm build:version");
     const expectedVersionPatchScript = [
       "npm version patch --no-git-tag-version",
-      "node scripts/sync-setup-prompt-install-version.mjs",
       "pnpm build",
       "pnpm build:docs"
     ].join(" && ");
@@ -150,7 +149,7 @@ describe("release package", () => {
     expect(packageJson.scripts?.["build:version"]).toBe("node scripts/generate-version.mjs");
     expect(packageJson.scripts?.["build:viewer"]).toBe("vite build --config viewer/vite.config.ts");
     expect(packageJson.scripts?.["version:patch"]).toBe(expectedVersionPatchScript);
-    await expectBuiltPublicDocs(packageVersion);
+    await expectBuiltPublicDocs();
     expect(packageJson.devDependencies).toEqual(
       expect.objectContaining({
         "@astrojs/starlight": expect.any(String),
@@ -283,6 +282,7 @@ const requiredPackedPaths = [
   "docs/src/content/docs/getting-started.md",
   "docs/src/content/docs/index.md",
   "docs/src/content/docs/mcp.md",
+  "docs/src/content/docs/plugin-publishing.md",
   "docs/src/content/docs/reference.md",
   "docs/src/content/docs/specializing-aictx.md",
   "docs/src/content/docs/troubleshooting.md",
@@ -337,7 +337,6 @@ const forbiddenPackedPathPrefixes = [
 ] as const;
 
 const publicMcpContractPaths = [
-  "README.md",
   "docs/src/content/docs/agent-integration.md",
   "docs/src/content/docs/capabilities.md",
   "docs/src/content/docs/cli.md",
@@ -410,16 +409,17 @@ async function ensureBuiltPackageOutput(packageVersion: string): Promise<void> {
   await expectSuccessfulCommand("pnpm", ["build"], repoRoot);
 }
 
-async function expectBuiltPublicDocs(packageVersion: string): Promise<void> {
+async function expectBuiltPublicDocs(): Promise<void> {
   await expectSuccessfulCommand("pnpm", ["build:docs"], repoRoot);
   await expect(
     readFile(join(repoRoot, "docs", "dist", "agent-recipes", "index.html"), "utf8")
   ).resolves.toContain("Agent recipes");
 
   for (const filename of ["llms-small.txt", "llms-full.txt"] as const) {
-    await expect(readFile(join(repoRoot, "docs", "dist", filename), "utf8")).resolves.toContain(
-      `npm install -g @aictx/memory@${packageVersion}`
-    );
+    const content = await readFile(join(repoRoot, "docs", "dist", filename), "utf8");
+
+    expect(content).toContain("npm install -g @aictx/memory");
+    expect(content).not.toMatch(/^npm install -g @aictx\/memory@/m);
   }
 }
 

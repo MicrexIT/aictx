@@ -100,9 +100,11 @@ describe("read-only viewer shell", () => {
       await expectText(page, '[data-testid="memory-list-view"]', "Aictx Viewer Shell Project");
       await expectText(page, '[data-testid="memory-list-view"]', "Memory Schema");
       await expectText(page, '[data-testid="memory-list-view"]', "Canonical objects");
+      await expectNoText(page, '[data-testid="memory-list-view"]', "Schema projection loaded");
       await expectCount(page, '[data-testid="guided-views-panel"]', 0);
       await expectCount(page, '[data-testid="context-preview-panel"]', 0);
       await page.locator('[data-testid="object-row-decision.viewer-shell"]').click();
+      await assertSelectedObject(page, "Viewer Shell Layout", "decision.viewer-shell");
 
       await page.locator('[data-testid="nav-graph"]').click();
       await expectText(page, '[data-testid="graph-view"]', "Graph");
@@ -360,14 +362,116 @@ describe("read-only viewer shell", () => {
       await expectText(page, '[data-testid="starter-memory-notice"]', "aictx save --file bootstrap-memory.json");
       await expectText(page, '[data-testid="memory-list-view"]', "Memory Schema");
       await expectText(page, '[data-testid="memory-list-view"]', "Canonical objects");
+      await expectNoText(page, '[data-testid="memory-list-view"]', "Schema projection loaded");
+      await expect(page.locator('[data-testid="schema-context-toggle"]').isVisible()).resolves.toBe(true);
+      await expect(page.locator('[data-testid="doc-relation-overview"]').isVisible()).resolves.toBe(true);
       await page.locator('[data-testid="object-row-architecture.current"]').click();
+      await expectCount(page, '[data-testid="selected-object"]', 1);
+      await expectCount(page, '[data-testid="selected-object-back"]', 1);
+      await expect(page.locator('[data-testid="schema-context-toggle"]').isHidden()).resolves.toBe(true);
       await expectText(page, '[data-testid="incoming-relations"]', "related_to");
       await expectCount(page, '[data-testid="relation-graph"]', 0);
+      await page.locator('[data-testid="selected-object-back"]').click();
+      await expectCount(page, '[data-testid="selected-object"]', 0);
+      await expectCount(page, '[data-testid="object-row-architecture.current"]', 1);
 
       expect(consoleErrors()).toEqual([]);
     } finally {
       await browser?.close();
       await started.data.close();
+    }
+  });
+
+  it("deletes project memory from the projects page and hides delete controls in demo mode", async () => {
+    const assets = await stat(join(viewerAssetsDir, "index.html"));
+
+    expect(assets.isFile()).toBe(true);
+
+    const projectRoot = await createInitializedProject("aictx-viewer-delete-project-");
+    await writeProjectFile(projectRoot, "src/app.ts", "export const kept = true;\n");
+    const aictxHome = await createTempRoot("aictx-viewer-delete-home-");
+    const started = await startViewerServer({
+      cwd: projectRoot,
+      assetsDir: viewerAssetsDir,
+      aictxHome,
+      token: "viewer-delete-token"
+    });
+
+    expect(started.ok).toBe(true);
+    if (!started.ok) {
+      throw new Error(started.error.message);
+    }
+
+    let browser: Browser | null = null;
+
+    try {
+      const projectsResponse = await fetch(`${started.data.url.replace(/\?.*$/, "")}api/projects?token=viewer-delete-token`);
+      const projectsEnvelope = await projectsResponse.json() as {
+        ok: true;
+        data: { projects: Array<{ registry_id: string; project: { id: string } }> };
+      };
+      const project = projectsEnvelope.data.projects[0];
+
+      expect(project).toBeDefined();
+      if (project === undefined) {
+        throw new Error("Expected a registered project for deletion test.");
+      }
+
+      browser = await chromium.launch();
+      const page = await browser.newPage();
+      const consoleErrors = collectPageErrors(page);
+
+      await page.setViewportSize({ width: 1280, height: 900 });
+      await page.goto(started.data.url, { waitUntil: "domcontentloaded" });
+      await page.locator('[data-testid="projects-view"]').waitFor();
+
+      await page.getByTestId(`project-delete-${project.registry_id}`).click();
+      await expectCount(page, `[data-testid="project-delete-confirm-${project.registry_id}"]`, 1);
+      await expect(page.getByTestId(`project-delete-submit-${project.registry_id}`).isDisabled()).resolves.toBe(true);
+      await expectText(page, '[data-testid="project-list"]', "Source files");
+
+      await page.getByTestId(`project-delete-confirm-${project.registry_id}`).fill(project.project.id);
+      await expect(page.getByTestId(`project-delete-submit-${project.registry_id}`).isEnabled()).resolves.toBe(true);
+      await page.getByTestId(`project-delete-submit-${project.registry_id}`).click();
+
+      await page.waitForFunction(
+        (testId) => document.querySelector(`[data-testid="${testId}"]`) === null,
+        `project-card-${project.registry_id}`
+      );
+      await expectText(page, '[data-testid="project-delete-status"]', "Deleted .aictx memory");
+      await expect(pathExists(join(projectRoot, ".aictx"))).resolves.toBe(false);
+      await expect(readFile(join(projectRoot, "src/app.ts"), "utf8"))
+        .resolves.toBe("export const kept = true;\n");
+      expect(consoleErrors()).toEqual([]);
+    } finally {
+      await browser?.close();
+      await started.data.close();
+    }
+
+    const demoProjectRoot = await createInitializedProject("aictx-viewer-demo-delete-project-");
+    const demoHome = await createTempRoot("aictx-viewer-demo-delete-home-");
+    const demoStarted = await startViewerServer({
+      cwd: demoProjectRoot,
+      assetsDir: viewerAssetsDir,
+      aictxHome: demoHome,
+      token: "demo"
+    });
+
+    expect(demoStarted.ok).toBe(true);
+    if (!demoStarted.ok) {
+      throw new Error(demoStarted.error.message);
+    }
+
+    try {
+      browser = await chromium.launch();
+      const page = await browser.newPage();
+
+      await page.goto(demoStarted.data.url, { waitUntil: "domcontentloaded" });
+      await page.locator('[data-testid="projects-view"]').waitFor();
+      await expect(page.getByText("Delete memory").count()).resolves.toBe(0);
+    } finally {
+      await browser?.close();
+      await demoStarted.data.close();
     }
   });
 });
@@ -399,6 +503,15 @@ async function expectNoText(page: Page, selector: string, expected: string): Pro
 
 async function expectCount(page: Page, selector: string, expected: number): Promise<void> {
   await expect(page.locator(selector).count()).resolves.toBe(expected);
+}
+
+async function pathExists(path: string): Promise<boolean> {
+  try {
+    await stat(path);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function collectPageErrors(page: Page): () => string[] {

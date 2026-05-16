@@ -10,13 +10,13 @@ export default defineConfig({
       description: "Local-first project memory for AI coding agents.",
       customCss: ["./src/styles/aictx.css"],
       editLink: {
-        baseUrl: "https://github.com/MicrexIT/aictx/edit/main/docs/"
+        baseUrl: "https://github.com/aictx/memory/edit/main/docs/"
       },
       social: [
         {
           icon: "github",
           label: "GitHub",
-          href: "https://github.com/MicrexIT/aictx"
+          href: "https://github.com/aictx/memory"
         }
       ],
       sidebar: [
@@ -38,6 +38,7 @@ export default defineConfig({
             "mcp",
             "agent-integration",
             "agent-recipes",
+            "plugin-publishing",
             "viewer",
             "troubleshooting"
           ]

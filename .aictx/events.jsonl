@@ -21,3 +21,14 @@
 {"actor":"cli","event":"memory.created","id":"constraint.node-engine","timestamp":"2026-05-15T15:03:08+02:00"}
 {"actor":"cli","event":"memory.created","id":"constraint.package-manager","timestamp":"2026-05-15T15:03:08+02:00"}
 {"actor":"agent","event":"memory.created","id":"fact.aictx-ships-generated-skill-and-plugin-distribution-artifacts","timestamp":"2026-05-15T15:24:09+02:00"}
+{"actor":"agent","event":"memory.updated","id":"fact.aictx-ships-generated-skill-and-plugin-distribution-artifacts","timestamp":"2026-05-15T15:51:49+02:00"}
+{"actor":"agent","event":"memory.created","id":"decision.schema-browser-keeps-navigation-fixed-above-object-scrolling","timestamp":"2026-05-15T22:14:27+02:00"}
+{"actor":"agent","event":"memory.updated","id":"decision.schema-browser-keeps-navigation-fixed-above-object-scrolling","timestamp":"2026-05-16T10:12:03+02:00"}
+{"actor":"agent","event":"memory.created","id":"workflow.plugin-publishing-verification","timestamp":"2026-05-16T10:15:07+02:00"}
+{"actor":"agent","event":"memory.updated","id":"fact.aictx-ships-generated-skill-and-plugin-distribution-artifacts","timestamp":"2026-05-16T10:15:07+02:00"}
+{"actor":"agent","event":"memory.created","id":"decision.readme-stays-focused-on-activation-not-reference-contracts","timestamp":"2026-05-16T10:20:49+02:00"}
+{"actor":"agent","event":"memory.created","id":"decision.setup-prompt-installs-stay-unpinned","timestamp":"2026-05-16T10:30:23+02:00"}
+{"actor":"agent","event":"memory.updated","id":"workflow.package-scripts","timestamp":"2026-05-16T10:30:23+02:00"}
+{"actor":"agent","event":"memory.created","id":"decision.viewer-project-deletion-removes-memory-only","timestamp":"2026-05-16T11:12:34+02:00"}
+{"actor":"agent","event":"memory.updated","id":"decision.schema-browser-keeps-navigation-fixed-above-object-scrolling","timestamp":"2026-05-16T11:12:34+02:00"}
+{"actor":"agent","event":"memory.created","id":"decision.public-repo-identity-uses-aictx-organization","timestamp":"2026-05-16T14:25:18+02:00"}

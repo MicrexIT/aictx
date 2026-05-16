@@ -258,7 +258,6 @@ const mcpPackageManagerFallbacks = [
 ] as const;
 
 const staleRoadmapDocs = [
-  "README.md",
   "docs/src/content/docs/capabilities.md",
   "docs/src/content/docs/agent-integration.md",
   "docs/src/content/docs/mcp.md",
@@ -267,7 +266,6 @@ const staleRoadmapDocs = [
 ] as const;
 
 const localNowCloudLaterDocs = [
-  "README.md",
   "docs/src/content/docs/capabilities.md",
   "docs/src/content/docs/mcp.md",
   "docs/src/content/docs/agent-integration.md",
@@ -275,7 +273,6 @@ const localNowCloudLaterDocs = [
 ] as const;
 
 const futureAdapterMappingDocs = [
-  "README.md",
   "docs/src/content/docs/capabilities.md",
   "docs/src/content/docs/mcp.md",
   "docs/src/content/docs/agent-integration.md",
@@ -349,7 +346,6 @@ function parseCapabilityTable(markdown: string): CapabilityRow[] {
 describe("agent capability map guardrail", () => {
   it("locks the object taxonomy and exclusions in public and agent docs", async () => {
     const taxonomyDocs = [
-      "README.md",
       "docs/src/content/docs/reference.md",
       "docs/src/content/docs/agent-integration.md"
     ] as const;
@@ -372,7 +368,6 @@ describe("agent capability map guardrail", () => {
 
   it("locks memory discipline lifecycle rules in public and agent docs", async () => {
     const lifecycleDocs = [
-      "README.md",
       "docs/src/content/docs/agent-integration.md"
     ] as const;
 
@@ -387,7 +382,6 @@ describe("agent capability map guardrail", () => {
 
   it("keeps setup docs explicit about package-manager fallback commands", async () => {
     const cliFallbackDocs = [
-      "README.md",
       "docs/src/content/docs/agent-integration.md",
       "integrations/templates/agent-guidance.md"
     ] as const;
@@ -402,7 +396,7 @@ describe("agent capability map guardrail", () => {
       }
     }
 
-    for (const path of ["README.md", "docs/src/content/docs/agent-integration.md"] as const) {
+    for (const path of ["docs/src/content/docs/agent-integration.md"] as const) {
       const content = await readProjectFile(path);
 
       for (const fallback of mcpPackageManagerFallbacks) {
@@ -413,7 +407,6 @@ describe("agent capability map guardrail", () => {
 
   it("locks the load mode contract across public docs and guidance", async () => {
     const modeDocs = [
-      "README.md",
       "docs/src/content/docs/agent-integration.md",
       "docs/src/content/docs/mental-model.md"
     ] as const;
@@ -459,7 +452,7 @@ describe("agent capability map guardrail", () => {
       }
     }
 
-    for (const path of ["README.md", "docs/src/content/docs/agent-integration.md"] as const) {
+    for (const path of ["docs/src/content/docs/agent-integration.md"] as const) {
       const content = await readProjectFile(path);
 
       for (const tool of exactMcpTools) {
@@ -565,7 +558,6 @@ describe("agent capability map guardrail", () => {
 
   it("keeps docs explicit about MCP parity and direct-edit guardrails", async () => {
     const docsAndGuidance = [
-      "README.md",
       "docs/src/content/docs/agent-integration.md",
       "integrations/templates/agent-guidance.md"
     ] as const;
@@ -581,8 +573,8 @@ describe("agent capability map guardrail", () => {
     }
   });
 
-  it("keeps README and agent docs explicit that local viewing is CLI-only", async () => {
-    for (const path of ["README.md", "docs/src/content/docs/agent-integration.md"] as const) {
+  it("keeps agent docs explicit that local viewing is CLI-only", async () => {
+    for (const path of ["docs/src/content/docs/agent-integration.md"] as const) {
       const content = await readProjectFile(path);
 
       expect(content).toContain("| View local memory | none | `aictx view`");
@@ -594,19 +586,17 @@ describe("agent capability map guardrail", () => {
 
   it("documents local viewing as CLI-only with the JSON startup flag", async () => {
     const viewer = await readProjectFile("docs/src/content/docs/viewer.md");
-    const readme = await readProjectFile("README.md");
     const agentIntegration = await readProjectFile("docs/src/content/docs/agent-integration.md");
 
-    for (const content of [viewer, readme]) {
+    for (const content of [viewer]) {
       expect(content).toContain("aictx view [--port <number>] [--open] [--detach] [--json]");
     }
 
-    for (const content of [viewer, readme, agentIntegration]) {
+    for (const content of [viewer, agentIntegration]) {
       expect(content).toContain("`aictx view`");
       expect(content).toMatch(/CLI-only|has no MCP equivalent|none \| `aictx view`/);
     }
 
-    expect(readme).toMatch(/Graph inspection\s+is available in the CLI and local viewer, but remains outside local MCP\./);
     expect(viewer).toContain("`aictx view` is CLI-only in v1 and has no MCP equivalent.");
   });
 });
