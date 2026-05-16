@@ -1,0 +1,17 @@
+{
+  "confidence": "medium",
+  "content_hash": "sha256:e5972786328bffe14cbc8c3b3ae8ed75324d3e0e821b7642c22606dba2ba2c59",
+  "created_at": "2026-05-16T15:03:50+02:00",
+  "evidence": [
+    {
+      "id": "viewer/src/App.svelte",
+      "kind": "file"
+    }
+  ],
+  "from": "decision.viewer-sidebar-collapsed-drawer",
+  "id": "rel.decision-viewer-sidebar-collapsed-drawer-related-to-decision-schema-browser-keeps-navigation-fixed-above-object-scrolling",
+  "predicate": "related_to",
+  "status": "active",
+  "to": "decision.schema-browser-keeps-navigation-fixed-above-object-scrolling",
+  "updated_at": "2026-05-16T15:03:50+02:00"
+}

@@ -1,0 +1,1 @@
+The local viewer navigation sidebar is collapsed by default at all viewport sizes. A persistent burger/menu button opens the existing navigation, search, stats, and export controls in a left overlay drawer. The drawer closes through the toggle, backdrop, Escape key, or navigation actions so the main viewer content remains full-width by default.

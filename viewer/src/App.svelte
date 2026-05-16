@@ -334,7 +334,7 @@
   let tagFilter = $state("all");
   let pagePreset = $state<PagePreset>("all");
   let activeLensName = $state<MemoryLensName>("project-map");
-  let mobileMenuOpen = $state(false);
+  let sidebarDrawerOpen = $state(false);
   let exportOutDir = $state("");
   let exportState = $state<ExportState>("idle");
   let exportMessage = $state("");
@@ -978,10 +978,12 @@
 
   function showProjects(): void {
     currentScreen = "projects";
+    closeSidebarDrawer();
   }
 
   function showMemories(): void {
     currentScreen = selectedProjectId === null ? "projects" : "memories";
+    closeSidebarDrawer();
   }
 
   function showGraph(): void {
@@ -991,7 +993,7 @@
     }
 
     currentScreen = "graph";
-    mobileMenuOpen = false;
+    closeSidebarDrawer();
 
     if (selectedGraphObjectId === null) {
       selectedGraphObjectId = preferredGraphObjectId();
@@ -1005,6 +1007,7 @@
     }
 
     currentScreen = selectedProjectId === null ? "projects" : "export";
+    closeSidebarDrawer();
   }
 
   function rankedObjects(memoryObjects: MemoryObjectSummary[]): MemoryObjectSummary[] {
@@ -1679,7 +1682,7 @@
 
   function pageFilter(section: string): void {
     currentScreen = "memories";
-    mobileMenuOpen = false;
+    closeSidebarDrawer();
     searchQuery = "";
     typeFilter = allOption;
     facetCategoryFilter = allOption;
@@ -2102,7 +2105,23 @@
     flushLooseBlocks();
     return blocks;
   }
+
+  function toggleSidebarDrawer(): void {
+    sidebarDrawerOpen = !sidebarDrawerOpen;
+  }
+
+  function closeSidebarDrawer(): void {
+    sidebarDrawerOpen = false;
+  }
+
+  function handleWindowKeydown(event: KeyboardEvent): void {
+    if (event.key === "Escape" && sidebarDrawerOpen) {
+      closeSidebarDrawer();
+    }
+  }
 </script>
+
+<svelte:window onkeydown={handleWindowKeydown} />
 
 <main class="viewer-shell" aria-labelledby="viewer-title">
   {#if loadState === "loading"}
@@ -2119,27 +2138,41 @@
       <p>{errorMessage}</p>
     </section>
   {:else if projectsData !== null}
-    <aside class="sidebar" aria-label="Viewer navigation">
+    <button
+      type="button"
+      class="sidebar-toggle"
+      class:open={sidebarDrawerOpen}
+      aria-label={sidebarDrawerOpen ? "Close menu" : "Open menu"}
+      aria-expanded={sidebarDrawerOpen}
+      aria-controls="viewer-sidebar-drawer"
+      onclick={toggleSidebarDrawer}
+      data-testid="sidebar-menu-toggle"
+    >
+      <span class="burger-icon" aria-hidden="true"></span>
+      <span>{sidebarDrawerOpen ? "Close menu" : "Menu"}</span>
+    </button>
+
+    {#if sidebarDrawerOpen}
+      <button
+        type="button"
+        class="sidebar-backdrop"
+        aria-label="Dismiss menu"
+        onclick={closeSidebarDrawer}
+        data-testid="sidebar-backdrop"
+      ></button>
+    {/if}
+
+    {#if sidebarDrawerOpen}
+    <aside id="viewer-sidebar-drawer" class="sidebar" aria-label="Viewer navigation" data-testid="viewer-sidebar-drawer">
       <div class="brand">
         <div class="brand-row">
           <span class="book-icon" aria-hidden="true">A</span>
           <h1 id="viewer-title">Memory Schema</h1>
-          <button
-            type="button"
-            class="mobile-menu-toggle"
-            aria-expanded={mobileMenuOpen}
-            aria-controls="viewer-mobile-menu"
-            onclick={() => {
-              mobileMenuOpen = !mobileMenuOpen;
-            }}
-          >
-            {mobileMenuOpen ? "Close menu" : "Menu"}
-          </button>
         </div>
         <p>{selectedProject?.project.name ?? "No project selected"} · {selectedProject?.project.id ?? "local memory"}</p>
       </div>
 
-      <div id="viewer-mobile-menu" class="sidebar-menu" class:open={mobileMenuOpen}>
+      <div class="sidebar-menu open">
         {#if bootstrap !== null}
           <dl class="sidebar-stats" aria-label="Memory schema stats">
             <div><dt>{activeMemoryCount}</dt><dd>active</dd></div>
@@ -2264,6 +2297,7 @@
         {/if}
       </div>
     </aside>
+    {/if}
 
     <section
       class={`main-stage ${memoryScreenActive ? "memory-stage" : ""} ${hasSelectedObject ? "has-selected-object" : ""}`}
@@ -3622,10 +3656,6 @@
     padding: 4px 6px;
   }
 
-  .mobile-menu-toggle {
-    display: none;
-  }
-
   .sidebar-menu {
     display: grid;
     gap: 14px;
@@ -4142,28 +4172,6 @@
 
     .brand-row {
       gap: 8px;
-    }
-
-    .mobile-menu-toggle {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 34px;
-      margin-left: auto;
-      border: 1px solid #d9d5cc;
-      border-radius: 7px;
-      padding: 0 12px;
-      color: #343434;
-      background: #ffffff;
-      font-size: 0.84rem;
-      font-weight: 850;
-      box-shadow: 0 1px 2px rgb(16 24 40 / 5%);
-    }
-
-    .mobile-menu-toggle[aria-expanded="true"] {
-      border-color: #bdb7ab;
-      color: #2f2f2b;
-      background: #ece9e1;
     }
 
     .book-icon {
@@ -6396,6 +6404,175 @@
     .memory-stage.has-selected-object .warnings,
     .memory-stage.has-selected-object .onboarding-callout,
     .memory-stage.has-selected-object .sectioned-memory {
+      display: none;
+    }
+  }
+
+  /* Collapsed navigation drawer. */
+  .viewer-shell {
+    display: block;
+    min-height: 100vh;
+  }
+
+  .sidebar-toggle {
+    position: fixed;
+    top: 18px;
+    left: 18px;
+    z-index: 60;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 42px;
+    border: 1px solid #d8d0c3;
+    border-radius: 8px;
+    padding: 0 14px 0 12px;
+    color: #2f2e2a;
+    background: #fffdf9;
+    font-size: 0.92rem;
+    font-weight: 800;
+    box-shadow:
+      0 1px 2px rgb(39 31 21 / 6%),
+      0 10px 28px rgb(39 31 21 / 8%);
+  }
+
+  .sidebar-toggle:hover,
+  .sidebar-toggle.open {
+    border-color: #262522;
+    background: #262522;
+    color: #fffefa;
+  }
+
+  .sidebar-toggle:focus-visible,
+  .sidebar-backdrop:focus-visible {
+    outline: 3px solid rgb(47 93 98 / 28%);
+    outline-offset: 3px;
+  }
+
+  .burger-icon {
+    position: relative;
+    width: 16px;
+    height: 12px;
+    border-top: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+  }
+
+  .burger-icon::before {
+    position: absolute;
+    top: 3px;
+    left: 0;
+    width: 16px;
+    height: 2px;
+    background: currentColor;
+    content: "";
+  }
+
+  .sidebar-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    border: 0;
+    padding: 0;
+    background: rgb(36 34 30 / 34%);
+    cursor: default;
+  }
+
+  .sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: 50;
+    display: flex;
+    width: min(340px, calc(100vw - 32px));
+    height: 100dvh;
+    max-height: 100dvh;
+    overflow-y: auto;
+    flex-direction: column;
+    gap: 28px;
+    border-right: 1px solid #dedbd2;
+    padding: 82px 28px 30px;
+    background: #f4f1eb;
+    box-shadow:
+      24px 0 70px rgb(39 31 21 / 18%),
+      3px 0 12px rgb(39 31 21 / 10%);
+    scrollbar-gutter: stable;
+  }
+
+  .sidebar-menu,
+  .sidebar-menu.open {
+    position: static;
+    display: grid;
+    gap: 24px;
+    max-height: none;
+    overflow: visible;
+    border: 0;
+    border-radius: 0;
+    padding: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .main-stage {
+    width: 100%;
+    padding-top: max(88px, clamp(34px, 5vw, 60px));
+  }
+
+  .main-stage.memory-stage {
+    height: 100vh;
+  }
+
+  @media (max-width: 900px) {
+    .sidebar {
+      position: fixed;
+      top: 0;
+      height: 100dvh;
+      padding: 76px 18px 24px;
+      border-bottom: 0;
+      background: #f4f1eb;
+      box-shadow:
+        18px 0 52px rgb(39 31 21 / 18%),
+        2px 0 10px rgb(39 31 21 / 10%);
+    }
+
+    .brand {
+      gap: 10px;
+    }
+
+    .brand p:last-child {
+      padding-left: 0;
+      white-space: normal;
+    }
+
+    .sidebar-stats {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .main-stage {
+      padding-top: 88px;
+    }
+  }
+
+  @media (max-width: 560px) {
+    .sidebar-toggle {
+      top: 10px;
+      left: 10px;
+      min-height: 40px;
+      padding-inline: 11px 13px;
+    }
+
+    .sidebar {
+      width: calc(100vw - 20px);
+      padding: 70px 14px 22px;
+    }
+
+    .main-stage {
+      padding-top: 78px;
+    }
+  }
+
+  @media print {
+    .sidebar-toggle,
+    .sidebar-backdrop,
+    .sidebar {
       display: none;
     }
   }

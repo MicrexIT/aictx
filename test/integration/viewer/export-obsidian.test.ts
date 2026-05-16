@@ -93,6 +93,7 @@ describe("viewer Obsidian export action", () => {
 
       await page.goto(started.data.url, { waitUntil: "domcontentloaded" });
       await openFirstProject(page);
+      await openSidebar(page);
       await page.locator('[data-testid="nav-export"]').click();
       await page.locator('[data-testid="obsidian-export-submit"]').waitFor();
       await page.locator('[data-testid="obsidian-export-submit"]').click();
@@ -153,6 +154,7 @@ describe("viewer Obsidian export action", () => {
 
       await page.goto(started.data.url, { waitUntil: "domcontentloaded" });
       await openFirstProject(page);
+      await openSidebar(page);
       await page.locator('[data-testid="nav-export"]').click();
       await page.locator('[data-testid="obsidian-export-out-dir"]').fill("unsafe-export");
       await page.locator('[data-testid="obsidian-export-submit"]').click();
@@ -176,7 +178,12 @@ describe("viewer Obsidian export action", () => {
 async function openFirstProject(page: Page): Promise<void> {
   await page.locator('[data-testid="projects-view"]').waitFor();
   await page.locator('[data-testid^="project-open-"]').first().click();
-  await page.locator('[data-testid="viewer-search"]').waitFor();
+  await page.locator('[data-testid="memory-list-view"]').waitFor();
+}
+
+async function openSidebar(page: Page): Promise<void> {
+  await page.getByRole("button", { name: "Open menu" }).click();
+  await page.locator('[data-testid="viewer-sidebar-drawer"]').waitFor();
 }
 
 async function writeViewerExportFixtures(projectRoot: string): Promise<void> {

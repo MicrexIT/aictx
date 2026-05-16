@@ -92,7 +92,15 @@ describe("read-only viewer shell", () => {
 
       await page.setViewportSize({ width: 1280, height: 900 });
       await page.goto(started.data.url, { waitUntil: "domcontentloaded" });
+      await page.locator('[data-testid="projects-view"]').waitFor();
+      await expectSidebarClosed(page);
+      await openSidebar(page);
       await page.locator('[data-testid="viewer-search"]').waitFor();
+      await page.keyboard.press("Escape");
+      await expectSidebarClosed(page);
+      await openSidebar(page);
+      await page.locator('[data-testid="sidebar-backdrop"]').click({ position: { x: 700, y: 40 } });
+      await expectSidebarClosed(page);
       await expectText(page, '[data-testid="projects-view"]', "Projects");
       await expectText(page, '[data-testid="project-list"]', "Current");
       await expectCount(page, '[data-testid="memory-list-view"]', 0);
@@ -106,7 +114,9 @@ describe("read-only viewer shell", () => {
       await page.locator('[data-testid="object-row-decision.viewer-shell"]').click();
       await assertSelectedObject(page, "Viewer Shell Layout", "decision.viewer-shell");
 
+      await openSidebar(page);
       await page.locator('[data-testid="nav-graph"]').click();
+      await expectSidebarClosed(page);
       await expectText(page, '[data-testid="graph-view"]', "Graph");
       await expectText(page, '[data-testid="graph-node-count"]', "11");
       await expectText(page, '[data-testid="graph-relation-count"]', "6");
@@ -167,7 +177,7 @@ describe("read-only viewer shell", () => {
       await expectCount(page, '[data-testid="object-row-source.agent-integration"]', 0);
 
       await page.locator('[data-testid="viewer-layer-all"]').click();
-      await page.fill('[data-testid="viewer-search"]', "agent guidance provenance");
+      await setViewerSearch(page, "agent guidance provenance");
       await page.locator('[data-testid="object-row-synthesis.agent-guidance"]').click();
       await assertSelectedObject(page, "Agent Guidance Synthesis", "synthesis.agent-guidance");
       await expectText(page, '[data-testid="selected-object"]', "Source: docs/agent-integration.md");
@@ -183,7 +193,7 @@ describe("read-only viewer shell", () => {
       await page.locator('[data-testid="object-row-source.agent-integration"]').click();
       await expectText(page, '[data-testid="memory-list-view"]', "Agent Guidance Synthesis");
 
-      await page.fill('[data-testid="viewer-search"]', "markdown safety");
+      await setViewerSearch(page, "markdown safety");
       await page.locator('[data-testid="object-row-constraint.viewer-markdown"]').click();
       await assertSelectedObject(page, "Viewer Markdown Safety", "constraint.viewer-markdown");
       await expectText(page, '[data-testid="selected-object"]', "business-rule");
@@ -196,7 +206,7 @@ describe("read-only viewer shell", () => {
       await expectCount(page, '[data-testid="object-row-decision.viewer-shell"]', 0);
 
       await page.selectOption('[data-testid="viewer-tag-filter"]', "all");
-      await page.fill('[data-testid="viewer-search"]', "shell layout");
+      await setViewerSearch(page, "shell layout");
       await page.locator('[data-testid="object-row-decision.viewer-shell"]').click();
       await assertSelectedObject(page, "Viewer Shell Layout", "decision.viewer-shell");
       await expectText(page, '[data-testid="outgoing-relations"]', "requires");
@@ -220,7 +230,7 @@ describe("read-only viewer shell", () => {
       await expectText(page, '[data-testid="memory-list-view"]', "Viewer Shell Layout");
       await expectCount(page, '[data-testid="object-row-constraint.viewer-markdown"]', 1);
 
-      await page.fill('[data-testid="viewer-search"]', "empty neighborhood");
+      await setViewerSearch(page, "empty neighborhood");
       await page.locator('[data-testid="object-row-note.viewer-empty"]').click();
       await assertSelectedObject(page, "Viewer Empty Neighborhood", "note.viewer-empty");
       await expectText(page, '[data-testid="outgoing-relations"]', "No outgoing related memories.");
@@ -351,10 +361,12 @@ describe("read-only viewer shell", () => {
 
       await page.setViewportSize({ width: 390, height: 780 });
       await page.goto(started.data.url, { waitUntil: "domcontentloaded" });
-      await page.getByRole("button", { name: "Menu" }).click();
+      await expectSidebarClosed(page);
+      await openSidebar(page);
       await page.locator('[data-testid="viewer-search"]').waitFor();
       await expectText(page, '[data-testid="projects-view"]', "Projects");
       await page.getByRole("button", { name: "Close menu" }).click();
+      await expectSidebarClosed(page);
       await page.getByRole("button", { name: "Open project" }).first().click();
 
       await expectText(page, '[data-testid="starter-memory-notice"]', "Starter memory only.");
@@ -489,6 +501,23 @@ async function assertMarkdownIsSafe(page: Page): Promise<void> {
   await expectCount(page, '[data-testid="markdown-view"] script', 0);
   await expectCount(page, '[data-testid="markdown-view"] img', 0);
   await expect(markdown.textContent()).resolves.toContain("Verify search works");
+}
+
+async function openSidebar(page: Page): Promise<void> {
+  await page.getByRole("button", { name: "Open menu" }).click();
+  await page.locator('[data-testid="viewer-sidebar-drawer"]').waitFor();
+}
+
+async function expectSidebarClosed(page: Page): Promise<void> {
+  await expectCount(page, '[data-testid="viewer-sidebar-drawer"]', 0);
+  await expectCount(page, '[data-testid="sidebar-backdrop"]', 0);
+}
+
+async function setViewerSearch(page: Page, query: string): Promise<void> {
+  await openSidebar(page);
+  await page.fill('[data-testid="viewer-search"]', query);
+  await page.getByRole("button", { name: "Close menu" }).click();
+  await expectSidebarClosed(page);
 }
 
 async function expectText(page: Page, selector: string, expected: string): Promise<void> {
