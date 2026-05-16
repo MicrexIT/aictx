@@ -20,3 +20,4 @@
 {"actor":"cli","event":"memory.created","id":"workflow.post-task-verification","timestamp":"2026-05-16T18:52:44+02:00"}
 {"actor":"cli","event":"memory.created","id":"constraint.node-engine","timestamp":"2026-05-16T18:52:44+02:00"}
 {"actor":"cli","event":"memory.created","id":"constraint.package-manager","timestamp":"2026-05-16T18:52:44+02:00"}
+{"actor":"agent","event":"memory.created","id":"gotcha.dependabot-pnpm-lockfile-overrides-need-matching-package-overrides","timestamp":"2026-05-16T21:08:48+02:00"}
