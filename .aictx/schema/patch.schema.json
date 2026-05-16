@@ -19,6 +19,9 @@
         "op": {
           "const": "create_object"
         },
+        "origin": {
+          "$ref": "#/$defs/origin"
+        },
         "scope": {
           "$ref": "#/$defs/scope"
         },
@@ -95,6 +98,8 @@
             "depends_on",
             "supersedes",
             "conflicts_with",
+            "supports",
+            "challenges",
             "derived_from",
             "summarizes",
             "documents",
@@ -264,6 +269,40 @@
       "pattern": "^[a-z][a-z0-9_]*\\.[a-z0-9][a-z0-9-]*$",
       "type": "string"
     },
+    "origin": {
+      "additionalProperties": false,
+      "properties": {
+        "captured_at": {
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$",
+          "type": "string"
+        },
+        "digest": {
+          "pattern": "^sha256:[a-f0-9]{64}$",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "file",
+            "url",
+            "user",
+            "external"
+          ]
+        },
+        "locator": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "media_type": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "locator"
+      ],
+      "type": "object"
+    },
     "relationId": {
       "pattern": "^rel\\.[a-z0-9][a-z0-9-]*$",
       "type": "string"
@@ -380,6 +419,9 @@
         "op": {
           "const": "update_object"
         },
+        "origin": {
+          "$ref": "#/$defs/origin"
+        },
         "scope": {
           "$ref": "#/$defs/scope"
         },
@@ -446,7 +488,7 @@
       "type": "object"
     }
   },
-  "$id": "https://aictx.dev/schemas/v3/patch.schema.json",
+  "$id": "https://aictx.dev/schemas/v4/patch.schema.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "properties": {

@@ -117,13 +117,15 @@ export const MEMORY_ROLE_DEFINITIONS: MemoryRoleDefinition[] = [
 
 const ACTIVE_STATUSES = new Set(["active", "open"]);
 const INACTIVE_STATUSES = new Set(["stale", "superseded"]);
-const PROVENANCE_PREDICATES = new Set(["derived_from", "summarizes", "documents"]);
+const PROVENANCE_PREDICATES = new Set(["derived_from", "summarizes", "documents", "supports"]);
 const IMPORTANT_RELATION_PREDICATES = new Set([
   "conflicts_with",
+  "challenges",
   "supersedes",
   "requires",
   "depends_on",
   "derived_from",
+  "supports",
   "summarizes",
   "documents"
 ]);
@@ -383,7 +385,8 @@ function conflictingObjectIds(relations: readonly StoredMemoryRelation[]): Set<O
   for (const relation of relations) {
     if (
       relation.relation.status === "active" &&
-      relation.relation.predicate === "conflicts_with"
+      (relation.relation.predicate === "conflicts_with" ||
+        relation.relation.predicate === "challenges")
     ) {
       ids.add(relation.relation.from);
       ids.add(relation.relation.to);

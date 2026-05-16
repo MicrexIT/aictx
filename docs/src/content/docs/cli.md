@@ -3,9 +3,8 @@ title: CLI guide
 description: Setup, routine work, inspection, recovery, export, docs, and viewer commands.
 ---
 
-The CLI is the default interface for Aictx. It is the quickest path for setup,
-routine memory work, inspection, recovery, export, documentation, and the local
-viewer.
+The CLI is the default way to use Aictx. It handles setup, routine memory work,
+inspection, recovery, exports, bundled docs, and the local viewer.
 
 Most days, an agent only needs:
 
@@ -40,13 +39,11 @@ aictx setup --open
 aictx patch review bootstrap-memory.json
 ```
 
-- `setup` is the normal onboarding command; it initializes storage if needed,
-  applies conservative bootstrap memory by default, and starts the local
-  viewer for inspection.
-- `init` is the lower-level empty-storage initializer for automation, tests, and manual workflows.
-- `setup --dry-run` previews the bootstrap patch and role coverage without
-  initializing storage, writing repo files, running checks, or starting the
-  viewer.
+- `setup` is the normal onboarding command. It initializes storage if needed,
+  applies conservative bootstrap memory, and starts the local viewer unless
+  told not to.
+- `init` creates empty storage for automation, tests, and manual workflows.
+- `setup --dry-run` previews setup without writing memory or repo files.
 - `setup --force --dry-run` previews reset/setup behavior without deleting or
   rewriting anything.
 - `setup --no-view` skips viewer startup; `setup --open` also opens the viewer
@@ -55,7 +52,7 @@ aictx patch review bootstrap-memory.json
 
 :::tip
 If memory is empty after `init`, use `aictx setup` before hand-writing memory.
-The bootstrap flow is designed for exactly that first-run gap.
+The bootstrap flow is designed for that first-run gap.
 :::
 
 ## Routine memory work
@@ -69,13 +66,30 @@ aictx audit --json
 aictx remember --stdin
 ```
 
-The routine loop is narrow load, work, and save only durable knowledge as active
-memory. A task that produced no reusable project knowledge does not need a save.
-Use `remember` for normal intent-first memory creation, and `save` only when
-you need to submit a structured patch directly. In `suggest --after-task --json`,
-use `recommended_actions` as the primary advisory save/no-save aid; fill in
-semantic `title`, `body`, and `reason` fields yourself because Aictx does not
-infer durable project meaning from diffs.
+The routine loop is narrow: load context, do the work, and save durable
+knowledge as active memory. A task that produced no reusable project knowledge
+does not need a save.
+
+Use `remember` for normal intent-first memory creation. Use `save` only when
+you need to submit a structured patch directly. In
+`suggest --after-task --json`, use `recommended_actions` as advice; the agent
+still writes the meaningful title, body, and reason from current evidence.
+
+## Wiki-style source workflows
+
+```bash
+aictx wiki ingest --stdin
+aictx wiki ingest --stdin --dry-run --json
+aictx wiki file --stdin
+aictx wiki lint --json
+aictx wiki log --limit 20
+```
+
+`wiki ingest` creates or updates a source record with `origin` and files
+agent-supplied syntheses in the same atomic patch. `wiki file` saves a useful
+query result or synthesis through the intent-first remember path. `wiki lint`
+uses audit semantics with wiki wording, and `wiki log` renders a chronological
+view from canonical events.
 
 Commands that support structured output accept `--json`:
 
@@ -95,10 +109,8 @@ aictx handoff show
 
 `audit` includes role coverage gaps, but missing roles are not `check`
 failures. `stale` lists stale and superseded memory. `graph` shows a one-hop
-relation neighborhood for debugging retrieval and provenance. `lens` renders
-readable project views with role coverage and generated gaps. `handoff`
-preserves unfinished current-branch state without making it project truth;
-`handoff show` only returns an active current-branch handoff.
+relation neighborhood. `lens` renders readable project views. `handoff`
+preserves unfinished current-branch state without making it project truth.
 
 ## Maintenance
 
@@ -140,22 +152,12 @@ aictx docs agent-recipes
 aictx docs agent-integration --open
 ```
 
-`aictx view` starts a local memory viewer. `aictx docs` lists bundled
-public docs topics. `aictx docs <topic>` prints bundled Markdown for that topic.
-`--open` opens the hosted docs site.
+`view` starts a local memory viewer. `docs` lists bundled public docs topics.
+`docs <topic>` prints bundled Markdown for that topic. `--open` opens the
+hosted docs site.
 
-## CLI and MCP
+## MCP
 
 MCP is available when the agent client has launched and connected to
-`aictx-mcp`.
-
-MCP exposes exactly `load_memory`, `search_memory`, `inspect_memory`,
-`remember_memory`, `save_memory_patch`, and `diff_memory`. Setup, lenses,
-handoff, maintenance, recovery, export, registry, viewer, docs, suggest, audit,
-stale, and graph workflows are CLI-only in v1. These CLI-only commands are part
-of the v1 integration model rather than MCP parity gaps.
-
-Local MCP is the near-term integration path for local agent harnesses. Remote
-MCP, hosted sync, cloud auth, cloud hosting, and ChatGPT App SDK UI are future
-work. Future ChatGPT-compatible `search`/`fetch` names are adapter aliases over
-search and inspect behavior, not local MCP tool names.
+`aictx-mcp`. Use the [MCP guide](/mcp/) for configuration and exact tool
+boundaries.

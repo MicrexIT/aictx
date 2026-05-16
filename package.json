@@ -1,6 +1,6 @@
 {
   "name": "@aictx/memory",
-  "version": "0.1.35",
+  "version": "0.1.38",
   "description": "Local-first project memory for AI coding agents.",
   "license": "MIT",
   "type": "module",
@@ -8,10 +8,10 @@
   "homepage": "https://aictx.dev",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/MicrexIT/aictx.git"
+    "url": "git+https://github.com/aictx/memory.git"
   },
   "bugs": {
-    "url": "https://github.com/MicrexIT/aictx/issues"
+    "url": "https://github.com/aictx/memory/issues"
   },
   "keywords": [
     "ai",
@@ -25,7 +25,7 @@
     "agent-memory",
     "context"
   ],
-  "author": "MicrexIT",
+  "author": "Aictx",
   "publishConfig": {
     "access": "public"
   },
@@ -51,13 +51,15 @@
     "build:site": "astro build --root site",
     "build:version": "node scripts/generate-version.mjs",
     "build:viewer": "vite build --config viewer/vite.config.ts",
+    "build:demo-viewer": "pnpm build:viewer && node scripts/build-viewer-demo-data.mjs && tsc --noEmit",
     "build:guidance": "node scripts/generate-agent-guidance.mjs",
     "deploy:site:cloudflare": "wrangler deploy",
+    "deploy:demo:cloudflare": "wrangler deploy --config wrangler.demo.jsonc",
     "dev": "tsx src/cli/main.ts",
     "dev:docs": "astro dev --root docs",
     "dev:mcp": "tsx src/mcp/server.ts",
     "dev:site": "astro dev --root site",
-    "version:patch": "npm version patch --no-git-tag-version && node scripts/sync-setup-prompt-install-version.mjs && pnpm build && pnpm build:docs",
+    "version:patch": "npm version patch --no-git-tag-version && pnpm build && pnpm build:docs",
     "test": "vitest run",
     "test:local": "pnpm typecheck && pnpm test:package",
     "test:package": "vitest run test/integration/release/packaging.test.ts",
@@ -69,6 +71,7 @@
     "@sqlite.org/sqlite-wasm": "3.53.0-build1",
     "ajv": "^8.20.0",
     "commander": "^14.0.3",
+    "cytoscape": "^3.33.3",
     "fast-glob": "^3.3.3",
     "zod": "^4.3.6"
   },

@@ -11,10 +11,12 @@ import type {
   ObjectId,
   ObjectType,
   Predicate,
-  RelationConfidence
+  RelationConfidence,
+  SourceOrigin
 } from "../core/types.js";
 import {
   FACET_CATEGORIES,
+  ORIGIN_KINDS,
   PREDICATES,
   RELATION_CONFIDENCES
 } from "../core/types.js";
@@ -47,6 +49,7 @@ interface RememberPatchCreateObject {
   tags?: string[];
   facets?: ObjectFacets;
   evidence?: Evidence[];
+  origin?: SourceOrigin;
 }
 
 interface RememberPatchUpdateObject {
@@ -57,6 +60,7 @@ interface RememberPatchUpdateObject {
   tags?: string[];
   facets?: ObjectFacets;
   evidence?: Evidence[];
+  origin?: SourceOrigin;
 }
 
 interface RememberPatchMarkStale {
@@ -174,7 +178,8 @@ function createObjectChange(
     body: memory.body,
     ...(memory.tags === undefined ? {} : { tags: memory.tags }),
     ...facetsField(facetsForKind(memory.kind, memory.category, memory.applies_to)),
-    ...(memory.evidence === undefined ? {} : { evidence: memory.evidence })
+    ...(memory.evidence === undefined ? {} : { evidence: memory.evidence }),
+    ...(memory.origin === undefined ? {} : { origin: memory.origin })
   });
 }
 
@@ -189,7 +194,8 @@ function updateObjectChange(
     ...(update.body === undefined ? {} : { body: update.body }),
     ...(update.tags === undefined ? {} : { tags: update.tags }),
     ...facetsField(updateFacets(update, existingFacets)),
-    ...(update.evidence === undefined ? {} : { evidence: update.evidence })
+    ...(update.evidence === undefined ? {} : { evidence: update.evidence }),
+    ...(update.origin === undefined ? {} : { origin: update.origin })
   });
 }
 
@@ -403,6 +409,11 @@ function parseMemoryInputItem(value: unknown, field: string): Result<RememberMem
     return evidence;
   }
 
+  const origin = optionalSourceOrigin(value.origin, `${field}.origin`);
+  if (!origin.ok) {
+    return origin;
+  }
+
   const related = optionalArray(value.related, `${field}.related`, parseRelatedInputItem);
   if (!related.ok) {
     return related;
@@ -417,6 +428,7 @@ function parseMemoryInputItem(value: unknown, field: string): Result<RememberMem
     ...(appliesTo.data === undefined ? {} : { applies_to: appliesTo.data }),
     ...(category.data === undefined ? {} : { category: category.data }),
     ...(evidence.data === undefined ? {} : { evidence: evidence.data }),
+    ...(origin.data === undefined ? {} : { origin: origin.data }),
     ...(related.data.length === 0 ? {} : { related: related.data })
   });
 }
@@ -461,13 +473,19 @@ function parseUpdateInputItem(value: unknown, field: string): Result<RememberUpd
     return evidence;
   }
 
+  const origin = optionalSourceOrigin(value.origin, `${field}.origin`);
+  if (!origin.ok) {
+    return origin;
+  }
+
   if (
     title.data === undefined &&
     body.data === undefined &&
     tags.data === undefined &&
     appliesTo.data === undefined &&
     category.data === undefined &&
-    evidence.data === undefined
+    evidence.data === undefined &&
+    origin.data === undefined
   ) {
     return invalidRememberInput("Remember update item must include at least one update field.", {
       field
@@ -481,7 +499,8 @@ function parseUpdateInputItem(value: unknown, field: string): Result<RememberUpd
     ...(tags.data === undefined ? {} : { tags: tags.data }),
     ...(appliesTo.data === undefined ? {} : { applies_to: appliesTo.data }),
     ...(category.data === undefined ? {} : { category: category.data }),
-    ...(evidence.data === undefined ? {} : { evidence: evidence.data })
+    ...(evidence.data === undefined ? {} : { evidence: evidence.data }),
+    ...(origin.data === undefined ? {} : { origin: origin.data })
   });
 }
 
@@ -826,6 +845,54 @@ function optionalEvidenceArray(value: unknown, field: string): Result<Evidence[]
   }
 
   return ok(evidence);
+}
+
+function optionalSourceOrigin(value: unknown, field: string): Result<SourceOrigin | undefined> {
+  if (value === undefined) {
+    return ok(undefined);
+  }
+
+  if (!isRecord(value)) {
+    return invalidRememberInput("Remember origin must be an object.", { field });
+  }
+
+  const kind = value.kind;
+  if (typeof kind !== "string" || !(ORIGIN_KINDS as readonly string[]).includes(kind)) {
+    return invalidRememberInput("Remember origin kind is not supported.", {
+      field: `${field}.kind`,
+      allowed: [...ORIGIN_KINDS]
+    });
+  }
+
+  const locator = value.locator;
+  if (typeof locator !== "string" || locator.trim() === "") {
+    return invalidRememberInput("Remember origin locator must be a non-empty string.", {
+      field: `${field}.locator`
+    });
+  }
+
+  const capturedAt = optionalStringField(value.captured_at, `${field}.captured_at`);
+  if (!capturedAt.ok) {
+    return capturedAt;
+  }
+
+  const digest = optionalStringField(value.digest, `${field}.digest`);
+  if (!digest.ok) {
+    return digest;
+  }
+
+  const mediaType = optionalStringField(value.media_type, `${field}.media_type`);
+  if (!mediaType.ok) {
+    return mediaType;
+  }
+
+  return ok({
+    kind: kind as SourceOrigin["kind"],
+    locator: locator.trim(),
+    ...(capturedAt.data === undefined ? {} : { captured_at: capturedAt.data }),
+    ...(digest.data === undefined ? {} : { digest: digest.data }),
+    ...(mediaType.data === undefined ? {} : { media_type: mediaType.data })
+  });
 }
 
 function invalidRememberInput<T>(message: string, details: JsonValue): Result<T> {

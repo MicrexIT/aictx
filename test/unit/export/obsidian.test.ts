@@ -146,6 +146,54 @@ describe("exportObsidianProjection", () => {
     });
   });
 
+  it("writes source origin frontmatter", async () => {
+    const projectRoot = await createTempRoot("aictx-export-obsidian-origin-");
+    const baseStorage = fixtureStorage(projectRoot);
+    const storage = {
+      ...baseStorage,
+      objects: [
+        ...baseStorage.objects,
+        memoryObject({
+          id: "source.llm-wiki",
+          type: "source",
+          status: "active",
+          title: "LLM Wiki source",
+          bodyPath: "memory/sources/llm-wiki.md",
+          body: "# LLM Wiki source\n\nSource-backed wiki workflow article.\n",
+          tags: ["wiki"],
+          origin: {
+            kind: "url",
+            locator: "https://example.com/llm-wiki",
+            captured_at: FIXED_TIMESTAMP,
+            digest: `sha256:${"1".repeat(64)}`,
+            media_type: "text/markdown"
+          }
+        })
+      ]
+    };
+
+    const result = await exportObsidianProjection({ projectRoot, storage });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+
+    const sourceNote = await readProjectFile(
+      projectRoot,
+      ".aictx/exports/obsidian/memory/source.llm-wiki.md"
+    );
+
+    expect(parseJsonFrontmatter(sourceNote)).toMatchObject({
+      aictx_id: "source.llm-wiki",
+      aictx_origin_kind: "url",
+      aictx_origin_locator: "https://example.com/llm-wiki",
+      aictx_origin_captured_at: FIXED_TIMESTAMP,
+      aictx_origin_digest: `sha256:${"1".repeat(64)}`,
+      aictx_origin_media_type: "text/markdown"
+    });
+  });
+
   it("rejects unsafe output targets", async () => {
     const projectRoot = await createTempRoot("aictx-export-obsidian-unsafe-");
     const storage = fixtureStorage(projectRoot);
@@ -342,6 +390,7 @@ function memoryObject(options: {
   body: string;
   tags: string[];
   updatedAt?: string;
+  origin?: StoredMemoryObject["sidecar"]["origin"];
 }): StoredMemoryObject {
   return {
     path: `.aictx/${options.bodyPath.replace(/\.md$/, ".json")}`,
@@ -360,6 +409,7 @@ function memoryObject(options: {
         task: null
       },
       tags: options.tags,
+      ...(options.origin === undefined ? {} : { origin: options.origin }),
       source: {
         kind: "agent"
       },

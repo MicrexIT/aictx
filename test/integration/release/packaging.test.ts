@@ -122,11 +122,11 @@ describe("release package", () => {
     expect(packageJson.description).toBe("Local-first project memory for AI coding agents.");
     expect(packageJson.repository).toEqual({
       type: "git",
-      url: "git+https://github.com/MicrexIT/aictx.git"
+      url: "git+https://github.com/aictx/memory.git"
     });
     expect(packageJson.homepage).toBe("https://aictx.dev");
     expect(packageJson.bugs).toEqual({
-      url: "https://github.com/MicrexIT/aictx/issues"
+      url: "https://github.com/aictx/memory/issues"
     });
     expect(packageJson.keywords).toEqual(
       expect.arrayContaining(["coding-agents", "project-memory", "local-first", "mcp"])
@@ -141,7 +141,6 @@ describe("release package", () => {
     expect(packageJson.scripts?.build).toContain("pnpm build:version");
     const expectedVersionPatchScript = [
       "npm version patch --no-git-tag-version",
-      "node scripts/sync-setup-prompt-install-version.mjs",
       "pnpm build",
       "pnpm build:docs"
     ].join(" && ");
@@ -150,7 +149,7 @@ describe("release package", () => {
     expect(packageJson.scripts?.["build:version"]).toBe("node scripts/generate-version.mjs");
     expect(packageJson.scripts?.["build:viewer"]).toBe("vite build --config viewer/vite.config.ts");
     expect(packageJson.scripts?.["version:patch"]).toBe(expectedVersionPatchScript);
-    await expectBuiltPublicDocs(packageVersion);
+    await expectBuiltPublicDocs();
     expect(packageJson.devDependencies).toEqual(
       expect.objectContaining({
         "@astrojs/starlight": expect.any(String),
@@ -274,6 +273,7 @@ const requiredPackedPaths = [
   "dist/schemas/object.schema.json",
   "dist/schemas/patch.schema.json",
   "dist/schemas/relation.schema.json",
+  "dist/viewer/favicon.ico",
   "dist/viewer/index.html",
   "docs/src/content/docs/agent-integration.md",
   "docs/src/content/docs/agent-recipes.md",
@@ -283,13 +283,25 @@ const requiredPackedPaths = [
   "docs/src/content/docs/getting-started.md",
   "docs/src/content/docs/index.md",
   "docs/src/content/docs/mcp.md",
+  "docs/src/content/docs/plugin-publishing.md",
   "docs/src/content/docs/reference.md",
   "docs/src/content/docs/specializing-aictx.md",
   "docs/src/content/docs/troubleshooting.md",
   "docs/src/content/docs/viewer.md",
+  "docs/src/content/docs/wiki-workflow.md",
   "integrations/templates/agent-guidance.md",
   "integrations/codex/aictx/SKILL.md",
+  "integrations/codex/skills/aictx-memory/SKILL.md",
+  "integrations/codex/skills/aictx-memory/LICENSE.txt",
+  "integrations/codex/plugins/aictx-memory/.codex-plugin/plugin.json",
+  "integrations/codex/plugins/aictx-memory/LICENSE",
+  "integrations/codex/plugins/aictx-memory/README.md",
+  "integrations/codex/plugins/aictx-memory/skills/aictx-memory/SKILL.md",
   "integrations/claude/aictx/SKILL.md",
+  "integrations/claude/plugins/aictx-memory/.claude-plugin/plugin.json",
+  "integrations/claude/plugins/aictx-memory/LICENSE",
+  "integrations/claude/plugins/aictx-memory/README.md",
+  "integrations/claude/plugins/aictx-memory/skills/aictx-memory/SKILL.md",
   "integrations/claude/aictx.md",
   "integrations/cursor/aictx.mdc",
   "integrations/cline/aictx.md",
@@ -325,8 +337,7 @@ const forbiddenPackedPathPrefixes = [
   "viewer/"
 ] as const;
 
-const publicMcpContractPaths = [
-  "README.md",
+const bundledPublicDocsPaths = [
   "docs/src/content/docs/agent-integration.md",
   "docs/src/content/docs/capabilities.md",
   "docs/src/content/docs/cli.md",
@@ -337,26 +348,21 @@ const publicMcpContractPaths = [
   "docs/src/content/docs/reference.md",
   "docs/src/content/docs/specializing-aictx.md",
   "docs/src/content/docs/troubleshooting.md",
-  "docs/src/content/docs/viewer.md"
+  "docs/src/content/docs/viewer.md",
+  "docs/src/content/docs/wiki-workflow.md"
 ] as const;
 
 const generatedGuidancePaths = [
   "integrations/templates/agent-guidance.md",
   "integrations/codex/aictx/SKILL.md",
+  "integrations/codex/skills/aictx-memory/SKILL.md",
+  "integrations/codex/plugins/aictx-memory/skills/aictx-memory/SKILL.md",
   "integrations/claude/aictx/SKILL.md",
+  "integrations/claude/plugins/aictx-memory/skills/aictx-memory/SKILL.md",
   "integrations/claude/aictx.md",
   "integrations/cursor/aictx.mdc",
   "integrations/cline/aictx.md",
   "integrations/generic/aictx-agent-instructions.md"
-] as const;
-
-const mcpTools = [
-  "`load_memory`",
-  "`search_memory`",
-  "`inspect_memory`",
-  "`remember_memory`",
-  "`save_memory_patch`",
-  "`diff_memory`"
 ] as const;
 
 const forbiddenMcpToolNames = [
@@ -377,6 +383,7 @@ async function ensureBuiltPackageOutput(packageVersion: string): Promise<void> {
     await Promise.all([
       readFile(join(repoRoot, "dist", "cli", "main.js"), "utf8"),
       readFile(join(repoRoot, "dist", "mcp", "server.js"), "utf8"),
+      readFile(join(repoRoot, "dist", "viewer", "favicon.ico")),
       readFile(join(repoRoot, "dist", "viewer", "index.html"), "utf8")
     ]);
     const version = await expectSuccessfulCommand(
@@ -395,16 +402,17 @@ async function ensureBuiltPackageOutput(packageVersion: string): Promise<void> {
   await expectSuccessfulCommand("pnpm", ["build"], repoRoot);
 }
 
-async function expectBuiltPublicDocs(packageVersion: string): Promise<void> {
+async function expectBuiltPublicDocs(): Promise<void> {
   await expectSuccessfulCommand("pnpm", ["build:docs"], repoRoot);
   await expect(
     readFile(join(repoRoot, "docs", "dist", "agent-recipes", "index.html"), "utf8")
   ).resolves.toContain("Agent recipes");
 
   for (const filename of ["llms-small.txt", "llms-full.txt"] as const) {
-    await expect(readFile(join(repoRoot, "docs", "dist", filename), "utf8")).resolves.toContain(
-      `npm install -g @aictx/memory@${packageVersion}`
-    );
+    const content = await readFile(join(repoRoot, "docs", "dist", filename), "utf8");
+
+    expect(content).toContain("npm install -g @aictx/memory");
+    expect(content).not.toMatch(/^npm install -g @aictx\/memory@/m);
   }
 }
 
@@ -526,10 +534,14 @@ function exactDependencyVersion(version: string): string {
 }
 
 async function expectInstalledMemoryDisciplineDocs(installRoot: string): Promise<void> {
-  for (const relativePath of publicMcpContractPaths) {
+  for (const relativePath of bundledPublicDocsPaths) {
     const content = await readInstalledPackageFile(installRoot, relativePath);
 
-    expectMcpBoundaryContent(content);
+    expect(content).toMatch(/^---\n/u);
+    expect(content).toMatch(/^title:/m);
+    for (const forbiddenName of forbiddenMcpToolNames) {
+      expect(content).not.toContain(forbiddenName);
+    }
   }
 
   const agentIntegration = await readInstalledPackageFile(
@@ -537,47 +549,14 @@ async function expectInstalledMemoryDisciplineDocs(installRoot: string): Promise
     "docs/src/content/docs/agent-integration.md"
   );
 
-  expectMemoryDisciplineContent(agentIntegration);
-  expect(agentIntegration).toContain("The v1 agent model is CLI-first and MCP-compatible");
+  expect(agentIntegration).toContain("aictx remember --stdin");
+  expect(agentIntegration).toContain("Save nothing when the task produced no durable future value.");
 
   for (const relativePath of generatedGuidancePaths) {
     const content = await readInstalledPackageFile(installRoot, relativePath);
 
     expectGeneratedGuidanceContent(content);
   }
-}
-
-function expectMcpBoundaryContent(content: string): void {
-  expect(content).toMatch(/MCP\s+exposes\s+exactly/i);
-  expect(content).toMatch(
-    /setup,\s+lenses,\s+(?:branch\s+)?handoff,\s+maintenance,\s+recovery,\s+export,\s+registry,\s+viewer,\s+docs,\s+suggest,\s+audit,\s+stale,\s+and graph/i
-  );
-
-  for (const tool of mcpTools) {
-    expect(content).toContain(tool);
-  }
-
-  for (const forbiddenName of forbiddenMcpToolNames) {
-    expect(content).not.toContain(forbiddenName);
-  }
-
-  expect(content).not.toContain(
-    "exactly `load_memory`, `search_memory`, `save_memory_patch`, and `diff_memory`"
-  );
-}
-
-function expectMemoryDisciplineContent(content: string): void {
-  expect(content).toContain("aictx suggest --bootstrap --json");
-  expect(content).toContain("aictx audit --json");
-  expect(content).toContain("`gotcha`");
-  expect(content).toContain("`workflow`");
-  expect(content).toContain("`mark_stale`");
-  expect(content).toContain("`supersede_object`");
-  expect(
-    /report whether memory changed/i.test(content) ||
-      /inspect(?:ion)?[\s\S]{0,40}asynchron/i.test(content) ||
-      /async inspection/i.test(content)
-  ).toBe(true);
 }
 
 function expectGeneratedGuidanceContent(content: string): void {
@@ -587,13 +566,6 @@ function expectGeneratedGuidanceContent(content: string): void {
   expect(content).toContain("remember_template");
   expect(content).toContain("`gotcha`");
   expect(content).toContain("`workflow`");
-  expect(content).toMatch(
-    /setup,\s+lenses,\s+(?:branch\s+)?handoff,\s+maintenance,\s+recovery,\s+export,\s+registry,\s+viewer,\s+docs,\s+suggest,\s+audit,\s+stale,\s+and graph/i
-  );
-
-  for (const tool of mcpTools) {
-    expect(content).toContain(tool);
-  }
 
   for (const forbiddenName of forbiddenMcpToolNames) {
     expect(content).not.toContain(forbiddenName);

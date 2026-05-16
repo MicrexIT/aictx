@@ -13,7 +13,7 @@ Do not open a public issue for suspected vulnerabilities.
 Use GitHub private vulnerability reporting or draft a private repository security
 advisory:
 
-https://github.com/MicrexIT/aictx/security/advisories/new
+https://github.com/aictx/memory/security/advisories/new
 
 If that path is unavailable, open a minimal public issue asking for a private
 security contact and do not include exploit details, private project memory, or

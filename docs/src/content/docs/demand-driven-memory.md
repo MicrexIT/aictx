@@ -3,7 +3,7 @@ title: Demand-driven memory
 description: How real agent failure, confusion, and correction improve durable project memory.
 ---
 
-Aictx is most useful when memory quality improves from real work.
+Aictx is most useful when memory improves from real work.
 
 When an agent fails, asks for missing project context, finds stale assumptions,
 or receives a correction from the user, that event is evidence. It may mean the
@@ -35,20 +35,18 @@ next agent does not repeat it.
 
 ## Repair with existing primitives
 
-Existing Aictx objects cover the common repair cases:
+Common repairs use the same memory types as normal work:
 
-- `source` for provenance.
-- `question` for missing knowledge or unresolved conflict.
-- `gotcha` for repeated failure modes.
-- `synthesis` for compact maintained context.
-- `workflow` for project-specific how-tos, runbooks, command sequences, and
-  repeated procedures.
-- `decision`, `constraint`, `fact`, and `concept` for precise claims.
-- Relations when the link matters.
+- `source` for provenance
+- `question` for missing knowledge or unresolved conflict
+- `gotcha` for repeated failure modes
+- `synthesis` for compact maintained context
+- `workflow` for project-specific how-tos and repeated procedures
+- `decision`, `constraint`, `fact`, and `concept` for precise claims
+- relations when the link matters
 
 Facets such as `domain`, `bounded-context`, `capability`, `business-rule`, and
-`unresolved-conflict` are organization hints. They are optional and should stay
-plain-language.
+`unresolved-conflict` are optional retrieval hints. Keep them plain-language.
 
 ## When to save nothing
 

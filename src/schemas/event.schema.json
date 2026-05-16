@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://aictx.dev/schemas/v3/event.schema.json",
+  "$id": "https://aictx.dev/schemas/v4/event.schema.json",
   "type": "object",
   "additionalProperties": false,
   "required": ["event", "actor", "timestamp"],

@@ -8,6 +8,7 @@ import {
   FACET_CATEGORIES,
   OBJECT_STATUSES,
   OBJECT_TYPES,
+  ORIGIN_KINDS,
   PREDICATES,
   RELATION_CONFIDENCES,
   RELATION_STATUSES,
@@ -64,6 +65,15 @@ const EVIDENCE_SCHEMA = z.array(
     })
     .strict()
 );
+const ORIGIN_SCHEMA = z
+  .object({
+    kind: z.enum(ORIGIN_KINDS),
+    locator: z.string().min(1),
+    captured_at: z.string().min(1).optional(),
+    digest: z.string().regex(/^sha256:[a-f0-9]{64}$/u).optional(),
+    media_type: z.string().min(1).optional()
+  })
+  .strict();
 const FACETS_SCHEMA = z
   .object({
     category: z.enum(FACET_CATEGORIES),
@@ -83,6 +93,7 @@ const CREATE_OBJECT_SCHEMA = z
     tags: TAGS_SCHEMA.optional(),
     facets: FACETS_SCHEMA.optional(),
     evidence: EVIDENCE_SCHEMA.optional(),
+    origin: ORIGIN_SCHEMA.optional(),
     source: SOURCE_SCHEMA.optional()
   })
   .strict();
@@ -97,6 +108,7 @@ const UPDATE_OBJECT_SCHEMA = z
     tags: TAGS_SCHEMA.optional(),
     facets: FACETS_SCHEMA.optional(),
     evidence: EVIDENCE_SCHEMA.optional(),
+    origin: ORIGIN_SCHEMA.optional(),
     source: SOURCE_SCHEMA.optional(),
     superseded_by: OBJECT_ID_SCHEMA.optional()
   })

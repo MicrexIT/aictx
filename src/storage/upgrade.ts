@@ -11,12 +11,14 @@ import type {
   ObjectFacets,
   ObjectType,
   Scope,
-  Source
+  Source,
+  SourceOrigin
 } from "../core/types.js";
 import { computeObjectContentHash } from "./hashes.js";
 import type { AictxConfig, MemoryObjectSidecar, StoredMemoryObject } from "./objects.js";
 import type { StoredMemoryRelation } from "./relations.js";
 import { readCanonicalStorage } from "./read.js";
+import { fileSourceOrigin } from "./source-origin.js";
 import { SCHEMA_FILES } from "../validation/schemas.js";
 
 interface UpgradeEvent {
@@ -37,14 +39,14 @@ export interface UpgradeStorageOptions {
 export interface UpgradeStorageData {
   upgraded: boolean;
   from_version: number;
-  to_version: 3;
+  to_version: 4;
   files_changed: string[];
   objects_upgraded: string[];
   objects_deleted: string[];
   relations_deleted: string[];
 }
 
-export async function upgradeStorageToV3(
+export async function upgradeStorageToV4(
   options: UpgradeStorageOptions
 ): Promise<Result<UpgradeStorageData>> {
   const storage = await readCanonicalStorage(options.projectRoot);
@@ -59,10 +61,10 @@ export async function upgradeStorageToV3(
   const relationsDeleted: string[] = [];
   const fromVersion = storage.data.config.version;
 
-  if (fromVersion !== 3) {
+  if (fromVersion !== 4) {
     const config = {
       ...storage.data.config,
-      version: 3
+      version: 4
     } satisfies AictxConfig;
 
     const configWrite = await writeJsonAtomic(
@@ -134,11 +136,13 @@ export async function upgradeStorageToV3(
       continue;
     }
 
-    if (!needsObjectUpgrade(object)) {
+    const inferredOrigin = await inferSourceOrigin(options.projectRoot, object);
+
+    if (!needsObjectUpgrade(object) && inferredOrigin === undefined) {
       continue;
     }
 
-    const upgraded = upgradeObjectSidecar(object);
+    const upgraded = upgradeObjectSidecar(object, inferredOrigin);
     const written = await writeJsonAtomic(
       options.projectRoot,
       object.path,
@@ -154,9 +158,9 @@ export async function upgradeStorageToV3(
   }
 
   return ok({
-    upgraded: fromVersion !== 3 || filesChanged.length > 0,
+    upgraded: fromVersion !== 4 || filesChanged.length > 0,
     from_version: fromVersion,
-    to_version: 3,
+    to_version: 4,
     files_changed: filesChanged,
     objects_upgraded: objectsUpgraded,
     objects_deleted: objectsDeleted,
@@ -164,7 +168,8 @@ export async function upgradeStorageToV3(
   });
 }
 
-export const upgradeStorageToV2 = upgradeStorageToV3;
+export const upgradeStorageToV3 = upgradeStorageToV4;
+export const upgradeStorageToV2 = upgradeStorageToV4;
 
 function isLegacyRejectedObject(object: StoredMemoryObject): boolean {
   return objectStatusString(object) === "rejected";
@@ -263,7 +268,10 @@ function eventToJson(event: UpgradeEvent): Record<string, JsonValue> {
   return json;
 }
 
-function upgradeObjectSidecar(object: StoredMemoryObject): MemoryObjectSidecar {
+function upgradeObjectSidecar(
+  object: StoredMemoryObject,
+  inferredOrigin: SourceOrigin | undefined
+): MemoryObjectSidecar {
   const sidecarWithoutHash: Omit<MemoryObjectSidecar, "content_hash"> = {
     id: object.sidecar.id,
     type: object.sidecar.type,
@@ -275,6 +283,11 @@ function upgradeObjectSidecar(object: StoredMemoryObject): MemoryObjectSidecar {
     facets: object.sidecar.facets ?? inferFacets(object.sidecar.type, object.sidecar.tags ?? []),
     evidence: object.sidecar.evidence ?? [],
     ...(object.sidecar.source === undefined ? {} : { source: cloneSource(object.sidecar.source) }),
+    ...(object.sidecar.origin === undefined
+      ? inferredOrigin === undefined
+        ? {}
+        : { origin: cloneSourceOrigin(inferredOrigin) }
+      : { origin: cloneSourceOrigin(object.sidecar.origin) }),
     ...(object.sidecar.superseded_by === undefined
       ? {}
       : { superseded_by: object.sidecar.superseded_by }),
@@ -286,6 +299,43 @@ function upgradeObjectSidecar(object: StoredMemoryObject): MemoryObjectSidecar {
     ...sidecarWithoutHash,
     content_hash: computeObjectContentHash(objectSidecarToJson(sidecarWithoutHash), object.body)
   };
+}
+
+async function inferSourceOrigin(
+  projectRoot: string,
+  object: StoredMemoryObject
+): Promise<SourceOrigin | undefined> {
+  if (object.sidecar.origin !== undefined || object.sidecar.type !== "source") {
+    return undefined;
+  }
+
+  const fileEvidence = (object.sidecar.evidence ?? []).find(
+    (evidence) => evidence.kind === "file" && evidence.id.trim() !== ""
+  );
+
+  if (fileEvidence !== undefined) {
+    return fileSourceOrigin({
+      projectRoot,
+      locator: fileEvidence.id,
+      capturedAt: object.sidecar.created_at
+    });
+  }
+
+  const url = extractFirstUrl([object.sidecar.title, object.body].join("\n"));
+
+  if (url !== null) {
+    return {
+      kind: "url",
+      locator: url,
+      captured_at: object.sidecar.created_at
+    };
+  }
+
+  return undefined;
+}
+
+function extractFirstUrl(value: string): string | null {
+  return value.match(/https?:\/\/[^\s<>)"']+/u)?.[0] ?? null;
 }
 
 function objectStatusString(object: StoredMemoryObject): string {
@@ -473,6 +523,7 @@ function objectSidecarToJson(
     facets: facetsToJson(sidecar.facets ?? inferFacets(sidecar.type, sidecar.tags ?? [])),
     evidence: (sidecar.evidence ?? []).map(evidenceToJson),
     ...(sidecar.source === undefined ? {} : { source: sourceToJson(sidecar.source) }),
+    ...(sidecar.origin === undefined ? {} : { origin: sourceOriginToJson(sidecar.origin) }),
     ...(sidecar.superseded_by === undefined ? {} : { superseded_by: sidecar.superseded_by }),
     created_at: sidecar.created_at,
     updated_at: sidecar.updated_at
@@ -508,6 +559,16 @@ function sourceToJson(source: Source): Record<string, JsonValue> {
   };
 }
 
+function sourceOriginToJson(origin: SourceOrigin): Record<string, JsonValue> {
+  return {
+    kind: origin.kind,
+    locator: origin.locator,
+    ...(origin.captured_at === undefined ? {} : { captured_at: origin.captured_at }),
+    ...(origin.digest === undefined ? {} : { digest: origin.digest }),
+    ...(origin.media_type === undefined ? {} : { media_type: origin.media_type })
+  };
+}
+
 function cloneScope(scope: Scope): Scope {
   return {
     kind: scope.kind,
@@ -522,6 +583,16 @@ function cloneSource(source: Source): Source {
     kind: source.kind,
     ...(source.task === undefined ? {} : { task: source.task }),
     ...(source.commit === undefined ? {} : { commit: source.commit })
+  };
+}
+
+function cloneSourceOrigin(origin: SourceOrigin): SourceOrigin {
+  return {
+    kind: origin.kind,
+    locator: origin.locator,
+    ...(origin.captured_at === undefined ? {} : { captured_at: origin.captured_at }),
+    ...(origin.digest === undefined ? {} : { digest: origin.digest }),
+    ...(origin.media_type === undefined ? {} : { media_type: origin.media_type })
   };
 }
 

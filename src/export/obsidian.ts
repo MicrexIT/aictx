@@ -493,6 +493,23 @@ function objectFrontmatter(
     frontmatter.aictx_scope_task = sidecar.scope.task;
   }
 
+  if (sidecar.origin !== undefined) {
+    frontmatter.aictx_origin_kind = sidecar.origin.kind;
+    frontmatter.aictx_origin_locator = sidecar.origin.locator;
+
+    if (sidecar.origin.captured_at !== undefined) {
+      frontmatter.aictx_origin_captured_at = sidecar.origin.captured_at;
+    }
+
+    if (sidecar.origin.digest !== undefined) {
+      frontmatter.aictx_origin_digest = sidecar.origin.digest;
+    }
+
+    if (sidecar.origin.media_type !== undefined) {
+      frontmatter.aictx_origin_media_type = sidecar.origin.media_type;
+    }
+  }
+
   for (const [predicate, relations] of groupRelationsByPredicate(outgoingRelations)) {
     frontmatter[`aictx_rel_${predicate}`] = relations.map((relation) =>
       wikilink(relation.relation.to)
