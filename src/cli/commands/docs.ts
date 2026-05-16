@@ -153,6 +153,14 @@ const DOC_TOPICS = [
     ]
   },
   {
+    topic: "plugin-publishing",
+    title: "Publishing Plugins",
+    description: "Publish the generated Aictx Codex and Claude Code plugin artifacts.",
+    file: "plugin-publishing.md",
+    path: "/plugin-publishing/",
+    aliases: ["plugins", "publishing", "plugin-marketplace", "marketplace"]
+  },
+  {
     topic: "viewer",
     title: "Local viewer",
     description: "Inspect project memory through the local browser viewer.",
