@@ -1765,41 +1765,6 @@
     return text.length > 190 ? `${text.slice(0, 187)}...` : text;
   }
 
-  function objectIcon(object: MemoryObjectSummary): string {
-    return objectTypeGlyph(object.type);
-  }
-
-  function objectTypeGlyph(type: ObjectType): string {
-    switch (type) {
-      case "project":
-        return "P";
-      case "architecture":
-        return "A";
-      case "synthesis":
-        return "S";
-      case "decision":
-        return "D";
-      case "constraint":
-        return "C";
-      case "question":
-        return "?";
-      case "fact":
-        return "F";
-      case "workflow":
-        return "W";
-      case "gotcha":
-        return "!";
-      case "source":
-        return "R";
-      case "concept":
-        return "K";
-      case "note":
-        return "N";
-      default:
-        return "•";
-    }
-  }
-
   function objectTypeLabel(type: ObjectType): string {
     return `${type.charAt(0).toUpperCase()}${type.slice(1)} objects`;
   }
@@ -2166,7 +2131,7 @@
     <aside id="viewer-sidebar-drawer" class="sidebar" aria-label="Viewer navigation" data-testid="viewer-sidebar-drawer">
       <div class="brand">
         <div class="brand-row">
-          <span class="book-icon" aria-hidden="true">A</span>
+          <img class="book-icon" src="/favicon.ico" width="28" height="28" alt="" aria-hidden="true" />
           <h1 id="viewer-title">Memory Schema</h1>
         </div>
         <p>{selectedProject?.project.name ?? "No project selected"} · {selectedProject?.project.id ?? "local memory"}</p>
@@ -2631,7 +2596,7 @@
           data-testid="memory-list-view"
         >
           <header class="doc-hero">
-            <span class="doc-icon" aria-hidden="true">A</span>
+            <img class="doc-icon" src="/favicon.ico" width="46" height="46" alt="" aria-hidden="true" />
             <p class="eyebrow">Canonical Aictx storage</p>
             <h2 id="memory-list-title">{bootstrap.project.name} Memory Schema</h2>
             <p>
@@ -2842,7 +2807,6 @@
                         onclick={() => selectObject(object.id)}
                         data-testid={`object-row-${object.id}`}
                       >
-                        <span class="object-glyph">{objectIcon(object)}</span>
                         <span>
                           <strong>{object.title}</strong>
                           <span class="object-meta" data-testid={`object-meta-${object.id}`}>
@@ -3467,7 +3431,7 @@
 
   .object-list button {
     display: grid;
-    grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) auto;
     gap: 12px;
     width: 100%;
     border: 0;
@@ -3661,18 +3625,13 @@
     gap: 14px;
   }
 
-  .book-icon,
-  .object-glyph {
-    display: inline-grid;
-    place-items: center;
+  .book-icon {
+    display: block;
     width: 22px;
     height: 22px;
     flex: 0 0 auto;
     border-radius: 6px;
-    background: #ebe9e3;
-    color: #4e504b;
-    font-size: 0.78rem;
-    font-weight: 900;
+    object-fit: contain;
   }
 
   .brand h1 {
@@ -4072,7 +4031,7 @@
   }
 
   .object-list button {
-    grid-template-columns: 24px minmax(0, 1fr) 18px;
+    grid-template-columns: minmax(0, 1fr) 18px;
     align-items: center;
     border: 0;
     border-radius: 4px;
@@ -4117,15 +4076,6 @@
     color: #8a8a8a;
     font-style: normal;
     font-weight: 900;
-  }
-
-  .object-list .object-glyph {
-    width: 20px;
-    height: 20px;
-    border-radius: 4px;
-    background: transparent;
-    color: #7d7b74;
-    font-size: 0.82rem;
   }
 
   @media (max-width: 980px) {
@@ -4178,7 +4128,6 @@
       width: 22px;
       height: 22px;
       border-radius: 5px;
-      font-size: 0.78rem;
     }
 
     .brand h1 {
@@ -4405,9 +4354,7 @@
     width: 28px;
     height: 28px;
     border-radius: 999px;
-    background: #111214;
-    color: #faf9f5;
-    font-size: 0.9rem;
+    object-fit: contain;
     box-shadow:
       0 1px 2px rgb(16 24 40 / 8%),
       inset 0 0 0 1px rgb(255 255 255 / 8%);
@@ -4562,16 +4509,11 @@
   }
 
   .doc-icon {
-    display: inline-grid;
-    place-items: center;
+    display: block;
     width: 46px;
     height: 46px;
     border-radius: 999px;
-    background: #111214;
-    color: #faf9f5;
-    font-size: 1.38rem;
-    font-weight: 850;
-    line-height: 1;
+    object-fit: contain;
     box-shadow:
       0 16px 42px rgb(16 24 40 / 10%),
       inset 0 0 0 1px rgb(255 255 255 / 8%);
@@ -5146,22 +5088,32 @@
   .list-controls select {
     flex: 0 0 auto;
     width: auto;
-    min-width: 150px;
+    min-width: 138px;
     min-height: 38px;
     border-color: #dedbd3;
     border-radius: 999px;
+    appearance: none;
+    -webkit-appearance: none;
     background-color: #efede8;
+    background-image:
+      linear-gradient(45deg, transparent 50%, #6c675f 50%),
+      linear-gradient(135deg, #6c675f 50%, transparent 50%);
+    background-position:
+      calc(100% - 18px) 50%,
+      calc(100% - 13px) 50%;
+    background-repeat: no-repeat;
+    background-size: 5px 5px;
     color: #504d48;
     font-size: 0.9rem;
     white-space: nowrap;
   }
 
   .list-controls [data-testid="viewer-tag-filter"] {
-    min-width: 180px;
+    min-width: 140px;
   }
 
   .list-controls [data-testid="viewer-facet-filter"] {
-    min-width: 210px;
+    min-width: 160px;
   }
 
   .sectioned-memory {
@@ -5203,7 +5155,7 @@
 
   .object-list button {
     display: grid;
-    grid-template-columns: 34px minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
     gap: 14px;
     min-height: 72px;
@@ -5232,16 +5184,6 @@
     outline: 2px solid #2563eb;
     outline-offset: 2px;
     background: #f7f5f0;
-  }
-
-  .object-list .object-glyph {
-    width: 26px;
-    height: 26px;
-    border-radius: 7px;
-    background: #f1efea;
-    color: #68818d;
-    font-size: 0.92rem;
-    font-weight: 850;
   }
 
   .object-list strong {
@@ -5719,12 +5661,22 @@
   }
 
   .list-controls select {
-    min-width: 168px;
+    min-width: 138px;
     min-height: 40px;
     border-color: #dfd8cd;
+    appearance: none;
+    -webkit-appearance: none;
     padding-right: 38px;
     padding-left: 14px;
     background-color: #f4f1eb;
+    background-image:
+      linear-gradient(45deg, transparent 50%, #6c675f 50%),
+      linear-gradient(135deg, #6c675f 50%, transparent 50%);
+    background-position:
+      calc(100% - 18px) 50%,
+      calc(100% - 13px) 50%;
+    background-repeat: no-repeat;
+    background-size: 5px 5px;
     color: #45413b;
     font-size: 0.92rem;
   }
@@ -5800,7 +5752,7 @@
   }
 
   .object-list button {
-    grid-template-columns: 36px minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) auto;
     align-items: start;
     min-height: 0;
     border-color: #e6dfd4;
@@ -5829,16 +5781,6 @@
     border-color: #d8cec0;
     border-bottom-color: transparent;
     background: #f7f3ec;
-  }
-
-  .object-list .object-glyph {
-    width: 28px;
-    height: 28px;
-    margin-top: 2px;
-    border-radius: 7px;
-    background: #f3eee6;
-    color: #607a86;
-    font-size: 0.94rem;
   }
 
   .object-list strong {
@@ -6054,7 +5996,7 @@
     }
 
     .object-list button {
-      grid-template-columns: 32px minmax(0, 1fr);
+      grid-template-columns: minmax(0, 1fr) auto;
       padding: 16px;
     }
 
@@ -6096,13 +6038,13 @@
   }
 
   .main-stage.memory-stage {
-    padding-right: clamp(24px, 3vw, 48px);
-    padding-left: clamp(24px, 3vw, 48px);
+    padding-right: clamp(18px, 2vw, 32px);
+    padding-left: clamp(18px, 2vw, 32px);
   }
 
   .memory-stage .memory-page {
     width: 100%;
-    max-width: min(1500px, 100%);
+    max-width: none;
   }
 
   .memory-stage .list-controls {
@@ -6111,8 +6053,8 @@
 
   .schema-browser-layout {
     display: grid;
-    grid-template-columns: minmax(300px, 0.38fr) minmax(0, 1fr);
-    gap: 24px;
+    grid-template-columns: minmax(260px, 0.3fr) minmax(0, 1fr);
+    gap: clamp(16px, 2vw, 24px);
     min-height: 0;
     flex: 1 1 0;
     overflow: hidden;
@@ -6232,7 +6174,7 @@
 
   @media (max-width: 1180px) {
     .schema-browser-layout {
-      grid-template-columns: minmax(280px, 0.34fr) minmax(0, 1fr);
+      grid-template-columns: minmax(240px, 0.3fr) minmax(0, 1fr);
       gap: 18px;
     }
 

@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { readFile, stat } from "node:fs/promises";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -115,7 +115,12 @@ describe("site landing page", () => {
     const mobileUseCasesIndex = mobileMenu.indexOf('href="/use-cases/">Use Cases</a>');
 
     expect(layout).toContain("Open navigation menu");
+    expect(layout).toContain('<link rel="icon" href="/favicon.ico" sizes="any" />');
+    expect(layout).toContain(
+      '<img class="brand-mark" src="/favicon.ico" width="34" height="34" alt="" aria-hidden="true" />'
+    );
     expect(layout).not.toContain('href="/#context">Context</a>');
+    expect(layout).not.toContain('href="/favicon.svg"');
     expect(layout).not.toContain('href="/#demo">Demo</a>');
     expect(layout).not.toContain('https://demo.aictx.dev/?token=demo');
     expect(desktopViewerIndex).toBeGreaterThan(-1);
@@ -135,6 +140,10 @@ describe("site landing page", () => {
     expect(layout).toContain('<strong data-star-count="compact"></strong>');
     expect(layout).toContain("Footer navigation");
     expect(layout).toContain("Local, reviewable project memory for AI coding tools.");
+    expect(layout).toContain('<a href="mailto:michele@remics.tech">Contact us</a>');
+    await expect(stat(resolve(repoRoot, "site/public/favicon.ico"))).resolves.toMatchObject({
+      size: expect.any(Number)
+    });
   });
 
   it("frames the demo as a schema and graph inspection surface", async () => {

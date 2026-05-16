@@ -273,6 +273,7 @@ const requiredPackedPaths = [
   "dist/schemas/object.schema.json",
   "dist/schemas/patch.schema.json",
   "dist/schemas/relation.schema.json",
+  "dist/viewer/favicon.ico",
   "dist/viewer/index.html",
   "docs/src/content/docs/agent-integration.md",
   "docs/src/content/docs/agent-recipes.md",
@@ -382,6 +383,7 @@ async function ensureBuiltPackageOutput(packageVersion: string): Promise<void> {
     await Promise.all([
       readFile(join(repoRoot, "dist", "cli", "main.js"), "utf8"),
       readFile(join(repoRoot, "dist", "mcp", "server.js"), "utf8"),
+      readFile(join(repoRoot, "dist", "viewer", "favicon.ico")),
       readFile(join(repoRoot, "dist", "viewer", "index.html"), "utf8")
     ]);
     const version = await expectSuccessfulCommand(

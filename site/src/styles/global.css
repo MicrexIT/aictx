@@ -85,18 +85,12 @@ code {
 }
 
 .brand-mark {
-  display: grid;
+  display: block;
   flex: 0 0 auto;
   width: 34px;
   height: 34px;
-  place-items: center;
   border-radius: 50%;
-  background: linear-gradient(180deg, #1f2023, #090a0c);
-  color: #faf9f5;
-  font-size: 18px;
-  font-weight: 850;
-  line-height: 1;
-  letter-spacing: 0;
+  object-fit: contain;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.18),
     0 8px 18px rgba(17, 18, 20, 0.12);
@@ -2044,6 +2038,49 @@ h3 {
 .post-body {
   max-width: 780px;
   padding-top: 34px;
+}
+
+.post-body .prose pre {
+  margin: 1.75rem 0;
+  padding: 18px 20px;
+  color: #f5f5f0 !important;
+  background: #17191c !important;
+  border: 1px solid rgba(17, 18, 20, 0.18);
+  border-radius: 8px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 16px 34px rgba(37, 39, 36, 0.09);
+  overflow-x: auto;
+}
+
+.post-body .prose pre code {
+  display: block;
+  padding: 0 !important;
+  color: inherit !important;
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  font-size: 13px;
+  font-weight: 620;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.post-body .prose pre code,
+.post-body .prose pre code span {
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+}
+
+.post-body .prose pre.astro-code span {
+  color: inherit !important;
+  background: transparent !important;
+  white-space: inherit;
+}
+
+.post-body .prose pre .line {
+  display: block;
+  min-height: 1.7em;
 }
 
 .site-footer {
