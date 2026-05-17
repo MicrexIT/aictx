@@ -31,6 +31,7 @@ describe("repo maintenance scripts", () => {
     const docsIndex = await readFile(join(repoRoot, "docs/src/content/docs/index.md"), "utf8");
 
     for (const content of [readme, docsIndex]) {
+      expect(content).toMatch(/^brew install aictx\/tap\/memory$/m);
       expect(content).toMatch(/^npm install -g @aictx\/memory$/m);
       expect(content).not.toMatch(/^npm install -g @aictx\/memory@/m);
     }
@@ -40,7 +41,7 @@ describe("repo maintenance scripts", () => {
     const sha256 = "a".repeat(64);
     const result = await runSubprocess(
       "node",
-      ["scripts/render-homebrew-formula.mjs", "--version", "1.2.3", "--sha256", sha256],
+      ["scripts/render-homebrew-formula.mjs", "--", "--version", "1.2.3", "--sha256", sha256],
       { cwd: repoRoot }
     );
 

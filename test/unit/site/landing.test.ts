@@ -57,9 +57,12 @@ describe("site landing page", () => {
     expect(landing).not.toContain("<strong>Review it like code.</strong>");
     expect(landing).toContain("Get started");
     expect(landing).toContain('aria-label="Get started with Memory"');
+    expect(landing).toContain('aria-label="Install commands"');
     expect(landing).not.toContain("Install Memory");
     expect(landing).toContain("Open viewer");
     expect(landing).not.toContain("Join discussions");
+    expect(landing).toContain("Homebrew");
+    expect(landing).toContain("brew install aictx/tap/memory");
     expect(landing).toContain("npm install -g @aictx/memory");
     expect(landing).not.toContain('class="why-block"');
     expect(landing).not.toContain("Why not AGENTS.md only?");
@@ -204,7 +207,10 @@ describe("site landing page", () => {
           name: "Memory by Aictx",
           alternateName: ["Memory", "@aictx/memory"],
           codeRepository: "https://github.com/aictx/memory",
-          downloadUrl: "https://www.npmjs.com/package/@aictx/memory"
+          downloadUrl: [
+            "https://www.npmjs.com/package/@aictx/memory",
+            "https://github.com/aictx/homebrew-tap"
+          ]
         })
       ])
     );
@@ -239,6 +245,7 @@ describe("site landing page", () => {
     expect(docsRobots).toContain("Sitemap: https://docs.aictx.dev/sitemap-index.xml");
     expect(llmsTxt).toContain("# Memory by Aictx");
     expect(llmsTxt).toContain("Package: https://www.npmjs.com/package/@aictx/memory");
+    expect(llmsTxt).toContain("Homebrew: brew install aictx/tap/memory");
     expect(llmsTxt).toContain("CLI: memory");
     expect(llmsTxt).toContain("MCP server: memory-mcp");
     expect(llmsTxt).toContain(

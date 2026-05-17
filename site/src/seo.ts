@@ -14,7 +14,7 @@ Sitemap: ${mainSiteUrl}/sitemap.xml
 export const llmsTxt = `# Memory by Aictx
 
 Memory by Aictx provides local, reviewable, auto-maintained project memory for AI coding agents.
-It is the open source npm package @aictx/memory and runs through the memory CLI and optional memory-mcp server.
+It is distributed through the open source npm package @aictx/memory and the Homebrew formula aictx/tap/memory, then runs through the memory CLI and optional memory-mcp server.
 Use it as persistent memory and long-term project context for AI coding assistants including Codex, Claude Code, Cursor, Cline, OpenCode, and MCP-capable agents.
 
 Canonical public surfaces:
@@ -22,6 +22,7 @@ Canonical public surfaces:
 - Documentation: ${docsSiteUrl}
 - Repository: https://github.com/aictx/memory
 - Package: https://www.npmjs.com/package/@aictx/memory
+- Homebrew: brew install aictx/tap/memory
 - CLI: memory
 - MCP server: memory-mcp
 - Persistent memory guide: ${mainSiteUrl}/persistent-memory-ai-coding-agents/
@@ -59,7 +60,11 @@ export function buildStructuredData(siteUrl: URL): object {
         name: "Aictx",
         url: new URL("/", siteUrl).toString(),
         logo: new URL("/favicon.ico", siteUrl).toString(),
-        sameAs: ["https://github.com/aictx/memory", "https://www.npmjs.com/package/@aictx/memory"]
+        sameAs: [
+          "https://github.com/aictx/memory",
+          "https://www.npmjs.com/package/@aictx/memory",
+          "https://github.com/aictx/homebrew-tap"
+        ]
       },
       {
         "@type": "WebSite",
@@ -83,7 +88,10 @@ export function buildStructuredData(siteUrl: URL): object {
           "Memory by Aictx is local-first, reviewable, auto-maintained project memory for AI coding agents.",
         url: new URL("/", siteUrl).toString(),
         codeRepository: "https://github.com/aictx/memory",
-        downloadUrl: "https://www.npmjs.com/package/@aictx/memory",
+        downloadUrl: [
+          "https://www.npmjs.com/package/@aictx/memory",
+          "https://github.com/aictx/homebrew-tap"
+        ],
         publisher: {
           "@id": organizationId
         }

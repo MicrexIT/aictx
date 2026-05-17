@@ -406,11 +406,12 @@ async function expectBuiltPublicDocs(): Promise<void> {
   await expectSuccessfulCommand("pnpm", ["build:docs"], repoRoot);
   await expect(
     readFile(join(repoRoot, "docs", "dist", "agent-recipes", "index.html"), "utf8")
-  ).resolves.toContain("Agent recipes");
+  ).resolves.toContain("AI coding agent memory recipes");
 
   for (const filename of ["llms-small.txt", "llms-full.txt"] as const) {
     const content = await readFile(join(repoRoot, "docs", "dist", filename), "utf8");
 
+    expect(content).toContain("brew install aictx/tap/memory");
     expect(content).toContain("npm install -g @aictx/memory");
     expect(content).not.toMatch(/^npm install -g @aictx\/memory@/m);
   }

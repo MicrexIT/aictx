@@ -1,6 +1,7 @@
 # Release Policy
 
-Memory publishes the npm package `@aictx/memory`.
+Memory publishes the npm package `@aictx/memory` and updates the Homebrew
+formula in `aictx/homebrew-tap`.
 
 ## Versioning
 
@@ -40,7 +41,12 @@ raw viewer source, docs build output, and tool caches.
 
 Releases should be published through the GitHub Actions release workflow with
 npm provenance. The workflow checks that the pushed tag matches
-`package.json#version`.
+`package.json#version`, publishes npm, then renders `Formula/memory.rb` from the
+published npm tarball and pushes it to `aictx/homebrew-tap`.
+
+The `npm` environment must expose `HOMEBREW_TAP_TOKEN` with write access to the
+tap repository before tagging a release. The workflow verifies the token and tap
+checkout before publishing npm, so a release does not silently skip Homebrew.
 
 Manual publishing should be reserved for recovery situations and documented in
 the release notes.

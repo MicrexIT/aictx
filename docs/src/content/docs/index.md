@@ -4,8 +4,9 @@ description: Public documentation for local, reviewable, auto-maintained project
 ---
 
 Memory by Aictx provides local, reviewable, auto-maintained project memory for
-AI coding agents. It is the open source npm package `@aictx/memory` and runs
-through the `memory` CLI and optional `memory-mcp` server.
+AI coding agents. It is distributed through the open source npm package
+`@aictx/memory` and the Aictx Homebrew tap, then runs through the `memory` CLI
+and optional `memory-mcp` server.
 
 Memory gives coding agents a project memory they can return to.
 
@@ -24,7 +25,8 @@ load relevant memory -> do the work -> save what future agents should remember
 Core memory commands run locally. They do not require a cloud account,
 embeddings, hosted sync, external model API, or network access.
 
-This project is distributed as the npm package `@aictx/memory`.
+This project is distributed as the npm package `@aictx/memory` and the
+Homebrew formula `aictx/tap/memory`.
 
 ## What Memory is for
 
@@ -65,8 +67,11 @@ agent from the project root:
 ```text
 Set up fresh Memory for this repository.
 
-Run:
+Install Memory with one of:
+brew install aictx/tap/memory
 npm install -g @aictx/memory
+
+Then run:
 memory setup
 memory check
 memory load "onboard to this repository"

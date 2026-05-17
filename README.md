@@ -34,7 +34,8 @@ Use it when you want:
 - Local files and Git review instead of hosted memory, a vector database, or
   another prompt you have to manually keep current.
 
-This repository publishes the npm package `@aictx/memory`.
+This repository publishes the npm package `@aictx/memory` and the Homebrew
+formula `aictx/tap/memory`.
 
 Memory works with Codex, Claude Code, Cursor, Cline, OpenCode, and
 MCP-capable clients. Use the `memory` CLI by default, then add the local
@@ -234,5 +235,6 @@ agent recipes, and pull requests are welcome.
 ## Project identity
 
 Memory by Aictx provides local, reviewable, auto-maintained project memory for
-AI coding agents. It is the open source npm package `@aictx/memory` and runs
-through the `memory` CLI and optional `memory-mcp` server.
+AI coding agents. It is distributed through the open source npm package
+`@aictx/memory` and the Homebrew formula `aictx/tap/memory`, then runs through
+the `memory` CLI and optional `memory-mcp` server.

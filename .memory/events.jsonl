@@ -27,3 +27,5 @@
 {"actor":"agent","event":"memory.updated","id":"decision.product-command-surface-is-memory","timestamp":"2026-05-17T09:50:54+02:00"}
 {"actor":"agent","event":"memory.updated","id":"synthesis.product-intent","timestamp":"2026-05-17T10:06:20+02:00"}
 {"actor":"agent","event":"memory.updated","id":"decision.product-command-surface-is-memory","timestamp":"2026-05-17T10:06:20+02:00"}
+{"actor":"agent","event":"memory.created","id":"workflow.release-updates-homebrew-tap-from-npm-tarball","timestamp":"2026-05-17T10:22:44+02:00"}
+{"actor":"agent","event":"memory.created","id":"gotcha.homebrew-formula-output-must-avoid-pnpm-banners","timestamp":"2026-05-17T10:22:44+02:00"}

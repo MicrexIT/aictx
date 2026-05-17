@@ -65,8 +65,11 @@ Paste this prompt into the agent from the project root:
 ```text
 Set up fresh Memory for this repository.
 
-Run:
+Install Memory with one of:
+brew install aictx/tap/memory
 npm install -g @aictx/memory
+
+Then run:
 memory setup
 memory check
 memory load "onboard to this repository"

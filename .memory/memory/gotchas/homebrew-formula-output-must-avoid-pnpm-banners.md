@@ -1,0 +1,1 @@
+When writing Formula/memory.rb, call node scripts/render-homebrew-formula.mjs directly or otherwise guarantee silent stdout. pnpm run can emit a lifecycle banner before script output, which would corrupt the generated Ruby formula if stdout is redirected.
