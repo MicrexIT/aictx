@@ -2,7 +2,7 @@ import { join, resolve } from "node:path";
 
 import fg from "fast-glob";
 
-import { aictxError } from "../core/errors.js";
+import { memoryError } from "../core/errors.js";
 import { readUtf8FileInsideRoot } from "../core/fs.js";
 import { err, ok, type Result } from "../core/result.js";
 import type { ValidationIssue } from "../core/types.js";
@@ -17,9 +17,9 @@ import {
 } from "../validation/validate.js";
 import { readMarkdownBodyInsideRoot } from "./markdown.js";
 import {
-  isAictxConfig,
+  isMemoryConfig,
   isMemoryObjectSidecar,
-  type AictxConfig,
+  type MemoryConfig,
   type StoredMemoryObject
 } from "./objects.js";
 import { isMemoryEvent, isJsonObject, type StoredMemoryEvent } from "./events.js";
@@ -28,14 +28,14 @@ import {
   type StoredMemoryRelation
 } from "./relations.js";
 
-const CONFIG_PATH = ".aictx/config.json";
-const EVENTS_PATH = ".aictx/events.jsonl";
-const GENERATED_IGNORES = [".aictx/index/**", ".aictx/context/**"] as const;
+const CONFIG_PATH = ".memory/config.json";
+const EVENTS_PATH = ".memory/events.jsonl";
+const GENERATED_IGNORES = [".memory/index/**", ".memory/context/**"] as const;
 
 export interface CanonicalStorageSnapshot {
   projectRoot: string;
-  aictxRoot: string;
-  config: AictxConfig;
+  memoryRoot: string;
+  config: MemoryConfig;
   objects: StoredMemoryObject[];
   relations: StoredMemoryRelation[];
   events: StoredMemoryEvent[];
@@ -50,7 +50,7 @@ export async function readCanonicalStorage(
   options: ReadCanonicalStorageOptions = {}
 ): Promise<Result<CanonicalStorageSnapshot>> {
   const resolvedProjectRoot = resolve(projectRoot);
-  const aictxRoot = join(resolvedProjectRoot, ".aictx");
+  const memoryRoot = join(resolvedProjectRoot, ".memory");
   const validatorsResult = await getValidators(resolvedProjectRoot, options);
 
   if (!validatorsResult.ok) {
@@ -64,7 +64,7 @@ export async function readCanonicalStorage(
     return config;
   }
 
-  const objects = await readObjects(resolvedProjectRoot, aictxRoot, validators);
+  const objects = await readObjects(resolvedProjectRoot, memoryRoot, validators);
 
   if (!objects.ok) {
     return objects;
@@ -84,7 +84,7 @@ export async function readCanonicalStorage(
 
   return ok({
     projectRoot: resolvedProjectRoot,
-    aictxRoot,
+    memoryRoot,
     config: config.data,
     objects: objects.data,
     relations: relations.data,
@@ -106,7 +106,7 @@ async function getValidators(
 async function readConfig(
   projectRoot: string,
   validators: CompiledSchemaValidators
-): Promise<Result<AictxConfig>> {
+): Promise<Result<MemoryConfig>> {
   const parsed = await readJsonFile(projectRoot, CONFIG_PATH);
 
   if (!parsed.ok) {
@@ -119,7 +119,7 @@ async function readConfig(
     return err(schemaValidationError(validation.errors));
   }
 
-  if (!isAictxConfig(parsed.data)) {
+  if (!isMemoryConfig(parsed.data)) {
     return schemaContractFailure(CONFIG_PATH, "Config does not match the storage reader contract.");
   }
 
@@ -128,10 +128,10 @@ async function readConfig(
 
 async function readObjects(
   projectRoot: string,
-  aictxRoot: string,
+  memoryRoot: string,
   validators: CompiledSchemaValidators
 ): Promise<Result<StoredMemoryObject[]>> {
-  const paths = await discoverCanonicalJson(projectRoot, ".aictx/memory/**/*.json");
+  const paths = await discoverCanonicalJson(projectRoot, ".memory/memory/**/*.json");
   const objects: StoredMemoryObject[] = [];
 
   for (const path of paths) {
@@ -151,7 +151,7 @@ async function readObjects(
       return schemaContractFailure(path, "Memory object does not match the storage reader contract.");
     }
 
-    const body = await readMarkdownBodyInsideRoot(aictxRoot, parsed.data.body_path);
+    const body = await readMarkdownBodyInsideRoot(memoryRoot, parsed.data.body_path);
 
     if (!body.ok) {
       return body;
@@ -159,7 +159,7 @@ async function readObjects(
 
     objects.push({
       path,
-      bodyPath: `.aictx/${parsed.data.body_path}`,
+      bodyPath: `.memory/${parsed.data.body_path}`,
       sidecar: parsed.data,
       body: body.data
     });
@@ -172,7 +172,7 @@ async function readRelations(
   projectRoot: string,
   validators: CompiledSchemaValidators
 ): Promise<Result<StoredMemoryRelation[]>> {
-  const paths = await discoverCanonicalJson(projectRoot, ".aictx/relations/**/*.json");
+  const paths = await discoverCanonicalJson(projectRoot, ".memory/relations/**/*.json");
   const relations: StoredMemoryRelation[] = [];
 
   for (const path of paths) {
@@ -286,7 +286,7 @@ async function readJsonFile(projectRoot: string, path: string): Promise<Result<u
     return ok(JSON.parse(contents.data) as unknown);
   } catch (error) {
     return err(
-      aictxError("AICtxInvalidJson", "Invalid JSON.", {
+      memoryError("MemoryInvalidJson", "Invalid JSON.", {
         path,
         message: messageFromUnknown(error)
       })
@@ -304,7 +304,7 @@ function parseJsonlLine(line: string, lineNumber: number): Result<unknown> {
 
 function invalidJsonl(message: string, line: number): Result<never> {
   return err(
-    aictxError("AICtxInvalidJsonl", message, {
+    memoryError("MemoryInvalidJsonl", message, {
       path: `${EVENTS_PATH}:${line}`,
       line
     })

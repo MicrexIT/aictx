@@ -40,7 +40,7 @@ describe("initProject", () => {
     }
 
     expect(result.meta.project_root).toBe(repo);
-    expect(result.meta.aictx_root).toBe(join(repo, ".aictx"));
+    expect(result.meta.memory_root).toBe(join(repo, ".memory"));
     expect(result.meta.git.available).toBe(true);
     expect(result.meta.git.branch).toBe("main");
     expect(result.meta.git.commit).toBe(commitBefore.trim());
@@ -53,39 +53,39 @@ describe("initProject", () => {
       expect.arrayContaining([
         "AGENTS.md",
         "CLAUDE.md",
-        ".aictx/config.json",
-        ".aictx/events.jsonl",
-        ".aictx/memory/project.md",
-        ".aictx/memory/project.json",
-        ".aictx/memory/architecture.md",
-        ".aictx/memory/architecture.json",
+        ".memory/config.json",
+        ".memory/events.jsonl",
+        ".memory/memory/project.md",
+        ".memory/memory/project.json",
+        ".memory/memory/architecture.md",
+        ".memory/memory/architecture.json",
         expect.stringMatching(
-          /^\.aictx\/relations\/project-aictx-init-billing-api-.+-related-to-architecture-current\.json$/
+          /^\.memory\/relations\/project-memory-init-billing-api-.+-related-to-architecture-current\.json$/
         ),
-        ".aictx/schema/config.schema.json"
+        ".memory/schema/config.schema.json"
       ])
     );
     expect(await git(repo, ["rev-parse", "HEAD"])).toBe(commitBefore);
     await expect(readFile(join(repo, ".gitignore"), "utf8")).resolves.toContain(
-      ".aictx/index/"
+      ".memory/index/"
     );
     await expect(readFile(join(repo, ".gitignore"), "utf8")).resolves.toContain(
-      ".aictx/context/"
+      ".memory/context/"
     );
     await expect(readFile(join(repo, ".gitignore"), "utf8")).resolves.toContain(
-      ".aictx/exports/"
+      ".memory/exports/"
     );
-    await expect(readFile(join(repo, ".gitignore"), "utf8")).resolves.toContain(".aictx/.lock");
-    await expect(access(join(repo, ".aictx", "memory", "gotchas"))).resolves.toBeUndefined();
-    await expect(access(join(repo, ".aictx", "memory", "workflows"))).resolves.toBeUndefined();
+    await expect(readFile(join(repo, ".gitignore"), "utf8")).resolves.toContain(".memory/.lock");
+    await expect(access(join(repo, ".memory", "memory", "gotchas"))).resolves.toBeUndefined();
+    await expect(access(join(repo, ".memory", "memory", "workflows"))).resolves.toBeUndefined();
     const agentsGuidance = await readFile(join(repo, "AGENTS.md"), "utf8");
     const claudeGuidance = await readFile(join(repo, "CLAUDE.md"), "utf8");
     for (const guidance of [agentsGuidance, claudeGuidance]) {
       expect(guidance).toContain(
         "After meaningful work, make a save/no-save decision."
       );
-      expect(guidance).toContain('aictx suggest --after-task "<task>" --json');
-      expect(guidance).toContain("aictx remember --stdin");
+      expect(guidance).toContain('memory suggest --after-task "<task>" --json');
+      expect(guidance).toContain("memory remember --stdin");
       expect(guidance).toContain("remember_memory({ task, memories, updates, stale, supersede, relations })");
       expect(guidance).toContain("save_memory_patch({ patch })");
       expect(guidance).toContain("Save durable decisions");
@@ -96,11 +96,11 @@ describe("initProject", () => {
       expect(guidance).toContain("updating existing memory, marking stale, superseding, or deleting");
       expect(guidance).toContain("Save nothing when there is no durable future value");
       expect(guidance).toContain("Do not save task diaries");
-      expect(guidance).toContain("Before finalizing, say whether Aictx memory changed");
+      expect(guidance).toContain("Before finalizing, say whether Memory changed");
       expect(guidance).toContain("Saved memory is active immediately");
       expect(guidance).toContain("asynchronous inspection is available");
       expect(guidance).toContain(
-        "`inspect_memory`, `aictx view`, `aictx diff`, Git tools, or MCP `diff_memory`"
+        "`inspect_memory`, `memory view`, `memory diff`, Git tools, or MCP `diff_memory`"
       );
       expect(guidance).not.toMatch(/install .*skill/i);
     }
@@ -117,10 +117,10 @@ describe("initProject", () => {
         }
       ],
       optional_skills: [
-        "integrations/codex/aictx/SKILL.md",
-        "integrations/claude/aictx/SKILL.md",
-        "integrations/cursor/aictx.mdc",
-        "integrations/cline/aictx.md"
+        "integrations/codex/memory/SKILL.md",
+        "integrations/claude/memory/SKILL.md",
+        "integrations/cursor/memory.mdc",
+        "integrations/cline/memory.md"
       ]
     });
 
@@ -133,7 +133,7 @@ describe("initProject", () => {
   });
 
   it("initializes valid storage outside Git in local mode", async () => {
-    const projectRoot = await createTempRoot("aictx-init-local-project-");
+    const projectRoot = await createTempRoot("memory-init-local-project-");
 
     const result = await initProject({
       cwd: projectRoot,
@@ -147,7 +147,7 @@ describe("initProject", () => {
 
     expect(result.meta).toEqual({
       project_root: projectRoot,
-      aictx_root: join(projectRoot, ".aictx"),
+      memory_root: join(projectRoot, ".memory"),
       git: {
         available: false,
         branch: null,
@@ -160,14 +160,14 @@ describe("initProject", () => {
     expect(result.data.gitignore_updated).toBe(false);
     expect(result.data.index_built).toBe(true);
     const nextSteps = result.data.next_steps.join("\n");
-    expect(nextSteps).toContain("aictx load");
-    expect(nextSteps).toContain("aictx suggest --bootstrap --patch");
-    expect(nextSteps).toContain("aictx save --file bootstrap-memory.json");
+    expect(nextSteps).toContain("memory load");
+    expect(nextSteps).toContain("memory suggest --bootstrap --patch");
+    expect(nextSteps).toContain("memory save --file bootstrap-memory.json");
     expect(nextSteps).toContain("save_memory_patch");
     expect(nextSteps).toContain(
-      "Saved memory is active immediately after Aictx validates and writes it. Inspect memory asynchronously with `inspect_memory`, `aictx view`, `aictx diff`, Git tools, or MCP `diff_memory` when available."
+      "Saved memory is active immediately after Memory validates and writes it. Inspect memory asynchronously with `inspect_memory`, `memory view`, `memory diff`, Git tools, or MCP `diff_memory` when available."
     );
-    expect(nextSteps).not.toContain("`aictx check`, and `aictx diff`");
+    expect(nextSteps).not.toContain("`memory check`, and `memory diff`");
     expect(nextSteps).toContain("Codex, Claude Code, Cursor, Cline");
 
     const validation = await validateProject(projectRoot);
@@ -180,7 +180,7 @@ describe("initProject", () => {
     const storage = await readCanonicalStorage(projectRoot);
     expect(storage.ok).toBe(true);
     if (storage.ok) {
-      expect(storage.data.config.project.id).toMatch(/^project\.aictx-init-local-project-/);
+      expect(storage.data.config.project.id).toMatch(/^project\.memory-init-local-project-/);
       expect(storage.data.objects.map((object) => object.sidecar.id).sort()).toEqual([
         "architecture.current",
         storage.data.config.project.id
@@ -189,7 +189,7 @@ describe("initProject", () => {
       const relation = storage.data.relations[0]?.relation;
       expect(relation).toEqual(
         expect.objectContaining({
-          id: expect.stringMatching(/^rel\.project-aictx-init-local-project-.+-related-to-architecture-current$/),
+          id: expect.stringMatching(/^rel\.project-memory-init-local-project-.+-related-to-architecture-current$/),
           from: storage.data.config.project.id,
           predicate: "related_to",
           to: "architecture.current",
@@ -215,15 +215,15 @@ describe("initProject", () => {
           updated_at: relation.updated_at
         })
       );
-      await expect(access(join(projectRoot, ".aictx", "memory", "gotchas"))).resolves.toBeUndefined();
-      await expect(access(join(projectRoot, ".aictx", "memory", "workflows"))).resolves.toBeUndefined();
+      await expect(access(join(projectRoot, ".memory", "memory", "gotchas"))).resolves.toBeUndefined();
+      await expect(access(join(projectRoot, ".memory", "memory", "workflows"))).resolves.toBeUndefined();
       expect(storage.data.events).toEqual([]);
       expect(storage.data.objects[0]?.sidecar.created_at).toBe(FIXED_TIMESTAMP);
     }
   });
 
   it("does not derive semantic project memory during init", async () => {
-    const projectRoot = await createTempRoot("aictx-init-no-semantic-bootstrap-");
+    const projectRoot = await createTempRoot("memory-init-no-semantic-bootstrap-");
     await writeProjectFile(
       projectRoot,
       "README.md",
@@ -246,10 +246,10 @@ describe("initProject", () => {
     });
 
     expect(result.ok).toBe(true);
-    await expect(readFile(join(projectRoot, ".aictx", "memory", "project.md"), "utf8")).resolves.not.toContain(
+    await expect(readFile(join(projectRoot, ".memory", "memory", "project.md"), "utf8")).resolves.not.toContain(
       "Stripe webhook processing"
     );
-    await expect(readFile(join(projectRoot, ".aictx", "memory", "architecture.md"), "utf8")).resolves.toBe(
+    await expect(readFile(join(projectRoot, ".memory", "memory", "architecture.md"), "utf8")).resolves.toBe(
       "# Current Architecture\n\nArchitecture memory starts here.\n"
     );
     const storage = await readCanonicalStorage(projectRoot);
@@ -263,7 +263,7 @@ describe("initProject", () => {
   });
 
   it("returns success with a warning when valid storage already exists", async () => {
-    const projectRoot = await createTempRoot("aictx-init-rerun-");
+    const projectRoot = await createTempRoot("memory-init-rerun-");
     const first = await initProject({
       cwd: projectRoot,
       clock: createFixedTestClock()
@@ -283,7 +283,7 @@ describe("initProject", () => {
       expect(second.data.index_built).toBe(true);
       expect(second.warnings).toEqual(
         expect.arrayContaining([
-          "Aictx is already initialized; existing valid storage was left unchanged."
+          "Memory is already initialized; existing valid storage was left unchanged."
         ])
       );
     }
@@ -320,7 +320,7 @@ describe("initProject", () => {
     }
     expect(defaultRerun.data.created).toBe(false);
     await expect(
-      access(join(repo, ".aictx", "memory", "notes", "branch-note.md"))
+      access(join(repo, ".memory", "memory", "notes", "branch-note.md"))
     ).resolves.toBeUndefined();
 
     const forced = await initProject({
@@ -335,7 +335,7 @@ describe("initProject", () => {
     }
     expect(forced.data.created).toBe(true);
     await expect(
-      access(join(repo, ".aictx", "memory", "notes", "branch-note.md"))
+      access(join(repo, ".memory", "memory", "notes", "branch-note.md"))
     ).rejects.toMatchObject({
       code: "ENOENT"
     });
@@ -351,9 +351,9 @@ describe("initProject", () => {
     }
   });
 
-  it("allows untracked first-run Aictx files during init", async () => {
+  it("allows untracked first-run Memory files during init", async () => {
     const repo = await createRepo("untracked-first-run");
-    await writeProjectFile(repo, ".aictx/scratch.txt", "local scratch\n");
+    await writeProjectFile(repo, ".memory/scratch.txt", "local scratch\n");
 
     const result = await initProject({
       cwd: repo,
@@ -364,13 +364,13 @@ describe("initProject", () => {
     if (result.ok) {
       expect(result.data.created).toBe(true);
     }
-    await expect(readFile(join(repo, ".aictx", "scratch.txt"), "utf8")).resolves.toBe(
+    await expect(readFile(join(repo, ".memory", "scratch.txt"), "utf8")).resolves.toBe(
       "local scratch\n"
     );
   });
 
   it("installs missing agent guidance when valid storage already exists", async () => {
-    const projectRoot = await createTempRoot("aictx-init-existing-guidance-");
+    const projectRoot = await createTempRoot("memory-init-existing-guidance-");
     const first = await initProject({
       cwd: projectRoot,
       clock: createFixedTestClock()
@@ -403,16 +403,16 @@ describe("initProject", () => {
   });
 
   it("appends or replaces marked agent guidance without duplicating blocks", async () => {
-    const projectRoot = await createTempRoot("aictx-init-guidance-update-");
+    const projectRoot = await createTempRoot("memory-init-guidance-update-");
     await writeFile(join(projectRoot, "AGENTS.md"), "# Existing instructions\n");
     await writeFile(
       join(projectRoot, "CLAUDE.md"),
       [
         "# Claude instructions",
         "",
-        "<!-- aictx-memory:start -->",
+        "<!-- memory:start -->",
         "old guidance",
-        "<!-- aictx-memory:end -->",
+        "<!-- memory:end -->",
         "",
         "Keep this line."
       ].join("\n")
@@ -443,16 +443,54 @@ describe("initProject", () => {
     const claude = await readFile(join(projectRoot, "CLAUDE.md"), "utf8");
 
     expect(agents).toContain("# Existing instructions");
-    expect(agents).toContain("<!-- aictx-memory:start -->");
+    expect(agents).toContain("<!-- memory:start -->");
     expect(agents).toContain("make a save/no-save decision");
     expect(claude).not.toContain("old guidance");
     expect(claude).toContain("Keep this line.");
-    expect(countOccurrences(claude, "<!-- aictx-memory:start -->")).toBe(1);
+    expect(countOccurrences(claude, "<!-- memory:start -->")).toBe(1);
+  });
+
+  it("replaces legacy aictx-memory marked guidance with memory guidance", async () => {
+    const projectRoot = await createTempRoot("memory-init-guidance-legacy-update-");
+    await writeFile(
+      join(projectRoot, "AGENTS.md"),
+      [
+        "# Existing instructions",
+        "",
+        "<!-- aictx-memory:start -->",
+        "old guidance",
+        "<!-- aictx-memory:end -->",
+        "",
+        "Keep this line."
+      ].join("\n")
+    );
+
+    const result = await initProject({
+      cwd: projectRoot,
+      clock: createFixedTestClock()
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+
+    expect(result.data.agent_guidance.targets[0]).toEqual({
+      path: "AGENTS.md",
+      status: "updated"
+    });
+
+    const agents = await readFile(join(projectRoot, "AGENTS.md"), "utf8");
+    expect(agents).not.toContain("aictx-memory");
+    expect(agents).not.toContain("old guidance");
+    expect(agents).toContain("<!-- memory:start -->");
+    expect(agents).toContain("Keep this line.");
+    expect(countOccurrences(agents, "<!-- memory:start -->")).toBe(1);
   });
 
   it("skips malformed marked agent guidance and reports a warning", async () => {
-    const projectRoot = await createTempRoot("aictx-init-guidance-malformed-");
-    await writeFile(join(projectRoot, "AGENTS.md"), "<!-- aictx-memory:start -->\n");
+    const projectRoot = await createTempRoot("memory-init-guidance-malformed-");
+    await writeFile(join(projectRoot, "AGENTS.md"), "<!-- memory:start -->\n");
 
     const result = await initProject({
       cwd: projectRoot,
@@ -476,19 +514,19 @@ describe("initProject", () => {
     ]);
     expect(result.warnings.join("\n")).toContain("AGENTS.md");
     await expect(readFile(join(projectRoot, "AGENTS.md"), "utf8")).resolves.toBe(
-      "<!-- aictx-memory:start -->\n"
+      "<!-- memory:start -->\n"
     );
   });
 
-  it("skips unmarked existing Aictx guidance instead of appending a duplicate block", async () => {
-    const projectRoot = await createTempRoot("aictx-init-guidance-unmarked-");
+  it("skips unmarked existing Memory guidance instead of appending a duplicate block", async () => {
+    const projectRoot = await createTempRoot("memory-init-guidance-unmarked-");
     await writeFile(
       join(projectRoot, "AGENTS.md"),
       [
         "# Existing instructions",
         "",
-        "Aictx project memory:",
-        "- Run `aictx load \"task\"` before coding.",
+        "Memory as project memory:",
+        "- Run `memory load \"task\"` before coding.",
         "- Use `save_memory_patch` after meaningful work."
       ].join("\n")
     );
@@ -516,8 +554,8 @@ describe("initProject", () => {
     expect(result.warnings.join("\n")).toContain("AGENTS.md");
 
     const agents = await readFile(join(projectRoot, "AGENTS.md"), "utf8");
-    expect(agents).toContain("Aictx project memory");
-    expect(agents).not.toContain("<!-- aictx-memory:start -->");
+    expect(agents).toContain("Memory as project memory");
+    expect(agents).not.toContain("<!-- memory:start -->");
   });
 
   it("returns success when existing storage has branch-scoped memory for the current branch", async () => {
@@ -551,16 +589,16 @@ describe("initProject", () => {
       expect(second.data.index_built).toBe(true);
       expect(second.warnings).toEqual(
         expect.arrayContaining([
-          "Aictx is already initialized; existing valid storage was left unchanged."
+          "Memory is already initialized; existing valid storage was left unchanged."
         ])
       );
     }
   });
 
-  it("returns AICtxAlreadyInitializedInvalid for invalid existing storage", async () => {
-    const projectRoot = await createTempRoot("aictx-init-invalid-");
-    await mkdir(join(projectRoot, ".aictx"), { recursive: true });
-    await writeFile(join(projectRoot, ".aictx", "config.json"), "{bad json");
+  it("returns MemoryAlreadyInitializedInvalid for invalid existing storage", async () => {
+    const projectRoot = await createTempRoot("memory-init-invalid-");
+    await mkdir(join(projectRoot, ".memory"), { recursive: true });
+    await writeFile(join(projectRoot, ".memory", "config.json"), "{bad json");
 
     const result = await initProject({
       cwd: projectRoot,
@@ -569,18 +607,18 @@ describe("initProject", () => {
 
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.error.code).toBe("AICtxAlreadyInitializedInvalid");
+      expect(result.error.code).toBe("MemoryAlreadyInitializedInvalid");
       expect(JSON.stringify(result.error.details)).toContain("issues");
     }
   });
 
   it("requires force before resetting tracked dirty invalid storage", async () => {
     const repo = await createRepo("force-invalid-reset");
-    await mkdir(join(repo, ".aictx"), { recursive: true });
-    await writeFile(join(repo, ".aictx", "config.json"), "{bad json");
-    await git(repo, ["add", ".aictx/config.json"]);
-    await git(repo, ["commit", "-m", "Add invalid Aictx storage"]);
-    await writeFile(join(repo, ".aictx", "config.json"), "{still bad json");
+    await mkdir(join(repo, ".memory"), { recursive: true });
+    await writeFile(join(repo, ".memory", "config.json"), "{bad json");
+    await git(repo, ["add", ".memory/config.json"]);
+    await git(repo, ["commit", "-m", "Add invalid Memory storage"]);
+    await writeFile(join(repo, ".memory", "config.json"), "{still bad json");
 
     const defaultResult = await initProject({
       cwd: repo,
@@ -589,8 +627,8 @@ describe("initProject", () => {
 
     expect(defaultResult.ok).toBe(false);
     if (!defaultResult.ok) {
-      expect(defaultResult.error.code).toBe("AICtxDirtyMemory");
-      expect(JSON.stringify(defaultResult.error.details)).toContain(".aictx/config.json");
+      expect(defaultResult.error.code).toBe("MemoryDirtyMemory");
+      expect(JSON.stringify(defaultResult.error.details)).toContain(".memory/config.json");
     }
 
     const forced = await initProject({
@@ -609,10 +647,10 @@ describe("initProject", () => {
 });
 
 async function createRepo(name: string): Promise<string> {
-  const repo = await createTempRoot(`aictx-init-${name}-`);
+  const repo = await createTempRoot(`memory-init-${name}-`);
   await git(repo, ["init", "--initial-branch=main"]);
   await git(repo, ["config", "user.email", "test@example.com"]);
-  await git(repo, ["config", "user.name", "Aictx Test"]);
+  await git(repo, ["config", "user.name", "Memory Test"]);
   await writeFile(join(repo, "README.md"), "# Test\n");
   await git(repo, ["add", "README.md"]);
   await git(repo, ["commit", "-m", "Initial commit"]);
@@ -649,10 +687,10 @@ async function writeBranchScopedMemory(
     content_hash: computeObjectContentHash(sidecarWithoutHash, body)
   };
 
-  await writeProjectFile(projectRoot, ".aictx/memory/notes/branch-note.md", body);
+  await writeProjectFile(projectRoot, ".memory/memory/notes/branch-note.md", body);
   await writeProjectFile(
     projectRoot,
-    ".aictx/memory/notes/branch-note.json",
+    ".memory/memory/notes/branch-note.json",
     stableJson(sidecar)
   );
 }

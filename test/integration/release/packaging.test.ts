@@ -83,8 +83,8 @@ afterEach(async () => {
 
 describe("release package", () => {
   it("packs required files and runs published binaries", async () => {
-    const packDestination = await createTempRoot("aictx-release-pack-");
-    const installRoot = await createTempRoot("aictx-release-install-");
+    const packDestination = await createTempRoot("memory-release-pack-");
+    const installRoot = await createTempRoot("memory-release-install-");
     const packageJson = parsePackageJson(await readFile(join(repoRoot, "package.json"), "utf8"));
     const packageVersion = requirePackageVersion(packageJson);
 
@@ -124,7 +124,7 @@ describe("release package", () => {
       type: "git",
       url: "git+https://github.com/aictx/memory.git"
     });
-    expect(packageJson.homepage).toBe("https://aictx.dev");
+    expect(packageJson.homepage).toBe("https://memory.aictx.dev");
     expect(packageJson.bugs).toEqual({
       url: "https://github.com/aictx/memory/issues"
     });
@@ -134,8 +134,8 @@ describe("release package", () => {
     expect(packageJson.license).toBe("MIT");
     expect(packageJson.engines?.node).toBe(">=22");
     expect(packageJson.bin).toEqual({
-      aictx: "dist/cli/main.js",
-      "aictx-mcp": "dist/mcp/server.js"
+      memory: "dist/cli/main.js",
+      "memory-mcp": "dist/mcp/server.js"
     });
     expect(packageJson.scripts?.build).toContain("pnpm build:viewer");
     expect(packageJson.scripts?.build).toContain("pnpm build:version");
@@ -180,27 +180,27 @@ describe("release package", () => {
     await expectSuccessfulCommand("pnpm", ["add", "--prefer-offline", pack.filename], installRoot);
     await expectInstalledMemoryDisciplineDocs(installRoot);
 
-    const viewerProjectRoot = await createTempRoot("aictx-release-viewer-project-");
+    const viewerProjectRoot = await createTempRoot("memory-release-viewer-project-");
     const init = await expectSuccessfulCommand(
-      installedBin("aictx", installRoot),
+      installedBin("memory", installRoot),
       ["init", "--json"],
       viewerProjectRoot
     );
 
     expect(init.stderr).toBe("");
 
-    const aictxHelp = await expectSuccessfulCommand(
-      installedBin("aictx", installRoot),
+    const memoryHelp = await expectSuccessfulCommand(
+      installedBin("memory", installRoot),
       ["--help"],
       installRoot
     );
 
-    expect(aictxHelp.stderr).toBe("");
-    expect(aictxHelp.stdout).toContain("Usage: aictx");
-    expect(aictxHelp.stdout).toContain("Aictx project memory CLI");
+    expect(memoryHelp.stderr).toBe("");
+    expect(memoryHelp.stdout).toContain("Usage: memory");
+    expect(memoryHelp.stdout).toContain("Local project memory CLI");
 
     const initHelp = await expectSuccessfulCommand(
-      installedBin("aictx", installRoot),
+      installedBin("memory", installRoot),
       ["init", "--help"],
       installRoot
     );
@@ -208,27 +208,27 @@ describe("release package", () => {
     expect(initHelp.stderr).toBe("");
     expect(initHelp.stdout).toContain("--force");
 
-    const aictxVersion = await expectSuccessfulCommand(
-      installedBin("aictx", installRoot),
+    const memoryVersion = await expectSuccessfulCommand(
+      installedBin("memory", installRoot),
       ["--version"],
       installRoot
     );
 
-    expect(aictxVersion.stderr).toBe("");
-    expect(aictxVersion.stdout).toBe(`${packageVersion}\n`);
+    expect(memoryVersion.stderr).toBe("");
+    expect(memoryVersion.stdout).toBe(`${packageVersion}\n`);
 
     const docsList = await expectSuccessfulCommand(
-      installedBin("aictx", installRoot),
+      installedBin("memory", installRoot),
       ["docs"],
       installRoot
     );
 
     expect(docsList.stderr).toBe("");
-    expect(docsList.stdout).toContain("Aictx docs: https://docs.aictx.dev/");
+    expect(docsList.stdout).toContain("Memory docs: https://docs.aictx.dev/");
     expect(docsList.stdout).toContain("- getting-started:");
 
     const docsTopic = await expectSuccessfulCommand(
-      installedBin("aictx", installRoot),
+      installedBin("memory", installRoot),
       ["docs", "agent-integration"],
       installRoot
     );
@@ -251,7 +251,7 @@ describe("release package", () => {
     try {
       await expect(started.client.ping()).resolves.toEqual({});
       expect(started.client.getServerVersion()).toMatchObject({
-        name: "aictx-mcp",
+        name: "memory-mcp",
         version: packageVersion
       });
     } finally {
@@ -273,6 +273,7 @@ const requiredPackedPaths = [
   "dist/schemas/object.schema.json",
   "dist/schemas/patch.schema.json",
   "dist/schemas/relation.schema.json",
+  "dist/viewer/favicon.ico",
   "dist/viewer/index.html",
   "docs/src/content/docs/agent-integration.md",
   "docs/src/content/docs/agent-recipes.md",
@@ -284,27 +285,27 @@ const requiredPackedPaths = [
   "docs/src/content/docs/mcp.md",
   "docs/src/content/docs/plugin-publishing.md",
   "docs/src/content/docs/reference.md",
-  "docs/src/content/docs/specializing-aictx.md",
+  "docs/src/content/docs/specializing-memory.md",
   "docs/src/content/docs/troubleshooting.md",
   "docs/src/content/docs/viewer.md",
   "docs/src/content/docs/wiki-workflow.md",
   "integrations/templates/agent-guidance.md",
-  "integrations/codex/aictx/SKILL.md",
-  "integrations/codex/skills/aictx-memory/SKILL.md",
-  "integrations/codex/skills/aictx-memory/LICENSE.txt",
-  "integrations/codex/plugins/aictx-memory/.codex-plugin/plugin.json",
-  "integrations/codex/plugins/aictx-memory/LICENSE",
-  "integrations/codex/plugins/aictx-memory/README.md",
-  "integrations/codex/plugins/aictx-memory/skills/aictx-memory/SKILL.md",
-  "integrations/claude/aictx/SKILL.md",
-  "integrations/claude/plugins/aictx-memory/.claude-plugin/plugin.json",
-  "integrations/claude/plugins/aictx-memory/LICENSE",
-  "integrations/claude/plugins/aictx-memory/README.md",
-  "integrations/claude/plugins/aictx-memory/skills/aictx-memory/SKILL.md",
-  "integrations/claude/aictx.md",
-  "integrations/cursor/aictx.mdc",
-  "integrations/cline/aictx.md",
-  "integrations/generic/aictx-agent-instructions.md"
+  "integrations/codex/memory/SKILL.md",
+  "integrations/codex/skills/memory/SKILL.md",
+  "integrations/codex/skills/memory/LICENSE.txt",
+  "integrations/codex/plugins/memory/.codex-plugin/plugin.json",
+  "integrations/codex/plugins/memory/LICENSE",
+  "integrations/codex/plugins/memory/README.md",
+  "integrations/codex/plugins/memory/skills/memory/SKILL.md",
+  "integrations/claude/memory/SKILL.md",
+  "integrations/claude/plugins/memory/.claude-plugin/plugin.json",
+  "integrations/claude/plugins/memory/LICENSE",
+  "integrations/claude/plugins/memory/README.md",
+  "integrations/claude/plugins/memory/skills/memory/SKILL.md",
+  "integrations/claude/memory.md",
+  "integrations/cursor/memory.mdc",
+  "integrations/cline/memory.md",
+  "integrations/generic/memory-agent-instructions.md"
 ];
 
 const forbiddenPackedPaths = [
@@ -345,7 +346,7 @@ const bundledPublicDocsPaths = [
   "docs/src/content/docs/mcp.md",
   "docs/src/content/docs/agent-recipes.md",
   "docs/src/content/docs/reference.md",
-  "docs/src/content/docs/specializing-aictx.md",
+  "docs/src/content/docs/specializing-memory.md",
   "docs/src/content/docs/troubleshooting.md",
   "docs/src/content/docs/viewer.md",
   "docs/src/content/docs/wiki-workflow.md"
@@ -353,15 +354,15 @@ const bundledPublicDocsPaths = [
 
 const generatedGuidancePaths = [
   "integrations/templates/agent-guidance.md",
-  "integrations/codex/aictx/SKILL.md",
-  "integrations/codex/skills/aictx-memory/SKILL.md",
-  "integrations/codex/plugins/aictx-memory/skills/aictx-memory/SKILL.md",
-  "integrations/claude/aictx/SKILL.md",
-  "integrations/claude/plugins/aictx-memory/skills/aictx-memory/SKILL.md",
-  "integrations/claude/aictx.md",
-  "integrations/cursor/aictx.mdc",
-  "integrations/cline/aictx.md",
-  "integrations/generic/aictx-agent-instructions.md"
+  "integrations/codex/memory/SKILL.md",
+  "integrations/codex/skills/memory/SKILL.md",
+  "integrations/codex/plugins/memory/skills/memory/SKILL.md",
+  "integrations/claude/memory/SKILL.md",
+  "integrations/claude/plugins/memory/skills/memory/SKILL.md",
+  "integrations/claude/memory.md",
+  "integrations/cursor/memory.mdc",
+  "integrations/cline/memory.md",
+  "integrations/generic/memory-agent-instructions.md"
 ] as const;
 
 const forbiddenMcpToolNames = [
@@ -382,6 +383,7 @@ async function ensureBuiltPackageOutput(packageVersion: string): Promise<void> {
     await Promise.all([
       readFile(join(repoRoot, "dist", "cli", "main.js"), "utf8"),
       readFile(join(repoRoot, "dist", "mcp", "server.js"), "utf8"),
+      readFile(join(repoRoot, "dist", "viewer", "favicon.ico")),
       readFile(join(repoRoot, "dist", "viewer", "index.html"), "utf8")
     ]);
     const version = await expectSuccessfulCommand(
@@ -404,11 +406,12 @@ async function expectBuiltPublicDocs(): Promise<void> {
   await expectSuccessfulCommand("pnpm", ["build:docs"], repoRoot);
   await expect(
     readFile(join(repoRoot, "docs", "dist", "agent-recipes", "index.html"), "utf8")
-  ).resolves.toContain("Agent recipes");
+  ).resolves.toContain("AI coding agent memory recipes");
 
   for (const filename of ["llms-small.txt", "llms-full.txt"] as const) {
     const content = await readFile(join(repoRoot, "docs", "dist", filename), "utf8");
 
+    expect(content).toContain("brew install aictx/tap/memory");
     expect(content).toContain("npm install -g @aictx/memory");
     expect(content).not.toMatch(/^npm install -g @aictx\/memory@/m);
   }
@@ -488,8 +491,8 @@ function requirePackageVersion(packageJson: PackageJson): string {
 }
 
 async function expectCliSymlinkRuns(packageVersion: string): Promise<void> {
-  const binRoot = await createTempRoot("aictx-release-bin-symlink-");
-  const binPath = join(binRoot, executableName("aictx"));
+  const binRoot = await createTempRoot("memory-release-bin-symlink-");
+  const binPath = join(binRoot, executableName("memory"));
 
   await symlink(join(repoRoot, "dist", "cli", "main.js"), binPath);
 
@@ -547,7 +550,7 @@ async function expectInstalledMemoryDisciplineDocs(installRoot: string): Promise
     "docs/src/content/docs/agent-integration.md"
   );
 
-  expect(agentIntegration).toContain("aictx remember --stdin");
+  expect(agentIntegration).toContain("memory remember --stdin");
   expect(agentIntegration).toContain("Save nothing when the task produced no durable future value.");
 
   for (const relativePath of generatedGuidancePaths) {
@@ -558,8 +561,8 @@ async function expectInstalledMemoryDisciplineDocs(installRoot: string): Promise
 }
 
 function expectGeneratedGuidanceContent(content: string): void {
-  expect(content).toContain("aictx remember --stdin");
-  expect(content).toContain('aictx suggest --after-task "<task>" --json');
+  expect(content).toContain("memory remember --stdin");
+  expect(content).toContain('memory suggest --after-task "<task>" --json');
   expect(content).toContain("recommended_actions");
   expect(content).toContain("remember_template");
   expect(content).toContain("`gotcha`");
@@ -570,7 +573,7 @@ function expectGeneratedGuidanceContent(content: string): void {
   }
 
   expect(
-    /whether Aictx memory changed/i.test(content) ||
+    /whether Memory changed/i.test(content) ||
       /inspect(?:ion)?[\s\S]{0,40}asynchron/i.test(content) ||
       /async inspection/i.test(content)
   ).toBe(true);
@@ -589,7 +592,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 async function startInstalledMcpClient(cwd: string): Promise<StartedMcpClient> {
   const transport = new StdioClientTransport({
-    command: installedBin("aictx-mcp", cwd),
+    command: installedBin("memory-mcp", cwd),
     cwd,
     stderr: "pipe"
   });
@@ -604,7 +607,7 @@ async function startInstalledMcpClient(cwd: string): Promise<StartedMcpClient> {
   }
 
   const client = new Client({
-    name: "aictx-release-test-client",
+    name: "memory-release-test-client",
     version: "0.0.0"
   });
 
@@ -623,7 +626,7 @@ async function startInstalledViewerProcess(
   installRoot: string,
   cwd: string
 ): Promise<StartedViewerProcess> {
-  const child = spawn(installedBin("aictx", installRoot), ["view", "--json"], {
+  const child = spawn(installedBin("memory", installRoot), ["view", "--json"], {
     cwd,
     stdio: ["ignore", "pipe", "pipe"]
   });
@@ -803,7 +806,7 @@ function isViewerStartupEnvelope(value: unknown): value is ViewerStartupEnvelope
   );
 }
 
-function installedBin(name: "aictx" | "aictx-mcp", installRoot: string): string {
+function installedBin(name: "memory" | "memory-mcp", installRoot: string): string {
   return join(installRoot, "node_modules", ".bin", executableName(name));
 }
 

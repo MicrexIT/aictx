@@ -2,7 +2,7 @@ import { lstat } from "node:fs/promises";
 
 import type { Clock } from "../core/clock.js";
 import { systemClock } from "../core/clock.js";
-import { aictxError, type JsonValue } from "../core/errors.js";
+import { memoryError, type JsonValue } from "../core/errors.js";
 import { err, ok, type Result } from "../core/result.js";
 import type { GitState, ObjectId, RelationId, ValidationIssue } from "../core/types.js";
 import type { StoredMemoryEvent } from "../storage/events.js";
@@ -30,7 +30,7 @@ export interface IncrementalIndexTouchedChanges {
 
 export interface IncrementalIndexUpdateOptions {
   projectRoot: string;
-  aictxRoot: string;
+  memoryRoot: string;
   touched: IncrementalIndexTouchedChanges;
   clock?: Clock;
   git?: Pick<GitState, "available" | "branch" | "commit">;
@@ -83,8 +83,8 @@ export async function updateIndexIncrementally(
 
   if (!validation.valid) {
     return err(
-      aictxError(
-        "AICtxIndexUnavailable",
+      memoryError(
+        "MemoryIndexUnavailable",
         "Canonical files are invalid; SQLite index was not updated.",
         validationIssuesDetails(validation.errors)
       ),
@@ -96,7 +96,7 @@ export async function updateIndexIncrementally(
 
   if (!storage.ok) {
     return err(
-      aictxError("AICtxIndexUnavailable", "Canonical files could not be read for indexing.", {
+      memoryError("MemoryIndexUnavailable", "Canonical files could not be read for indexing.", {
         cause: errorToJson(storage.error)
       }),
       [...validationWarnings, ...storage.warnings]
@@ -107,7 +107,7 @@ export async function updateIndexIncrementally(
     return ok(emptyUpdateData(), validationWarnings);
   }
 
-  const databaseExists = await existingDatabaseCanBeUpdated(options.aictxRoot);
+  const databaseExists = await existingDatabaseCanBeUpdated(options.memoryRoot);
 
   if (!databaseExists.ok) {
     return fallbackToFullRebuild({
@@ -118,7 +118,7 @@ export async function updateIndexIncrementally(
     });
   }
 
-  const connection = await openIndexDatabase({ aictxRoot: options.aictxRoot });
+  const connection = await openIndexDatabase({ memoryRoot: options.memoryRoot });
 
   if (!connection.ok) {
     return fallbackToFullRebuild({
@@ -169,8 +169,8 @@ export async function updateIndexAfterCanonicalWrite(
   ]);
 }
 
-async function existingDatabaseCanBeUpdated(aictxRoot: string): Promise<Result<void>> {
-  const databasePath = await resolveIndexDatabasePath(aictxRoot);
+async function existingDatabaseCanBeUpdated(memoryRoot: string): Promise<Result<void>> {
+  const databasePath = await resolveIndexDatabasePath(memoryRoot);
 
   if (!databasePath.ok) {
     return indexUnavailable("SQLite index database path could not be resolved.", {
@@ -693,7 +693,7 @@ async function fallbackToFullRebuild(options: {
 }): Promise<Result<IncrementalIndexUpdateData>> {
   const rebuilt = await rebuildIndex({
     projectRoot: options.options.projectRoot,
-    aictxRoot: options.options.aictxRoot,
+    memoryRoot: options.options.memoryRoot,
     clock: options.clock,
     ...(options.options.git === undefined ? {} : { git: options.options.git })
   });
@@ -831,7 +831,7 @@ function normalizeProjectFileReference(value: string): string | null {
     normalized.includes("/../") ||
     normalized.includes("://") ||
     normalized.includes("\0") ||
-    normalized.startsWith(".aictx/")
+    normalized.startsWith(".memory/")
   ) {
     return null;
   }
@@ -902,7 +902,7 @@ function warningsFromValidation(issues: readonly ValidationIssue[]): string[] {
 }
 
 function indexUnavailable<T>(message: string, details: JsonValue): Result<T> {
-  return err(aictxError("AICtxIndexUnavailable", message, details));
+  return err(memoryError("MemoryIndexUnavailable", message, details));
 }
 
 function errorToJson(error: { code: string; message: string; details?: JsonValue }): JsonValue {

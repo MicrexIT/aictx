@@ -37,7 +37,7 @@ const HOST_ADAPTER_PROFILES = {
   "local-mcp": {
     id: "local-mcp",
     status: "active",
-    description: "Default local MCP profile with Aictx-specific tool names.",
+    description: "Default local MCP profile with Memory-specific tool names.",
     tools: [
       {
         toolName: "load_memory",
@@ -92,7 +92,7 @@ export function selectHostAdapterProfile(profileId?: string): HostAdapterProfile
 
   if (!isHostAdapterProfileId(resolvedProfileId)) {
     throw new Error(
-      `Unsupported Aictx host adapter profile "${resolvedProfileId}". Supported profiles: ${HOST_ADAPTER_PROFILE_IDS.join(", ")}.`
+      `Unsupported Memory host adapter profile "${resolvedProfileId}". Supported profiles: ${HOST_ADAPTER_PROFILE_IDS.join(", ")}.`
     );
   }
 

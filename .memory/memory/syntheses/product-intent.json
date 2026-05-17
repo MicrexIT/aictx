@@ -1,0 +1,54 @@
+{
+  "body_path": "memory/syntheses/product-intent.md",
+  "content_hash": "sha256:acfe10f4ee839e17056bb5ab6eb11e991c7b5220533a561def5f0cf627fcd3b1",
+  "created_at": "2026-05-16T18:52:44+02:00",
+  "evidence": [
+    {
+      "id": "site/src/pages/index.astro",
+      "kind": "file"
+    },
+    {
+      "id": "site/src/layouts/BaseLayout.astro",
+      "kind": "file"
+    },
+    {
+      "id": "site/src/seo.ts",
+      "kind": "file"
+    },
+    {
+      "id": "README.md",
+      "kind": "file"
+    },
+    {
+      "id": "docs/src/content/docs/index.md",
+      "kind": "file"
+    }
+  ],
+  "facets": {
+    "category": "product-intent",
+    "load_modes": [
+      "coding",
+      "architecture",
+      "onboarding"
+    ]
+  },
+  "id": "synthesis.product-intent",
+  "scope": {
+    "branch": null,
+    "kind": "project",
+    "project": "project.memory",
+    "task": null
+  },
+  "source": {
+    "kind": "cli",
+    "task": "Proposed bootstrap memory patch from deterministic repository analysis"
+  },
+  "status": "active",
+  "tags": [
+    "synthesis",
+    "product-intent"
+  ],
+  "title": "Product intent",
+  "type": "synthesis",
+  "updated_at": "2026-05-17T10:06:20+02:00"
+}

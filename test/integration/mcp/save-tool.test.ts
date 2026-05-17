@@ -14,7 +14,7 @@ import { main, type CliOutputWriter } from "../../../src/cli/main.js";
 import { runSubprocess } from "../../../src/core/subprocess.js";
 import { readCanonicalStorage } from "../../../src/storage/read.js";
 import {
-  backupParityAictxRoot,
+  backupParityMemoryRoot,
   cleanupParityTempRoots,
   createInitializedParityProject,
   createParityNotePatch,
@@ -22,7 +22,7 @@ import {
   parseParityCliEnvelope,
   parseParityToolEnvelope,
   readParityCanonicalSnapshot,
-  restoreParityAictxRoot,
+  restoreParityMemoryRoot,
   runParityCli,
   startParityMcpClient
 } from "./parity-fixtures.js";
@@ -95,9 +95,9 @@ afterEach(async () => {
   await cleanupParityTempRoots();
 });
 
-describe("aictx MCP save_memory_patch tool", () => {
+describe("memory MCP save_memory_patch tool", () => {
   it("exposes only the normalized v1 MCP tool set", async () => {
-    const projectRoot = await createProjectRoot("aictx-mcp-save-tools-");
+    const projectRoot = await createProjectRoot("memory-mcp-save-tools-");
     const started = await startMcpClient(projectRoot);
 
     try {
@@ -146,7 +146,7 @@ describe("aictx MCP save_memory_patch tool", () => {
   });
 
   it("advertises the v4 structured patch shape", async () => {
-    const projectRoot = await createProjectRoot("aictx-mcp-save-schema-");
+    const projectRoot = await createProjectRoot("memory-mcp-save-schema-");
     const started = await startMcpClient(projectRoot);
 
     try {
@@ -171,8 +171,8 @@ describe("aictx MCP save_memory_patch tool", () => {
   });
 
   it("remembers intent-first memory through globally targeted MCP writes", async () => {
-    const serverRoot = await createProjectRoot("aictx-mcp-remember-server-");
-    const projectRoot = await createInitializedProject("aictx-mcp-remember-project-");
+    const serverRoot = await createProjectRoot("memory-mcp-remember-server-");
+    const projectRoot = await createInitializedProject("memory-mcp-remember-project-");
     const started = await startMcpClient(serverRoot);
 
     try {
@@ -228,7 +228,7 @@ describe("aictx MCP save_memory_patch tool", () => {
   });
 
   it("shares write serialization between remember_memory and save_memory_patch", async () => {
-    const projectRoot = await createInitializedProject("aictx-mcp-remember-queue-");
+    const projectRoot = await createInitializedProject("memory-mcp-remember-queue-");
     const started = await startMcpClient(projectRoot);
 
     try {
@@ -283,14 +283,14 @@ describe("aictx MCP save_memory_patch tool", () => {
       "MCP shared save note",
       "CLI and MCP save should write equivalent canonical memory."
     );
-    const cliStdinProject = await createInitializedProject("aictx-mcp-save-cli-stdin-");
-    const cliFileProject = await createInitializedProject("aictx-mcp-save-cli-file-");
-    const mcpProject = await createInitializedProject("aictx-mcp-save-mcp-");
+    const cliStdinProject = await createInitializedProject("memory-mcp-save-cli-stdin-");
+    const cliFileProject = await createInitializedProject("memory-mcp-save-cli-file-");
+    const mcpProject = await createInitializedProject("memory-mcp-save-mcp-");
     const started = await startMcpClient(mcpProject);
 
     try {
       const cliStdin = await runCli(
-        ["node", "aictx", "save", "--stdin", "--json"],
+        ["node", "memory", "save", "--stdin", "--json"],
         cliStdinProject,
         {
           stdin: Readable.from([JSON.stringify(patch)])
@@ -298,7 +298,7 @@ describe("aictx MCP save_memory_patch tool", () => {
       );
       await writeFile(join(cliFileProject, "patch.json"), JSON.stringify(patch), "utf8");
       const cliFile = await runCli(
-        ["node", "aictx", "save", "--file", "patch.json", "--json"],
+        ["node", "memory", "save", "--file", "patch.json", "--json"],
         cliFileProject
       );
       const mcp = await started.client.callTool({
@@ -315,9 +315,9 @@ describe("aictx MCP save_memory_patch tool", () => {
       expect(mcpEnvelope.data).toEqual(cliStdinEnvelope.data);
       expect(mcpEnvelope.data).toEqual({
         files_changed: [
-          ".aictx/events.jsonl",
-          ".aictx/memory/notes/mcp-shared-save-note.json",
-          ".aictx/memory/notes/mcp-shared-save-note.md"
+          ".memory/events.jsonl",
+          ".memory/memory/notes/mcp-shared-save-note.json",
+          ".memory/memory/notes/mcp-shared-save-note.md"
         ],
         memory_created: ["note.mcp-shared-save-note"],
         memory_updated: [],
@@ -344,9 +344,9 @@ describe("aictx MCP save_memory_patch tool", () => {
   });
 
   it("keeps globally targeted save_memory_patch envelopes in parity with CLI stdin", async () => {
-    const serverRoot = await createParityTempRoot("aictx-mcp-save-parity-server-");
-    const projectRoot = await createInitializedParityProject("aictx-mcp-save-parity-");
-    const initialSnapshot = await backupParityAictxRoot(projectRoot);
+    const serverRoot = await createParityTempRoot("memory-mcp-save-parity-server-");
+    const projectRoot = await createInitializedParityProject("memory-mcp-save-parity-");
+    const initialSnapshot = await backupParityMemoryRoot(projectRoot);
     const patch = createParityNotePatch(
       "Global parity save note",
       "Global project_root save should match CLI stdin."
@@ -355,13 +355,13 @@ describe("aictx MCP save_memory_patch tool", () => {
 
     try {
       const cli = parseParityCliEnvelope<SaveEnvelope>(
-        await runParityCli(["node", "aictx", "save", "--stdin", "--json"], projectRoot, {
+        await runParityCli(["node", "memory", "save", "--stdin", "--json"], projectRoot, {
           stdin: Readable.from([JSON.stringify(patch)])
         })
       );
       const cliSnapshot = await readParityCanonicalSnapshot(projectRoot);
 
-      await restoreParityAictxRoot(projectRoot, initialSnapshot);
+      await restoreParityMemoryRoot(projectRoot, initialSnapshot);
 
       const mcp = parseParityToolEnvelope<SaveEnvelope>(
         await started.client.callTool({
@@ -383,7 +383,7 @@ describe("aictx MCP save_memory_patch tool", () => {
   });
 
   it("saves object facets and object evidence through MCP", async () => {
-    const projectRoot = await createInitializedProject("aictx-mcp-save-facets-");
+    const projectRoot = await createInitializedProject("memory-mcp-save-facets-");
     const started = await startMcpClient(projectRoot);
 
     try {
@@ -427,7 +427,7 @@ describe("aictx MCP save_memory_patch tool", () => {
   });
 
   it("saves source origin through MCP remember and patch contracts", async () => {
-    const projectRoot = await createInitializedProject("aictx-mcp-save-origin-");
+    const projectRoot = await createInitializedProject("memory-mcp-save-origin-");
     const started = await startMcpClient(projectRoot);
 
     try {
@@ -496,7 +496,7 @@ describe("aictx MCP save_memory_patch tool", () => {
   });
 
   it("serializes concurrent MCP writes or returns lock errors", async () => {
-    const projectRoot = await createInitializedProject("aictx-mcp-save-concurrent-");
+    const projectRoot = await createInitializedProject("memory-mcp-save-concurrent-");
     const started = await startMcpClient(projectRoot);
 
     try {
@@ -520,7 +520,7 @@ describe("aictx MCP save_memory_patch tool", () => {
       const successes = envelopes.filter(isSaveSuccess);
       const lockFailures = envelopes.filter(
         (envelope): envelope is SaveErrorEnvelope =>
-          !envelope.ok && envelope.error.code === "AICtxLockBusy"
+          !envelope.ok && envelope.error.code === "MemoryLockBusy"
       );
 
       expect(successes.length + lockFailures.length).toBe(2);
@@ -538,7 +538,7 @@ describe("aictx MCP save_memory_patch tool", () => {
         );
       }
 
-      await expect(readFile(join(projectRoot, ".aictx", ".lock"), "utf8")).rejects.toMatchObject({
+      await expect(readFile(join(projectRoot, ".memory", ".lock"), "utf8")).rejects.toMatchObject({
         code: "ENOENT"
       });
     } finally {
@@ -549,7 +549,7 @@ describe("aictx MCP save_memory_patch tool", () => {
   });
 
   it("does not create a Git commit", async () => {
-    const repo = await createInitializedGitProject("aictx-mcp-save-git-");
+    const repo = await createInitializedGitProject("memory-mcp-save-git-");
     const commitBefore = (await git(repo, ["rev-parse", "HEAD"])).trim();
     const started = await startMcpClient(repo);
 
@@ -568,10 +568,10 @@ describe("aictx MCP save_memory_patch tool", () => {
       expect(envelope.meta.git.dirty).toBe(true);
       expect((await git(repo, ["rev-parse", "HEAD"])).trim()).toBe(commitBefore);
 
-      const status = await git(repo, ["status", "--porcelain=v1", "-uall", "--", ".aictx"]);
-      expect(status).toContain(".aictx/events.jsonl");
-      expect(status).toContain(".aictx/memory/notes/mcp-git-save-note.md");
-      expect(status).toContain(".aictx/memory/notes/mcp-git-save-note.json");
+      const status = await git(repo, ["status", "--porcelain=v1", "-uall", "--", ".memory"]);
+      expect(status).toContain(".memory/events.jsonl");
+      expect(status).toContain(".memory/memory/notes/mcp-git-save-note.md");
+      expect(status).toContain(".memory/memory/notes/mcp-git-save-note.json");
     } finally {
       await started.close();
     }
@@ -580,7 +580,7 @@ describe("aictx MCP save_memory_patch tool", () => {
   });
 
   it("rejects invalid MCP input before service execution", async () => {
-    const projectRoot = await createProjectRoot("aictx-mcp-save-invalid-");
+    const projectRoot = await createProjectRoot("memory-mcp-save-invalid-");
     const started = await startMcpClient(projectRoot);
 
     try {
@@ -657,12 +657,12 @@ describe("aictx MCP save_memory_patch tool", () => {
   });
 
   it("returns save_memory_patch app-error envelopes matching CLI save JSON", async () => {
-    const projectRoot = await createInitializedProject("aictx-mcp-save-error-parity-");
+    const projectRoot = await createInitializedProject("memory-mcp-save-error-parity-");
     const patch = createMissingRelationPatch();
     const started = await startMcpClient(projectRoot);
 
     try {
-      const cli = await runCli(["node", "aictx", "save", "--stdin", "--json"], projectRoot, {
+      const cli = await runCli(["node", "memory", "save", "--stdin", "--json"], projectRoot, {
         stdin: Readable.from([JSON.stringify(patch)])
       });
       const mcp = await started.client.callTool({
@@ -675,7 +675,7 @@ describe("aictx MCP save_memory_patch tool", () => {
       const mcpEnvelope = parseToolEnvelope<SaveErrorEnvelope>(mcp);
 
       expect(mcpEnvelope).toEqual(cliEnvelope);
-      expect(mcpEnvelope.error.code).toBe("AICtxObjectNotFound");
+      expect(mcpEnvelope.error.code).toBe("MemoryObjectNotFound");
     } finally {
       await started.close();
     }
@@ -702,7 +702,7 @@ async function startMcpClient(cwd: string): Promise<StartedMcpClient> {
   }
 
   const client = new Client({
-    name: "aictx-mcp-save-tool-test-client",
+    name: "memory-mcp-save-tool-test-client",
     version: "0.0.0"
   });
 
@@ -719,7 +719,7 @@ async function startMcpClient(cwd: string): Promise<StartedMcpClient> {
 
 async function createInitializedProject(prefix: string): Promise<string> {
   const projectRoot = await createProjectRoot(prefix);
-  const output = await runCli(["node", "aictx", "init", "--json"], projectRoot);
+  const output = await runCli(["node", "memory", "init", "--json"], projectRoot);
 
   expect(output.exitCode).toBe(0);
   expect(output.stderr).toBe("");
@@ -729,13 +729,13 @@ async function createInitializedProject(prefix: string): Promise<string> {
 
 async function createInitializedGitProject(prefix: string): Promise<string> {
   const repo = await createRepo(prefix);
-  const output = await runCli(["node", "aictx", "init", "--json"], repo);
+  const output = await runCli(["node", "memory", "init", "--json"], repo);
 
   expect(output.exitCode).toBe(0);
   expect(output.stderr).toBe("");
 
-  await git(repo, ["add", ".gitignore", ".aictx"]);
-  await git(repo, ["commit", "-m", "Initialize aictx"]);
+  await git(repo, ["add", ".gitignore", ".memory"]);
+  await git(repo, ["commit", "-m", "Initialize memory"]);
 
   return repo;
 }
@@ -744,7 +744,7 @@ async function createRepo(prefix: string): Promise<string> {
   const repo = await createProjectRoot(prefix);
   await git(repo, ["init", "--initial-branch=main"]);
   await git(repo, ["config", "user.email", "test@example.com"]);
-  await git(repo, ["config", "user.name", "Aictx Test"]);
+  await git(repo, ["config", "user.name", "Memory Test"]);
   await writeFile(join(repo, "README.md"), "# Test\n", "utf8");
   await git(repo, ["add", "README.md"]);
   await git(repo, ["commit", "-m", "Initial commit"]);
@@ -917,10 +917,10 @@ async function readMemoryIds(projectRoot: string): Promise<string[]> {
 
 async function readCanonicalSnapshot(projectRoot: string): Promise<Record<string, unknown>> {
   const paths = (
-    await fg(".aictx/**/*.{json,jsonl,md}", {
+    await fg(".memory/**/*.{json,jsonl,md}", {
       cwd: projectRoot,
       dot: true,
-      ignore: [".aictx/index/**", ".aictx/context/**", ".aictx/exports/**", ".aictx/.lock"],
+      ignore: [".memory/index/**", ".memory/context/**", ".memory/exports/**", ".memory/.lock"],
       onlyFiles: true,
       unique: true
     })

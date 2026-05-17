@@ -3,7 +3,7 @@ import { join, resolve } from "node:path";
 
 import type { Clock } from "./clock.js";
 import { systemClock } from "./clock.js";
-import { aictxError, type JsonValue } from "./errors.js";
+import { memoryError, type JsonValue } from "./errors.js";
 import { stableJsonStringify } from "./fs.js";
 import { err, ok, type Result } from "./result.js";
 import type { IsoDateTime } from "./types.js";
@@ -12,11 +12,11 @@ const LOCK_FILENAME = ".lock";
 const STALE_LOCK_THRESHOLD_MS = 60 * 60 * 1000;
 
 export interface ProjectLockOptions {
-  aictxRoot: string;
+  memoryRoot: string;
   operation: string;
   clock?: Clock;
   pid?: number;
-  createAictxRoot?: boolean;
+  createMemoryRoot?: boolean;
 }
 
 export interface ProjectLockPayload {
@@ -34,8 +34,8 @@ export interface ProjectLock {
 export type ProjectLockCallback<T> = (lock: ProjectLock) => Promise<Result<T>> | Result<T>;
 
 export async function acquireProjectLock(options: ProjectLockOptions): Promise<Result<ProjectLock>> {
-  const aictxRoot = resolve(options.aictxRoot);
-  const lockPath = join(aictxRoot, LOCK_FILENAME);
+  const memoryRoot = resolve(options.memoryRoot);
+  const lockPath = join(memoryRoot, LOCK_FILENAME);
   const clock = options.clock ?? systemClock;
   const payload: ProjectLockPayload = {
     pid: options.pid ?? process.pid,
@@ -43,13 +43,13 @@ export async function acquireProjectLock(options: ProjectLockOptions): Promise<R
     operation: options.operation
   };
 
-  if (options.createAictxRoot === true) {
+  if (options.createMemoryRoot === true) {
     try {
-      await mkdir(aictxRoot, { recursive: true });
+      await mkdir(memoryRoot, { recursive: true });
     } catch (error) {
       return err(
-        aictxError("AICtxValidationFailed", "Aictx root could not be created before locking.", {
-          aictxRoot,
+        memoryError("MemoryValidationFailed", "Memory root could not be created before locking.", {
+          memoryRoot,
           message: messageFromUnknown(error)
         })
       );
@@ -80,7 +80,7 @@ export async function acquireProjectLock(options: ProjectLockOptions): Promise<R
     }
 
     return err(
-      aictxError("AICtxValidationFailed", "Project lock could not be acquired.", {
+      memoryError("MemoryValidationFailed", "Project lock could not be acquired.", {
         lockPath,
         operation: options.operation,
         message: messageFromUnknown(error)
@@ -131,7 +131,7 @@ export async function withProjectLock<T>(
 
   if (callbackResult === undefined) {
     return err(
-      aictxError("AICtxInternalError", "Project lock callback did not return a result.", {
+      memoryError("MemoryInternalError", "Project lock callback did not return a result.", {
         lockPath: acquired.data.lockPath
       })
     );
@@ -157,7 +157,7 @@ function createProjectLock(lockPath: string, payload: ProjectLockPayload): Proje
         return ok(undefined);
       } catch (error) {
         return err(
-          aictxError("AICtxValidationFailed", "Project lock could not be released.", {
+          memoryError("MemoryValidationFailed", "Project lock could not be released.", {
             lockPath,
             message: messageFromUnknown(error)
           })
@@ -194,7 +194,7 @@ async function lockBusy(
   }
 
   return err(
-    aictxError("AICtxLockBusy", "Project lock is already held.", details),
+    memoryError("MemoryLockBusy", "Project lock is already held.", details),
     warnings
   );
 }

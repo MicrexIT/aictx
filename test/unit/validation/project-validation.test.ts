@@ -38,7 +38,7 @@ afterEach(async () => {
 });
 
 describe("project validation", () => {
-  it("accepts an initialized sample .aictx directory", async () => {
+  it("accepts an initialized sample .memory directory", async () => {
     const projectRoot = await createValidProject();
 
     const result = await validateProject(projectRoot);
@@ -78,7 +78,7 @@ describe("project validation", () => {
 
   it("reports missing required canonical files and directories", async () => {
     const projectRoot = await mkdirTempRoot();
-    await mkdir(join(projectRoot, ".aictx"), { recursive: true });
+    await mkdir(join(projectRoot, ".memory"), { recursive: true });
 
     const result = await validateProject(projectRoot);
 
@@ -88,7 +88,7 @@ describe("project validation", () => {
     expect(result.errors).toContainEqual(
       expect.objectContaining({
         code: "CanonicalFileMissing",
-        path: ".aictx/config.json",
+        path: ".memory/config.json",
         field: null
       })
     );
@@ -96,10 +96,10 @@ describe("project validation", () => {
 
   it("reports invalid JSON and blank or malformed JSONL with line numbers", async () => {
     const projectRoot = await createValidProject();
-    await writeProjectFile(projectRoot, ".aictx/memory/decisions/billing-retries.json", "{bad json");
+    await writeProjectFile(projectRoot, ".memory/memory/decisions/billing-retries.json", "{bad json");
     await writeProjectFile(
       projectRoot,
-      ".aictx/events.jsonl",
+      ".memory/events.jsonl",
       [
         '{"event":"memory.created","id":"decision.billing-retries","actor":"agent","timestamp":"2026-04-25T14:00:00+02:00"}',
         "",
@@ -112,21 +112,21 @@ describe("project validation", () => {
     expect(result.errors).toContainEqual(
       expect.objectContaining({
         code: "JsonInvalid",
-        path: ".aictx/memory/decisions/billing-retries.json",
+        path: ".memory/memory/decisions/billing-retries.json",
         field: null
       })
     );
     expect(result.errors).toContainEqual(
       expect.objectContaining({
         code: "EventJsonlBlankLine",
-        path: ".aictx/events.jsonl:2",
+        path: ".memory/events.jsonl:2",
         field: null
       })
     );
     expect(result.errors).toContainEqual(
       expect.objectContaining({
         code: "EventJsonlInvalid",
-        path: ".aictx/events.jsonl:3",
+        path: ".memory/events.jsonl:3",
         field: null
       })
     );
@@ -182,7 +182,7 @@ describe("project validation", () => {
 
   it("detects missing, escaping, and mismatched body paths", async () => {
     const projectRoot = await createValidProject();
-    await writeObjectSidecar(projectRoot, ".aictx/memory/decisions/billing-retries.json", {
+    await writeObjectSidecar(projectRoot, ".memory/memory/decisions/billing-retries.json", {
       ...baseObject(
         "decision.billing-retries",
         "decision",
@@ -213,7 +213,7 @@ describe("project validation", () => {
     expect(issueCodes(result.errors)).toEqual(
       expect.arrayContaining([
         "ObjectBodyMissing",
-        "ObjectBodyPathEscapesAictx",
+        "ObjectBodyPathEscapesMemory",
         "ObjectBodyPathMismatch"
       ])
     );
@@ -298,7 +298,7 @@ describe("project validation", () => {
     expect(validDirection.warnings).not.toContainEqual(
       expect.objectContaining({
         code: "ObjectSupersededReplacementMissing",
-        path: ".aictx/memory/notes/old.json"
+        path: ".memory/memory/notes/old.json"
       })
     );
 
@@ -331,7 +331,7 @@ describe("project validation", () => {
     expect(reversedDirection.warnings).toContainEqual(
       expect.objectContaining({
         code: "ObjectSupersededReplacementMissing",
-        path: ".aictx/memory/notes/old.json"
+        path: ".memory/memory/notes/old.json"
       })
     );
   });
@@ -393,7 +393,7 @@ describe("project validation", () => {
     const projectRoot = await createValidProject();
     await writeProjectFile(
       projectRoot,
-      ".aictx/memory/notes/conflict.md",
+      ".memory/memory/notes/conflict.md",
       ["# Conflict", "<<<<<<< HEAD"].join("\n")
     );
     await writeMemoryObject(projectRoot, {
@@ -414,15 +414,15 @@ describe("project validation", () => {
     const result = await validateProject(projectRoot);
 
     expect(issueCodes(result.errors)).toEqual(
-      expect.arrayContaining(["AICtxConflictDetected", "AICtxSecretDetected"])
+      expect.arrayContaining(["MemoryConflictDetected", "MemorySecretDetected"])
     );
-    expect(issueCodes(result.warnings)).toContain("AICtxSecretWarning");
+    expect(issueCodes(result.warnings)).toContain("MemorySecretWarning");
   });
 
   it("rejects symlinked Markdown bodies without reporting them as missing", async () => {
     const projectRoot = await createValidProject();
-    const sidecarPath = ".aictx/memory/decisions/billing-retries.json";
-    const bodyPath = join(projectRoot, ".aictx/memory/decisions/billing-retries.md");
+    const sidecarPath = ".memory/memory/decisions/billing-retries.json";
+    const bodyPath = join(projectRoot, ".memory/memory/decisions/billing-retries.md");
     const outsidePath = join(projectRoot, "outside.md");
     await writeFile(outsidePath, "# Outside\n\nOutside body.\n", "utf8");
     await rm(bodyPath);
@@ -433,7 +433,7 @@ describe("project validation", () => {
     expect(result.errors).toContainEqual(
       expect.objectContaining({
         code: "ObjectBodyPathUnsafe",
-        path: ".aictx/memory/decisions/billing-retries.md"
+        path: ".memory/memory/decisions/billing-retries.md"
       })
     );
     expect(result.errors).not.toContainEqual(
@@ -447,17 +447,17 @@ describe("project validation", () => {
 
 async function createValidProject(): Promise<string> {
   const projectRoot = await mkdirTempRoot();
-  await mkdir(join(projectRoot, ".aictx", "schema"), { recursive: true });
-  await mkdir(join(projectRoot, ".aictx", "relations"), { recursive: true });
+  await mkdir(join(projectRoot, ".memory", "schema"), { recursive: true });
+  await mkdir(join(projectRoot, ".memory", "relations"), { recursive: true });
 
   for (const file of Object.values(SCHEMA_FILES)) {
     await copyFile(
       join(root, "src", "schemas", file),
-      join(projectRoot, ".aictx", "schema", file)
+      join(projectRoot, ".memory", "schema", file)
     );
   }
 
-  await writeProjectFile(projectRoot, ".aictx/config.json", stableJson(validConfig));
+  await writeProjectFile(projectRoot, ".memory/config.json", stableJson(validConfig));
   await writeMemoryObject(projectRoot, {
     path: "memory/decisions/billing-retries.md",
     id: "decision.billing-retries",
@@ -481,7 +481,7 @@ async function createValidProject(): Promise<string> {
   });
   await writeProjectFile(
     projectRoot,
-    ".aictx/events.jsonl",
+    ".memory/events.jsonl",
     `${JSON.stringify({
       event: "memory.created",
       id: "decision.billing-retries",
@@ -548,10 +548,10 @@ async function writeMemoryObject(
     content_hash: options.contentHash ?? computeObjectContentHash(sidecar, options.body)
   };
 
-  await writeProjectFile(projectRoot, `.aictx/${options.path}`, options.body);
+  await writeProjectFile(projectRoot, `.memory/${options.path}`, options.body);
   await writeObjectSidecar(
     projectRoot,
-    `.aictx/${options.path.replace(/\.md$/, ".json")}`,
+    `.memory/${options.path.replace(/\.md$/, ".json")}`,
     sidecarWithHash
   );
 }
@@ -583,7 +583,7 @@ async function writeRelation(
 
   await writeProjectFile(
     projectRoot,
-    `.aictx/relations/${options.file}`,
+    `.memory/relations/${options.file}`,
     stableJson(relationWithHash)
   );
 }
@@ -625,7 +625,7 @@ async function writeObjectSidecar(
 }
 
 async function mkdirTempRoot(): Promise<string> {
-  const projectRoot = await mkdtemp(join(tmpdir(), "aictx-project-validation-"));
+  const projectRoot = await mkdtemp(join(tmpdir(), "memory-project-validation-"));
   tempRoots.push(projectRoot);
   return projectRoot;
 }

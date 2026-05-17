@@ -76,7 +76,7 @@ describe("context memory ranking", () => {
       id: "constraint.webhook-idempotency",
       type: "constraint",
       title: "Webhook idempotency",
-      body_path: ".aictx/memory/constraints/webhook-idempotency.md",
+      body_path: ".memory/memory/constraints/webhook-idempotency.md",
       body: "Webhook handlers must be idempotent.",
       tags: ["stripe"],
       updated_at: "2026-04-27T12:00:00+02:00"
@@ -84,7 +84,7 @@ describe("context memory ranking", () => {
 
     const result = rankMemoryCandidates({
       task:
-        "Read constraint.webhook-idempotency at .aictx/memory/constraints/webhook-idempotency.md for Stripe webhook work.",
+        "Read constraint.webhook-idempotency at .memory/memory/constraints/webhook-idempotency.md for Stripe webhook work.",
       projectId: PROJECT_ID,
       git: GIT_MAIN,
       candidates: [candidate]

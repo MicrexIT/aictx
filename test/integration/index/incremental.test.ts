@@ -29,12 +29,12 @@ afterEach(async () => {
 
 describe("incremental index integration", () => {
   it("matches a full rebuild after touched object, relation, and event changes", async () => {
-    const projectRoot = await createInitializedProject("aictx-incremental-match-rebuild-");
+    const projectRoot = await createInitializedProject("memory-incremental-match-rebuild-");
     const touched = await writeTouchedCanonicalChanges(projectRoot);
 
     const incremental = await updateIndexIncrementally({
       projectRoot,
-      aictxRoot: join(projectRoot, ".aictx"),
+      memoryRoot: join(projectRoot, ".memory"),
       clock: createFixedTestClock(FIXED_TIMESTAMP_NEXT_MINUTE),
       touched
     });
@@ -64,16 +64,16 @@ describe("incremental index integration", () => {
   });
 
   it("returns an index warning instead of a failed save result after canonical writes", async () => {
-    const projectRoot = await createInitializedProject("aictx-incremental-warning-after-write-");
+    const projectRoot = await createInitializedProject("memory-incremental-warning-after-write-");
     const storageBefore = await readCanonicalStorage(projectRoot);
     expect(storageBefore.ok).toBe(true);
 
-    await rm(join(projectRoot, ".aictx", "index", "aictx.sqlite"), { force: true });
-    await mkdir(join(projectRoot, ".aictx", "index", "aictx.sqlite"));
+    await rm(join(projectRoot, ".memory", "index", "memory.sqlite"), { force: true });
+    await mkdir(join(projectRoot, ".memory", "index", "memory.sqlite"));
 
     const result = await updateIndexAfterCanonicalWrite({
       projectRoot,
-      aictxRoot: join(projectRoot, ".aictx"),
+      memoryRoot: join(projectRoot, ".memory"),
       clock: createFixedTestClock(FIXED_TIMESTAMP_NEXT_MINUTE),
       touched: {
         objectIds: ["architecture.current"]
@@ -219,7 +219,7 @@ async function writeTouchedCanonicalChanges(projectRoot: string): Promise<Touche
 
   await writeProjectFile(
     projectRoot,
-    `.aictx/${updatedArchitecture.body_path}`,
+    `.memory/${updatedArchitecture.body_path}`,
     updatedArchitectureBody
   );
   await writeJsonProjectFile(projectRoot, architecture.path, updatedArchitecture);
@@ -291,20 +291,20 @@ async function writeTouchedCanonicalChanges(projectRoot: string): Promise<Touche
     }
   ];
 
-  await writeProjectFile(projectRoot, ".aictx/memory/constraints/webhook-idempotency.md", constraintBody);
+  await writeProjectFile(projectRoot, ".memory/memory/constraints/webhook-idempotency.md", constraintBody);
   await writeJsonProjectFile(
     projectRoot,
-    ".aictx/memory/constraints/webhook-idempotency.json",
+    ".memory/memory/constraints/webhook-idempotency.json",
     constraint
   );
   await writeJsonProjectFile(
     projectRoot,
-    ".aictx/relations/architecture-requires-webhook-idempotency.json",
+    ".memory/relations/architecture-requires-webhook-idempotency.json",
     relation
   );
   await writeProjectFile(
     projectRoot,
-    ".aictx/events.jsonl",
+    ".memory/events.jsonl",
     `${events.map((event) => JSON.stringify(event)).join("\n")}\n`
   );
 
@@ -398,7 +398,7 @@ async function snapshotIndex(projectRoot: string) {
 }
 
 async function openConnection(projectRoot: string): Promise<IndexDatabaseConnection> {
-  const opened = await openIndexDatabase({ aictxRoot: join(projectRoot, ".aictx") });
+  const opened = await openIndexDatabase({ memoryRoot: join(projectRoot, ".memory") });
 
   expect(opened.ok).toBe(true);
   if (!opened.ok) {

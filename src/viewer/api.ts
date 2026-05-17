@@ -15,7 +15,7 @@ import {
   type ViewerProjectsData
 } from "../app/operations.js";
 import type { LoadMemoryData } from "../context/compile.js";
-import { aictxError, type AictxError, type JsonValue } from "../core/errors.js";
+import { memoryError, type MemoryError, type JsonValue } from "../core/errors.js";
 import { err, ok, type Result } from "../core/result.js";
 
 const MAX_API_BODY_BYTES = 64 * 1024;
@@ -23,7 +23,7 @@ const MAX_API_BODY_BYTES = 64 * 1024;
 export interface ViewerApiContext {
   cwd: string;
   token: string;
-  aictxHome?: string;
+  memoryHome?: string;
 }
 
 type ViewerApiResult =
@@ -41,7 +41,7 @@ export async function handleViewerApiRequest(
 ): Promise<void> {
   if (!isAuthorizedApiRequest(request, url, context.token)) {
     writeViewerJsonResponse(response, 401, viewerErrorBody(
-      aictxError("AICtxValidationFailed", "Viewer API token is required.")
+      memoryError("MemoryValidationFailed", "Viewer API token is required.")
     ));
     return;
   }
@@ -90,7 +90,7 @@ export async function handleViewerApiRequest(
   }
 
   writeViewerJsonResponse(response, 404, viewerErrorBody(
-    aictxError("AICtxValidationFailed", "Viewer API route is not supported.", {
+    memoryError("MemoryValidationFailed", "Viewer API route is not supported.", {
       path: url.pathname
     })
   ));
@@ -106,7 +106,7 @@ export function writeViewerJsonResponse(
   response.end(`${JSON.stringify(body)}\n`);
 }
 
-export function viewerErrorBody(error: AictxError): JsonValue {
+export function viewerErrorBody(error: MemoryError): JsonValue {
   return {
     ok: false,
     error: error as unknown as JsonValue,
@@ -154,7 +154,7 @@ async function handleProjectsRequest(
 
   const result = await getViewerProjects({
     cwd: context.cwd,
-    ...(context.aictxHome === undefined ? {} : { aictxHome: context.aictxHome })
+    ...(context.memoryHome === undefined ? {} : { memoryHome: context.memoryHome })
   });
   writeAppResult(response, result);
 }
@@ -173,7 +173,7 @@ async function handleProjectBootstrapRequest(
   const result = await getViewerProjectBootstrap({
     cwd: context.cwd,
     registryId,
-    ...(context.aictxHome === undefined ? {} : { aictxHome: context.aictxHome })
+    ...(context.memoryHome === undefined ? {} : { memoryHome: context.memoryHome })
   });
   writeAppResult(response, result);
 }
@@ -192,7 +192,7 @@ async function handleProjectDeleteRequest(
   const result = await deleteViewerProject({
     cwd: context.cwd,
     registryId,
-    ...(context.aictxHome === undefined ? {} : { aictxHome: context.aictxHome })
+    ...(context.memoryHome === undefined ? {} : { memoryHome: context.memoryHome })
   });
   writeAppResult(response, result);
 }
@@ -258,7 +258,7 @@ async function handleProjectExportObsidianRequest(
     cwd: context.cwd,
     registryId,
     ...(outDir.data === undefined ? {} : { outDir: outDir.data }),
-    ...(context.aictxHome === undefined ? {} : { aictxHome: context.aictxHome })
+    ...(context.memoryHome === undefined ? {} : { memoryHome: context.memoryHome })
   });
 
   writeAppResult(response, result);
@@ -295,7 +295,7 @@ async function handleProjectLoadPreviewRequest(
     task: input.data.task,
     ...(input.data.mode === undefined ? {} : { mode: input.data.mode }),
     ...(input.data.token_budget === undefined ? {} : { token_budget: input.data.token_budget }),
-    ...(context.aictxHome === undefined ? {} : { aictxHome: context.aictxHome })
+    ...(context.memoryHome === undefined ? {} : { memoryHome: context.memoryHome })
   });
 
   writeAppResult(response, result);
@@ -304,7 +304,7 @@ async function handleProjectLoadPreviewRequest(
 function writeMethodNotAllowed(response: ServerResponse, allow: string): void {
   response.setHeader("Allow", allow);
   writeViewerJsonResponse(response, 405, viewerErrorBody(
-    aictxError("AICtxValidationFailed", "HTTP method is not supported for this route.", {
+    memoryError("MemoryValidationFailed", "HTTP method is not supported for this route.", {
       allow
     })
   ));
@@ -320,20 +320,20 @@ function statusCodeForAppResult(result: ViewerApiResult): number {
   }
 
   switch (result.error.code) {
-    case "AICtxNotInitialized":
-    case "AICtxAlreadyInitializedInvalid":
-    case "AICtxUnsupportedStorageVersion":
-    case "AICtxConflictDetected":
-    case "AICtxDirtyMemory":
-    case "AICtxIndexUnavailable":
-    case "AICtxLockBusy":
-    case "AICtxGitRequired":
+    case "MemoryNotInitialized":
+    case "MemoryAlreadyInitializedInvalid":
+    case "MemoryUnsupportedStorageVersion":
+    case "MemoryConflictDetected":
+    case "MemoryDirtyMemory":
+    case "MemoryIndexUnavailable":
+    case "MemoryLockBusy":
+    case "MemoryGitRequired":
       return 412;
-    case "AICtxObjectNotFound":
-    case "AICtxRelationNotFound":
+    case "MemoryObjectNotFound":
+    case "MemoryRelationNotFound":
       return 404;
-    case "AICtxInternalError":
-    case "AICtxGitOperationFailed":
+    case "MemoryInternalError":
+    case "MemoryGitOperationFailed":
       return 500;
     default:
       return 400;
@@ -387,7 +387,7 @@ function readJsonBody(request: IncomingMessage): Promise<Result<unknown>> {
         settled = true;
         request.destroy();
         resolve(err(
-          aictxError("AICtxValidationFailed", "Viewer API request body is too large.", {
+          memoryError("MemoryValidationFailed", "Viewer API request body is too large.", {
             max_bytes: MAX_API_BODY_BYTES
           })
         ));
@@ -401,7 +401,7 @@ function readJsonBody(request: IncomingMessage): Promise<Result<unknown>> {
       if (!settled) {
         settled = true;
         resolve(err(
-          aictxError("AICtxInternalError", "Viewer API request body could not be read.", {
+          memoryError("MemoryInternalError", "Viewer API request body could not be read.", {
             message: error.message
           })
         ));
@@ -425,7 +425,7 @@ function readJsonBody(request: IncomingMessage): Promise<Result<unknown>> {
         resolve(ok(JSON.parse(raw) as unknown));
       } catch (error) {
         resolve(err(
-          aictxError("AICtxInvalidJson", "Invalid JSON.", {
+          memoryError("MemoryInvalidJson", "Invalid JSON.", {
             message: messageFromUnknown(error)
           })
         ));
@@ -437,7 +437,7 @@ function readJsonBody(request: IncomingMessage): Promise<Result<unknown>> {
 function parseExportOutDir(value: unknown): Result<string | undefined> {
   if (!isRecord(value)) {
     return err(
-      aictxError("AICtxValidationFailed", "Viewer export request body must be a JSON object.")
+      memoryError("MemoryValidationFailed", "Viewer export request body must be a JSON object.")
     );
   }
 
@@ -447,7 +447,7 @@ function parseExportOutDir(value: unknown): Result<string | undefined> {
 
   if (typeof value.outDir !== "string") {
     return err(
-      aictxError("AICtxValidationFailed", "Viewer export outDir must be a string.")
+      memoryError("MemoryValidationFailed", "Viewer export outDir must be a string.")
     );
   }
 
@@ -461,13 +461,13 @@ function parseLoadPreviewInput(value: unknown): Result<{
 }> {
   if (!isRecord(value)) {
     return err(
-      aictxError("AICtxValidationFailed", "Viewer load preview request body must be a JSON object.")
+      memoryError("MemoryValidationFailed", "Viewer load preview request body must be a JSON object.")
     );
   }
 
   if (typeof value.task !== "string") {
     return err(
-      aictxError("AICtxValidationFailed", "Viewer load preview task must be a string.")
+      memoryError("MemoryValidationFailed", "Viewer load preview task must be a string.")
     );
   }
 
@@ -475,19 +475,19 @@ function parseLoadPreviewInput(value: unknown): Result<{
 
   if (task === "") {
     return err(
-      aictxError("AICtxValidationFailed", "Viewer load preview task must be non-empty.")
+      memoryError("MemoryValidationFailed", "Viewer load preview task must be non-empty.")
     );
   }
 
   if (value.mode !== undefined && typeof value.mode !== "string") {
     return err(
-      aictxError("AICtxValidationFailed", "Viewer load preview mode must be a string.")
+      memoryError("MemoryValidationFailed", "Viewer load preview mode must be a string.")
     );
   }
 
   if (value.token_budget !== undefined && typeof value.token_budget !== "number") {
     return err(
-      aictxError("AICtxValidationFailed", "Viewer load preview token_budget must be a number.")
+      memoryError("MemoryValidationFailed", "Viewer load preview token_budget must be a number.")
     );
   }
 

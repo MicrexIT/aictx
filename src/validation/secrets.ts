@@ -1,6 +1,6 @@
 import fg from "fast-glob";
 
-import { aictxError, type AictxError, type JsonValue } from "../core/errors.js";
+import { memoryError, type MemoryError, type JsonValue } from "../core/errors.js";
 import { readUtf8FileInsideRoot } from "../core/fs.js";
 import type { ValidationIssue } from "../core/types.js";
 
@@ -123,10 +123,10 @@ export async function scanProjectSecrets(
   options: ScanProjectSecretsOptions = {}
 ): Promise<SecretDetectionResult> {
   const ignore = options.includeContextPacks
-    ? [".aictx/index/**"]
-    : [".aictx/index/**", ".aictx/context/**"];
+    ? [".memory/index/**"]
+    : [".memory/index/**", ".memory/context/**"];
   const paths = (
-    await fg(".aictx/**/*.{json,jsonl,md}", {
+    await fg(".memory/**/*.{json,jsonl,md}", {
       cwd: projectRoot,
       dot: true,
       ignore,
@@ -158,9 +158,9 @@ export async function scanProjectSecrets(
   };
 }
 
-export function secretDetectionError(issues: readonly ValidationIssue[]): AictxError {
-  return aictxError(
-    "AICtxSecretDetected",
+export function secretDetectionError(issues: readonly ValidationIssue[]): MemoryError {
+  return memoryError(
+    "MemorySecretDetected",
     "Secret material detected.",
     validationIssuesDetails(issues)
   );
@@ -242,10 +242,10 @@ function matchRule(rule: SecretRule, line: string): string[] {
 }
 
 function shouldIgnoreRuleMatch(rule: SecretRule, candidate: string, line: string): boolean {
-  return rule.rule === "openai_api_key" && isAictxIdentifierSubstring(candidate, line);
+  return rule.rule === "openai_api_key" && isMemoryIdentifierSubstring(candidate, line);
 }
 
-function isAictxIdentifierSubstring(candidate: string, line: string): boolean {
+function isMemoryIdentifierSubstring(candidate: string, line: string): boolean {
   const tokens = line.match(/[A-Za-z0-9_.-]+/g) ?? [];
 
   return tokens.some(
@@ -286,14 +286,14 @@ function secretFinding(
 
 function findingToIssue(finding: SecretFinding): ValidationIssue {
   return {
-    code: finding.severity === "block" ? "AICtxSecretDetected" : "AICtxSecretWarning",
+    code: finding.severity === "block" ? "MemorySecretDetected" : "MemorySecretWarning",
     message: finding.message,
     path: finding.line === undefined ? finding.path : `${finding.path}:${finding.line}`,
     field: finding.field ?? null
   };
 }
 
-function canonicalReadIssue(path: string, error: AictxError): ValidationIssue {
+function canonicalReadIssue(path: string, error: MemoryError): ValidationIssue {
   return {
     code: "CanonicalFileUnsafe",
     message: `Canonical file could not be read safely: ${error.message}`,

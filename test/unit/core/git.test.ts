@@ -2,12 +2,12 @@ import { describe, expect, it } from "vitest";
 
 import {
   findGitRoot,
-  getAictxDiff,
-  getAictxDirtyState,
-  getAictxLog,
+  getMemoryDiff,
+  getMemoryDirtyState,
+  getMemoryLog,
   getGitState,
-  restoreAictxFromCommit,
-  showAictxFileAtCommit
+  restoreMemoryFromCommit,
+  showMemoryFileAtCommit
 } from "../../../src/core/git.js";
 import type {
   SubprocessResult,
@@ -67,7 +67,7 @@ describe("core git wrapper", () => {
       "rev-parse HEAD": result(["rev-parse", "HEAD"], {
         stdout: "abc123\n"
       }),
-      "status --porcelain=v1 -- .aictx": result(["status", "--porcelain=v1", "--", ".aictx"])
+      "status --porcelain=v1 -- .memory": result(["status", "--porcelain=v1", "--", ".memory"])
     });
 
     const state = await getGitState("/repo", { runner });
@@ -84,73 +84,73 @@ describe("core git wrapper", () => {
     });
   });
 
-  it("parses dirty .aictx files and ignores generated/local files", async () => {
+  it("parses dirty .memory files and ignores generated/local files", async () => {
     const { runner } = createRunner({
-      "status --porcelain=v1 -- .aictx": result(["status", "--porcelain=v1", "--", ".aictx"], {
+      "status --porcelain=v1 -- .memory": result(["status", "--porcelain=v1", "--", ".memory"], {
         stdout: [
-          " M .aictx/memory/changed.md",
-          "A  .aictx/memory/new.md",
-          "D  .aictx/memory/deleted.md",
-          "R  .aictx/memory/old.md -> .aictx/memory/renamed.md",
-          "UU .aictx/memory/conflict.md",
-          "?? .aictx/index/cache.sqlite",
-          "?? .aictx/context/pack.md",
-          "?? .aictx/.lock",
+          " M .memory/memory/changed.md",
+          "A  .memory/memory/new.md",
+          "D  .memory/memory/deleted.md",
+          "R  .memory/memory/old.md -> .memory/memory/renamed.md",
+          "UU .memory/memory/conflict.md",
+          "?? .memory/index/cache.sqlite",
+          "?? .memory/context/pack.md",
+          "?? .memory/.lock",
           " M src/outside.ts",
           ""
         ].join("\n")
       })
     });
 
-    const dirtyState = await getAictxDirtyState("/repo", { runner });
+    const dirtyState = await getMemoryDirtyState("/repo", { runner });
 
     expect(dirtyState).toEqual({
       ok: true,
       data: {
         dirty: true,
         files: [
-          ".aictx/memory/changed.md",
-          ".aictx/memory/conflict.md",
-          ".aictx/memory/deleted.md",
-          ".aictx/memory/new.md",
-          ".aictx/memory/renamed.md"
+          ".memory/memory/changed.md",
+          ".memory/memory/conflict.md",
+          ".memory/memory/deleted.md",
+          ".memory/memory/new.md",
+          ".memory/memory/renamed.md"
         ],
-        unmergedFiles: [".aictx/memory/conflict.md"]
+        unmergedFiles: [".memory/memory/conflict.md"]
       },
       warnings: []
     });
   });
 
-  it("scopes diff, log, and restore helpers to .aictx argv pathspecs", async () => {
+  it("scopes diff, log, and restore helpers to .memory argv pathspecs", async () => {
     const { calls, runner } = createRunner({
-      "diff -- .aictx": result(["diff", "--", ".aictx"], {
+      "diff -- .memory": result(["diff", "--", ".memory"], {
         stdout: [
-          "diff --git a/.aictx/events.jsonl b/.aictx/events.jsonl",
+          "diff --git a/.memory/events.jsonl b/.memory/events.jsonl",
           "index 1111111..2222222 100644",
-          "--- a/.aictx/events.jsonl",
-          "+++ b/.aictx/events.jsonl",
+          "--- a/.memory/events.jsonl",
+          "+++ b/.memory/events.jsonl",
           ""
         ].join("\n")
       }),
-      "status --porcelain=v1 --untracked-files=all -- .aictx": result(
-        ["status", "--porcelain=v1", "--untracked-files=all", "--", ".aictx"]
+      "status --porcelain=v1 --untracked-files=all -- .memory": result(
+        ["status", "--porcelain=v1", "--untracked-files=all", "--", ".memory"]
       ),
-      "log --format=%H\u001f%h\u001f%ct\u001f%s -- .aictx": result(
-        ["log", "--format=%H\u001f%h\u001f%ct\u001f%s", "--", ".aictx"],
+      "log --format=%H\u001f%h\u001f%ct\u001f%s -- .memory": result(
+        ["log", "--format=%H\u001f%h\u001f%ct\u001f%s", "--", ".memory"],
         {
           stdout: "abcdef\u001fabcdef\u001f1770000000\u001fUpdate memory\n"
         }
       ),
-      "restore --source abcdef -- .aictx": result(["restore", "--source", "abcdef", "--", ".aictx"])
+      "restore --source abcdef -- .memory": result(["restore", "--source", "abcdef", "--", ".memory"])
     });
 
-    const diff = await getAictxDiff("/repo", { runner });
-    const log = await getAictxLog("/repo", { runner });
-    const restore = await restoreAictxFromCommit("/repo", "abcdef", { runner });
+    const diff = await getMemoryDiff("/repo", { runner });
+    const log = await getMemoryLog("/repo", { runner });
+    const restore = await restoreMemoryFromCommit("/repo", "abcdef", { runner });
 
     expect(diff.ok).toBe(true);
     if (diff.ok) {
-      expect(diff.data.changedFiles).toEqual([".aictx/events.jsonl"]);
+      expect(diff.data.changedFiles).toEqual([".memory/events.jsonl"]);
       expect(diff.data.untrackedFiles).toEqual([]);
     }
     expect(log).toEqual({
@@ -167,37 +167,37 @@ describe("core git wrapper", () => {
     });
     expect(restore.ok).toBe(true);
     expect(calls.map((call) => call.args)).toEqual([
-      ["diff", "--", ".aictx"],
-      ["status", "--porcelain=v1", "--untracked-files=all", "--", ".aictx"],
-      ["log", "--format=%H\u001f%h\u001f%ct\u001f%s", "--", ".aictx"],
-      ["restore", "--source", "abcdef", "--", ".aictx"]
+      ["diff", "--", ".memory"],
+      ["status", "--porcelain=v1", "--untracked-files=all", "--", ".memory"],
+      ["log", "--format=%H\u001f%h\u001f%ct\u001f%s", "--", ".memory"],
+      ["restore", "--source", "abcdef", "--", ".memory"]
     ]);
   });
 
-  it("shows only files validated inside .aictx", async () => {
+  it("shows only files validated inside .memory", async () => {
     const { calls, runner } = createRunner({
-      "show abcdef:.aictx/memory/example.md": result(["show", "abcdef:.aictx/memory/example.md"], {
+      "show abcdef:.memory/memory/example.md": result(["show", "abcdef:.memory/memory/example.md"], {
         stdout: "# Example\n"
       })
     });
 
-    const shown = await showAictxFileAtCommit("/repo", "abcdef", "memory/example.md", { runner });
-    const rejected = await showAictxFileAtCommit("/repo", "abcdef", "../outside.md", { runner });
+    const shown = await showMemoryFileAtCommit("/repo", "abcdef", "memory/example.md", { runner });
+    const rejected = await showMemoryFileAtCommit("/repo", "abcdef", "../outside.md", { runner });
 
     expect(shown).toEqual({
       ok: true,
       data: {
         commit: "abcdef",
-        path: ".aictx/memory/example.md",
+        path: ".memory/memory/example.md",
         contents: "# Example\n"
       },
       warnings: []
     });
     expect(rejected.ok).toBe(false);
     if (!rejected.ok) {
-      expect(rejected.error.code).toBe("AICtxValidationFailed");
+      expect(rejected.error.code).toBe("MemoryValidationFailed");
     }
-    expect(calls.map((call) => call.args)).toEqual([["show", "abcdef:.aictx/memory/example.md"]]);
+    expect(calls.map((call) => call.args)).toEqual([["show", "abcdef:.memory/memory/example.md"]]);
   });
 });
 

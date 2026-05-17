@@ -1,16 +1,16 @@
 import { lstat, mkdir, realpath } from "node:fs/promises";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
 
-import { aictxError } from "../core/errors.js";
+import { memoryError } from "../core/errors.js";
 import { resolveInsideRoot } from "../core/fs.js";
 import { err, ok, type Result } from "../core/result.js";
 import { migrateIndexDatabase } from "./migrations.js";
 import { openSqliteDatabase, type SqliteDatabase } from "./sqlite-driver.js";
 
-export const INDEX_DATABASE_RELATIVE_PATH = "index/aictx.sqlite";
+export const INDEX_DATABASE_RELATIVE_PATH = "index/memory.sqlite";
 
 export interface OpenIndexDatabaseOptions {
-  aictxRoot: string;
+  memoryRoot: string;
   migrate?: boolean;
   readonly?: boolean;
   fileMustExist?: boolean;
@@ -23,8 +23,8 @@ export interface IndexDatabaseConnection {
   transaction<T>(callback: (db: SqliteDatabase) => T): Result<T>;
 }
 
-export async function resolveIndexDatabasePath(aictxRoot: string): Promise<Result<string>> {
-  const resolved = resolveInsideRoot(aictxRoot, INDEX_DATABASE_RELATIVE_PATH);
+export async function resolveIndexDatabasePath(memoryRoot: string): Promise<Result<string>> {
+  const resolved = resolveInsideRoot(memoryRoot, INDEX_DATABASE_RELATIVE_PATH);
 
   if (!resolved.ok) {
     return resolved;
@@ -36,7 +36,7 @@ export async function resolveIndexDatabasePath(aictxRoot: string): Promise<Resul
 export async function openIndexDatabase(
   options: OpenIndexDatabaseOptions
 ): Promise<Result<IndexDatabaseConnection>> {
-  const databasePath = await prepareIndexDatabasePath(options.aictxRoot);
+  const databasePath = await prepareIndexDatabasePath(options.memoryRoot);
 
   if (!databasePath.ok) {
     return databasePath;
@@ -51,7 +51,7 @@ export async function openIndexDatabase(
     });
   } catch (error) {
     return err(
-      aictxError("AICtxIndexUnavailable", "SQLite index database could not be opened.", {
+      memoryError("MemoryIndexUnavailable", "SQLite index database could not be opened.", {
         path: databasePath.data,
         message: messageFromUnknown(error)
       })
@@ -72,14 +72,14 @@ export async function openIndexDatabase(
   return ok(connection);
 }
 
-async function prepareIndexDatabasePath(aictxRoot: string): Promise<Result<string>> {
-  const resolved = await resolveIndexDatabasePath(aictxRoot);
+async function prepareIndexDatabasePath(memoryRoot: string): Promise<Result<string>> {
+  const resolved = await resolveIndexDatabasePath(memoryRoot);
 
   if (!resolved.ok) {
     return resolved;
   }
 
-  const rootPath = resolve(aictxRoot);
+  const rootPath = resolve(memoryRoot);
   const databasePath = resolved.data;
   const indexDirectory = dirname(databasePath);
 
@@ -93,11 +93,11 @@ async function prepareIndexDatabasePath(aictxRoot: string): Promise<Result<strin
 
     if (!isInsideOrEqual(realRoot, realIndexDirectory)) {
       return err(
-        aictxError(
-          "AICtxValidationFailed",
-          "SQLite index directory resolves outside the Aictx root.",
+        memoryError(
+          "MemoryValidationFailed",
+          "SQLite index directory resolves outside the Memory root.",
           {
-            aictxRoot: realRoot,
+            memoryRoot: realRoot,
             indexDirectory: realIndexDirectory
           }
         )
@@ -114,7 +114,7 @@ async function prepareIndexDatabasePath(aictxRoot: string): Promise<Result<strin
 
     if (existingDatabase?.isSymbolicLink() === true) {
       return err(
-        aictxError("AICtxValidationFailed", "Refusing to open SQLite index through a symbolic link.", {
+        memoryError("MemoryValidationFailed", "Refusing to open SQLite index through a symbolic link.", {
           path: databasePath
         })
       );
@@ -123,7 +123,7 @@ async function prepareIndexDatabasePath(aictxRoot: string): Promise<Result<strin
     return ok(databasePath);
   } catch (error) {
     return err(
-      aictxError("AICtxIndexUnavailable", "SQLite index database path could not be prepared.", {
+      memoryError("MemoryIndexUnavailable", "SQLite index database path could not be prepared.", {
         path: databasePath,
         message: messageFromUnknown(error)
       })
@@ -148,7 +148,7 @@ function createConnection(path: string, db: SqliteDatabase): IndexDatabaseConnec
         return ok(undefined);
       } catch (error) {
         return err(
-          aictxError("AICtxIndexUnavailable", "SQLite index database could not be closed.", {
+          memoryError("MemoryIndexUnavailable", "SQLite index database could not be closed.", {
             path,
             message: messageFromUnknown(error)
           })
@@ -161,7 +161,7 @@ function createConnection(path: string, db: SqliteDatabase): IndexDatabaseConnec
         return ok(run());
       } catch (error) {
         return err(
-          aictxError("AICtxIndexUnavailable", "SQLite index transaction failed.", {
+          memoryError("MemoryIndexUnavailable", "SQLite index transaction failed.", {
             path,
             message: messageFromUnknown(error)
           })

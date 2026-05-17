@@ -20,7 +20,7 @@ export interface RegisterProjectsCommandOptions {
   cwd: string;
   stdout: CliOutputWriter;
   stderr: CliOutputWriter;
-  aictxHome?: string;
+  memoryHome?: string;
 }
 
 export function registerProjectsCommand(
@@ -29,14 +29,14 @@ export function registerProjectsCommand(
 ): void {
   const projects = program
     .command("projects")
-    .description("Manage the user-level Aictx project registry.")
+    .description("Manage the user-level Memory project registry.")
     .action((_commandOptions: unknown, command: Command) => {
       command.outputHelp();
     });
 
   projects
     .command("list")
-    .description("List registered Aictx projects.")
+    .description("List registered Memory projects.")
     .action(async (command: Command) => {
       const result = await listRegisteredProjects(projectRegistryOptions(options));
       const rendered = renderAppResult(result, {
@@ -50,7 +50,7 @@ export function registerProjectsCommand(
   projects
     .command("add")
     .argument("[path]", "Project path to register. Defaults to the current directory.")
-    .description("Add or refresh an initialized Aictx project in the registry.")
+    .description("Add or refresh an initialized Memory project in the registry.")
     .action(async (path: string | undefined, command: Command) => {
       const result = await addRegisteredProject({
         ...projectRegistryOptions(options),
@@ -83,7 +83,7 @@ export function registerProjectsCommand(
 
   projects
     .command("prune")
-    .description("Remove registry entries whose Aictx storage is unavailable.")
+    .description("Remove registry entries whose Memory storage is unavailable.")
     .action(async (command: Command) => {
       const result = await pruneRegisteredProjects(projectRegistryOptions(options));
       const rendered = renderAppResult(result, {
@@ -97,17 +97,17 @@ export function registerProjectsCommand(
 
 function projectRegistryOptions(options: RegisterProjectsCommandOptions): {
   cwd: string;
-  aictxHome?: string;
+  memoryHome?: string;
 } {
   return {
     cwd: options.cwd,
-    ...(options.aictxHome === undefined ? {} : { aictxHome: options.aictxHome })
+    ...(options.memoryHome === undefined ? {} : { memoryHome: options.memoryHome })
   };
 }
 
 function renderListData(data: ProjectRegistryListData): string {
   return [
-    `Aictx project registry: ${data.registry_path}`,
+    `Memory project registry: ${data.registry_path}`,
     data.projects.length === 0
       ? "No registered projects."
       : `Registered projects: ${data.projects.length}`,
@@ -117,7 +117,7 @@ function renderListData(data: ProjectRegistryListData): string {
 
 function renderAddData(data: ProjectRegistryAddData): string {
   return [
-    "Registered Aictx project.",
+    "Registered Memory project.",
     `Registry: ${data.registry_path}`,
     renderProject(data.project)
   ].join("\n");
@@ -125,7 +125,7 @@ function renderAddData(data: ProjectRegistryAddData): string {
 
 function renderRemoveData(data: ProjectRegistryRemoveData): string {
   return [
-    "Removed Aictx project from registry.",
+    "Removed Memory project from registry.",
     `Registry: ${data.registry_path}`,
     renderProject(data.removed)
   ].join("\n");
@@ -133,7 +133,7 @@ function renderRemoveData(data: ProjectRegistryRemoveData): string {
 
 function renderPruneData(data: ProjectRegistryPruneData): string {
   return [
-    `Aictx project registry: ${data.registry_path}`,
+    `Memory project registry: ${data.registry_path}`,
     `Remaining projects: ${data.projects.length}`,
     `Removed projects: ${data.removed.length}`,
     ...data.removed.map(renderProject)
@@ -178,7 +178,7 @@ function writeAndThrowOnFailure(
 function throwCommandFailed(exitCode: CliExitCode): never {
   throw new CommanderError(
     exitCode,
-    "aictx.command.failed",
-    "Aictx command failed."
+    "memory.command.failed",
+    "Memory command failed."
   );
 }

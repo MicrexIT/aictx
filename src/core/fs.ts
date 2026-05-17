@@ -4,7 +4,7 @@ import { lstat, mkdir, open, readFile, realpath, rename, rm } from "node:fs/prom
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { TextDecoder } from "node:util";
 
-import { aictxError, type JsonValue } from "./errors.js";
+import { memoryError, type JsonValue } from "./errors.js";
 import { err, ok, type Result } from "./result.js";
 
 const UTF8_DECODER = new TextDecoder("utf-8", { fatal: true });
@@ -24,7 +24,7 @@ export function resolveInsideRoot(root: string, target: string): Result<string> 
 
   if (!isInsideOrEqual(rootPath, targetPath)) {
     return err(
-      aictxError("AICtxValidationFailed", "Resolved path is outside the allowed root.", {
+      memoryError("MemoryValidationFailed", "Resolved path is outside the allowed root.", {
         root: rootPath,
         target
       })
@@ -40,7 +40,7 @@ export async function readUtf8File(path: string): Promise<Result<string>> {
     return ok(UTF8_DECODER.decode(buffer));
   } catch (error) {
     return err(
-      aictxError("AICtxValidationFailed", "File could not be read as valid UTF-8.", {
+      memoryError("MemoryValidationFailed", "File could not be read as valid UTF-8.", {
         path,
         message: messageFromUnknown(error)
       })
@@ -66,7 +66,7 @@ export async function readUtf8FileInsideRoot(
 
     if (targetStat.isSymbolicLink()) {
       return err(
-        aictxError("AICtxValidationFailed", "Refusing to read through a symbolic link.", {
+        memoryError("MemoryValidationFailed", "Refusing to read through a symbolic link.", {
           path: target
         })
       );
@@ -74,7 +74,7 @@ export async function readUtf8FileInsideRoot(
 
     if (!targetStat.isFile()) {
       return err(
-        aictxError("AICtxValidationFailed", "Canonical path is not a file.", {
+        memoryError("MemoryValidationFailed", "Canonical path is not a file.", {
           path: target
         })
       );
@@ -84,7 +84,7 @@ export async function readUtf8FileInsideRoot(
 
     if (!isInsideOrEqual(realRoot, realTarget)) {
       return err(
-        aictxError("AICtxValidationFailed", "Canonical path resolves outside the allowed root.", {
+        memoryError("MemoryValidationFailed", "Canonical path resolves outside the allowed root.", {
           root: realRoot,
           target
         })
@@ -101,7 +101,7 @@ export async function readUtf8FileInsideRoot(
     }
   } catch (error) {
     return err(
-      aictxError("AICtxValidationFailed", "File could not be read as valid UTF-8.", {
+      memoryError("MemoryValidationFailed", "File could not be read as valid UTF-8.", {
         path: target,
         fsCode: errorCode(error),
         message: messageFromUnknown(error)
@@ -121,7 +121,7 @@ export async function writeTextAtomic(
     return prepared;
   }
 
-  const tempPath = join(prepared.data.parentPath, `.aictx-tmp-${randomUUID()}`);
+  const tempPath = join(prepared.data.parentPath, `.memory-tmp-${randomUUID()}`);
   let tempFileCreated = false;
 
   try {
@@ -149,7 +149,7 @@ export async function writeTextAtomic(
     }
 
     return err(
-      aictxError("AICtxValidationFailed", "File could not be written atomically.", {
+      memoryError("MemoryValidationFailed", "File could not be written atomically.", {
         path: target,
         message: messageFromUnknown(error)
       })
@@ -195,7 +195,7 @@ export async function appendJsonl(
 
     if (existingTarget?.isSymbolicLink() === true) {
       return err(
-        aictxError("AICtxValidationFailed", "Refusing to append through a symbolic link.", {
+        memoryError("MemoryValidationFailed", "Refusing to append through a symbolic link.", {
           path: target
         })
       );
@@ -219,7 +219,7 @@ export async function appendJsonl(
     return ok(undefined);
   } catch (error) {
     return err(
-      aictxError("AICtxValidationFailed", "JSONL object could not be appended.", {
+      memoryError("MemoryValidationFailed", "JSONL object could not be appended.", {
         path: target,
         message: messageFromUnknown(error)
       })
@@ -254,8 +254,8 @@ async function prepareWritePath(root: string, target: string): Promise<Result<Pr
 
     if (!isInsideOrEqual(realRoot, realParent)) {
       return err(
-        aictxError(
-          "AICtxValidationFailed",
+        memoryError(
+          "MemoryValidationFailed",
           "Resolved parent directory is outside the allowed root.",
           {
             root: realRoot,
@@ -268,7 +268,7 @@ async function prepareWritePath(root: string, target: string): Promise<Result<Pr
     return ok({ targetPath, parentPath });
   } catch (error) {
     return err(
-      aictxError("AICtxValidationFailed", "Write path could not be prepared.", {
+      memoryError("MemoryValidationFailed", "Write path could not be prepared.", {
         path: target,
         message: messageFromUnknown(error)
       })
@@ -310,7 +310,7 @@ async function ensureDirectoryComponent(path: string): Promise<Result<void>> {
   } catch (error) {
     if (errorCode(error) !== "EEXIST") {
       return err(
-        aictxError("AICtxValidationFailed", "Directory could not be created.", {
+        memoryError("MemoryValidationFailed", "Directory could not be created.", {
           path,
           message: messageFromUnknown(error)
         })
@@ -323,7 +323,7 @@ async function ensureDirectoryComponent(path: string): Promise<Result<void>> {
 
     if (pathStat.isSymbolicLink()) {
       return err(
-        aictxError("AICtxValidationFailed", "Refusing to write through a symbolic link.", {
+        memoryError("MemoryValidationFailed", "Refusing to write through a symbolic link.", {
           path
         })
       );
@@ -331,7 +331,7 @@ async function ensureDirectoryComponent(path: string): Promise<Result<void>> {
 
     if (!pathStat.isDirectory()) {
       return err(
-        aictxError("AICtxValidationFailed", "Write path component is not a directory.", {
+        memoryError("MemoryValidationFailed", "Write path component is not a directory.", {
           path
         })
       );
@@ -340,7 +340,7 @@ async function ensureDirectoryComponent(path: string): Promise<Result<void>> {
     return ok(undefined);
   } catch (error) {
     return err(
-      aictxError("AICtxValidationFailed", "Directory could not be inspected.", {
+      memoryError("MemoryValidationFailed", "Directory could not be inspected.", {
         path,
         message: messageFromUnknown(error)
       })

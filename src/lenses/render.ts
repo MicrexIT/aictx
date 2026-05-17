@@ -145,7 +145,7 @@ function lensDefinition(name: MemoryLensName): LensDefinition {
   const definition = LENS_DEFINITIONS.find((lens) => lens.name === name);
 
   if (definition === undefined) {
-    throw new Error(`Unknown Aictx lens: ${name}`);
+    throw new Error(`Unknown Memory lens: ${name}`);
   }
 
   return definition;

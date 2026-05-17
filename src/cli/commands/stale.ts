@@ -23,7 +23,7 @@ export function registerStaleCommand(
 ): void {
   program
     .command("stale")
-    .description("List stale and superseded Aictx memory.")
+    .description("List stale and superseded Memory.")
     .action(async (_commandOptions: unknown, command: Command) => {
       const result = await listStaleMemory(listStaleMemoryOptions(options));
       const rendered = renderAppResult(result, {
@@ -55,7 +55,7 @@ function isJsonMode(command: Command): boolean {
 
 function renderStaleData(data: ListStaleMemoryData): string {
   if (data.objects.length === 0) {
-    return "No stale or superseded Aictx memory.";
+    return "No stale or superseded Memory.";
   }
 
   return ["Stale and superseded memory:", ...data.objects.map(renderObject)].join(
@@ -70,7 +70,7 @@ function renderObject(object: MemoryObjectSummary): string {
 function throwCommandFailed(exitCode: CliExitCode): never {
   throw new CommanderError(
     exitCode,
-    "aictx.command.failed",
-    "Aictx command failed."
+    "memory.command.failed",
+    "Memory command failed."
   );
 }

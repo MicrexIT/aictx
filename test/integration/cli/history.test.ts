@@ -43,10 +43,10 @@ afterEach(async () => {
   );
 });
 
-describe("aictx history CLI", () => {
-  it("returns only commits that changed .aictx in the API JSON shape", async () => {
-    const repo = await createHistoryRepo("aictx-cli-history-json-");
-    const output = await runCli(["node", "aictx", "history", "--json"], repo);
+describe("memory history CLI", () => {
+  it("returns only commits that changed .memory in the API JSON shape", async () => {
+    const repo = await createHistoryRepo("memory-cli-history-json-");
+    const output = await runCli(["node", "memory", "history", "--json"], repo);
 
     expect(output.exitCode).toBe(0);
     expect(output.stderr).toBe("");
@@ -57,7 +57,7 @@ describe("aictx history CLI", () => {
     expect(envelope.data.commits.map((commit) => commit.subject)).toEqual([
       "Update memory and code",
       "Update memory only",
-      "Initialize aictx"
+      "Initialize memory"
     ]);
     expect(envelope.data.commits.map((commit) => commit.subject)).not.toContain(
       "Update app code only"
@@ -68,7 +68,7 @@ describe("aictx history CLI", () => {
     const newestCommit = envelope.data.commits[0];
 
     if (newestCommit === undefined) {
-      throw new Error("Expected at least one Aictx history commit.");
+      throw new Error("Expected at least one Memory history commit.");
     }
 
     expect(Object.keys(newestCommit).sort()).toEqual([
@@ -79,7 +79,7 @@ describe("aictx history CLI", () => {
       "timestamp"
     ]);
     expect(newestCommit).toMatchObject({
-      author: "Aictx Test <test@example.com>",
+      author: "Memory Test <test@example.com>",
       timestamp: "2026-04-25T15:00:00+02:00",
       subject: "Update memory and code"
     });
@@ -88,10 +88,10 @@ describe("aictx history CLI", () => {
     expect(newestCommit.commit.startsWith(newestCommit.short_commit)).toBe(true);
   });
 
-  it("limits history to the newest matching .aictx commits", async () => {
-    const repo = await createHistoryRepo("aictx-cli-history-limit-");
+  it("limits history to the newest matching .memory commits", async () => {
+    const repo = await createHistoryRepo("memory-cli-history-limit-");
     const output = await runCli(
-      ["node", "aictx", "history", "--limit", "2", "--json"],
+      ["node", "memory", "history", "--limit", "2", "--json"],
       repo
     );
 
@@ -107,27 +107,27 @@ describe("aictx history CLI", () => {
   });
 
   it("prints compact human output", async () => {
-    const repo = await createHistoryRepo("aictx-cli-history-human-");
-    const output = await runCli(["node", "aictx", "history", "--limit", "1"], repo);
+    const repo = await createHistoryRepo("memory-cli-history-human-");
+    const output = await runCli(["node", "memory", "history", "--limit", "1"], repo);
 
     expect(output.exitCode).toBe(0);
     expect(output.stderr).toBe("");
     expect(output.stdout).toContain("Update memory and code");
-    expect(output.stdout).toContain("Aictx Test <test@example.com>");
+    expect(output.stdout).toContain("Memory Test <test@example.com>");
     expect(output.stdout).toContain("2026-04-25T15:00:00+02:00");
     expect(() => JSON.parse(output.stdout) as unknown).toThrow();
   });
 
-  it("returns AICtxGitRequired outside Git", async () => {
-    const projectRoot = await createInitializedLocalProject("aictx-cli-history-local-");
-    const output = await runCli(["node", "aictx", "history", "--json"], projectRoot);
+  it("returns MemoryGitRequired outside Git", async () => {
+    const projectRoot = await createInitializedLocalProject("memory-cli-history-local-");
+    const output = await runCli(["node", "memory", "history", "--json"], projectRoot);
 
     expect(output.exitCode).toBe(3);
     expect(output.stderr).toBe("");
     const envelope = JSON.parse(output.stdout) as HistoryErrorEnvelope;
 
     expect(envelope.ok).toBe(false);
-    expect(envelope.error.code).toBe("AICtxGitRequired");
+    expect(envelope.error.code).toBe("MemoryGitRequired");
   });
 });
 
@@ -138,23 +138,23 @@ async function createHistoryRepo(prefix: string): Promise<string> {
   await commit(repo, "Update app code only", "2026-04-25T13:00:00+02:00", ["src.ts"]);
 
   await writeFile(
-    join(repo, ".aictx", "memory", "project.md"),
+    join(repo, ".memory", "memory", "project.md"),
     "# Test Project\n\nMemory-only history update.\n",
     "utf8"
   );
   await commit(repo, "Update memory only", "2026-04-25T14:00:00+02:00", [
-    ".aictx/memory/project.md"
+    ".memory/memory/project.md"
   ]);
 
   await writeFile(join(repo, "src.ts"), "outside mixed change\n", "utf8");
   await writeFile(
-    join(repo, ".aictx", "memory", "project.md"),
+    join(repo, ".memory", "memory", "project.md"),
     "# Test Project\n\nMixed history update.\n",
     "utf8"
   );
   await commit(repo, "Update memory and code", "2026-04-25T15:00:00+02:00", [
     "src.ts",
-    ".aictx/memory/project.md"
+    ".memory/memory/project.md"
   ]);
 
   return repo;
@@ -162,14 +162,14 @@ async function createHistoryRepo(prefix: string): Promise<string> {
 
 async function createInitializedGitProject(prefix: string): Promise<string> {
   const repo = await createRepo(prefix);
-  const output = await runCli(["node", "aictx", "init", "--json"], repo);
+  const output = await runCli(["node", "memory", "init", "--json"], repo);
 
   expect(output.exitCode).toBe(0);
   expect(output.stderr).toBe("");
 
-  await commit(repo, "Initialize aictx", "2026-04-25T12:00:00+02:00", [
+  await commit(repo, "Initialize memory", "2026-04-25T12:00:00+02:00", [
     ".gitignore",
-    ".aictx"
+    ".memory"
   ]);
 
   return repo;
@@ -177,7 +177,7 @@ async function createInitializedGitProject(prefix: string): Promise<string> {
 
 async function createInitializedLocalProject(prefix: string): Promise<string> {
   const projectRoot = await createTempRoot(prefix);
-  const output = await runCli(["node", "aictx", "init", "--json"], projectRoot);
+  const output = await runCli(["node", "memory", "init", "--json"], projectRoot);
 
   expect(output.exitCode).toBe(0);
   expect(output.stderr).toBe("");
@@ -189,7 +189,7 @@ async function createRepo(prefix: string): Promise<string> {
   const repo = await createTempRoot(prefix);
   await git(repo, ["init", "--initial-branch=main"]);
   await git(repo, ["config", "user.email", "test@example.com"]);
-  await git(repo, ["config", "user.name", "Aictx Test"]);
+  await git(repo, ["config", "user.name", "Memory Test"]);
   await writeFile(join(repo, "README.md"), "# Test\n", "utf8");
   await writeFile(join(repo, "src.ts"), "initial\n", "utf8");
   await commit(repo, "Initial commit", "2026-04-25T11:00:00+02:00", [

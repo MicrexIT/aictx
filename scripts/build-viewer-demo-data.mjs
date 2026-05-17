@@ -10,7 +10,7 @@ const DEMO_TOKEN = "demo";
 const DEMO_PROJECT_ID = "project.todo-app";
 const DEMO_PROJECT_NAME = "Todo App";
 const DEMO_PROJECT_ROOT = "demo://todo-app";
-const DEMO_AICTX_ROOT = "demo://todo-app/.aictx";
+const DEMO_MEMORY_ROOT = "demo://todo-app/.memory";
 const DEFAULT_TOKEN_BUDGET = 6000;
 const CREATED_AT = "2026-05-12T09:00:00+02:00";
 const UPDATED_AT = "2026-05-13T15:30:00+02:00";
@@ -24,7 +24,7 @@ const SECRET_PATTERNS = [
 ];
 
 const LOCAL_STATE_PATTERNS = [
-  /\.aictx\/(?:index|context|\.backup|\.lock|exports|recovery)\b/,
+  /\.memory\/(?:index|context|\.backup|\.lock|exports|recovery)\b/,
   /\/Users\/[^"'\s`)]+/,
   /\/home\/[^"'\s`)]+/
 ];
@@ -179,7 +179,7 @@ const OBJECT_FIXTURES = [
   object("synthesis.agent-guidance", "synthesis", "active", "Agent guidance", "memory/syntheses/agent-guidance.md", [
     "# Agent guidance",
     "",
-    "Load Aictx memory before non-trivial Todo App work. Preserve the offline-first scope, keep UI behavior keyboard accessible, and verify persistence after reload."
+    "Load Memory before non-trivial Todo App work. Preserve the offline-first scope, keep UI behavior keyboard accessible, and verify persistence after reload."
   ], {
     tags: ["agents", "guidance", "synthesis"],
     facets: { category: "agent-guidance", applies_to: ["AGENTS.md"] },
@@ -226,8 +226,17 @@ const OBJECT_FIXTURES = [
 const RELATION_FIXTURES = [
   relation("rel.project-todo-app-implements-concept-quick-add", "project.todo-app", "implements", "concept.quick-add"),
   relation("rel.project-todo-app-implements-concept-filtered-views", "project.todo-app", "implements", "concept.filtered-views"),
+  relation("rel.synthesis-product-intent-summarizes-project-todo-app", "synthesis.product-intent", "summarizes", "project.todo-app"),
+  relation("rel.synthesis-feature-map-documents-project-todo-app", "synthesis.feature-map", "documents", "project.todo-app"),
+  relation("rel.synthesis-repository-map-documents-project-todo-app", "synthesis.repository-map", "documents", "project.todo-app"),
+  relation("rel.architecture-local-first-todo-app-documents-project-todo-app", "architecture.local-first-todo-app", "documents", "project.todo-app"),
+  relation("rel.synthesis-stack-and-tooling-documents-project-todo-app", "synthesis.stack-and-tooling", "documents", "project.todo-app"),
+  relation("rel.synthesis-conventions-quality-documents-project-todo-app", "synthesis.conventions-quality", "documents", "project.todo-app"),
+  relation("rel.synthesis-agent-guidance-documents-project-todo-app", "synthesis.agent-guidance", "documents", "project.todo-app"),
+  relation("rel.workflow-local-development-supports-project-todo-app", "workflow.local-development", "supports", "project.todo-app"),
+  relation("rel.workflow-post-task-verification-supports-project-todo-app", "workflow.post-task-verification", "supports", "project.todo-app"),
+  relation("rel.constraint-offline-first-affects-project-todo-app", "constraint.offline-first", "affects", "project.todo-app"),
   relation("rel.synthesis-product-intent-derived-from-source-product-brief", "synthesis.product-intent", "derived_from", "source.product-brief"),
-  relation("rel.source-product-brief-supports-synthesis-product-intent", "source.product-brief", "supports", "synthesis.product-intent"),
   relation("rel.synthesis-feature-map-derived-from-source-product-brief", "synthesis.feature-map", "derived_from", "source.product-brief"),
   relation("rel.question-recurring-tasks-challenges-synthesis-feature-map", "question.recurring-tasks", "challenges", "synthesis.feature-map"),
   relation("rel.synthesis-feature-map-summarizes-concept-quick-add", "synthesis.feature-map", "summarizes", "concept.quick-add"),
@@ -236,11 +245,11 @@ const RELATION_FIXTURES = [
   relation("rel.architecture-local-first-derived-from-source-readme", "architecture.local-first-todo-app", "derived_from", "source.readme"),
   relation("rel.synthesis-stack-and-tooling-derived-from-source-package-json", "synthesis.stack-and-tooling", "derived_from", "source.package-json"),
   relation("rel.synthesis-conventions-quality-derived-from-source-product-brief", "synthesis.conventions-quality", "derived_from", "source.product-brief"),
-  relation("rel.workflow-local-development-documents-source-package-json", "workflow.local-development", "documents", "source.package-json"),
-  relation("rel.workflow-post-task-verification-documents-source-package-json", "workflow.post-task-verification", "documents", "source.package-json"),
+  relation("rel.workflow-local-development-derived-from-source-package-json", "workflow.local-development", "derived_from", "source.package-json"),
+  relation("rel.workflow-post-task-verification-derived-from-source-package-json", "workflow.post-task-verification", "derived_from", "source.package-json"),
+  relation("rel.constraint-offline-first-derived-from-source-product-brief", "constraint.offline-first", "derived_from", "source.product-brief"),
   relation("rel.gotcha-completed-filter-counts-affects-concept-filtered-views", "gotcha.completed-filter-counts", "affects", "concept.filtered-views"),
   relation("rel.concept-filtered-views-depends-on-fact-storage-localstorage", "concept.filtered-views", "depends_on", "fact.storage-localstorage"),
-  relation("rel.question-recurring-tasks-related-to-synthesis-feature-map", "question.recurring-tasks", "related_to", "synthesis.feature-map"),
   relation("rel.synthesis-agent-guidance-derived-from-source-agent-guidance", "synthesis.agent-guidance", "derived_from", "source.agent-guidance"),
   relation("rel.constraint-offline-first-requires-fact-storage-localstorage", "constraint.offline-first", "requires", "fact.storage-localstorage")
 ];
@@ -349,7 +358,7 @@ function buildDemoData() {
   };
   const meta = {
     project_root: DEMO_PROJECT_ROOT,
-    aictx_root: DEMO_AICTX_ROOT,
+    memory_root: DEMO_MEMORY_ROOT,
     git: {
       available: true,
       branch: "main",
@@ -364,7 +373,7 @@ function buildDemoData() {
         registry_id: DEMO_REGISTRY_ID,
         project: bootstrap.project,
         project_root: DEMO_PROJECT_ROOT,
-        aictx_root: DEMO_AICTX_ROOT,
+        memory_root: DEMO_MEMORY_ROOT,
         source: "manual",
         registered_at: CREATED_AT,
         last_seen_at: UPDATED_AT,
@@ -495,8 +504,8 @@ function summarizeObject(fixture) {
     type: fixture.type,
     status: fixture.status,
     title: fixture.title,
-    body_path: `.aictx/${fixture.body_path}`,
-    json_path: `.aictx/${fixture.body_path.replace(/\.md$/u, ".json")}`,
+    body_path: `.memory/${fixture.body_path}`,
+    json_path: `.memory/${fixture.body_path.replace(/\.md$/u, ".json")}`,
     scope: {
       kind: "project",
       project: DEMO_PROJECT_ID,
@@ -530,7 +539,7 @@ function summarizeRelation(fixture) {
     content_hash: null,
     created_at: CREATED_AT,
     updated_at: UPDATED_AT,
-    json_path: `.aictx/relations/${fixture.id.replace(/^rel\./u, "")}.json`
+    json_path: `.memory/relations/${fixture.id.replace(/^rel\./u, "")}.json`
   };
 }
 

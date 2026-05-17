@@ -1,11 +1,11 @@
 {
   "name": "@aictx/memory",
-  "version": "0.1.37",
+  "version": "0.1.45",
   "description": "Local-first project memory for AI coding agents.",
   "license": "MIT",
   "type": "module",
   "packageManager": "pnpm@10.11.0",
-  "homepage": "https://aictx.dev",
+  "homepage": "https://memory.aictx.dev",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/aictx/memory.git"
@@ -16,13 +16,21 @@
   "keywords": [
     "ai",
     "agents",
+    "ai-coding-agents",
+    "ai-coding-assistants",
     "coding-agents",
+    "persistent-memory",
     "project-memory",
+    "agent-memory",
     "local-first",
     "mcp",
+    "mcp-server",
     "cli",
     "developer-tools",
-    "agent-memory",
+    "context-engineering",
+    "claude-code",
+    "codex",
+    "cursor",
     "context"
   ],
   "author": "Aictx",
@@ -33,8 +41,8 @@
     "node": ">=22"
   },
   "bin": {
-    "aictx": "dist/cli/main.js",
-    "aictx-mcp": "dist/mcp/server.js"
+    "memory": "dist/cli/main.js",
+    "memory-mcp": "dist/mcp/server.js"
   },
   "files": [
     "dist",
@@ -59,6 +67,7 @@
     "dev:docs": "astro dev --root docs",
     "dev:mcp": "tsx src/mcp/server.ts",
     "dev:site": "astro dev --root site",
+    "homebrew:formula": "node scripts/render-homebrew-formula.mjs",
     "version:patch": "npm version patch --no-git-tag-version && pnpm build && pnpm build:docs",
     "test": "vitest run",
     "test:local": "pnpm typecheck && pnpm test:package",
@@ -77,13 +86,13 @@
   },
   "devDependencies": {
     "@astrojs/starlight": "^0.38.4",
-    "@sveltejs/vite-plugin-svelte": "^5.1.1",
+    "@sveltejs/vite-plugin-svelte": "^6.2.4",
     "@tailwindcss/typography": "^0.5.19",
     "@tailwindcss/vite": "^4.2.4",
     "@types/node": "^25.6.0",
     "astro": "^6.2.2",
     "playwright": "^1.59.1",
-    "starlight-llms-txt": "^0.8.1",
+    "starlight-llms-txt": "^0.10.0",
     "svelte": "^5.55.5",
     "svelte-check": "^4.4.6",
     "tailwindcss": "^4.2.4",
@@ -92,6 +101,16 @@
     "typescript": "^6.0.3",
     "vite": "^6.3.7",
     "vitest": "^4.1.5",
-    "wrangler": "4.88.0"
+    "wrangler": "4.92.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "fast-uri@<=3.1.0": ">=3.1.1",
+      "fast-uri@<=3.1.1": ">=3.1.2",
+      "hono@<4.12.18": ">=4.12.18",
+      "ip-address@<=10.1.0": ">=10.1.1",
+      "hono@<4.12.16": ">=4.12.16",
+      "devalue@>=5.6.3 <=5.8.0": ">=5.8.1"
+    }
   }
 }

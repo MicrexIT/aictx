@@ -34,7 +34,7 @@ afterEach(async () => {
 
 describe("exportObsidianProjection", () => {
   it("writes notes with JSON frontmatter, aliases, tags, body, and active relation links", async () => {
-    const projectRoot = await createTempRoot("aictx-export-obsidian-unit-");
+    const projectRoot = await createTempRoot("memory-export-obsidian-unit-");
     const storage = fixtureStorage(projectRoot);
 
     const result = await exportObsidianProjection({ projectRoot, storage });
@@ -52,33 +52,33 @@ describe("exportObsidianProjection", () => {
       relations_linked: 1
     });
     expect(result.data.files_written).toEqual([
-      ".aictx/exports/obsidian/index.md",
-      ".aictx/exports/obsidian/memory/constraint.webhook-idempotency.md",
-      ".aictx/exports/obsidian/memory/decision.billing-retries.md",
-      ".aictx/exports/obsidian/.aictx-obsidian-export.json"
+      ".memory/exports/obsidian/index.md",
+      ".memory/exports/obsidian/memory/constraint.webhook-idempotency.md",
+      ".memory/exports/obsidian/memory/decision.billing-retries.md",
+      ".memory/exports/obsidian/.memory-obsidian-export.json"
     ]);
     expect(result.data.files_removed).toEqual([]);
 
     const decisionNote = await readProjectFile(
       projectRoot,
-      ".aictx/exports/obsidian/memory/decision.billing-retries.md"
+      ".memory/exports/obsidian/memory/decision.billing-retries.md"
     );
     const frontmatter = parseJsonFrontmatter(decisionNote);
 
     expect(frontmatter).toMatchObject({
-      aictx_id: "decision.billing-retries",
-      aictx_title: "Billing retries",
-      aictx_type: "decision",
-      aictx_status: "active",
-      aictx_scope_kind: "project",
-      aictx_scope_project: "project.billing-api",
-      aictx_created_at: FIXED_TIMESTAMP,
-      aictx_updated_at: FIXED_TIMESTAMP_NEXT_MINUTE,
+      memory_id: "decision.billing-retries",
+      memory_title: "Billing retries",
+      memory_type: "decision",
+      memory_status: "active",
+      memory_scope_kind: "project",
+      memory_scope_project: "project.billing-api",
+      memory_created_at: FIXED_TIMESTAMP,
+      memory_updated_at: FIXED_TIMESTAMP_NEXT_MINUTE,
       aliases: ["Billing retries"],
       tags: ["billing", "retries"],
-      aictx_rel_requires: ["[[memory/constraint.webhook-idempotency]]"]
+      memory_rel_requires: ["[[memory/constraint.webhook-idempotency]]"]
     });
-    expect(frontmatter).not.toHaveProperty("aictx_rel_mentions");
+    expect(frontmatter).not.toHaveProperty("memory_rel_mentions");
     expect(decisionNote).toContain("# Billing retries\n\nRetries run in the queue worker.\n");
     expect(decisionNote).toContain(
       "- requires: [[memory/constraint.webhook-idempotency]]"
@@ -86,7 +86,7 @@ describe("exportObsidianProjection", () => {
   });
 
   it("exports gotcha and workflow objects", async () => {
-    const projectRoot = await createTempRoot("aictx-export-obsidian-types-");
+    const projectRoot = await createTempRoot("memory-export-obsidian-types-");
     const baseStorage = fixtureStorage(projectRoot);
     const storage = {
       ...baseStorage,
@@ -122,32 +122,32 @@ describe("exportObsidianProjection", () => {
 
     expect(result.data.files_written).toEqual(
       expect.arrayContaining([
-        ".aictx/exports/obsidian/memory/gotcha.webhook-duplicates.md",
-        ".aictx/exports/obsidian/memory/workflow.release-checklist.md"
+        ".memory/exports/obsidian/memory/gotcha.webhook-duplicates.md",
+        ".memory/exports/obsidian/memory/workflow.release-checklist.md"
       ])
     );
 
     const gotchaNote = await readProjectFile(
       projectRoot,
-      ".aictx/exports/obsidian/memory/gotcha.webhook-duplicates.md"
+      ".memory/exports/obsidian/memory/gotcha.webhook-duplicates.md"
     );
     const workflowNote = await readProjectFile(
       projectRoot,
-      ".aictx/exports/obsidian/memory/workflow.release-checklist.md"
+      ".memory/exports/obsidian/memory/workflow.release-checklist.md"
     );
 
     expect(parseJsonFrontmatter(gotchaNote)).toMatchObject({
-      aictx_id: "gotcha.webhook-duplicates",
-      aictx_type: "gotcha"
+      memory_id: "gotcha.webhook-duplicates",
+      memory_type: "gotcha"
     });
     expect(parseJsonFrontmatter(workflowNote)).toMatchObject({
-      aictx_id: "workflow.release-checklist",
-      aictx_type: "workflow"
+      memory_id: "workflow.release-checklist",
+      memory_type: "workflow"
     });
   });
 
   it("writes source origin frontmatter", async () => {
-    const projectRoot = await createTempRoot("aictx-export-obsidian-origin-");
+    const projectRoot = await createTempRoot("memory-export-obsidian-origin-");
     const baseStorage = fixtureStorage(projectRoot);
     const storage = {
       ...baseStorage,
@@ -181,35 +181,35 @@ describe("exportObsidianProjection", () => {
 
     const sourceNote = await readProjectFile(
       projectRoot,
-      ".aictx/exports/obsidian/memory/source.llm-wiki.md"
+      ".memory/exports/obsidian/memory/source.llm-wiki.md"
     );
 
     expect(parseJsonFrontmatter(sourceNote)).toMatchObject({
-      aictx_id: "source.llm-wiki",
-      aictx_origin_kind: "url",
-      aictx_origin_locator: "https://example.com/llm-wiki",
-      aictx_origin_captured_at: FIXED_TIMESTAMP,
-      aictx_origin_digest: `sha256:${"1".repeat(64)}`,
-      aictx_origin_media_type: "text/markdown"
+      memory_id: "source.llm-wiki",
+      memory_origin_kind: "url",
+      memory_origin_locator: "https://example.com/llm-wiki",
+      memory_origin_captured_at: FIXED_TIMESTAMP,
+      memory_origin_digest: `sha256:${"1".repeat(64)}`,
+      memory_origin_media_type: "text/markdown"
     });
   });
 
   it("rejects unsafe output targets", async () => {
-    const projectRoot = await createTempRoot("aictx-export-obsidian-unsafe-");
+    const projectRoot = await createTempRoot("memory-export-obsidian-unsafe-");
     const storage = fixtureStorage(projectRoot);
 
-    for (const outDir of [".", "../outside", ".aictx", ".aictx/memory", ".aictx/exports"]) {
+    for (const outDir of [".", "../outside", ".memory", ".memory/memory", ".memory/exports"]) {
       const result = await exportObsidianProjection({ projectRoot, storage, outDir });
 
       expect(result.ok).toBe(false);
       if (!result.ok) {
-        expect(result.error.code).toBe("AICtxExportTargetInvalid");
+        expect(result.error.code).toBe("MemoryExportTargetInvalid");
       }
     }
   });
 
   it("rejects non-empty unmanifested output directories and invalid manifests", async () => {
-    const projectRoot = await createTempRoot("aictx-export-obsidian-target-");
+    const projectRoot = await createTempRoot("memory-export-obsidian-target-");
     const storage = fixtureStorage(projectRoot);
     await writeProjectFile(projectRoot, "vault/user.md", "# User\n");
 
@@ -221,7 +221,7 @@ describe("exportObsidianProjection", () => {
 
     expect(unmanifested.ok).toBe(false);
     if (!unmanifested.ok) {
-      expect(unmanifested.error.code).toBe("AICtxExportTargetInvalid");
+      expect(unmanifested.error.code).toBe("MemoryExportTargetInvalid");
     }
 
     await rm(join(projectRoot, "vault"), { recursive: true, force: true });
@@ -239,12 +239,12 @@ describe("exportObsidianProjection", () => {
 
     expect(invalidManifest.ok).toBe(false);
     if (!invalidManifest.ok) {
-      expect(invalidManifest.error.code).toBe("AICtxExportTargetInvalid");
+      expect(invalidManifest.error.code).toBe("MemoryExportTargetInvalid");
     }
   });
 
   it("removes stale manifest-owned files while preserving unmanifested files", async () => {
-    const projectRoot = await createTempRoot("aictx-export-obsidian-stale-");
+    const projectRoot = await createTempRoot("memory-export-obsidian-stale-");
     const storage = fixtureStorage(projectRoot);
 
     const first = await exportObsidianProjection({ projectRoot, storage, outDir: "vault" });
@@ -281,7 +281,7 @@ describe("exportObsidianProjection", () => {
   });
 
   it("rejects symlink targets and unmanifested generated-file conflicts", async () => {
-    const projectRoot = await createTempRoot("aictx-export-obsidian-symlink-");
+    const projectRoot = await createTempRoot("memory-export-obsidian-symlink-");
     const storage = fixtureStorage(projectRoot);
     await mkdir(join(projectRoot, "real-vault"), { recursive: true });
     await symlink(join(projectRoot, "real-vault"), join(projectRoot, "vault-link"));
@@ -294,7 +294,7 @@ describe("exportObsidianProjection", () => {
 
     expect(symlinkResult.ok).toBe(false);
     if (!symlinkResult.ok) {
-      expect(symlinkResult.error.code).toBe("AICtxExportTargetInvalid");
+      expect(symlinkResult.error.code).toBe("MemoryExportTargetInvalid");
     }
 
     await writeProjectFile(
@@ -316,7 +316,7 @@ describe("exportObsidianProjection", () => {
 
     expect(conflict.ok).toBe(false);
     if (!conflict.ok) {
-      expect(conflict.error.code).toBe("AICtxExportTargetInvalid");
+      expect(conflict.error.code).toBe("MemoryExportTargetInvalid");
     }
   });
 });
@@ -344,7 +344,7 @@ function fixtureStorage(projectRoot: string): CanonicalStorageSnapshot {
 
   return {
     projectRoot,
-    aictxRoot: join(projectRoot, ".aictx"),
+    memoryRoot: join(projectRoot, ".memory"),
     config: {
       version: 1,
       project: {
@@ -393,8 +393,8 @@ function memoryObject(options: {
   origin?: StoredMemoryObject["sidecar"]["origin"];
 }): StoredMemoryObject {
   return {
-    path: `.aictx/${options.bodyPath.replace(/\.md$/, ".json")}`,
-    bodyPath: `.aictx/${options.bodyPath}`,
+    path: `.memory/${options.bodyPath.replace(/\.md$/, ".json")}`,
+    bodyPath: `.memory/${options.bodyPath}`,
     body: options.body,
     sidecar: {
       id: options.id,
@@ -428,7 +428,7 @@ function relation(options: {
   status: MemoryRelation["status"];
 }): StoredMemoryRelation {
   return {
-    path: `.aictx/relations/${options.id.replace(/^rel\./, "")}.json`,
+    path: `.memory/relations/${options.id.replace(/^rel\./, "")}.json`,
     relation: {
       id: options.id,
       from: options.from,

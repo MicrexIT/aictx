@@ -118,7 +118,7 @@
       name: string;
     };
     project_root: string;
-    aictx_root: string;
+    memory_root: string;
     source: "auto" | "manual";
     registered_at: string;
     last_seen_at: string;
@@ -167,7 +167,7 @@
     warnings: string[];
     meta: {
       project_root: string;
-      aictx_root: string;
+      memory_root: string;
       git: {
         available: boolean;
         branch: string | null;
@@ -198,6 +198,7 @@
   type PreviewState = "idle" | "running" | "success" | "error";
   type LayerFilter = "all" | "memories" | "syntheses" | "sources" | "inactive";
   type PagePreset = "all" | "atomic-memory" | "syntheses" | "sources" | "inactive";
+  type ObjectSort = "type" | "updated-desc" | "updated-asc";
   type LoadMemoryMode = "coding" | "debugging" | "review" | "architecture" | "onboarding";
   type MemoryLensName = "project-map" | "current-work" | "review-risk" | "provenance" | "maintenance";
   type RoleCoverageStatus = "populated" | "thin" | "missing" | "stale" | "conflicted";
@@ -333,8 +334,9 @@
   let statusFilter = $state("all");
   let tagFilter = $state("all");
   let pagePreset = $state<PagePreset>("all");
+  let objectSort = $state<ObjectSort>("type");
   let activeLensName = $state<MemoryLensName>("project-map");
-  let mobileMenuOpen = $state(false);
+  let sidebarDrawerOpen = $state(false);
   let exportOutDir = $state("");
   let exportState = $state<ExportState>("idle");
   let exportMessage = $state("");
@@ -372,12 +374,32 @@
     { value: "sources", label: "Sources" },
     { value: "inactive", label: "Inactive" }
   ];
+  const objectSortOptions: Array<{ value: ObjectSort; label: string }> = [
+    { value: "type", label: "Type order" },
+    { value: "updated-desc", label: "Edited newest" },
+    { value: "updated-asc", label: "Edited oldest" }
+  ];
   const loadModeOptions: Array<{ value: LoadMemoryMode; label: string }> = [
     { value: "coding", label: "Coding" },
     { value: "debugging", label: "Debugging" },
     { value: "review", label: "Review" },
     { value: "architecture", label: "Architecture" },
     { value: "onboarding", label: "Onboarding" }
+  ];
+  const graphTypeLegend: Array<{
+    label: string;
+    color: string;
+    borderColor: string;
+  }> = [
+    { label: "Project", color: "#2f5d62", borderColor: "#fffefa" },
+    { label: "Synthesis", color: "#574b90", borderColor: "#fffefa" },
+    { label: "Workflow", color: "#3f648c", borderColor: "#fffefa" },
+    { label: "Source", color: "#6b6f76", borderColor: "#9a968d" }
+  ];
+  const graphRelationLegend: Array<{ label: string; color: string; lineStyle: "solid" | "dashed" }> = [
+    { label: "Semantic", color: "#4f6f5a", lineStyle: "solid" },
+    { label: "Dependency", color: "#4f6590", lineStyle: "solid" },
+    { label: "Provenance", color: "#766b94", lineStyle: "dashed" }
   ];
   const graphStyles: cytoscape.StylesheetJson = [
     {
@@ -386,7 +408,7 @@
         "background-color": "data(color)",
         "border-color": "data(borderColor)",
         "border-width": 2,
-        color: "#37352f",
+        color: "#2e2d2a",
         "font-size": 9,
         "font-weight": 700,
         height: "data(size)",
@@ -394,7 +416,7 @@
         "min-zoomed-font-size": 8.5,
         "overlay-opacity": 0,
         "text-background-color": "#fffefa",
-        "text-background-opacity": 0.9,
+        "text-background-opacity": 0.94,
         "text-background-padding": "2px",
         "text-halign": "center",
         "text-margin-y": 10,
@@ -402,6 +424,31 @@
         "text-valign": "bottom",
         "text-wrap": "wrap",
         width: "data(size)"
+      }
+    },
+    {
+      selector: "node.graph-node-source",
+      style: {
+        shape: "round-rectangle"
+      }
+    },
+    {
+      selector: "node.graph-node-project",
+      style: {
+        shape: "hexagon"
+      }
+    },
+    {
+      selector: "node.graph-node-workflow",
+      style: {
+        shape: "round-diamond"
+      }
+    },
+    {
+      selector: "node.graph-node-isolated",
+      style: {
+        "border-color": "#c36a43",
+        "border-style": "dashed"
       }
     },
     {
@@ -418,9 +465,15 @@
       }
     },
     {
+      selector: "edge.graph-edge-provenance",
+      style: {
+        "line-style": "dashed"
+      }
+    },
+    {
       selector: "node.graph-selected",
       style: {
-        "border-color": "#111214",
+        "border-color": "#171715",
         "border-width": 4,
         "font-size": 10.5,
         height: "data(size)",
@@ -436,9 +489,9 @@
     {
       selector: "edge.graph-selected",
       style: {
-        "line-color": "#111214",
+        "line-color": "#171715",
         opacity: 1,
-        "target-arrow-color": "#111214",
+        "target-arrow-color": "#171715",
         width: 3.2,
         "z-index": 20
       }
@@ -464,11 +517,11 @@
     {
       selector: "node.graph-faded",
       style: {
-        color: "#5f594f",
+        color: "#6c665e",
         "font-size": 8.8,
         label: "data(peekLabel)",
         "min-zoomed-font-size": 6.8,
-        opacity: 0.52,
+        opacity: 0.44,
         "text-background-opacity": 0.78,
         "text-max-width": "80px",
         "text-opacity": 1,
@@ -478,7 +531,7 @@
     {
       selector: "edge.graph-faded",
       style: {
-        opacity: 0.14
+        opacity: 0.12
       }
     }
   ];
@@ -512,6 +565,16 @@
       graphVisibleObjectIds.has(relation.to)
     )
   );
+  const graphUnlinkedCount = $derived.by(() => {
+    const linkedIds = new Set<string>();
+
+    for (const relation of graphRelations) {
+      linkedIds.add(relation.from);
+      linkedIds.add(relation.to);
+    }
+
+    return graphObjects.filter((object) => !linkedIds.has(object.id)).length;
+  });
   const graphElements = $derived.by(() => buildGraphElements(graphObjects, graphRelations));
   const selectedGraphObject = $derived.by(() =>
     selectedGraphObjectId === null || !graphVisibleObjectIds.has(selectedGraphObjectId)
@@ -585,7 +648,7 @@
   const trustDescription = $derived.by(() =>
     selectedProject === null ? "No project is selected." : gitDescription(selectedProject)
   );
-  const memorySections = $derived.by(() => buildMemorySections(filteredObjects));
+  const memorySections = $derived.by(() => buildMemorySections(filteredObjects, objectSort));
   const previewCommandTask = $derived.by(() => previewTask.trim() || (previewData?.task ?? ""));
   const showPreviewCommand = $derived(previewCommandTask.trim() !== "");
   const previewCommand = $derived.by(() => buildPreviewCommand(previewCommandTask, previewMode, previewTokenBudget));
@@ -705,14 +768,14 @@
   async function exportObsidian(): Promise<void> {
     if (isDemoMode) {
       exportState = "error";
-      exportErrorCode = "AICtxValidationFailed";
+      exportErrorCode = "MemoryValidationFailed";
       exportMessage = "The public demo viewer is read-only.";
       return;
     }
 
     if (selectedProjectId === null) {
       exportState = "error";
-      exportErrorCode = "AICtxValidationFailed";
+      exportErrorCode = "MemoryValidationFailed";
       exportMessage = "Select a project before exporting.";
       return;
     }
@@ -752,7 +815,7 @@
       exportManifestPath = envelope.data.manifest_path;
     } catch (error) {
       exportState = "error";
-      exportErrorCode = "AICtxInternalError";
+      exportErrorCode = "MemoryInternalError";
       exportMessage = error instanceof Error ? error.message : String(error);
     }
   }
@@ -760,7 +823,7 @@
   async function previewContext(): Promise<void> {
     if (selectedProjectId === null) {
       previewState = "error";
-      previewErrorCode = "AICtxValidationFailed";
+      previewErrorCode = "MemoryValidationFailed";
       previewMessage = "Select a project before previewing context.";
       return;
     }
@@ -769,7 +832,7 @@
 
     if (task === "") {
       previewState = "error";
-      previewErrorCode = "AICtxValidationFailed";
+      previewErrorCode = "MemoryValidationFailed";
       previewMessage = "Enter a task to preview the context an agent would load.";
       return;
     }
@@ -778,7 +841,7 @@
 
     if (!parsedBudget.ok) {
       previewState = "error";
-      previewErrorCode = "AICtxValidationFailed";
+      previewErrorCode = "MemoryValidationFailed";
       previewMessage = parsedBudget.message;
       return;
     }
@@ -821,7 +884,7 @@
     } catch (error) {
       previewState = "error";
       previewData = null;
-      previewErrorCode = "AICtxInternalError";
+      previewErrorCode = "MemoryInternalError";
       previewMessage = error instanceof Error ? error.message : String(error);
     }
   }
@@ -856,13 +919,13 @@
 
   async function deleteProjectMemory(project: ViewerProjectSummary): Promise<void> {
     if (isDemoMode) {
-      projectDeleteErrorCode = "AICtxValidationFailed";
+      projectDeleteErrorCode = "MemoryValidationFailed";
       projectDeleteMessage = "The public demo viewer is read-only.";
       return;
     }
 
     if (!projectDeleteConfirmationMatches(project)) {
-      projectDeleteErrorCode = "AICtxValidationFailed";
+      projectDeleteErrorCode = "MemoryValidationFailed";
       projectDeleteMessage = `Type ${project.project.id} to confirm memory deletion.`;
       return;
     }
@@ -898,7 +961,7 @@
       projectDeleteErrorCode = "";
       await loadProjects();
     } catch (error) {
-      projectDeleteErrorCode = "AICtxInternalError";
+      projectDeleteErrorCode = "MemoryInternalError";
       projectDeleteMessage = error instanceof Error ? error.message : String(error);
     } finally {
       if (deletingProjectId === project.registry_id) {
@@ -913,6 +976,7 @@
     bootstrap = null;
     projectLoadState = "loading";
     currentScreen = "projects";
+    objectSort = "type";
     exportState = "idle";
     previewState = "idle";
     previewData = null;
@@ -923,10 +987,10 @@
   }
 
   function projectDeleteSuccessMessage(data: ViewerProjectDeleteData): string {
-    const removedMemory = data.entries_removed.includes(".aictx");
+    const removedMemory = data.entries_removed.includes(".memory");
     const action = removedMemory
-      ? "Deleted .aictx memory and removed the project from the viewer."
-      : "Removed the project from the viewer; .aictx memory was already missing.";
+      ? "Deleted .memory and removed the project from the viewer."
+      : "Removed the project from the viewer; .memory was already missing.";
 
     return `${data.project.project.name}: ${action}`;
   }
@@ -941,6 +1005,7 @@
     statusFilter = allOption;
     tagFilter = allOption;
     pagePreset = "all";
+    objectSort = "type";
     activeLensName = "project-map";
     exportState = "idle";
     previewState = "idle";
@@ -978,10 +1043,12 @@
 
   function showProjects(): void {
     currentScreen = "projects";
+    closeSidebarDrawer();
   }
 
   function showMemories(): void {
     currentScreen = selectedProjectId === null ? "projects" : "memories";
+    closeSidebarDrawer();
   }
 
   function showGraph(): void {
@@ -991,7 +1058,7 @@
     }
 
     currentScreen = "graph";
-    mobileMenuOpen = false;
+    closeSidebarDrawer();
 
     if (selectedGraphObjectId === null) {
       selectedGraphObjectId = preferredGraphObjectId();
@@ -1005,24 +1072,47 @@
     }
 
     currentScreen = selectedProjectId === null ? "projects" : "export";
+    closeSidebarDrawer();
   }
 
   function rankedObjects(memoryObjects: MemoryObjectSummary[]): MemoryObjectSummary[] {
+    return [...memoryObjects].sort(compareObjectsByRank);
+  }
+
+  function compareObjectsByRank(left: MemoryObjectSummary, right: MemoryObjectSummary): number {
+    const leftStatus = isCurrentStatus(left.status) ? 0 : 1;
+    const rightStatus = isCurrentStatus(right.status) ? 0 : 1;
+    if (leftStatus !== rightStatus) {
+      return leftStatus - rightStatus;
+    }
+
+    const leftType = OBJECT_TYPES.indexOf(left.type);
+    const rightType = OBJECT_TYPES.indexOf(right.type);
+    if (leftType !== rightType) {
+      return leftType - rightType;
+    }
+
+    const titleComparison = left.title.localeCompare(right.title);
+    return titleComparison === 0 ? left.id.localeCompare(right.id) : titleComparison;
+  }
+
+  function sortObjects(memoryObjects: MemoryObjectSummary[], sort: ObjectSort): MemoryObjectSummary[] {
+    if (sort === "type") {
+      return rankedObjects(memoryObjects);
+    }
+
     return [...memoryObjects].sort((left, right) => {
-      const leftStatus = isCurrentStatus(left.status) ? 0 : 1;
-      const rightStatus = isCurrentStatus(right.status) ? 0 : 1;
-      if (leftStatus !== rightStatus) {
-        return leftStatus - rightStatus;
-      }
+      const direction = sort === "updated-desc" ? -1 : 1;
+      const timestampComparison =
+        (updatedAtTimestamp(left.updated_at) - updatedAtTimestamp(right.updated_at)) * direction;
 
-      const leftType = OBJECT_TYPES.indexOf(left.type);
-      const rightType = OBJECT_TYPES.indexOf(right.type);
-      if (leftType !== rightType) {
-        return leftType - rightType;
-      }
-
-      return left.title.localeCompare(right.title);
+      return timestampComparison === 0 ? compareObjectsByRank(left, right) : timestampComparison;
     });
+  }
+
+  function updatedAtTimestamp(value: string): number {
+    const timestamp = Date.parse(value);
+    return Number.isFinite(timestamp) ? timestamp : 0;
   }
 
   function objectMatchesFilters(object: MemoryObjectSummary): boolean {
@@ -1359,22 +1449,28 @@
     }
 
     return [
-      ...memoryObjects.map((object) => ({
-        group: "nodes" as const,
-        data: {
-          id: object.id,
-          label: graphObjectLabel(object),
-          peekLabel: graphObjectPeekLabel(object),
-          fullLabel: graphObjectFullLabel(object),
-          type: object.type,
-          status: object.status,
-          color: graphObjectColor(object),
-          borderColor: graphObjectBorderColor(object),
-          size: 28 + Math.min(degreeById.get(object.id) ?? 0, 8) * 3
-        }
-      })),
+      ...memoryObjects.map((object) => {
+        const degree = degreeById.get(object.id) ?? 0;
+
+        return {
+          group: "nodes" as const,
+          classes: graphNodeClasses(object, degree),
+          data: {
+            id: object.id,
+            label: graphObjectLabel(object),
+            peekLabel: graphObjectPeekLabel(object),
+            fullLabel: graphObjectFullLabel(object),
+            type: object.type,
+            status: object.status,
+            color: graphObjectColor(object),
+            borderColor: graphObjectBorderColor(object, degree),
+            size: (degree === 0 ? 25 : 29) + Math.min(degree, 8) * 3
+          }
+        };
+      }),
       ...relationList.map((relation) => ({
         group: "edges" as const,
+        classes: graphEdgeClasses(relation),
         data: {
           id: relation.id,
           source: relation.from,
@@ -1644,7 +1740,18 @@
     }
   }
 
-  function graphObjectBorderColor(object: MemoryObjectSummary): string {
+  function graphNodeClasses(object: MemoryObjectSummary, degree: number): string {
+    return [
+      `graph-node-${object.type}`,
+      ...(degree === 0 ? ["graph-node-isolated"] : [])
+    ].join(" ");
+  }
+
+  function graphObjectBorderColor(object: MemoryObjectSummary, degree = 1): string {
+    if (degree === 0) {
+      return "#c36a43";
+    }
+
     if (object.type === "source") {
       return "#9a968d";
     }
@@ -1677,9 +1784,13 @@
     }
   }
 
+  function graphEdgeClasses(relation: MemoryRelationSummary): string {
+    return relation.predicate === "derived_from" ? "graph-edge-provenance" : "";
+  }
+
   function pageFilter(section: string): void {
     currentScreen = "memories";
-    mobileMenuOpen = false;
+    closeSidebarDrawer();
     searchQuery = "";
     typeFilter = allOption;
     facetCategoryFilter = allOption;
@@ -1710,12 +1821,25 @@
     }
   }
 
-  function buildMemorySections(memoryObjects: MemoryObjectSummary[]): MemorySection[] {
+  function buildMemorySections(
+    memoryObjects: MemoryObjectSummary[],
+    sort: ObjectSort
+  ): MemorySection[] {
+    if (sort !== "type") {
+      return [
+        {
+          id: "edited-objects",
+          title: sort === "updated-desc" ? "Recently edited objects" : "Oldest edited objects",
+          objects: sortObjects(memoryObjects, sort)
+        }
+      ].filter((section) => section.objects.length > 0);
+    }
+
     return OBJECT_TYPES
       .map((type) => ({
         id: `type-${type}`,
         title: objectTypeLabel(type),
-        objects: rankedObjects(memoryObjects.filter((object) => object.type === type))
+        objects: sortObjects(memoryObjects.filter((object) => object.type === type), sort)
       }))
       .filter((section) => section.objects.length > 0);
   }
@@ -1762,47 +1886,21 @@
     return text.length > 190 ? `${text.slice(0, 187)}...` : text;
   }
 
-  function objectIcon(object: MemoryObjectSummary): string {
-    return objectTypeGlyph(object.type);
-  }
-
-  function objectTypeGlyph(type: ObjectType): string {
-    switch (type) {
-      case "project":
-        return "P";
-      case "architecture":
-        return "A";
-      case "synthesis":
-        return "S";
-      case "decision":
-        return "D";
-      case "constraint":
-        return "C";
-      case "question":
-        return "?";
-      case "fact":
-        return "F";
-      case "workflow":
-        return "W";
-      case "gotcha":
-        return "!";
-      case "source":
-        return "R";
-      case "concept":
-        return "K";
-      case "note":
-        return "N";
-      default:
-        return "•";
-    }
-  }
-
   function objectTypeLabel(type: ObjectType): string {
     return `${type.charAt(0).toUpperCase()}${type.slice(1)} objects`;
   }
 
   function facetCategoryLabel(object: MemoryObjectSummary): string {
     return object.facets?.category ?? "no facet category";
+  }
+
+  function editedDateLabel(object: MemoryObjectSummary): string {
+    return `Edited ${compactIsoDateTime(object.updated_at)}`;
+  }
+
+  function compactIsoDateTime(value: string): string {
+    const match = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/.exec(value);
+    return match === null ? value : `${match[1]} ${match[2]}`;
   }
 
   function scopeLabel(scope: Scope): string {
@@ -1871,15 +1969,15 @@
   }
 
   function previewErrorMessage(code: string, message: string): string {
-    if (code === "AICtxIndexUnavailable") {
-      return `${code}: ${message} Run aictx rebuild, then preview again.`;
+    if (code === "MemoryIndexUnavailable") {
+      return `${code}: ${message} Run memory rebuild, then preview again.`;
     }
 
     return `${code}: ${message}`;
   }
 
   function buildPreviewCommand(task: string, mode: LoadMemoryMode, tokenBudget: string): string {
-    const parts = ["aictx", "load", shellQuote(task.trim())];
+    const parts = ["memory", "load", shellQuote(task.trim())];
 
     if (mode !== "coding") {
       parts.push("--mode", mode);
@@ -1936,7 +2034,7 @@
     }
 
     if (project.git.dirty === true) {
-      return "There are uncommitted changes under this memory root. Use aictx diff or Git before treating it as committed team state.";
+      return "There are uncommitted changes under this memory root. Use memory diff or Git before treating it as committed team state.";
     }
 
     if (project.git.dirty === false) {
@@ -2102,44 +2200,74 @@
     flushLooseBlocks();
     return blocks;
   }
+
+  function toggleSidebarDrawer(): void {
+    sidebarDrawerOpen = !sidebarDrawerOpen;
+  }
+
+  function closeSidebarDrawer(): void {
+    sidebarDrawerOpen = false;
+  }
+
+  function handleWindowKeydown(event: KeyboardEvent): void {
+    if (event.key === "Escape" && sidebarDrawerOpen) {
+      closeSidebarDrawer();
+    }
+  }
 </script>
+
+<svelte:window onkeydown={handleWindowKeydown} />
 
 <main class="viewer-shell" aria-labelledby="viewer-title">
   {#if loadState === "loading"}
     <section class="system-panel" aria-live="polite">
-      <p class="eyebrow">Aictx local viewer</p>
+      <p class="eyebrow">Memory local viewer</p>
       <h1 id="viewer-title">Memory Viewer</h1>
       <p>Loading memory from the local viewer API.</p>
     </section>
   {:else if loadState === "error"}
     <section class="system-panel error-panel" role="alert">
-      <p class="eyebrow">Aictx local viewer</p>
+      <p class="eyebrow">Memory local viewer</p>
       <h1 id="viewer-title">Memory Viewer</h1>
       <h2>Viewer failed to load</h2>
       <p>{errorMessage}</p>
     </section>
   {:else if projectsData !== null}
-    <aside class="sidebar" aria-label="Viewer navigation">
+    <button
+      type="button"
+      class="sidebar-toggle"
+      class:open={sidebarDrawerOpen}
+      aria-label={sidebarDrawerOpen ? "Close menu" : "Open menu"}
+      aria-expanded={sidebarDrawerOpen}
+      aria-controls="viewer-sidebar-drawer"
+      onclick={toggleSidebarDrawer}
+      data-testid="sidebar-menu-toggle"
+    >
+      <span class="burger-icon" aria-hidden="true"></span>
+      <span>{sidebarDrawerOpen ? "Close menu" : "Menu"}</span>
+    </button>
+
+    {#if sidebarDrawerOpen}
+      <button
+        type="button"
+        class="sidebar-backdrop"
+        aria-label="Dismiss menu"
+        onclick={closeSidebarDrawer}
+        data-testid="sidebar-backdrop"
+      ></button>
+    {/if}
+
+    {#if sidebarDrawerOpen}
+    <aside id="viewer-sidebar-drawer" class="sidebar" aria-label="Viewer navigation" data-testid="viewer-sidebar-drawer">
       <div class="brand">
         <div class="brand-row">
-          <span class="book-icon" aria-hidden="true">A</span>
+          <img class="book-icon" src="/favicon.ico" width="28" height="28" alt="" aria-hidden="true" />
           <h1 id="viewer-title">Memory Schema</h1>
-          <button
-            type="button"
-            class="mobile-menu-toggle"
-            aria-expanded={mobileMenuOpen}
-            aria-controls="viewer-mobile-menu"
-            onclick={() => {
-              mobileMenuOpen = !mobileMenuOpen;
-            }}
-          >
-            {mobileMenuOpen ? "Close menu" : "Menu"}
-          </button>
         </div>
         <p>{selectedProject?.project.name ?? "No project selected"} · {selectedProject?.project.id ?? "local memory"}</p>
       </div>
 
-      <div id="viewer-mobile-menu" class="sidebar-menu" class:open={mobileMenuOpen}>
+      <div class="sidebar-menu open">
         {#if bootstrap !== null}
           <dl class="sidebar-stats" aria-label="Memory schema stats">
             <div><dt>{activeMemoryCount}</dt><dd>active</dd></div>
@@ -2249,7 +2377,7 @@
               <input
                 type="text"
                 bind:value={exportOutDir}
-                placeholder=".aictx/exports/obsidian"
+                placeholder=".memory/exports/obsidian"
                 autocomplete="off"
               />
             </label>
@@ -2264,6 +2392,7 @@
         {/if}
       </div>
     </aside>
+    {/if}
 
     <section
       class={`main-stage ${memoryScreenActive ? "memory-stage" : ""} ${hasSelectedObject ? "has-selected-object" : ""}`}
@@ -2341,7 +2470,7 @@
                 {#if !isDemoMode && pendingDeleteProjectId === project.registry_id}
                   <section class="project-delete-confirm" aria-label={`Confirm memory deletion for ${project.project.name}`}>
                     <p>
-                      Delete this project's <code>.aictx</code> memory directory and unregister it from the viewer.
+                      Delete this project's <code>.memory</code> memory directory and unregister it from the viewer.
                       Source files in <span class="mono">{project.project_root}</span> remain.
                     </p>
                     <label class="field">
@@ -2362,7 +2491,7 @@
                         onclick={() => void deleteProjectMemory(project)}
                         data-testid={`project-delete-submit-${project.registry_id}`}
                       >
-                        {deletingProjectId === project.registry_id ? "Deleting" : "Delete .aictx memory"}
+                        {deletingProjectId === project.registry_id ? "Deleting" : "Delete .memory"}
                       </button>
                       <button
                         type="button"
@@ -2380,7 +2509,7 @@
             {:else}
               <section class="empty-panel" data-testid="empty-projects">
                 <h3>No projects registered</h3>
-                <p>Run <code>aictx projects add</code> inside an initialized project.</p>
+                <p>Run <code>memory projects add</code> inside an initialized project.</p>
                 <p class="mono">{projectsData.registry_path}</p>
               </section>
             {/each}
@@ -2388,14 +2517,14 @@
         </section>
       {:else if projectLoadState === "error"}
         <section class="system-panel error-panel" role="alert" data-testid="project-load-error">
-          <p class="eyebrow">Aictx local viewer</p>
+          <p class="eyebrow">Memory local viewer</p>
           <h2>Project failed to load</h2>
           <p>{projectErrorMessage}</p>
           <button type="button" class="ghost-action" onclick={showProjects}>Back to projects</button>
         </section>
       {:else if projectLoadState === "loading" || bootstrap === null}
         <section class="system-panel" aria-live="polite" data-testid="project-loading">
-          <p class="eyebrow">Aictx local viewer</p>
+          <p class="eyebrow">Memory local viewer</p>
           <h2>Loading project</h2>
           <p>{selectedProject?.project.name ?? "Selected project"}</p>
         </section>
@@ -2409,6 +2538,7 @@
             <dl class="graph-counts" aria-label="Visible graph counts">
               <div><dt>Nodes</dt><dd data-testid="graph-node-count">{graphObjects.length}</dd></div>
               <div><dt>Links</dt><dd data-testid="graph-relation-count">{graphRelations.length}</dd></div>
+              <div><dt>Unlinked</dt><dd data-testid="graph-unlinked-count">{graphUnlinkedCount}</dd></div>
             </dl>
           </header>
 
@@ -2433,18 +2563,51 @@
                 </button>
               </div>
               <div class="graph-actions">
-                <button type="button" onclick={() => zoomGraph(1.18)} data-testid="graph-zoom-in">Zoom in</button>
-                <button type="button" onclick={() => zoomGraph(0.84)} data-testid="graph-zoom-out">Zoom out</button>
-                <button type="button" onclick={fitGraph} data-testid="graph-fit">Fit</button>
-                <button type="button" onclick={resetGraphLayout} data-testid="graph-reset-layout">Reset layout</button>
+                <button type="button" aria-label="Zoom in" title="Zoom in" onclick={() => zoomGraph(1.18)} data-testid="graph-zoom-in">+</button>
+                <button type="button" aria-label="Zoom out" title="Zoom out" onclick={() => zoomGraph(0.84)} data-testid="graph-zoom-out">-</button>
+                <button type="button" aria-label="Fit graph" title="Fit graph" onclick={fitGraph} data-testid="graph-fit">Fit</button>
+                <button type="button" aria-label="Reset graph layout" title="Reset graph layout" onclick={resetGraphLayout} data-testid="graph-reset-layout">↺</button>
                 <button
                   type="button"
+                  aria-label="Focus selected graph item"
+                  title="Focus selected graph item"
                   disabled={selectedGraphObject === null && selectedGraphRelation === null}
                   onclick={focusGraphSelection}
                   data-testid="graph-focus-selected"
                 >
-                  Focus
+                  ◎
                 </button>
+              </div>
+            </div>
+            <div class="graph-legend" aria-label="Graph legend" data-testid="graph-legend">
+              <div class="graph-legend-group">
+                {#each graphTypeLegend as item (item.label)}
+                  <span class="graph-legend-item">
+                    <span
+                      class="graph-legend-node"
+                      style={`--legend-color: ${item.color}; --legend-border: ${item.borderColor}`}
+                      aria-hidden="true"
+                    ></span>
+                    {item.label}
+                  </span>
+                {/each}
+                <span class="graph-legend-item">
+                  <span class="graph-legend-node unlinked" aria-hidden="true"></span>
+                  Unlinked
+                </span>
+              </div>
+              <div class="graph-legend-group">
+                {#each graphRelationLegend as item (item.label)}
+                  <span class="graph-legend-item">
+                    <span
+                      class:dashed={item.lineStyle === "dashed"}
+                      class="graph-legend-line"
+                      style={`--legend-color: ${item.color}`}
+                      aria-hidden="true"
+                    ></span>
+                    {item.label}
+                  </span>
+                {/each}
               </div>
             </div>
 
@@ -2475,6 +2638,7 @@
                       <div><dt>Status</dt><dd>{selectedGraphObject.status}</dd></div>
                       <div><dt>Facet</dt><dd>{facetCategoryLabel(selectedGraphObject)}</dd></div>
                       <div><dt>Relations</dt><dd>{relationsForObject(selectedGraphObject.id).length}</dd></div>
+                      <div><dt>Graph</dt><dd>{relationsForObject(selectedGraphObject.id).length === 0 ? "Unlinked" : "Linked"}</dd></div>
                     </dl>
                     <p class="graph-body-preview">{bodyPreview(selectedGraphObject)}</p>
                     <div class="graph-inspector-actions">
@@ -2525,7 +2689,7 @@
                   <section class="graph-empty-selection">
                     <p class="eyebrow">Selection</p>
                     <h3>{graphObjects.length} visible objects</h3>
-                    <p>{graphRelations.length} visible relation links.</p>
+                    <p>{graphRelations.length} visible relation links. {graphUnlinkedCount} unlinked {graphUnlinkedCount === 1 ? "node" : "nodes"} use dashed rims.</p>
                   </section>
                 {/if}
               </aside>
@@ -2553,7 +2717,7 @@
               <input
                 type="text"
                 bind:value={exportOutDir}
-                placeholder=".aictx/exports/obsidian"
+                placeholder=".memory/exports/obsidian"
                 autocomplete="off"
                 disabled={exportState === "running"}
                 data-testid="obsidian-export-out-dir"
@@ -2597,8 +2761,8 @@
           data-testid="memory-list-view"
         >
           <header class="doc-hero">
-            <span class="doc-icon" aria-hidden="true">A</span>
-            <p class="eyebrow">Canonical Aictx storage</p>
+            <img class="doc-icon" src="/favicon.ico" width="46" height="46" alt="" aria-hidden="true" />
+            <p class="eyebrow">Canonical Memory storage</p>
             <h2 id="memory-list-title">{bootstrap.project.name} Memory Schema</h2>
             <p>
               Browse the real object types, facet categories, statuses, scopes, evidence, and relations
@@ -2789,13 +2953,27 @@
             {#if hasStarterMemoryOnly}
               <section class="onboarding-callout" aria-label="Starter memory notice" data-testid="starter-memory-notice">
                 <p><strong>Starter memory only.</strong> Seed useful repo memory with a bootstrap patch, then refresh the viewer.</p>
-                <code>aictx suggest --bootstrap --patch &gt; bootstrap-memory.json</code>
-                <code>aictx save --file bootstrap-memory.json</code>
+                <code>memory suggest --bootstrap --patch &gt; bootstrap-memory.json</code>
+                <code>memory save --file bootstrap-memory.json</code>
               </section>
             {/if}
 
             <div class="browser-workspace-grid">
             <section class="sectioned-memory" aria-label="Memory objects">
+              <div class="schema-browser-toolbar">
+                <div>
+                  <strong>Schema browser</strong>
+                  <span>{filteredObjects.length} visible objects</span>
+                </div>
+                <label class="schema-sort-field">
+                  <span>Sort</span>
+                  <select bind:value={objectSort} class="schema-sort-select" data-testid="viewer-sort" aria-label="Sort objects">
+                    {#each objectSortOptions as option (option.value)}
+                      <option value={option.value}>{option.label}</option>
+                    {/each}
+                  </select>
+                </label>
+              </div>
               {#each memorySections as section (section.id)}
                 <section id={section.id}>
                   <h3>{section.title}</h3>
@@ -2808,7 +2986,6 @@
                         onclick={() => selectObject(object.id)}
                         data-testid={`object-row-${object.id}`}
                       >
-                        <span class="object-glyph">{objectIcon(object)}</span>
                         <span>
                           <strong>{object.title}</strong>
                           <span class="object-meta" data-testid={`object-meta-${object.id}`}>
@@ -2816,6 +2993,7 @@
                             <span>{object.status}</span>
                             <span>{facetCategoryLabel(object)}</span>
                             <span>{scopeLabel(object.scope)}</span>
+                            <span>{editedDateLabel(object)}</span>
                           </span>
                           <small>{bodyPreview(object)}</small>
                         </span>
@@ -3433,7 +3611,7 @@
 
   .object-list button {
     display: grid;
-    grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) auto;
     gap: 12px;
     width: 100%;
     border: 0;
@@ -3622,27 +3800,18 @@
     padding: 4px 6px;
   }
 
-  .mobile-menu-toggle {
-    display: none;
-  }
-
   .sidebar-menu {
     display: grid;
     gap: 14px;
   }
 
-  .book-icon,
-  .object-glyph {
-    display: inline-grid;
-    place-items: center;
+  .book-icon {
+    display: block;
     width: 22px;
     height: 22px;
     flex: 0 0 auto;
     border-radius: 6px;
-    background: #ebe9e3;
-    color: #4e504b;
-    font-size: 0.78rem;
-    font-weight: 900;
+    object-fit: contain;
   }
 
   .brand h1 {
@@ -4042,7 +4211,7 @@
   }
 
   .object-list button {
-    grid-template-columns: 24px minmax(0, 1fr) 18px;
+    grid-template-columns: minmax(0, 1fr) 18px;
     align-items: center;
     border: 0;
     border-radius: 4px;
@@ -4087,15 +4256,6 @@
     color: #8a8a8a;
     font-style: normal;
     font-weight: 900;
-  }
-
-  .object-list .object-glyph {
-    width: 20px;
-    height: 20px;
-    border-radius: 4px;
-    background: transparent;
-    color: #7d7b74;
-    font-size: 0.82rem;
   }
 
   @media (max-width: 980px) {
@@ -4144,33 +4304,10 @@
       gap: 8px;
     }
 
-    .mobile-menu-toggle {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 34px;
-      margin-left: auto;
-      border: 1px solid #d9d5cc;
-      border-radius: 7px;
-      padding: 0 12px;
-      color: #343434;
-      background: #ffffff;
-      font-size: 0.84rem;
-      font-weight: 850;
-      box-shadow: 0 1px 2px rgb(16 24 40 / 5%);
-    }
-
-    .mobile-menu-toggle[aria-expanded="true"] {
-      border-color: #bdb7ab;
-      color: #2f2f2b;
-      background: #ece9e1;
-    }
-
     .book-icon {
       width: 22px;
       height: 22px;
       border-radius: 5px;
-      font-size: 0.78rem;
     }
 
     .brand h1 {
@@ -4397,9 +4534,7 @@
     width: 28px;
     height: 28px;
     border-radius: 999px;
-    background: #111214;
-    color: #faf9f5;
-    font-size: 0.9rem;
+    object-fit: contain;
     box-shadow:
       0 1px 2px rgb(16 24 40 / 8%),
       inset 0 0 0 1px rgb(255 255 255 / 8%);
@@ -4554,16 +4689,11 @@
   }
 
   .doc-icon {
-    display: inline-grid;
-    place-items: center;
+    display: block;
     width: 46px;
     height: 46px;
     border-radius: 999px;
-    background: #111214;
-    color: #faf9f5;
-    font-size: 1.38rem;
-    font-weight: 850;
-    line-height: 1;
+    object-fit: contain;
     box-shadow:
       0 16px 42px rgb(16 24 40 / 10%),
       inset 0 0 0 1px rgb(255 255 255 / 8%);
@@ -4871,7 +5001,7 @@
   }
 
   .graph-counts div {
-    min-width: 88px;
+    min-width: 86px;
     border: 1px solid #e2ded5;
     border-radius: 8px;
     padding: 10px 12px;
@@ -4895,7 +5025,7 @@
 
   .graph-panel {
     display: grid;
-    gap: 14px;
+    gap: 12px;
   }
 
   .graph-toolbar {
@@ -4906,9 +5036,9 @@
     gap: 12px;
     border: 1px solid #e2ded5;
     border-radius: 8px;
-    padding: 12px;
-    background: #ffffff;
-    box-shadow: 0 10px 28px rgb(16 24 40 / 5%);
+    padding: 10px;
+    background: linear-gradient(180deg, #ffffff 0%, #fbfaf6 100%);
+    box-shadow: 0 8px 22px rgb(16 24 40 / 5%);
   }
 
   .graph-filter-tabs,
@@ -4932,10 +5062,74 @@
     font-weight: 760;
   }
 
+  .graph-actions button {
+    min-width: 38px;
+    padding-right: 10px;
+    padding-left: 10px;
+    color: #36342f;
+    font-size: 0.92rem;
+  }
+
+  .graph-actions button:disabled {
+    color: #b5aea4;
+    background: #f6f4ee;
+  }
+
   .graph-filter-tabs button.active {
     border-color: #2b2925;
     color: #ffffff;
     background: #2b2925;
+  }
+
+  .graph-legend {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 10px 16px;
+    border: 1px solid #e5e0d6;
+    border-radius: 8px;
+    padding: 10px 12px;
+    color: #625d55;
+    background: #fbfaf6;
+    font-size: 0.78rem;
+    font-weight: 760;
+  }
+
+  .graph-legend-group,
+  .graph-legend-item {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .graph-legend-item {
+    gap: 6px;
+    white-space: nowrap;
+  }
+
+  .graph-legend-node {
+    width: 11px;
+    height: 11px;
+    border: 2px solid var(--legend-border, #fffefa);
+    border-radius: 999px;
+    background: var(--legend-color, #6b6f76);
+    box-shadow: 0 0 0 1px rgb(38 37 34 / 14%);
+  }
+
+  .graph-legend-node.unlinked {
+    border-color: #c36a43;
+    border-style: dashed;
+    background: #fff7ef;
+  }
+
+  .graph-legend-line {
+    width: 24px;
+    border-top: 2px solid var(--legend-color, #78736b);
+  }
+
+  .graph-legend-line.dashed {
+    border-top-style: dashed;
   }
 
   .graph-workspace {
@@ -4964,10 +5158,11 @@
     height: 100%;
     min-height: 640px;
     background:
-      linear-gradient(rgb(242 239 232 / 68%) 1px, transparent 1px),
-      linear-gradient(90deg, rgb(242 239 232 / 68%) 1px, transparent 1px),
+      radial-gradient(circle at 18% 18%, rgb(47 93 98 / 7%), transparent 26%),
+      linear-gradient(rgb(238 234 225 / 72%) 1px, transparent 1px),
+      linear-gradient(90deg, rgb(238 234 225 / 72%) 1px, transparent 1px),
       #fffefa;
-    background-size: 28px 28px;
+    background-size: auto, 30px 30px, 30px 30px, auto;
   }
 
   .graph-empty {
@@ -4999,6 +5194,7 @@
     align-self: stretch;
     min-height: 640px;
     padding: 18px;
+    background: linear-gradient(180deg, #ffffff 0%, #fbfaf7 100%);
   }
 
   .graph-inspector section {
@@ -5010,6 +5206,7 @@
     color: #242423;
     font-size: 1.2rem;
     font-weight: 850;
+    line-height: 1.15;
   }
 
   .graph-meta {
@@ -5043,6 +5240,8 @@
 
   .graph-body-preview {
     margin: 0;
+    border-left: 3px solid #e2ded5;
+    padding-left: 10px;
     font-size: 0.92rem;
   }
 
@@ -5138,27 +5337,102 @@
   .list-controls select {
     flex: 0 0 auto;
     width: auto;
-    min-width: 150px;
+    min-width: 138px;
     min-height: 38px;
     border-color: #dedbd3;
     border-radius: 999px;
+    appearance: none;
+    -webkit-appearance: none;
     background-color: #efede8;
+    background-image:
+      linear-gradient(45deg, transparent 50%, #6c675f 50%),
+      linear-gradient(135deg, #6c675f 50%, transparent 50%);
+    background-position:
+      calc(100% - 18px) 50%,
+      calc(100% - 13px) 50%;
+    background-repeat: no-repeat;
+    background-size: 5px 5px;
     color: #504d48;
     font-size: 0.9rem;
     white-space: nowrap;
   }
 
   .list-controls [data-testid="viewer-tag-filter"] {
-    min-width: 180px;
+    min-width: 140px;
   }
 
   .list-controls [data-testid="viewer-facet-filter"] {
-    min-width: 210px;
+    min-width: 160px;
   }
 
   .sectioned-memory {
     display: grid;
     gap: 36px;
+  }
+
+  .schema-browser-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    border-bottom: 1px solid #ece6dc;
+    padding-bottom: 16px;
+  }
+
+  .schema-browser-toolbar strong,
+  .schema-browser-toolbar span {
+    display: block;
+  }
+
+  .schema-browser-toolbar strong {
+    color: #202020;
+    font-size: 1.04rem;
+    font-weight: 780;
+  }
+
+  .schema-browser-toolbar span {
+    margin-top: 3px;
+    color: #77736d;
+    font-size: 0.92rem;
+  }
+
+  .schema-sort-field {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 9px;
+    color: #625d54;
+    font-size: 0.88rem;
+    font-weight: 720;
+  }
+
+  .schema-sort-field > span {
+    margin: 0;
+    color: #625d54;
+    font-size: 0.88rem;
+  }
+
+  .schema-sort-select {
+    min-width: 168px;
+    min-height: 40px;
+    border: 1px solid #dfd8cd;
+    border-radius: 999px;
+    appearance: none;
+    -webkit-appearance: none;
+    padding: 0 38px 0 14px;
+    background-color: #f4f1eb;
+    background-image:
+      linear-gradient(45deg, transparent 50%, #6c675f 50%),
+      linear-gradient(135deg, #6c675f 50%, transparent 50%);
+    background-position:
+      calc(100% - 18px) 50%,
+      calc(100% - 13px) 50%;
+    background-repeat: no-repeat;
+    background-size: 5px 5px;
+    color: #45413b;
+    font: inherit;
+    font-size: 0.92rem;
+    white-space: nowrap;
   }
 
   .sectioned-memory > section {
@@ -5195,7 +5469,7 @@
 
   .object-list button {
     display: grid;
-    grid-template-columns: 34px minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
     gap: 14px;
     min-height: 72px;
@@ -5224,16 +5498,6 @@
     outline: 2px solid #2563eb;
     outline-offset: 2px;
     background: #f7f5f0;
-  }
-
-  .object-list .object-glyph {
-    width: 26px;
-    height: 26px;
-    border-radius: 7px;
-    background: #f1efea;
-    color: #68818d;
-    font-size: 0.92rem;
-    font-weight: 850;
   }
 
   .object-list strong {
@@ -5525,6 +5789,10 @@
       width: 100%;
     }
 
+    .graph-legend {
+      justify-content: flex-start;
+    }
+
     .graph-filter-tabs button,
     .graph-actions button {
       flex: 1 1 auto;
@@ -5711,12 +5979,22 @@
   }
 
   .list-controls select {
-    min-width: 168px;
+    min-width: 138px;
     min-height: 40px;
     border-color: #dfd8cd;
+    appearance: none;
+    -webkit-appearance: none;
     padding-right: 38px;
     padding-left: 14px;
     background-color: #f4f1eb;
+    background-image:
+      linear-gradient(45deg, transparent 50%, #6c675f 50%),
+      linear-gradient(135deg, #6c675f 50%, transparent 50%);
+    background-position:
+      calc(100% - 18px) 50%,
+      calc(100% - 13px) 50%;
+    background-repeat: no-repeat;
+    background-size: 5px 5px;
     color: #45413b;
     font-size: 0.92rem;
   }
@@ -5792,7 +6070,7 @@
   }
 
   .object-list button {
-    grid-template-columns: 36px minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) auto;
     align-items: start;
     min-height: 0;
     border-color: #e6dfd4;
@@ -5821,16 +6099,6 @@
     border-color: #d8cec0;
     border-bottom-color: transparent;
     background: #f7f3ec;
-  }
-
-  .object-list .object-glyph {
-    width: 28px;
-    height: 28px;
-    margin-top: 2px;
-    border-radius: 7px;
-    background: #f3eee6;
-    color: #607a86;
-    font-size: 0.94rem;
   }
 
   .object-list strong {
@@ -6046,7 +6314,7 @@
     }
 
     .object-list button {
-      grid-template-columns: 32px minmax(0, 1fr);
+      grid-template-columns: minmax(0, 1fr) auto;
       padding: 16px;
     }
 
@@ -6088,13 +6356,13 @@
   }
 
   .main-stage.memory-stage {
-    padding-right: clamp(24px, 3vw, 48px);
-    padding-left: clamp(24px, 3vw, 48px);
+    padding-right: clamp(18px, 2vw, 32px);
+    padding-left: clamp(18px, 2vw, 32px);
   }
 
   .memory-stage .memory-page {
     width: 100%;
-    max-width: min(1500px, 100%);
+    max-width: none;
   }
 
   .memory-stage .list-controls {
@@ -6103,8 +6371,8 @@
 
   .schema-browser-layout {
     display: grid;
-    grid-template-columns: minmax(300px, 0.38fr) minmax(0, 1fr);
-    gap: 24px;
+    grid-template-columns: minmax(260px, 0.3fr) minmax(0, 1fr);
+    gap: clamp(16px, 2vw, 24px);
     min-height: 0;
     flex: 1 1 0;
     overflow: hidden;
@@ -6224,7 +6492,7 @@
 
   @media (max-width: 1180px) {
     .schema-browser-layout {
-      grid-template-columns: minmax(280px, 0.34fr) minmax(0, 1fr);
+      grid-template-columns: minmax(240px, 0.3fr) minmax(0, 1fr);
       gap: 18px;
     }
 
@@ -6396,6 +6664,200 @@
     .memory-stage.has-selected-object .warnings,
     .memory-stage.has-selected-object .onboarding-callout,
     .memory-stage.has-selected-object .sectioned-memory {
+      display: none;
+    }
+  }
+
+  /* Collapsed navigation drawer. */
+  .viewer-shell {
+    display: block;
+    min-height: 100vh;
+  }
+
+  .sidebar-toggle {
+    position: fixed;
+    top: 18px;
+    left: 18px;
+    z-index: 60;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 42px;
+    border: 1px solid #d8d0c3;
+    border-radius: 8px;
+    padding: 0 14px 0 12px;
+    color: #2f2e2a;
+    background: #fffdf9;
+    font-size: 0.92rem;
+    font-weight: 800;
+    box-shadow:
+      0 1px 2px rgb(39 31 21 / 6%),
+      0 10px 28px rgb(39 31 21 / 8%);
+  }
+
+  .sidebar-toggle:hover,
+  .sidebar-toggle.open {
+    border-color: #262522;
+    background: #262522;
+    color: #fffefa;
+  }
+
+  .sidebar-toggle:focus-visible,
+  .sidebar-backdrop:focus-visible {
+    outline: 3px solid rgb(47 93 98 / 28%);
+    outline-offset: 3px;
+  }
+
+  .burger-icon {
+    position: relative;
+    width: 16px;
+    height: 12px;
+    border-top: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+  }
+
+  .burger-icon::before {
+    position: absolute;
+    top: 3px;
+    left: 0;
+    width: 16px;
+    height: 2px;
+    background: currentColor;
+    content: "";
+  }
+
+  .sidebar-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    border: 0;
+    padding: 0;
+    background: rgb(36 34 30 / 34%);
+    cursor: default;
+  }
+
+  .sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: 50;
+    display: flex;
+    width: min(340px, calc(100vw - 32px));
+    height: 100dvh;
+    max-height: 100dvh;
+    overflow-y: auto;
+    flex-direction: column;
+    gap: 28px;
+    border-right: 1px solid #dedbd2;
+    padding: 82px 28px 30px;
+    background: #f4f1eb;
+    box-shadow:
+      24px 0 70px rgb(39 31 21 / 18%),
+      3px 0 12px rgb(39 31 21 / 10%);
+    scrollbar-gutter: stable;
+  }
+
+  .sidebar-menu,
+  .sidebar-menu.open {
+    position: static;
+    display: grid;
+    gap: 24px;
+    max-height: none;
+    overflow: visible;
+    border: 0;
+    border-radius: 0;
+    padding: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .main-stage {
+    width: 100%;
+    padding-top: max(88px, clamp(34px, 5vw, 60px));
+  }
+
+  .main-stage.memory-stage {
+    height: 100vh;
+  }
+
+  @media (max-width: 900px) {
+    .sidebar {
+      position: fixed;
+      top: 0;
+      height: 100dvh;
+      padding: 76px 18px 24px;
+      border-bottom: 0;
+      background: #f4f1eb;
+      box-shadow:
+        18px 0 52px rgb(39 31 21 / 18%),
+        2px 0 10px rgb(39 31 21 / 10%);
+    }
+
+    .brand {
+      gap: 10px;
+    }
+
+    .brand p:last-child {
+      padding-left: 0;
+      white-space: normal;
+    }
+
+    .sidebar-stats {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .main-stage {
+      padding-top: 88px;
+    }
+
+    .schema-browser-toolbar {
+      align-items: stretch;
+      flex-direction: column;
+    }
+
+    .schema-sort-field {
+      justify-content: space-between;
+      width: 100%;
+    }
+
+    .schema-sort-select {
+      min-width: min(210px, 62vw);
+    }
+  }
+
+  @media (max-width: 560px) {
+    .sidebar-toggle {
+      top: 10px;
+      left: 10px;
+      min-height: 40px;
+      padding-inline: 11px 13px;
+    }
+
+    .sidebar {
+      width: calc(100vw - 20px);
+      padding: 70px 14px 22px;
+    }
+
+    .main-stage {
+      padding-top: 78px;
+    }
+
+    .schema-sort-field {
+      align-items: stretch;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .schema-sort-select {
+      width: 100%;
+      min-width: 0;
+    }
+  }
+
+  @media print {
+    .sidebar-toggle,
+    .sidebar-backdrop,
+    .sidebar {
       display: none;
     }
   }

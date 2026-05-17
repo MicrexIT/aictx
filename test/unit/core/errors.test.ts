@@ -1,55 +1,55 @@
 import { describe, expect, it } from "vitest";
 
-import { AICTX_ERROR_CODES, aictxError } from "../../../src/core/errors.js";
+import { MEMORY_ERROR_CODES, memoryError } from "../../../src/core/errors.js";
 
 describe("core errors", () => {
   it("exports the API spec error code list in order", () => {
-    expect(AICTX_ERROR_CODES).toEqual([
-      "AICtxGitRequired",
-      "AICtxNotInitialized",
-      "AICtxAlreadyInitializedInvalid",
-      "AICtxUnsupportedStorageVersion",
-      "AICtxInvalidConfig",
-      "AICtxInvalidJson",
-      "AICtxInvalidJsonl",
-      "AICtxSchemaValidationFailed",
-      "AICtxValidationFailed",
-      "AICtxConflictDetected",
-      "AICtxDirtyMemory",
-      "AICtxPatchRequired",
-      "AICtxPatchInvalid",
-      "AICtxUnknownPatchOperation",
-      "AICtxObjectNotFound",
-      "AICtxRelationNotFound",
-      "AICtxDuplicateId",
-      "AICtxInvalidRelation",
-      "AICtxSecretDetected",
-      "AICtxIndexUnavailable",
-      "AICtxExportTargetInvalid",
-      "AICtxLockBusy",
-      "AICtxGitOperationFailed",
-      "AICtxInternalError"
+    expect(MEMORY_ERROR_CODES).toEqual([
+      "MemoryGitRequired",
+      "MemoryNotInitialized",
+      "MemoryAlreadyInitializedInvalid",
+      "MemoryUnsupportedStorageVersion",
+      "MemoryInvalidConfig",
+      "MemoryInvalidJson",
+      "MemoryInvalidJsonl",
+      "MemorySchemaValidationFailed",
+      "MemoryValidationFailed",
+      "MemoryConflictDetected",
+      "MemoryDirtyMemory",
+      "MemoryPatchRequired",
+      "MemoryPatchInvalid",
+      "MemoryUnknownPatchOperation",
+      "MemoryObjectNotFound",
+      "MemoryRelationNotFound",
+      "MemoryDuplicateId",
+      "MemoryInvalidRelation",
+      "MemorySecretDetected",
+      "MemoryIndexUnavailable",
+      "MemoryExportTargetInvalid",
+      "MemoryLockBusy",
+      "MemoryGitOperationFailed",
+      "MemoryInternalError"
     ]);
   });
 
   it("constructs errors without details", () => {
-    expect(aictxError("AICtxNotInitialized", "Aictx is not initialized.")).toEqual({
-      code: "AICtxNotInitialized",
-      message: "Aictx is not initialized."
+    expect(memoryError("MemoryNotInitialized", "Memory is not initialized.")).toEqual({
+      code: "MemoryNotInitialized",
+      message: "Memory is not initialized."
     });
   });
 
   it("constructs errors with details", () => {
     expect(
-      aictxError("AICtxInvalidJson", "Invalid JSON.", {
-        path: ".aictx/config.json",
+      memoryError("MemoryInvalidJson", "Invalid JSON.", {
+        path: ".memory/config.json",
         line: 1
       })
     ).toEqual({
-      code: "AICtxInvalidJson",
+      code: "MemoryInvalidJson",
       message: "Invalid JSON.",
       details: {
-        path: ".aictx/config.json",
+        path: ".memory/config.json",
         line: 1
       }
     });

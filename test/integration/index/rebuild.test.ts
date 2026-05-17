@@ -26,7 +26,7 @@ afterEach(async () => {
 
 describe("full index rebuild", () => {
   it("rebuilds valid canonical storage into SQLite rows without appending events", async () => {
-    const projectRoot = await createInitializedProject("aictx-rebuild-valid-");
+    const projectRoot = await createInitializedProject("memory-rebuild-valid-");
     await writeAdditionalCanonicalMemory(projectRoot);
     const eventsBefore = await readEvents(projectRoot);
 
@@ -61,8 +61,8 @@ describe("full index rebuild", () => {
         type: "constraint",
         status: "active",
         title: "Webhook idempotency",
-        body_path: ".aictx/memory/constraints/webhook-idempotency.md",
-        json_path: ".aictx/memory/constraints/webhook-idempotency.json",
+        body_path: ".memory/memory/constraints/webhook-idempotency.md",
+        json_path: ".memory/memory/constraints/webhook-idempotency.json",
         scope_kind: "project",
         tags_json: JSON.stringify(["stripe", "webhooks"])
       });
@@ -134,9 +134,9 @@ describe("full index rebuild", () => {
   });
 
   it("rebuilds after deleting the generated index without losing canonical memory", async () => {
-    const projectRoot = await createInitializedProject("aictx-rebuild-deleted-index-");
+    const projectRoot = await createInitializedProject("memory-rebuild-deleted-index-");
     await writeAdditionalCanonicalMemory(projectRoot);
-    await rm(join(projectRoot, ".aictx", "index"), { recursive: true, force: true });
+    await rm(join(projectRoot, ".memory", "index"), { recursive: true, force: true });
 
     const storageBefore = await readCanonicalStorage(projectRoot);
     expect(storageBefore.ok).toBe(true);
@@ -170,7 +170,7 @@ describe("full index rebuild", () => {
   });
 
   it("does not replace a previous valid index when canonical files are invalid", async () => {
-    const projectRoot = await createInitializedProject("aictx-rebuild-invalid-");
+    const projectRoot = await createInitializedProject("memory-rebuild-invalid-");
     await writeAdditionalCanonicalMemory(projectRoot);
     const first = await rebuildIndex({
       cwd: projectRoot,
@@ -180,7 +180,7 @@ describe("full index rebuild", () => {
     expect(first.ok).toBe(true);
     await writeProjectFile(
       projectRoot,
-      ".aictx/memory/constraints/webhook-idempotency.json",
+      ".memory/memory/constraints/webhook-idempotency.json",
       "{bad json"
     );
 
@@ -191,7 +191,7 @@ describe("full index rebuild", () => {
 
     expect(second.ok).toBe(false);
     if (!second.ok) {
-      expect(second.error.code).toBe("AICtxIndexUnavailable");
+      expect(second.error.code).toBe("MemoryIndexUnavailable");
     }
 
     const connection = await openConnection(projectRoot);
@@ -206,7 +206,7 @@ describe("full index rebuild", () => {
   });
 
   it("reports index_built true when init builds the initial index", async () => {
-    const projectRoot = await createTempRoot("aictx-rebuild-init-");
+    const projectRoot = await createTempRoot("memory-rebuild-init-");
 
     const result = await initProject({
       cwd: projectRoot,
@@ -235,12 +235,12 @@ describe("full index rebuild", () => {
   });
 
   it("indexes supplied Git file-change metadata during rebuild", async () => {
-    const projectRoot = await createInitializedProject("aictx-rebuild-git-history-");
+    const projectRoot = await createInitializedProject("memory-rebuild-git-history-");
     await writeAdditionalCanonicalMemory(projectRoot);
 
     const result = await rebuildGeneratedIndex({
       projectRoot,
-      aictxRoot: join(projectRoot, ".aictx"),
+      memoryRoot: join(projectRoot, ".memory"),
       clock: createFixedTestClock(FIXED_TIMESTAMP_NEXT_MINUTE),
       git: {
         available: true,
@@ -465,26 +465,26 @@ async function writeAdditionalCanonicalMemory(projectRoot: string): Promise<void
     }
   ];
 
-  await writeProjectFile(projectRoot, ".aictx/memory/constraints/webhook-idempotency.md", body);
+  await writeProjectFile(projectRoot, ".memory/memory/constraints/webhook-idempotency.md", body);
   await writeJsonProjectFile(
     projectRoot,
-    ".aictx/memory/constraints/webhook-idempotency.json",
+    ".memory/memory/constraints/webhook-idempotency.json",
     sidecar
   );
   await writeJsonProjectFile(
     projectRoot,
-    ".aictx/relations/architecture-requires-webhook-idempotency.json",
+    ".memory/relations/architecture-requires-webhook-idempotency.json",
     relation
   );
   await writeProjectFile(
     projectRoot,
-    ".aictx/events.jsonl",
+    ".memory/events.jsonl",
     `${events.map((event) => JSON.stringify(event)).join("\n")}\n`
   );
 }
 
 async function openConnection(projectRoot: string): Promise<IndexDatabaseConnection> {
-  const opened = await openIndexDatabase({ aictxRoot: join(projectRoot, ".aictx") });
+  const opened = await openIndexDatabase({ memoryRoot: join(projectRoot, ".memory") });
 
   expect(opened.ok).toBe(true);
   if (!opened.ok) {
@@ -595,7 +595,7 @@ function readMeta(db: IndexDatabaseConnection["db"]): Record<string, string> {
 }
 
 async function readEvents(projectRoot: string): Promise<string> {
-  return readFile(join(projectRoot, ".aictx", "events.jsonl"), "utf8");
+  return readFile(join(projectRoot, ".memory", "events.jsonl"), "utf8");
 }
 
 async function writeJsonProjectFile(

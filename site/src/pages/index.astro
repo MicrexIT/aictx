@@ -9,9 +9,13 @@ const viewerUrl = "https://demo.aictx.dev/?token=demo";
   <main id="top">
     <section class="hero">
       <div class="hero-panel">
-        <a class="eyebrow-link" href="https://github.com/aictx/memory" rel="noreferrer">
+        <a
+          class="eyebrow-link"
+          href="https://github.com/aictx/memory"
+          rel="noreferrer"
+        >
           <GitHubIcon />
-          Local-first and open source
+          Open source by Aictx
         </a>
         <h1 class="hero-title">
           <span class="hero-title-desktop">Stop re&#8209;explaining your</span>
@@ -20,35 +24,56 @@ const viewerUrl = "https://demo.aictx.dev/?token=demo";
           <span class="hero-title-mobile">your repo to AI agents.</span>
         </h1>
 
-        <div class="hero-install" aria-label="Get started with Aictx">
-          <div class="hero-command" aria-label="Quick start command">
-            <code>npm install -g @aictx/memory</code>
+        <p class="hero-identity">
+          Memory by Aictx provides local, reviewable, and auto-maintained
+          project memory for AI coding agents.
+        </p>
+
+        <div class="hero-install" aria-label="Get started with Memory">
+          <div class="hero-commands" aria-label="Install commands">
+            <div class="hero-command">
+              <span>Homebrew</span>
+              <code>brew install aictx/tap/memory</code>
+            </div>
+            <div class="hero-command">
+              <span>npm</span>
+              <code>npm install -g @aictx/memory</code>
+            </div>
           </div>
 
           <div class="hero-actions">
-            <a class="button primary" href="https://github.com/aictx/memory" rel="noreferrer">Get started</a>
+            <a
+              class="button primary"
+              href="https://github.com/aictx/memory"
+              rel="noreferrer">Get started</a
+            >
           </div>
         </div>
       </div>
     </section>
 
-    <section class="value-section context-section" id="context" aria-labelledby="context-title">
+    <section
+      class="value-section context-section"
+      id="context"
+      aria-labelledby="context-title"
+    >
       <div class="value-section-inner">
         <div class="section-heading">
-          <h2 id="context-title">Why Aictx?</h2>
+          <h2 id="context-title">Why Memory?</h2>
           <p>
             Durable project memory for AI agents: give the repo shared context,
             load only what matters, and inspect what agents remember.
           </p>
         </div>
 
-        <div class="comparison comparison-why" aria-label="Why use Aictx">
+        <div class="comparison comparison-why" aria-label="Why use Memory">
           <div>
             <span>01</span>
             <strong>Set it up once.</strong>
             <p>
               Give your repo durable memory for the product intent, decisions,
-              workflows, conventions, and gotchas agents usually need you to repeat.
+              workflows, conventions, and gotchas agents usually need you to
+              repeat.
             </p>
           </div>
           <div>
@@ -63,15 +88,81 @@ const viewerUrl = "https://demo.aictx.dev/?token=demo";
             <span>03</span>
             <strong>See what agents remember.</strong>
             <p>
-              Inspect the same typed memory agents use, including objects, schema,
-              relations, provenance, and graph context, in a local visual viewer.
+              Inspect the same typed memory agents use, including objects,
+              schema, relations, provenance, and graph context, in a local
+              visual viewer.
             </p>
           </div>
         </div>
       </div>
     </section>
 
-    <section class="impact-section" id="before-after" aria-labelledby="before-after-title">
+    <section
+      class="value-section"
+      id="agent-memory"
+      aria-labelledby="agent-memory-title"
+    >
+      <div class="value-section-inner">
+        <div class="section-heading">
+          <h2 id="agent-memory-title">
+            Persistent memory for the tools agents already use.
+          </h2>
+          <p>
+            Memory works as long-term project context for AI coding assistants
+            including Codex, Claude Code, Cursor, Cline, OpenCode, and
+            MCP-capable clients.
+          </p>
+        </div>
+
+        <div
+          class="comparison comparison-why"
+          aria-label="Memory guides by coding agent"
+        >
+          <div>
+            <span>Persistent memory</span>
+            <strong
+              ><a class="text-link" href="/persistent-memory-ai-coding-agents/"
+                >AI coding agent memory</a
+              ></strong
+            >
+            <p>
+              Keep decisions, conventions, workflows, and gotchas available
+              across sessions and context resets.
+            </p>
+          </div>
+          <div>
+            <span>MCP server</span>
+            <strong
+              ><a class="text-link" href="/mcp-memory-server/"
+                >MCP memory server</a
+              ></strong
+            >
+            <p>
+              Expose local project memory to MCP-capable assistants without
+              moving project knowledge into a hosted service.
+            </p>
+          </div>
+          <div>
+            <span>Agent workflows</span>
+            <strong
+              ><a class="text-link" href="/use-cases/"
+                >Codex, Claude Code, and Cursor</a
+              ></strong
+            >
+            <p>
+              Use short agent guidance files while Memory carries the durable
+              project context those tools need.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section
+      class="impact-section"
+      id="before-after"
+      aria-labelledby="before-after-title"
+    >
       <div class="section-heading">
         <h2 id="before-after-title">Proof in the first five minutes.</h2>
         <p>
@@ -82,14 +173,21 @@ const viewerUrl = "https://demo.aictx.dev/?token=demo";
 
       <div class="impact-module impact-module-single" style="--reveal: 50%">
         <div class="impact-visual">
-          <div class="impact-visual-panel is-active" id="impact-context" data-impact-panel="impact-context">
+          <div
+            class="impact-visual-panel is-active"
+            id="impact-context"
+            data-impact-panel="impact-context"
+          >
             <div class="comparison-labels" aria-hidden="true">
               <span>Before</span>
               <span>After</span>
             </div>
             <div class="comparison-state" aria-hidden="true">Compare</div>
             <div class="scene-layer before">
-              <div class="codex-chat codex-chat-before" aria-label="Codex chat without Aictx">
+              <div
+                class="codex-chat codex-chat-before"
+                aria-label="Codex chat without Memory"
+              >
                 <div class="codex-chat-topbar">
                   <span>Update viewer search behavior</span>
                   <strong>•••</strong>
@@ -100,7 +198,10 @@ const viewerUrl = "https://demo.aictx.dev/?token=demo";
                 <div class="codex-work-pill">Worked for 7m 18s⌄</div>
                 <div class="codex-divider"></div>
                 <div class="codex-response">
-                  <p>I need to inspect the docs and viewer code to recover the product direction.</p>
+                  <p>
+                    I need to inspect the docs and viewer code to recover the
+                    product direction.
+                  </p>
                 </div>
                 <div class="codex-command-row">
                   <span aria-hidden="true">›</span>
@@ -108,19 +209,26 @@ const viewerUrl = "https://demo.aictx.dev/?token=demo";
                 </div>
                 <div class="codex-command-row">
                   <span aria-hidden="true">›</span>
-                  Read <code>docs/viewer.md</code>, <code>viewer/src/App.svelte</code>
+                  Read <code>docs/viewer.md</code>, <code
+                    >viewer/src/App.svelte</code
+                  >
                 </div>
                 <div class="codex-command-row muted-row">
                   <span aria-hidden="true">›</span>
                   Explored 11 files, 4 searches
                 </div>
                 <div class="codex-response warning-message">
-                  <p>Remind me: are we still avoiding dashboard-style UI here?</p>
+                  <p>
+                    Remind me: are we still avoiding dashboard-style UI here?
+                  </p>
                 </div>
               </div>
             </div>
             <div class="scene-layer after">
-              <div class="codex-chat codex-chat-after" aria-label="Codex chat with Aictx">
+              <div
+                class="codex-chat codex-chat-after"
+                aria-label="Codex chat with Memory"
+              >
                 <div class="codex-chat-topbar">
                   <span>Update viewer search behavior</span>
                   <strong>•••</strong>
@@ -128,21 +236,30 @@ const viewerUrl = "https://demo.aictx.dev/?token=demo";
                 <div class="codex-user-bubble">
                   <p>Can you polish viewer search?</p>
                 </div>
-                <div class="codex-command-row aictx-command-row">
+                <div class="codex-command-row memory-command-row">
                   <span aria-hidden="true">›</span>
-                  Ran <code>aictx load "improve viewer search UI"</code>
+                  Ran <code>memory load "improve viewer search UI"</code>
                 </div>
-                <div class="aictx-context-pack">
+                <div class="memory-context-pack">
                   <span>AI Context Pack</span>
-                  <strong>Viewer memory page shows canonical types, facets, scopes, and relations first.</strong>
-                  <p>Keep guided lenses secondary. Verify schema filters and relation boundaries.</p>
+                  <strong
+                    >Viewer memory page shows canonical types, facets, scopes,
+                    and relations first.</strong
+                  >
+                  <p>
+                    Keep guided lenses secondary. Verify schema filters and
+                    relation boundaries.
+                  </p>
                 </div>
                 <div class="codex-command-row muted-row">
                   <span aria-hidden="true">›</span>
                   Loaded 6 relevant memories before editing
                 </div>
                 <div class="codex-response ready-message">
-                  <p>I have the UI constraint and verification path. I’ll update search without reopening old decisions.</p>
+                  <p>
+                    I have the UI constraint and verification path. I’ll update
+                    search without reopening old decisions.
+                  </p>
                 </div>
               </div>
             </div>
@@ -175,16 +292,17 @@ const viewerUrl = "https://demo.aictx.dev/?token=demo";
           </span>
           <img
             src="/assets/viewer-demo.png"
-            alt="Aictx viewer showing the memory schema graph with relation overview and canonical storage navigation."
+            alt="Memory viewer showing the memory schema graph with relation overview and canonical storage navigation."
           />
         </a>
       </div>
 
       <div class="demo-footer">
-        <p>Browse a local memory database with canonical object types, facet categories, relation overviews, provenance links, and graph context.</p>
-        <a class="text-link" href={viewerUrl} rel="noreferrer">
-          Open viewer
-        </a>
+        <p>
+          Browse a local memory database with canonical object types, facet
+          categories, relation overviews, provenance links, and graph context.
+        </p>
+        <a class="text-link" href={viewerUrl} rel="noreferrer"> Open viewer </a>
       </div>
     </section>
   </main>
@@ -196,16 +314,27 @@ const viewerUrl = "https://demo.aictx.dev/?token=demo";
       const module = control.closest(".impact-module");
       const setReveal = () => {
         module?.style.setProperty("--reveal", `${control.value}%`);
-        module?.style.setProperty("--handle", `clamp(28px, ${control.value}%, calc(100% - 28px))`);
-        const state = control.closest("[data-impact-panel]")?.querySelector(".comparison-state");
+        module?.style.setProperty(
+          "--handle",
+          `clamp(28px, ${control.value}%, calc(100% - 28px))`,
+        );
+        const state = control
+          .closest("[data-impact-panel]")
+          ?.querySelector(".comparison-state");
         if (state) {
           state.textContent =
-            control.value === "0" ? "Showing after" : control.value === "100" ? "Showing before" : "Compare";
+            control.value === "0"
+              ? "Showing after"
+              : control.value === "100"
+                ? "Showing before"
+                : "Compare";
         }
       };
 
       control.addEventListener("input", setReveal);
-      if (control.closest("[data-impact-panel]")?.classList.contains("is-active")) {
+      if (
+        control.closest("[data-impact-panel]")?.classList.contains("is-active")
+      ) {
         setReveal();
       }
     }

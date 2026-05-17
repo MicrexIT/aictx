@@ -53,7 +53,7 @@ describe("viewer demo Worker", () => {
       name: "Todo App"
     });
     expect(body.data.objects.map((object) => object.id)).toContain("concept.quick-add");
-    expect(body.data.objects.map((object) => object.id)).not.toContain("project.aictx");
+    expect(body.data.objects.map((object) => object.id)).not.toContain("project.memory");
     expect(body.data.objects.find((object) => object.id === "workflow.post-task-verification")).toMatchObject({
       type: "workflow",
       facets: { category: "testing" }
@@ -94,7 +94,7 @@ describe("viewer demo Worker", () => {
     expect(body.data.token_budget).toBe(1600);
     expect(body.data.context_pack).toContain("AI Context Pack");
     expect(body.data.context_pack).toContain("Todo App");
-    expect(body.data.context_pack).not.toContain("project.aictx");
+    expect(body.data.context_pack).not.toContain("project.memory");
     expect(body.data.included_ids).toContain("project.todo-app");
   });
 
@@ -104,7 +104,7 @@ describe("viewer demo Worker", () => {
 
     expect(response.status).toBe(401);
     expect(body.ok).toBe(false);
-    expect(body.error.code).toBe("AICtxValidationFailed");
+    expect(body.error.code).toBe("MemoryValidationFailed");
   });
 
   it("blocks write routes in the public demo", async () => {

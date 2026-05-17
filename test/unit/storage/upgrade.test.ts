@@ -40,11 +40,11 @@ describe("storage upgrade", () => {
       objects_upgraded: ["decision.billing-retries"]
     });
 
-    const config = JSON.parse(await readFile(join(projectRoot, ".aictx/config.json"), "utf8")) as {
+    const config = JSON.parse(await readFile(join(projectRoot, ".memory/config.json"), "utf8")) as {
       version: number;
     };
     const sidecar = JSON.parse(
-      await readFile(join(projectRoot, ".aictx/memory/decisions/billing-retries.json"), "utf8")
+      await readFile(join(projectRoot, ".memory/memory/decisions/billing-retries.json"), "utf8")
     ) as {
       facets?: { category?: string };
       evidence?: unknown[];
@@ -104,7 +104,7 @@ describe("storage upgrade", () => {
     }
 
     await writeFile(
-      join(projectRoot, ".aictx/schema/object.schema.json"),
+      join(projectRoot, ".memory/schema/object.schema.json"),
       `${JSON.stringify({ $id: "https://aictx.dev/schemas/v1/object.schema.json" }, null, 2)}\n`,
       "utf8"
     );
@@ -123,7 +123,7 @@ describe("storage upgrade", () => {
       upgraded: true,
       from_version: 4,
       to_version: 4,
-      files_changed: [".aictx/schema/object.schema.json"],
+      files_changed: [".memory/schema/object.schema.json"],
       objects_upgraded: []
     });
   });
@@ -179,7 +179,7 @@ describe("storage upgrade", () => {
       upgraded: true,
       from_version: 2,
       to_version: 4,
-      files_changed: expect.arrayContaining([".aictx/events.jsonl"]),
+      files_changed: expect.arrayContaining([".memory/events.jsonl"]),
       objects_upgraded: expect.arrayContaining([
         "decision.legacy-draft",
         "question.legacy-active-question"
@@ -189,7 +189,7 @@ describe("storage upgrade", () => {
     });
 
     await expect(
-      readFile(join(projectRoot, ".aictx/memory/notes/legacy-rejected.json"), "utf8")
+      readFile(join(projectRoot, ".memory/memory/notes/legacy-rejected.json"), "utf8")
     ).rejects.toMatchObject({ code: "ENOENT" });
 
     const storage = await readCanonicalStorage(projectRoot);
@@ -222,18 +222,18 @@ describe("storage upgrade", () => {
 });
 
 async function createV1Project(): Promise<string> {
-  const projectRoot = await mkdtemp(join(tmpdir(), "aictx-upgrade-"));
+  const projectRoot = await mkdtemp(join(tmpdir(), "memory-upgrade-"));
   tempRoots.push(projectRoot);
-  await mkdir(join(projectRoot, ".aictx/memory/decisions"), { recursive: true });
-  await mkdir(join(projectRoot, ".aictx/relations"), { recursive: true });
-  await mkdir(join(projectRoot, ".aictx/schema"), { recursive: true });
+  await mkdir(join(projectRoot, ".memory/memory/decisions"), { recursive: true });
+  await mkdir(join(projectRoot, ".memory/relations"), { recursive: true });
+  await mkdir(join(projectRoot, ".memory/schema"), { recursive: true });
 
   for (const file of Object.values(SCHEMA_FILES)) {
-    await copyFile(join(root, "src/schemas", file), join(projectRoot, ".aictx/schema", file));
+    await copyFile(join(root, "src/schemas", file), join(projectRoot, ".memory/schema", file));
   }
 
   await writeFile(
-    join(projectRoot, ".aictx/config.json"),
+    join(projectRoot, ".memory/config.json"),
     `${JSON.stringify({
       version: 1,
       project: { id: "project.billing-api", name: "Billing API" },
@@ -242,7 +242,7 @@ async function createV1Project(): Promise<string> {
     }, null, 2)}\n`,
     "utf8"
   );
-  await writeFile(join(projectRoot, ".aictx/events.jsonl"), "", "utf8");
+  await writeFile(join(projectRoot, ".memory/events.jsonl"), "", "utf8");
 
   const body = "# Billing retries\n\nRetries run in the worker.\n";
   const sidecarWithoutHash = {
@@ -267,9 +267,9 @@ async function createV1Project(): Promise<string> {
     content_hash: computeObjectContentHash(sidecarWithoutHash, body)
   };
 
-  await writeFile(join(projectRoot, ".aictx/memory/decisions/billing-retries.md"), body, "utf8");
+  await writeFile(join(projectRoot, ".memory/memory/decisions/billing-retries.md"), body, "utf8");
   await writeFile(
-    join(projectRoot, ".aictx/memory/decisions/billing-retries.json"),
+    join(projectRoot, ".memory/memory/decisions/billing-retries.json"),
     `${JSON.stringify(sidecar, null, 2)}\n`,
     "utf8"
   );
@@ -278,23 +278,23 @@ async function createV1Project(): Promise<string> {
 }
 
 async function createLegacyV2LifecycleProject(): Promise<string> {
-  const projectRoot = await mkdtemp(join(tmpdir(), "aictx-upgrade-v2-"));
+  const projectRoot = await mkdtemp(join(tmpdir(), "memory-upgrade-v2-"));
   tempRoots.push(projectRoot);
 
-  await mkdir(join(projectRoot, ".aictx/memory/decisions"), { recursive: true });
-  await mkdir(join(projectRoot, ".aictx/memory/questions"), { recursive: true });
-  await mkdir(join(projectRoot, ".aictx/memory/notes"), { recursive: true });
-  await mkdir(join(projectRoot, ".aictx/relations"), { recursive: true });
-  await mkdir(join(projectRoot, ".aictx/schema"), { recursive: true });
+  await mkdir(join(projectRoot, ".memory/memory/decisions"), { recursive: true });
+  await mkdir(join(projectRoot, ".memory/memory/questions"), { recursive: true });
+  await mkdir(join(projectRoot, ".memory/memory/notes"), { recursive: true });
+  await mkdir(join(projectRoot, ".memory/relations"), { recursive: true });
+  await mkdir(join(projectRoot, ".memory/schema"), { recursive: true });
 
   for (const file of Object.values(SCHEMA_FILES)) {
-    await copyFile(join(root, "src/schemas", file), join(projectRoot, ".aictx/schema", file));
+    await copyFile(join(root, "src/schemas", file), join(projectRoot, ".memory/schema", file));
   }
 
   await writePermissiveLegacyObjectSchema(projectRoot);
   await writePermissiveLegacyEventSchema(projectRoot);
   await writeFile(
-    join(projectRoot, ".aictx/config.json"),
+    join(projectRoot, ".memory/config.json"),
     `${JSON.stringify({
       version: 2,
       project: { id: "project.legacy-api", name: "Legacy API" },
@@ -304,7 +304,7 @@ async function createLegacyV2LifecycleProject(): Promise<string> {
     "utf8"
   );
   await writeFile(
-    join(projectRoot, ".aictx/events.jsonl"),
+    join(projectRoot, ".memory/events.jsonl"),
     `${JSON.stringify({
       event: "memory.rejected",
       id: "note.legacy-rejected",
@@ -384,7 +384,7 @@ async function createLegacyV2LifecycleProject(): Promise<string> {
     updated_at: "2026-04-25T13:00:00+02:00"
   };
   await writeFile(
-    join(projectRoot, ".aictx/relations/legacy-rejected-reference.json"),
+    join(projectRoot, ".memory/relations/legacy-rejected-reference.json"),
     `${JSON.stringify(
       {
         ...relationWithoutHash,
@@ -400,18 +400,18 @@ async function createLegacyV2LifecycleProject(): Promise<string> {
 }
 
 async function createV3SourceProject(): Promise<string> {
-  const projectRoot = await mkdtemp(join(tmpdir(), "aictx-upgrade-source-"));
+  const projectRoot = await mkdtemp(join(tmpdir(), "memory-upgrade-source-"));
   tempRoots.push(projectRoot);
-  await mkdir(join(projectRoot, ".aictx/memory/sources"), { recursive: true });
-  await mkdir(join(projectRoot, ".aictx/relations"), { recursive: true });
-  await mkdir(join(projectRoot, ".aictx/schema"), { recursive: true });
+  await mkdir(join(projectRoot, ".memory/memory/sources"), { recursive: true });
+  await mkdir(join(projectRoot, ".memory/relations"), { recursive: true });
+  await mkdir(join(projectRoot, ".memory/schema"), { recursive: true });
 
   for (const file of Object.values(SCHEMA_FILES)) {
-    await copyFile(join(root, "src/schemas", file), join(projectRoot, ".aictx/schema", file));
+    await copyFile(join(root, "src/schemas", file), join(projectRoot, ".memory/schema", file));
   }
 
   await writeFile(
-    join(projectRoot, ".aictx/config.json"),
+    join(projectRoot, ".memory/config.json"),
     `${JSON.stringify({
       version: 3,
       project: { id: "project.source-demo", name: "Source Demo" },
@@ -420,7 +420,7 @@ async function createV3SourceProject(): Promise<string> {
     }, null, 2)}\n`,
     "utf8"
   );
-  await writeFile(join(projectRoot, ".aictx/events.jsonl"), "", "utf8");
+  await writeFile(join(projectRoot, ".memory/events.jsonl"), "", "utf8");
   await writeFile(join(projectRoot, "README.md"), "# Demo\n\nSource file.\n", "utf8");
 
   const body = "# Source: README.md\n\nThe README documents the demo.\n";
@@ -444,9 +444,9 @@ async function createV3SourceProject(): Promise<string> {
     updated_at: "2026-04-25T13:00:00+02:00"
   };
 
-  await writeFile(join(projectRoot, ".aictx/memory/sources/readme.md"), body, "utf8");
+  await writeFile(join(projectRoot, ".memory/memory/sources/readme.md"), body, "utf8");
   await writeFile(
-    join(projectRoot, ".aictx/memory/sources/readme.json"),
+    join(projectRoot, ".memory/memory/sources/readme.json"),
     `${JSON.stringify(
       {
         ...sidecarWithoutHash,
@@ -463,7 +463,7 @@ async function createV3SourceProject(): Promise<string> {
 
 async function writePermissiveLegacyObjectSchema(projectRoot: string): Promise<void> {
   await writeFile(
-    join(projectRoot, ".aictx/schema/object.schema.json"),
+    join(projectRoot, ".memory/schema/object.schema.json"),
     `${JSON.stringify(
       {
         $schema: "https://json-schema.org/draft/2020-12/schema",
@@ -479,7 +479,7 @@ async function writePermissiveLegacyObjectSchema(projectRoot: string): Promise<v
 
 async function writePermissiveLegacyEventSchema(projectRoot: string): Promise<void> {
   await writeFile(
-    join(projectRoot, ".aictx/schema/event.schema.json"),
+    join(projectRoot, ".memory/schema/event.schema.json"),
     `${JSON.stringify(
       {
         $schema: "https://json-schema.org/draft/2020-12/schema",
@@ -529,9 +529,9 @@ async function writeLegacyObject(
     sidecarWithoutHash.superseded_by = input.superseded_by;
   }
 
-  await writeFile(join(projectRoot, ".aictx", bodyPath), body, "utf8");
+  await writeFile(join(projectRoot, ".memory", bodyPath), body, "utf8");
   await writeFile(
-    join(projectRoot, ".aictx", bodyPath.replace(/\.md$/, ".json")),
+    join(projectRoot, ".memory", bodyPath.replace(/\.md$/, ".json")),
     `${JSON.stringify(
       {
         ...sidecarWithoutHash,

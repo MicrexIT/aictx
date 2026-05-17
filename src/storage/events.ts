@@ -1,4 +1,4 @@
-import { aictxError, type JsonValue } from "../core/errors.js";
+import { memoryError, type JsonValue } from "../core/errors.js";
 import { appendJsonl } from "../core/fs.js";
 import { err, ok, type Result } from "../core/result.js";
 import type {
@@ -16,7 +16,7 @@ import {
   validateEvent
 } from "../validation/validate.js";
 
-export const EVENTS_PATH = ".aictx/events.jsonl";
+export const EVENTS_PATH = ".memory/events.jsonl";
 
 export const WRITE_OPERATION_EVENT_TYPES = {
   create_object: "memory.created",
@@ -93,7 +93,7 @@ export function validateBuiltEvent(
 ): Result<MemoryEvent> {
   if (event.event === "index.rebuilt") {
     return err(
-      aictxError("AICtxValidationFailed", "Refusing to append index.rebuilt events in v1.", {
+      memoryError("MemoryValidationFailed", "Refusing to append index.rebuilt events in v1.", {
         path: EVENTS_PATH
       })
     );

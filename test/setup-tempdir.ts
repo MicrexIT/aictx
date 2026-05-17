@@ -7,7 +7,7 @@ const repoRoot = realpathSync(resolve(fileURLToPath(new URL("..", import.meta.ur
 const currentTempRoot = realpathSync(resolve(tmpdir()));
 
 if (isInsideOrEqual(repoRoot, currentTempRoot)) {
-  const isolatedTempRoot = join(dirname(repoRoot), ".aictx-test-tmp");
+  const isolatedTempRoot = join(dirname(repoRoot), ".memory-test-tmp");
   mkdirSync(isolatedTempRoot, { recursive: true });
   const resolvedTempRoot = realpathSync(isolatedTempRoot);
 

@@ -41,7 +41,7 @@ describe("core filesystem helpers", () => {
 
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.error.code).toBe("AICtxValidationFailed");
+      expect(result.error.code).toBe("MemoryValidationFailed");
     }
     await expect(readFile(join(sandboxRoot, "outside.md"), "utf8")).rejects.toMatchObject({
       code: "ENOENT"
@@ -55,7 +55,7 @@ describe("core filesystem helpers", () => {
 
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.error.code).toBe("AICtxValidationFailed");
+      expect(result.error.code).toBe("MemoryValidationFailed");
     }
     await expect(readFile(outsidePath, "utf8")).rejects.toMatchObject({ code: "ENOENT" });
   });
@@ -70,7 +70,7 @@ describe("core filesystem helpers", () => {
 
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.error.code).toBe("AICtxValidationFailed");
+      expect(result.error.code).toBe("MemoryValidationFailed");
     }
     await expect(
       readFile(join(outsideDirectory, "nested", "escape.md"), "utf8")
@@ -174,16 +174,16 @@ describe("core filesystem helpers", () => {
     expect(valid).toEqual({ ok: true, data: "valid\n", warnings: [] });
     expect(invalid.ok).toBe(false);
     if (!invalid.ok) {
-      expect(invalid.error.code).toBe("AICtxValidationFailed");
+      expect(invalid.error.code).toBe("MemoryValidationFailed");
     }
   });
 });
 
 async function createSandbox(): Promise<{ sandboxRoot: string; allowedRoot: string }> {
-  const sandboxRoot = await mkdtemp(join(tmpdir(), "aictx-fs-"));
+  const sandboxRoot = await mkdtemp(join(tmpdir(), "memory-fs-"));
   tempRoots.push(sandboxRoot);
 
-  const allowedRoot = join(sandboxRoot, ".aictx");
+  const allowedRoot = join(sandboxRoot, ".memory");
   await mkdir(allowedRoot);
 
   return { sandboxRoot, allowedRoot };

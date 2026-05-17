@@ -244,7 +244,7 @@ describe("event validation and append", () => {
 
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.error.code).toBe("AICtxSchemaValidationFailed");
+      expect(result.error.code).toBe("MemorySchemaValidationFailed");
     }
     expect(await readFile(join(projectRoot, EVENTS_PATH), "utf8")).toBe("");
   });
@@ -261,21 +261,21 @@ describe("event validation and append", () => {
 
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.error.code).toBe("AICtxValidationFailed");
+      expect(result.error.code).toBe("MemoryValidationFailed");
     }
     expect(await readFile(join(projectRoot, EVENTS_PATH), "utf8")).toBe("");
   });
 });
 
 async function createProjectRoot(): Promise<string> {
-  const projectRoot = await mkdtemp(join(tmpdir(), "aictx-events-"));
+  const projectRoot = await mkdtemp(join(tmpdir(), "memory-events-"));
   tempRoots.push(projectRoot);
-  await mkdir(join(projectRoot, ".aictx", "schema"), { recursive: true });
+  await mkdir(join(projectRoot, ".memory", "schema"), { recursive: true });
 
   for (const schemaFile of Object.values(SCHEMA_FILES)) {
     await copyFile(
       join(repoRoot, "src", "schemas", schemaFile),
-      join(projectRoot, ".aictx", "schema", schemaFile)
+      join(projectRoot, ".memory", "schema", schemaFile)
     );
   }
 

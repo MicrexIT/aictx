@@ -1,4 +1,13 @@
-import { access, mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
+import {
+  access,
+  mkdir,
+  mkdtemp,
+  readFile,
+  realpath,
+  rename,
+  rm,
+  writeFile
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -23,7 +32,7 @@ interface InitSuccessEnvelope {
   warnings: string[];
   meta: {
     project_root: string;
-    aictx_root: string;
+    memory_root: string;
     git: {
       available: boolean;
       branch: string | null;
@@ -63,12 +72,12 @@ afterEach(async () => {
   );
 });
 
-describe("aictx init CLI", () => {
+describe("memory init CLI", () => {
   it("prints a success envelope for JSON output in a Git repo", async () => {
     const repo = await createRepo("json-git");
     const output = createCapturedOutput();
 
-    const exitCode = await main(["node", "aictx", "init", "--json"], {
+    const exitCode = await main(["node", "memory", "init", "--json"], {
       ...output.writers,
       cwd: repo
     });
@@ -91,15 +100,15 @@ describe("aictx init CLI", () => {
       }
     ]);
     expect(envelope.meta.project_root).toBe(repo);
-    expect(envelope.meta.aictx_root).toBe(join(repo, ".aictx"));
+    expect(envelope.meta.memory_root).toBe(join(repo, ".memory"));
     expect(envelope.meta.git.available).toBe(true);
   });
 
   it("prints a success envelope outside Git with unavailable Git metadata", async () => {
-    const projectRoot = await createTempRoot("aictx-cli-init-local-");
+    const projectRoot = await createTempRoot("memory-cli-init-local-");
     const output = createCapturedOutput();
 
-    const exitCode = await main(["node", "aictx", "init", "--json"], {
+    const exitCode = await main(["node", "memory", "init", "--json"], {
       ...output.writers,
       cwd: projectRoot
     });
@@ -109,7 +118,7 @@ describe("aictx init CLI", () => {
     const envelope = parseInitSuccessEnvelope(output.stdout());
     expect(envelope.meta).toEqual({
       project_root: projectRoot,
-      aictx_root: join(projectRoot, ".aictx"),
+      memory_root: join(projectRoot, ".memory"),
       git: {
         available: false,
         branch: null,
@@ -117,15 +126,61 @@ describe("aictx init CLI", () => {
         dirty: null
       }
     });
-    await expect(access(join(projectRoot, ".aictx", "config.json"))).resolves.toBeUndefined();
-    await expect(access(join(projectRoot, ".aictx", "events.jsonl"))).resolves.toBeUndefined();
+    await expect(access(join(projectRoot, ".memory", "config.json"))).resolves.toBeUndefined();
+    await expect(access(join(projectRoot, ".memory", "events.jsonl"))).resolves.toBeUndefined();
+  });
+
+  it("migrates legacy .aictx storage on the first memory command", async () => {
+    const projectRoot = await createTempRoot("memory-cli-legacy-migration-");
+    let output = createCapturedOutput();
+
+    expect(await main(["node", "memory", "init", "--json"], {
+      ...output.writers,
+      cwd: projectRoot,
+      registry: { enabled: false }
+    })).toBe(0);
+
+    await rename(join(projectRoot, ".memory"), join(projectRoot, ".aictx"));
+    await writeFile(
+      join(projectRoot, ".gitignore"),
+      [
+        ".aictx/index/",
+        ".aictx/context/",
+        ".aictx/exports/",
+        ".aictx/recovery/",
+        ".aictx/.backup/",
+        ".aictx/.lock",
+        ""
+      ].join("\n")
+    );
+
+    output = createCapturedOutput();
+    expect(await main(["node", "memory", "load", "legacy migration", "--json"], {
+      ...output.writers,
+      cwd: projectRoot,
+      registry: { enabled: false }
+    })).toBe(0);
+    expect(output.stderr()).toBe("");
+    await expect(access(join(projectRoot, ".memory", "config.json"))).resolves.toBeUndefined();
+    await expect(access(join(projectRoot, ".aictx"))).rejects.toMatchObject({ code: "ENOENT" });
+    await expect(readFile(join(projectRoot, ".gitignore"), "utf8")).resolves.toBe(
+      [
+        ".memory/index/",
+        ".memory/context/",
+        ".memory/exports/",
+        ".memory/recovery/",
+        ".memory/.backup/",
+        ".memory/.lock",
+        ""
+      ].join("\n")
+    );
   });
 
   it("prints concise human output", async () => {
-    const projectRoot = await createTempRoot("aictx-cli-init-human-");
+    const projectRoot = await createTempRoot("memory-cli-init-human-");
     const output = createCapturedOutput();
 
-    const exitCode = await main(["node", "aictx", "init"], {
+    const exitCode = await main(["node", "memory", "init"], {
       ...output.writers,
       cwd: projectRoot
     });
@@ -133,22 +188,22 @@ describe("aictx init CLI", () => {
     expect(exitCode).toBe(0);
     expect(output.stderr()).toBe("");
     expect(() => JSON.parse(output.stdout()) as unknown).toThrow();
-    expect(output.stdout()).toContain("Initialized Aictx.");
+    expect(output.stdout()).toContain("Initialized Memory.");
     expect(output.stdout()).toContain("Created files:");
-    expect(output.stdout()).toContain(".aictx/config.json");
-    expect(output.stdout()).toContain(".aictx/events.jsonl");
+    expect(output.stdout()).toContain(".memory/config.json");
+    expect(output.stdout()).toContain(".memory/events.jsonl");
     expect(output.stdout()).toContain("Index built.");
     expect(output.stdout()).toContain("Agent guidance installed:");
     expect(output.stdout()).toContain("AGENTS.md: created");
     expect(output.stdout()).toContain("CLAUDE.md: created");
     expect(output.stdout()).toContain("Optional bundled guidance:");
     expect(output.stdout()).toContain("Next steps:");
-    expect(output.stdout()).toContain("aictx load");
-    expect(output.stdout()).toContain("aictx suggest --bootstrap --patch");
-    expect(output.stdout()).toContain("aictx save --file bootstrap-memory.json");
+    expect(output.stdout()).toContain("memory load");
+    expect(output.stdout()).toContain("memory suggest --bootstrap --patch");
+    expect(output.stdout()).toContain("memory save --file bootstrap-memory.json");
 
     const agentGuidance = await readFile(join(projectRoot, "AGENTS.md"), "utf8");
-    expect(agentGuidance).toContain("aictx suggest --after-task");
+    expect(agentGuidance).toContain("memory suggest --after-task");
     expect(agentGuidance).toContain("save/no-save decision");
     expect(agentGuidance).toContain("Right-size memory");
     expect(agentGuidance).toContain("source records");
@@ -157,10 +212,10 @@ describe("aictx init CLI", () => {
   });
 
   it("skips repo agent guidance when requested", async () => {
-    const projectRoot = await createTempRoot("aictx-cli-init-no-guidance-");
+    const projectRoot = await createTempRoot("memory-cli-init-no-guidance-");
     const output = createCapturedOutput();
 
-    const exitCode = await main(["node", "aictx", "init", "--no-agent-guidance", "--json"], {
+    const exitCode = await main(["node", "memory", "init", "--no-agent-guidance", "--json"], {
       ...output.writers,
       cwd: projectRoot
     });
@@ -181,10 +236,10 @@ describe("aictx init CLI", () => {
         }
       ],
       optional_skills: [
-        "integrations/codex/aictx/SKILL.md",
-        "integrations/claude/aictx/SKILL.md",
-        "integrations/cursor/aictx.mdc",
-        "integrations/cline/aictx.md"
+        "integrations/codex/memory/SKILL.md",
+        "integrations/claude/memory/SKILL.md",
+        "integrations/cursor/memory.mdc",
+        "integrations/cline/memory.md"
       ]
     });
     await expect(access(join(projectRoot, "AGENTS.md"))).rejects.toMatchObject({
@@ -195,7 +250,7 @@ describe("aictx init CLI", () => {
     });
   });
 
-  it("requires --force before reinitializing tracked dirty Aictx state", async () => {
+  it("requires --force before reinitializing tracked dirty Memory state", async () => {
     const repo = await createRepo("force-reset");
     await writeFile(
       join(repo, "package.json"),
@@ -222,28 +277,28 @@ describe("aictx init CLI", () => {
     await git(repo, ["commit", "-m", "Add package metadata"]);
     let output = createCapturedOutput();
 
-    expect(await main(["node", "aictx", "init", "--json"], {
+    expect(await main(["node", "memory", "init", "--json"], {
       ...output.writers,
       cwd: repo
     })).toBe(0);
 
-    await git(repo, ["add", ".gitignore", "AGENTS.md", "CLAUDE.md", ".aictx"]);
-    await git(repo, ["commit", "-m", "Initialize Aictx memory"]);
-    await rm(join(repo, ".aictx"), { recursive: true, force: true });
+    await git(repo, ["add", ".gitignore", "AGENTS.md", "CLAUDE.md", ".memory"]);
+    await git(repo, ["commit", "-m", "Initialize Memory"]);
+    await rm(join(repo, ".memory"), { recursive: true, force: true });
 
     output = createCapturedOutput();
-    expect(await main(["node", "aictx", "init", "--json"], {
+    expect(await main(["node", "memory", "init", "--json"], {
       ...output.writers,
       cwd: repo
     })).not.toBe(0);
     expect(output.stderr()).toBe("");
     const errorEnvelope = JSON.parse(output.stdout()) as InitErrorEnvelope;
-    expect(errorEnvelope.error.code).toBe("AICtxDirtyMemory");
-    expect(JSON.stringify(errorEnvelope.error.details)).toContain(".aictx/config.json");
+    expect(errorEnvelope.error.code).toBe("MemoryDirtyMemory");
+    expect(JSON.stringify(errorEnvelope.error.details)).toContain(".memory/config.json");
     expect(errorEnvelope.error.message).toContain("--force");
 
     output = createCapturedOutput();
-    expect(await main(["node", "aictx", "init", "--force", "--json"], {
+    expect(await main(["node", "memory", "init", "--force", "--json"], {
       ...output.writers,
       cwd: repo
     })).toBe(0);
@@ -252,14 +307,14 @@ describe("aictx init CLI", () => {
     expect(forceEnvelope.data.index_built).toBe(true);
 
     output = createCapturedOutput();
-    expect(await main(["node", "aictx", "suggest", "--bootstrap", "--patch"], {
+    expect(await main(["node", "memory", "suggest", "--bootstrap", "--patch"], {
       ...output.writers,
       cwd: repo
     })).toBe(0);
     await writeFile(join(repo, "bootstrap-memory.json"), output.stdout(), "utf8");
 
     output = createCapturedOutput();
-    expect(await main(["node", "aictx", "save", "--file", "bootstrap-memory.json", "--json"], {
+    expect(await main(["node", "memory", "save", "--file", "bootstrap-memory.json", "--json"], {
       ...output.writers,
       cwd: repo
     })).toBe(0);
@@ -272,7 +327,7 @@ describe("aictx init CLI", () => {
     );
 
     output = createCapturedOutput();
-    expect(await main(["node", "aictx", "check", "--json"], {
+    expect(await main(["node", "memory", "check", "--json"], {
       ...output.writers,
       cwd: repo
     })).toBe(0);
@@ -308,10 +363,10 @@ function createCapturedOutput(): {
 }
 
 async function createRepo(name: string): Promise<string> {
-  const repo = await createTempRoot(`aictx-cli-init-${name}-`);
+  const repo = await createTempRoot(`memory-cli-init-${name}-`);
   await git(repo, ["init", "--initial-branch=main"]);
   await git(repo, ["config", "user.email", "test@example.com"]);
-  await git(repo, ["config", "user.name", "Aictx Test"]);
+  await git(repo, ["config", "user.name", "Memory Test"]);
   await writeFile(join(repo, "README.md"), "# Test\n");
   await git(repo, ["add", "README.md"]);
   await git(repo, ["commit", "-m", "Initial commit"]);

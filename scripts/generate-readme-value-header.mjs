@@ -283,7 +283,7 @@ const html = String.raw`<!doctype html>
           <h1>Stop re-explaining your repo to AI agents.</h1>
 
           <div class="subhead">
-            Aictx saves durable project knowledge as reviewable repo memory.
+            Memory saves durable project knowledge as reviewable repo memory.
           </div>
 
           <div class="chips">
@@ -293,7 +293,7 @@ const html = String.raw`<!doctype html>
           </div>
         </div>
 
-        <aside class="proof" aria-label="Aictx context pack example">
+        <aside class="proof" aria-label="Memory context pack example">
           <div class="proof-header">
             <div>
               <p class="proof-kicker">AI Context Pack</p>
@@ -308,7 +308,7 @@ const html = String.raw`<!doctype html>
 
           <div class="task">
             <div class="label">Ran</div>
-            <div class="command">aictx load "viewer search"</div>
+            <div class="command">memory load "viewer search"</div>
           </div>
 
           <div class="pack">

@@ -21,7 +21,7 @@ export function registerLensCommand(
 ): void {
   program
     .command("lens")
-    .description("Render a readable Aictx memory lens.")
+    .description("Render a readable Memory lens.")
     .argument("<name>", "Lens name: project-map, current-work, review-risk, provenance, or maintenance.")
     .action(async (name: string, _flags: Record<string, never>, command: Command) => {
       const result = await getMemoryLens({
@@ -39,8 +39,8 @@ export function registerLensCommand(
       if (rendered.exitCode !== CLI_EXIT_SUCCESS) {
         throw new CommanderError(
           rendered.exitCode,
-          "aictx.command.failed",
-          "Aictx command failed."
+          "memory.command.failed",
+          "Memory command failed."
         );
       }
     });

@@ -86,7 +86,7 @@ describe("performance smoke tests", () => {
   it(
     "keeps local rebuild, search, load, and save operations responsive on a generated project",
     async () => {
-      const projectRoot = await createInitializedProject("aictx-performance-smoke-");
+      const projectRoot = await createInitializedProject("memory-performance-smoke-");
       const objectIds = await withLocalTimeout(
         "performance fixture generation",
         FIXTURE_TIMEOUT_MS,
@@ -269,11 +269,11 @@ async function writePerformanceFixture(projectRoot: string): Promise<ObjectId[]>
     ...buildRelationWrites(objectIds)
   ];
 
-  await mkdir(join(projectRoot, ".aictx", "memory", "decisions"), { recursive: true });
-  await mkdir(join(projectRoot, ".aictx", "relations"), { recursive: true });
+  await mkdir(join(projectRoot, ".memory", "memory", "decisions"), { recursive: true });
+  await mkdir(join(projectRoot, ".memory", "relations"), { recursive: true });
   await writeFilesInBatches(projectRoot, writes, WRITE_BATCH_SIZE);
   await writeFile(
-    join(projectRoot, ".aictx", "events.jsonl"),
+    join(projectRoot, ".memory", "events.jsonl"),
     buildEventsJsonl(objectIds),
     "utf8"
   );
@@ -320,11 +320,11 @@ function buildObjectWrites(projectId: ProjectId, objectIds: readonly ObjectId[])
 
     return [
       {
-        relativePath: `.aictx/${bodyPath}`,
+        relativePath: `.memory/${bodyPath}`,
         contents: body
       },
       {
-        relativePath: `.aictx/${bodyPath.replace(/\.md$/, ".json")}`,
+        relativePath: `.memory/${bodyPath.replace(/\.md$/, ".json")}`,
         contents: `${JSON.stringify(sidecar, null, 2)}\n`
       }
     ];
@@ -353,7 +353,7 @@ function buildRelationWrites(objectIds: readonly ObjectId[]): FileWrite[] {
     };
 
     return {
-      relativePath: `.aictx/relations/perf-smoke-${padIndex(fixtureIndex)}.json`,
+      relativePath: `.memory/relations/perf-smoke-${padIndex(fixtureIndex)}.json`,
       contents: `${JSON.stringify(relation, null, 2)}\n`
     };
   });
@@ -390,7 +390,7 @@ async function writeFilesInBatches(
 }
 
 async function runLoadJson(projectRoot: string, args: readonly string[]): Promise<LoadEnvelope> {
-  const output = await runCli(["node", "aictx", "load", ...args, "--json"], projectRoot);
+  const output = await runCli(["node", "memory", "load", ...args, "--json"], projectRoot);
 
   expect(output.exitCode).toBe(0);
   expect(output.stderr).toBe("");

@@ -1,0 +1,17 @@
+{
+  "confidence": "high",
+  "content_hash": "sha256:0d237923ef993f8620942c2a2d75a8036849fcb1c5f3bd080157be4c13252e2e",
+  "created_at": "2026-05-16T18:52:44+02:00",
+  "evidence": [
+    {
+      "id": "source.package-json",
+      "kind": "source"
+    }
+  ],
+  "from": "synthesis.product-intent",
+  "id": "rel.synthesis-product-intent-derived-from-source-package-json",
+  "predicate": "derived_from",
+  "status": "active",
+  "to": "source.package-json",
+  "updated_at": "2026-05-16T18:52:44+02:00"
+}

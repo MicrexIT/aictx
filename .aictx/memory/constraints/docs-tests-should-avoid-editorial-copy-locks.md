@@ -1,1 +1,0 @@
-Documentation tests should smoke-test shipped behavior, bundled docs lookup, required packaged files, generated guidance safety basics, and unsupported tool-name regressions. They should not require exact public-doc phrasing or force repeated contract prose across guide pages.

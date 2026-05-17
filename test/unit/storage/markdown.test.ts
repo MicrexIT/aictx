@@ -85,16 +85,16 @@ describe("Markdown storage helpers", () => {
     it("reports frontmatter as a validation error with the provided path", () => {
       const result = validateMarkdownBody(
         "---\ntitle: Example\n---\n# Example",
-        ".aictx/memory/notes/example.md"
+        ".memory/memory/notes/example.md"
       );
 
       expect(result).toEqual({
         valid: false,
         errors: [
           {
-            code: "AICtxValidationFailed",
+            code: "MemoryValidationFailed",
             message: "Markdown files must not contain YAML frontmatter.",
-            path: ".aictx/memory/notes/example.md",
+            path: ".memory/memory/notes/example.md",
             field: null
           }
         ],
@@ -103,7 +103,7 @@ describe("Markdown storage helpers", () => {
     });
 
     it("accepts Markdown without frontmatter", () => {
-      expect(validateMarkdownBody("# Example\n\nBody", ".aictx/memory/notes/example.md")).toEqual({
+      expect(validateMarkdownBody("# Example\n\nBody", ".memory/memory/notes/example.md")).toEqual({
         valid: true,
         errors: [],
         warnings: []
@@ -113,7 +113,7 @@ describe("Markdown storage helpers", () => {
 
   describe("readMarkdownBody", () => {
     it("reads UTF-8 Markdown and returns normalized content", async () => {
-      const tempRoot = await mkdtemp(join(tmpdir(), "aictx-markdown-"));
+      const tempRoot = await mkdtemp(join(tmpdir(), "memory-markdown-"));
       tempRoots.push(tempRoot);
       await mkdir(join(tempRoot, "memory"), { recursive: true });
       const path = join(tempRoot, "memory", "example.md");

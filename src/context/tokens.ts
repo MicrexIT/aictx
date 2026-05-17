@@ -1,4 +1,4 @@
-import { aictxError, type JsonValue } from "../core/errors.js";
+import { memoryError, type JsonValue } from "../core/errors.js";
 import { err, ok, type Result } from "../core/result.js";
 
 export const MIN_TOKEN_BUDGET_EXCLUSIVE = 500;
@@ -54,7 +54,7 @@ function isSafeIntegerAboveMinimum(value: number): boolean {
 
 function invalidTokenBudget<T>(actual: number): Result<T> {
   return err(
-    aictxError("AICtxValidationFailed", "Token budget must be an integer greater than 500.", {
+    memoryError("MemoryValidationFailed", "Token budget must be an integer greater than 500.", {
       field: "token_budget",
       minimumExclusive: MIN_TOKEN_BUDGET_EXCLUSIVE,
       maximum: MAX_TOKEN_BUDGET,

@@ -12,8 +12,8 @@ import {
   type BranchHandoffUpdateData,
   type SaveMemoryData
 } from "../../app/operations.js";
-import { aictxError, type AictxError } from "../../core/errors.js";
-import type { AictxMeta } from "../../core/types.js";
+import { memoryError, type MemoryError } from "../../core/errors.js";
+import type { MemoryMeta } from "../../core/types.js";
 import { err, ok, type Result } from "../../core/result.js";
 import { CLI_EXIT_SUCCESS } from "../exit.js";
 import { renderAppResult } from "../render.js";
@@ -37,7 +37,7 @@ export function registerHandoffCommand(
 ): void {
   const handoff = program
     .command("handoff")
-    .description("Manage current-branch Aictx handoff memory.");
+    .description("Manage current-branch Memory handoff memory.");
 
   handoff
     .command("show")
@@ -104,7 +104,7 @@ async function readJsonInput(
 ): Promise<Result<unknown>> {
   if (flags.stdin !== true) {
     return err(
-      aictxError("AICtxValidationFailed", "--stdin is required for handoff update and close.", {
+      memoryError("MemoryValidationFailed", "--stdin is required for handoff update and close.", {
         field: "stdin"
       })
     );
@@ -118,7 +118,7 @@ async function readJsonInput(
     }
   } catch (error) {
     return err(
-      aictxError("AICtxValidationFailed", "Handoff input could not be read from stdin.", {
+      memoryError("MemoryValidationFailed", "Handoff input could not be read from stdin.", {
         message: messageFromUnknown(error)
       })
     );
@@ -128,7 +128,7 @@ async function readJsonInput(
     return ok(JSON.parse(contents) as unknown);
   } catch (error) {
     return err(
-      aictxError("AICtxInvalidJson", "Handoff input contains invalid JSON.", {
+      memoryError("MemoryInvalidJson", "Handoff input contains invalid JSON.", {
         source: "stdin",
         message: messageFromUnknown(error)
       })
@@ -153,13 +153,13 @@ function renderAndThrow<T>(
   if (rendered.exitCode !== CLI_EXIT_SUCCESS) {
     throw new CommanderError(
       rendered.exitCode,
-      "aictx.command.failed",
-      "Aictx command failed."
+      "memory.command.failed",
+      "Memory command failed."
     );
   }
 }
 
-function inputErrorResult<T>(error: AictxError, cwd: string): AppResult<T> {
+function inputErrorResult<T>(error: MemoryError, cwd: string): AppResult<T> {
   return {
     ok: false,
     error,
@@ -210,10 +210,10 @@ function renderList(label: string, values: readonly string[]): string[] {
   return values.length === 0 ? [] : [`${label}:`, ...values.map((value) => `- ${value}`)];
 }
 
-function fallbackMeta(cwd: string): AictxMeta {
+function fallbackMeta(cwd: string): MemoryMeta {
   return {
     project_root: cwd,
-    aictx_root: `${cwd}/.aictx`,
+    memory_root: `${cwd}/.memory`,
     git: {
       available: false,
       branch: null,

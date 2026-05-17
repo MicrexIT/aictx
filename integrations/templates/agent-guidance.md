@@ -1,6 +1,6 @@
-# Aictx Memory
+# Memory
 
-Aictx is the project's local, Git-aware memory layer for AI coding agents.
+Memory is the project's local, Git-aware memory layer for AI coding agents.
 
 Use it autonomously to load durable project context before substantial work and
 to save only reusable project knowledge after work. Treat loaded memory as
@@ -13,20 +13,20 @@ Before non-trivial coding, architecture, debugging, dependency, or configuration
 work:
 
 ```bash
-aictx load "<task summary>"
-aictx load "<task summary>" --mode debugging
+memory load "<task summary>"
+memory load "<task summary>" --mode debugging
 ```
 
 Use retrieval hints when you already know the touched area:
 
 ```bash
-aictx load "<task summary>" --file src/context/rank.ts --changed-file src/index/search.ts --history-window 30d
+memory load "<task summary>" --file src/context/rank.ts --changed-file src/index/search.ts --history-window 30d
 ```
 
 After meaningful work, save durable memory with the intent-first primitive:
 
 ```bash
-aictx remember --stdin
+memory remember --stdin
 ```
 
 The stdin payload is JSON. Keep it small and semantic:
@@ -49,28 +49,28 @@ The stdin payload is JSON. Keep it small and semantic:
 }
 ```
 
-Use `aictx remember --stdin --dry-run --json` to preview the generated patch
-without writing canonical memory. Use `aictx save --stdin` only when you need
+Use `memory remember --stdin --dry-run --json` to preview the generated patch
+without writing canonical memory. Use `memory save --stdin` only when you need
 the advanced structured patch API directly.
 
 Save nothing when the task produced no durable future value. Passing tests,
 renaming a local variable, or recording a task diary usually should not create
 memory.
 
-Before finalizing, tell the user whether Aictx memory changed. When it changed,
+Before finalizing, tell the user whether Memory changed. When it changed,
 mention that async inspection is available through:
 
 ```bash
-aictx view
-aictx diff
+memory view
+memory diff
 ```
 
-`aictx diff` includes tracked and untracked Aictx memory changes in Git
-projects. Aictx writes local files and never commits automatically.
+`memory diff` includes tracked and untracked Memory changes in Git
+projects. Memory writes local files and never commits automatically.
 
 ## MCP Equivalents
 
-Use the CLI by default. Use MCP only when the client already exposes Aictx tools.
+Use the CLI by default. Use MCP only when the client already exposes Memory tools.
 
 Routine MCP tools:
 
@@ -86,34 +86,34 @@ for normal autonomous memory creation. Use `save_memory_patch` for advanced
 patch-shaped writes.
 
 When one global MCP server serves multiple projects, include `project_root` on
-routine tool calls so reads and writes target the intended `.aictx/` directory.
+routine tool calls so reads and writes target the intended `.memory/` directory.
 
 Setup, lenses, branch handoff, maintenance, recovery, export, registry, viewer,
 docs, suggest, audit, wiki, and stale workflows are CLI-only in v1. Graph inspection
 is available in the CLI and local viewer, but remains outside MCP. Non-MCP
-capabilities are not MCP parity gaps. `aictx init` does not start MCP; MCP
-clients must launch `aictx-mcp`.
+capabilities are not MCP parity gaps. `memory init` does not start MCP; MCP
+clients must launch `memory-mcp`.
 
-Use `aictx setup` as the normal onboarding command. `aictx init` is the
+Use `memory setup` as the normal onboarding command. `memory init` is the
 lower-level empty-storage initializer for automation, tests, or manual
-workflows. `aictx setup --dry-run` previews the conservative bootstrap patch
-without initializing storage or writing repo files. `aictx setup --force
---dry-run` previews reset/setup behavior without deleting anything. `aictx
-audit` includes role coverage gaps, but missing roles are not `aictx check`
+workflows. `memory setup --dry-run` previews the conservative bootstrap patch
+without initializing storage or writing repo files. `memory setup --force
+--dry-run` previews reset/setup behavior without deleting anything. `memory
+audit` includes role coverage gaps, but missing roles are not `memory check`
 failures.
 
-Use `aictx wiki ingest --stdin` when a source-backed synthesis should be filed
+Use `memory wiki ingest --stdin` when a source-backed synthesis should be filed
 with a `source` record and raw-source `origin` metadata in one atomic patch.
-Use `aictx wiki file --stdin` for useful query results that should persist,
-`aictx wiki lint` for wiki-language audit findings, and `aictx wiki log` for
-the generated chronological event log. Aictx does not fetch sources or call an
+Use `memory wiki file --stdin` for useful query results that should persist,
+`memory wiki lint` for wiki-language audit findings, and `memory wiki log` for
+the generated chronological event log. Memory does not fetch sources or call an
 LLM; the agent supplies synthesized content.
 
-Use `aictx lens project-map` for a readable project overview and
-`aictx lens current-work` to inspect current branch continuity. Use
-`aictx handoff update --stdin` when unfinished branch work needs a scoped
-handoff; close it with `aictx handoff close --stdin` when durable memory has
-been promoted or the work is complete. `aictx handoff show` returns only an
+Use `memory lens project-map` for a readable project overview and
+`memory lens current-work` to inspect current branch continuity. Use
+`memory handoff update --stdin` when unfinished branch work needs a scoped
+handoff; close it with `memory handoff close --stdin` when durable memory has
+been promoted or the work is complete. `memory handoff show` returns only an
 active current-branch handoff; closed handoffs remain historical memory.
 
 ## What To Save
@@ -145,10 +145,10 @@ creating duplicates. After failure, confusion, stale loaded memory, active
 memory conflicts, or user correction, repair the durable memory so future agents
 do not repeat the same mistake.
 
-Use `aictx suggest --after-task "<task>" --json` when the right save/no-save
+Use `memory suggest --after-task "<task>" --json` when the right save/no-save
 decision is not obvious. It returns related memory, stale candidates, evidence,
 ranked `recommended_actions`, and a `remember_template` skeleton. Treat
-`recommended_actions` as the primary advisory decision aid. Aictx does not infer durable project meaning from diffs; write the semantic title/body/reason fields yourself.
+`recommended_actions` as the primary advisory decision aid. Memory does not infer durable project meaning from diffs; write the semantic title/body/reason fields yourself.
 
 ## Safety
 
@@ -156,12 +156,12 @@ Do not save secrets, tokens, private keys, sensitive raw logs, unsupported
 speculation, unrelated user preferences, or instructions that tell future agents
 to ignore current code, tests, user requests, or safety rules.
 
-If Aictx rejects a save, report the reason and do not work around it by editing
-`.aictx/` manually. Dirty or untracked `.aictx/` files are not by themselves a
+If Memory rejects a save, report the reason and do not work around it by editing
+`.memory/` manually. Dirty or untracked `.memory/` files are not by themselves a
 reason to skip durable memory; supported saves back up dirty touched files under
-`.aictx/recovery/` before overwrite or delete.
+`.memory/recovery/` before overwrite or delete.
 
-If `aictx` is not on `PATH`, use the project package-manager binary path, such
-as `pnpm exec aictx`, `npm exec aictx`, or `./node_modules/.bin/aictx`. For
+If `memory` is not on `PATH`, use the project package-manager binary path, such
+as `pnpm exec memory`, `npm exec memory`, or `./node_modules/.bin/memory`. For
 one-off `npx` usage, name the scoped package explicitly:
-`npx --package @aictx/memory -- aictx`.
+`npx --package @aictx/memory -- memory`.

@@ -36,11 +36,13 @@ report.*.json
 # Package artifacts
 *.tgz
 
-# Aictx generated local state
-.aictx/index/
-.aictx/context/
-.aictx/.backup/
-.aictx/.lock
+# Memory generated local state
+.memory/index/
+.memory/context/
+.memory/exports/
+.memory/recovery/
+.memory/.backup/
+.memory/.lock
 
 # OS files
 .DS_Store
@@ -53,7 +55,3 @@ Thumbs.db
 !.vscode/settings.json
 !.vscode/tasks.json
 !.vscode/launch.json
-
-.aictx/exports/
-
-.aictx/recovery/

@@ -68,9 +68,9 @@ describe("viewer Obsidian export action", () => {
 
     expect(assets.isFile()).toBe(true);
 
-    const projectRoot = await createInitializedProject("aictx-viewer-export-project-");
+    const projectRoot = await createInitializedProject("memory-viewer-export-project-");
     await writeViewerExportFixtures(projectRoot);
-    await rm(join(projectRoot, ".aictx/exports/obsidian"), { recursive: true, force: true });
+    await rm(join(projectRoot, ".memory/exports/obsidian"), { recursive: true, force: true });
 
     const before = await readCanonicalAndIndexFiles(projectRoot);
     const started = await startViewerServer({
@@ -93,6 +93,7 @@ describe("viewer Obsidian export action", () => {
 
       await page.goto(started.data.url, { waitUntil: "domcontentloaded" });
       await openFirstProject(page);
+      await openSidebar(page);
       await page.locator('[data-testid="nav-export"]').click();
       await page.locator('[data-testid="obsidian-export-submit"]').waitFor();
       await page.locator('[data-testid="obsidian-export-submit"]').click();
@@ -100,7 +101,7 @@ describe("viewer Obsidian export action", () => {
       await expectText(
         page,
         '[data-testid="obsidian-export-manifest-path"]',
-        ".aictx/exports/obsidian/.aictx-obsidian-export.json"
+        ".memory/exports/obsidian/.memory-obsidian-export.json"
       );
 
       const filesWritten = Number(
@@ -110,13 +111,13 @@ describe("viewer Obsidian export action", () => {
       expect(filesWritten).toBeGreaterThan(0);
       await expect(
         readFile(
-          join(projectRoot, ".aictx/exports/obsidian/memory/decision.viewer-export.md"),
+          join(projectRoot, ".memory/exports/obsidian/memory/decision.viewer-export.md"),
           "utf8"
         )
       ).resolves.toContain("# Viewer export");
       await expect(
         readFile(
-          join(projectRoot, ".aictx/exports/obsidian/.aictx-obsidian-export.json"),
+          join(projectRoot, ".memory/exports/obsidian/.memory-obsidian-export.json"),
           "utf8"
         )
       ).resolves.toContain("memory/decision.viewer-export.md");
@@ -129,7 +130,7 @@ describe("viewer Obsidian export action", () => {
   });
 
   it("shows the existing export-target error for unsafe output directories", async () => {
-    const projectRoot = await createInitializedProject("aictx-viewer-export-invalid-");
+    const projectRoot = await createInitializedProject("memory-viewer-export-invalid-");
     await writeViewerExportFixtures(projectRoot);
     await writeProjectFile(projectRoot, "unsafe-export/user-note.md", "# User note\n");
 
@@ -153,17 +154,18 @@ describe("viewer Obsidian export action", () => {
 
       await page.goto(started.data.url, { waitUntil: "domcontentloaded" });
       await openFirstProject(page);
+      await openSidebar(page);
       await page.locator('[data-testid="nav-export"]').click();
       await page.locator('[data-testid="obsidian-export-out-dir"]').fill("unsafe-export");
       await page.locator('[data-testid="obsidian-export-submit"]').click();
-      await expectText(page, '[data-testid="obsidian-export-status"]', "AICtxExportTargetInvalid");
+      await expectText(page, '[data-testid="obsidian-export-status"]', "MemoryExportTargetInvalid");
       await expectText(
         page,
         '[data-testid="obsidian-export-status"]',
-        "non-empty and does not contain an Aictx export manifest"
+        "non-empty and does not contain an Memory export manifest"
       );
       await expect(
-        readFile(join(projectRoot, "unsafe-export/.aictx-obsidian-export.json"), "utf8")
+        readFile(join(projectRoot, "unsafe-export/.memory-obsidian-export.json"), "utf8")
       ).rejects.toThrow();
       await expect(readCanonicalAndIndexFiles(projectRoot)).resolves.toEqual(before);
     } finally {
@@ -176,7 +178,12 @@ describe("viewer Obsidian export action", () => {
 async function openFirstProject(page: Page): Promise<void> {
   await page.locator('[data-testid="projects-view"]').waitFor();
   await page.locator('[data-testid^="project-open-"]').first().click();
-  await page.locator('[data-testid="viewer-search"]').waitFor();
+  await page.locator('[data-testid="memory-list-view"]').waitFor();
+}
+
+async function openSidebar(page: Page): Promise<void> {
+  await page.getByRole("button", { name: "Open menu" }).click();
+  await page.locator('[data-testid="viewer-sidebar-drawer"]').waitFor();
 }
 
 async function writeViewerExportFixtures(projectRoot: string): Promise<void> {
@@ -233,10 +240,10 @@ async function writeMemoryObject(projectRoot: string, fixture: MemoryFixture): P
     content_hash: computeObjectContentHash(sidecarWithoutHash, fixture.body)
   };
 
-  await writeProjectFile(projectRoot, `.aictx/${fixture.bodyPath}`, fixture.body);
+  await writeProjectFile(projectRoot, `.memory/${fixture.bodyPath}`, fixture.body);
   await writeJsonProjectFile(
     projectRoot,
-    `.aictx/${fixture.bodyPath.replace(/\.md$/, ".json")}`,
+    `.memory/${fixture.bodyPath.replace(/\.md$/, ".json")}`,
     sidecar
   );
 }
@@ -265,7 +272,7 @@ async function writeRelation(projectRoot: string, fixture: RelationFixture): Pro
 
   await writeJsonProjectFile(
     projectRoot,
-    `.aictx/relations/${fixture.id.replace(/^rel\./, "")}.json`,
+    `.memory/relations/${fixture.id.replace(/^rel\./, "")}.json`,
     relation
   );
 }
@@ -273,7 +280,7 @@ async function writeRelation(projectRoot: string, fixture: RelationFixture): Pro
 async function createInitializedProject(prefix: string): Promise<string> {
   const projectRoot = await createTempRoot(prefix);
   const output = createCapturedOutput();
-  const exitCode = await main(["node", "aictx", "init", "--json"], {
+  const exitCode = await main(["node", "memory", "init", "--json"], {
     ...output.writers,
     cwd: projectRoot
   });
@@ -299,12 +306,12 @@ async function readCanonicalAndIndexFiles(projectRoot: string): Promise<Record<s
   const files: Record<string, string> = {};
 
   for (const root of [
-    ".aictx/config.json",
-    ".aictx/events.jsonl",
-    ".aictx/memory",
-    ".aictx/relations",
-    ".aictx/schema",
-    ".aictx/index"
+    ".memory/config.json",
+    ".memory/events.jsonl",
+    ".memory/memory",
+    ".memory/relations",
+    ".memory/schema",
+    ".memory/index"
   ]) {
     const absoluteRoot = join(projectRoot, root);
     Object.assign(files, await readFilesRecursivelyIfExists(projectRoot, absoluteRoot));

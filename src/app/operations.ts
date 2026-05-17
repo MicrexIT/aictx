@@ -3,15 +3,16 @@ import { lstat, mkdir, readdir, rm } from "node:fs/promises";
 import { join, resolve } from "node:path";
 
 import { systemClock, type Clock } from "../core/clock.js";
-import { aictxError, type AictxError, type JsonValue } from "../core/errors.js";
+import { memoryError, type MemoryError, type JsonValue } from "../core/errors.js";
 import { readUtf8FileInsideRoot } from "../core/fs.js";
 import {
-  getAictxDiff,
-  getAictxDirtyState,
+  getMemoryDiff,
+  getMemoryDirtyState,
   getChangedProjectFiles,
   getGitState,
   getRecentProjectFileChanges,
-  showAictxFileAtCommit,
+  getTrackedMemoryDirtyFiles,
+  showMemoryFileAtCommit,
   type GitWrapperOptions,
   type ProjectFileChange
 } from "../core/git.js";
@@ -24,7 +25,7 @@ import {
   type SubprocessResult
 } from "../core/subprocess.js";
 import type {
-  AictxMeta,
+  MemoryMeta,
   IsoDateTime,
   ObjectId,
   ObjectFacets,
@@ -152,7 +153,7 @@ import { validateProject } from "../validation/validate.js";
 
 const INITIAL_INDEX_UNAVAILABLE_WARNING =
   "Initial index was not built because the index module is not available yet.";
-const AICTX_HISTORY_PATHSPEC = ".aictx";
+const MEMORY_HISTORY_PATHSPEC = ".memory";
 const HISTORY_FIELD_SEPARATOR = "\u001f";
 
 export interface InitProjectOptions extends GitWrapperOptions {
@@ -160,7 +161,7 @@ export interface InitProjectOptions extends GitWrapperOptions {
   clock?: Clock;
   agentGuidance?: boolean;
   force?: boolean;
-  allowTrackedAictxDeletions?: boolean;
+  allowTrackedMemoryDeletions?: boolean;
 }
 
 export interface PreviewSetupBootstrapOptions extends GitWrapperOptions {
@@ -241,10 +242,10 @@ export interface RewindMemoryOptions extends GitWrapperOptions {
   clock?: Clock;
 }
 
-export interface ResetAictxOptions extends GitWrapperOptions {
+export interface ResetMemoryOptions extends GitWrapperOptions {
   cwd: string;
   destroy?: boolean;
-  aictxHome?: string;
+  memoryHome?: string;
 }
 
 export interface ExportObsidianProjectionOptions extends GitWrapperOptions {
@@ -284,7 +285,7 @@ export interface CloseBranchHandoffOptions extends GitWrapperOptions {
 
 export interface ProjectRegistryOperationOptions extends GitWrapperOptions {
   cwd: string;
-  aictxHome?: string;
+  memoryHome?: string;
   clock?: Clock;
 }
 
@@ -577,7 +578,7 @@ export interface RegisteredProjectSummary {
     name: string;
   };
   project_root: string;
-  aictx_root: string;
+  memory_root: string;
   source: ProjectRegistrySource;
   registered_at: string;
   last_seen_at: string;
@@ -608,7 +609,7 @@ export interface ViewerProjectSummary extends RegisteredProjectSummary {
   current: boolean;
   available: boolean;
   counts: ViewerBootstrapData["counts"] | null;
-  git: AictxMeta["git"] | null;
+  git: MemoryMeta["git"] | null;
   warnings: string[];
 }
 
@@ -631,33 +632,33 @@ export interface ViewerProjectDeleteData {
   entries_removed: string[];
 }
 
-export interface ResetAictxData {
+export interface ResetMemoryData {
   destroyed: boolean;
   backup_path: string | null;
   entries_removed: string[];
 }
 
-export interface ResetAllAictxProjectReset extends RegisteredProjectSummary {
+export interface ResetAllMemoryProjectReset extends RegisteredProjectSummary {
   destroyed: boolean;
   backup_path: string | null;
   entries_removed: string[];
 }
 
-export interface ResetAllAictxProjectSkipped extends RegisteredProjectSummary {
+export interface ResetAllMemoryProjectSkipped extends RegisteredProjectSummary {
   reason: string;
 }
 
-export interface ResetAllAictxProjectFailed extends RegisteredProjectSummary {
-  error: AictxError;
+export interface ResetAllMemoryProjectFailed extends RegisteredProjectSummary {
+  error: MemoryError;
   warnings: string[];
 }
 
-export interface ResetAllAictxData {
+export interface ResetAllMemoryData {
   registry_path: string;
   destroyed: boolean;
-  projects_reset: ResetAllAictxProjectReset[];
-  projects_skipped: ResetAllAictxProjectSkipped[];
-  projects_failed: ResetAllAictxProjectFailed[];
+  projects_reset: ResetAllMemoryProjectReset[];
+  projects_skipped: ResetAllMemoryProjectSkipped[];
+  projects_failed: ResetAllMemoryProjectFailed[];
 }
 
 export type ExportObsidianProjectionData = ObsidianProjectionExportData;
@@ -667,13 +668,13 @@ export type AppResult<T> =
       ok: true;
       data: T;
       warnings: string[];
-      meta: AictxMeta;
+      meta: MemoryMeta;
     }
   | {
       ok: false;
-      error: AictxError;
+      error: MemoryError;
       warnings: string[];
-      meta: AictxMeta;
+      meta: MemoryMeta;
     };
 
 export async function initProject(
@@ -685,7 +686,7 @@ export async function initProject(
     clock,
     agentGuidance: options.agentGuidance ?? true,
     force: options.force ?? false,
-    allowTrackedAictxDeletions: options.allowTrackedAictxDeletions ?? false,
+    allowTrackedMemoryDeletions: options.allowTrackedMemoryDeletions ?? false,
     runner: options.runner
   });
 
@@ -768,7 +769,7 @@ export async function previewSetupBootstrap(
     return meta;
   }
 
-  const currentStorage = await aictxRootExists(paths.data.aictxRoot);
+  const currentStorage = await memoryRootExists(paths.data.memoryRoot);
 
   if (!currentStorage.ok) {
     return {
@@ -889,7 +890,7 @@ export async function upgradeStorage(
 
   const upgraded = await withProjectLock(
     {
-      aictxRoot: paths.data.aictxRoot,
+      memoryRoot: paths.data.memoryRoot,
       operation: "upgrade",
       clock
     },
@@ -910,7 +911,7 @@ export async function upgradeStorage(
       );
       const rebuilt = await rebuildGeneratedIndex({
         projectRoot: paths.data.projectRoot,
-        aictxRoot: paths.data.aictxRoot,
+        memoryRoot: paths.data.memoryRoot,
         clock,
         git: meta.meta.git,
         gitFileChanges: gitFileChanges.ok ? gitFileChanges.data : []
@@ -1071,7 +1072,7 @@ export async function loadMemory(
     };
   }
 
-  if (compiled.error.code !== "AICtxIndexUnavailable" || options.autoRebuildIndex === false) {
+  if (compiled.error.code !== "MemoryIndexUnavailable" || options.autoRebuildIndex === false) {
     return {
       ok: false,
       error: compiled.error,
@@ -1186,7 +1187,7 @@ export async function searchMemory(
     return meta;
   }
 
-  const searched = await searchIndex(searchIndexOptions(paths.data.aictxRoot, options));
+  const searched = await searchIndex(searchIndexOptions(paths.data.memoryRoot, options));
 
   if (searched.ok) {
     return {
@@ -1197,7 +1198,7 @@ export async function searchMemory(
     };
   }
 
-  if (searched.error.code !== "AICtxIndexUnavailable") {
+  if (searched.error.code !== "MemoryIndexUnavailable") {
     return {
       ok: false,
       error: searched.error,
@@ -1242,7 +1243,7 @@ export async function searchMemory(
     };
   }
 
-  const retried = await searchIndex(searchIndexOptions(paths.data.aictxRoot, options));
+  const retried = await searchIndex(searchIndexOptions(paths.data.memoryRoot, options));
 
   if (!retried.ok) {
     return {
@@ -1390,7 +1391,7 @@ export async function getMemoryLens(
   if (!isMemoryLensName(options.lens)) {
     return {
       ok: false,
-      error: aictxError("AICtxValidationFailed", "Unknown memory lens.", {
+      error: memoryError("MemoryValidationFailed", "Unknown memory lens.", {
         lens: options.lens
       }),
       warnings: [],
@@ -1728,13 +1729,13 @@ export async function deleteViewerProject(
     };
   }
 
-  const project = registeredProjectWithDerivedAictxRoot(resolved.data);
+  const project = registeredProjectWithDerivedMemoryRoot(resolved.data);
   const summary = summarizeRegisteredProject(project);
   const meta = await buildBestEffortMeta({
     ...options,
     cwd: project.project_root
   });
-  const missing = await isAictxRootMissing(project.aictx_root);
+  const missing = await isMemoryRootMissing(project.memory_root);
 
   if (!missing.ok) {
     return {
@@ -1749,7 +1750,7 @@ export async function deleteViewerProject(
   const entriesRemoved: string[] = [];
 
   if (!missing.data) {
-    const deleted = await removeAictxRoot(project.aictx_root);
+    const deleted = await removeMemoryRoot(project.memory_root);
 
     if (!deleted.ok) {
       return {
@@ -1761,7 +1762,7 @@ export async function deleteViewerProject(
     }
 
     warnings.push(...deleted.warnings);
-    entriesRemoved.push(".aictx");
+    entriesRemoved.push(".memory");
   }
 
   const unregistered = await removeProjectRootFromRegistry({
@@ -1848,7 +1849,7 @@ export async function exportObsidianProjection(
 
   const exported = await withProjectLock(
     {
-      aictxRoot: paths.data.aictxRoot,
+      memoryRoot: paths.data.memoryRoot,
       operation: "export",
       clock
     },
@@ -1920,13 +1921,13 @@ export async function diffMemory(
   if (!meta.meta.git.available) {
     return {
       ok: false,
-      error: aictxError("AICtxGitRequired", "Git is required for this operation."),
+      error: memoryError("MemoryGitRequired", "Git is required for this operation."),
       warnings: [],
       meta: meta.meta
     };
   }
 
-  const diff = await getAictxDiff(paths.data.projectRoot, options);
+  const diff = await getMemoryDiff(paths.data.projectRoot, options);
 
   if (!diff.ok) {
     return {
@@ -1974,8 +1975,8 @@ export async function suggestMemory(
   if (options.patch === true && mode.data !== "bootstrap") {
     return {
       ok: false,
-      error: aictxError(
-        "AICtxValidationFailed",
+      error: memoryError(
+        "MemoryValidationFailed",
         "Suggest --patch requires --bootstrap."
       ),
       warnings: [],
@@ -2007,7 +2008,7 @@ export async function suggestMemory(
   if (mode.data === "from_diff" && !meta.meta.git.available) {
     return {
       ok: false,
-      error: aictxError("AICtxGitRequired", "Git is required for this operation."),
+      error: memoryError("MemoryGitRequired", "Git is required for this operation."),
       warnings: [],
       meta: meta.meta
     };
@@ -2172,7 +2173,7 @@ export async function listMemoryHistory(
   if (!meta.meta.git.available) {
     return {
       ok: false,
-      error: aictxError("AICtxGitRequired", "Git is required for this operation."),
+      error: memoryError("MemoryGitRequired", "Git is required for this operation."),
       warnings: [],
       meta: meta.meta
     };
@@ -2184,7 +2185,7 @@ export async function listMemoryHistory(
   ) {
     return {
       ok: false,
-      error: aictxError("AICtxValidationFailed", "History limit must be a positive integer.", {
+      error: memoryError("MemoryValidationFailed", "History limit must be a positive integer.", {
         limit: options.limit
       }),
       warnings: [],
@@ -2192,7 +2193,7 @@ export async function listMemoryHistory(
     };
   }
 
-  const history = await getAictxHistory(paths.data.projectRoot, options);
+  const history = await getMemoryHistory(paths.data.projectRoot, options);
 
   if (!history.ok) {
     return {
@@ -2241,7 +2242,7 @@ export async function rewindMemory(
     return prepared;
   }
 
-  const history = await getAictxHistory(prepared.paths.projectRoot, {
+  const history = await getMemoryHistory(prepared.paths.projectRoot, {
     runner: options.runner,
     limit: 2
   });
@@ -2260,9 +2261,9 @@ export async function rewindMemory(
   if (previousCommit === undefined) {
     return {
       ok: false,
-      error: aictxError(
-        "AICtxValidationFailed",
-        "No previous committed Aictx state is available to rewind to."
+      error: memoryError(
+        "MemoryValidationFailed",
+        "No previous committed Memory state is available to rewind to."
       ),
       warnings: history.warnings,
       meta: prepared.meta
@@ -2279,7 +2280,7 @@ export async function rewindMemory(
   });
 }
 
-export async function resetAictx(options: ResetAictxOptions): Promise<AppResult<ResetAictxData>> {
+export async function resetMemory(options: ResetMemoryOptions): Promise<AppResult<ResetMemoryData>> {
   const paths = await resolveProjectPaths({
     cwd: options.cwd,
     mode: "init",
@@ -2302,7 +2303,7 @@ export async function resetAictx(options: ResetAictxOptions): Promise<AppResult<
   }
 
   if (options.destroy === true) {
-    const destroyed = await removeAictxRoot(paths.data.aictxRoot);
+    const destroyed = await removeMemoryRoot(paths.data.memoryRoot);
 
     if (!destroyed.ok) {
       return appError(destroyed.error, destroyed.warnings, meta.meta);
@@ -2313,14 +2314,14 @@ export async function resetAictx(options: ResetAictxOptions): Promise<AppResult<
       data: {
         destroyed: true,
         backup_path: null,
-        entries_removed: [".aictx"]
+        entries_removed: [".memory"]
       },
       warnings: destroyed.warnings,
       meta: meta.meta
     };
   }
 
-  const reset = await backupAndClearAictxRoot(paths.data.projectRoot, paths.data.aictxRoot, options);
+  const reset = await backupAndClearMemoryRoot(paths.data.projectRoot, paths.data.memoryRoot, options);
 
   if (!reset.ok) {
     return appError(reset.error, reset.warnings, meta.meta);
@@ -2338,9 +2339,9 @@ export async function resetAictx(options: ResetAictxOptions): Promise<AppResult<
   };
 }
 
-export async function resetAllAictx(
-  options: ResetAictxOptions
-): Promise<AppResult<ResetAllAictxData>> {
+export async function resetAllMemory(
+  options: ResetMemoryOptions
+): Promise<AppResult<ResetAllMemoryData>> {
   const registry = await readProjectRegistry(options);
   const meta = await buildBestEffortMeta(options);
   const registryPath = resolveProjectRegistryLocation(options).registryPath;
@@ -2355,15 +2356,15 @@ export async function resetAllAictx(
   }
 
   const warnings = [...registry.warnings];
-  const projectsReset: ResetAllAictxProjectReset[] = [];
-  const projectsSkipped: ResetAllAictxProjectSkipped[] = [];
-  const projectsFailed: ResetAllAictxProjectFailed[] = [];
+  const projectsReset: ResetAllMemoryProjectReset[] = [];
+  const projectsSkipped: ResetAllMemoryProjectSkipped[] = [];
+  const projectsFailed: ResetAllMemoryProjectFailed[] = [];
   const projectRootsToUnregister: string[] = [];
 
   for (const entry of registry.data.registry.projects) {
-    const project = registeredProjectWithDerivedAictxRoot(entry);
+    const project = registeredProjectWithDerivedMemoryRoot(entry);
     const summary = summarizeRegisteredProject(project);
-    const missing = await isAictxRootMissing(project.aictx_root);
+    const missing = await isMemoryRootMissing(project.memory_root);
 
     if (!missing.ok) {
       projectsFailed.push({
@@ -2378,14 +2379,14 @@ export async function resetAllAictx(
     if (missing.data) {
       projectsSkipped.push({
         ...summary,
-        reason: ".aictx directory does not exist."
+        reason: ".memory directory does not exist."
       });
       projectRootsToUnregister.push(project.project_root);
       continue;
     }
 
     if (options.destroy === true) {
-      const reset = await removeAictxRoot(project.aictx_root);
+      const reset = await removeMemoryRoot(project.memory_root);
 
       if (!reset.ok) {
         projectsFailed.push({
@@ -2404,12 +2405,12 @@ export async function resetAllAictx(
         ...summary,
         destroyed: true,
         backup_path: null,
-        entries_removed: [".aictx"]
+        entries_removed: [".memory"]
       });
       continue;
     }
 
-    const reset = await backupAndClearAictxRoot(project.project_root, project.aictx_root, options);
+    const reset = await backupAndClearMemoryRoot(project.project_root, project.memory_root, options);
 
     if (!reset.ok) {
       projectsFailed.push({
@@ -2468,9 +2469,18 @@ export async function saveMemoryPatch(
   options: SaveMemoryPatchOptions
 ): Promise<AppResult<SaveMemoryData>> {
   const clock = options.clock ?? systemClock;
-  const paths = await resolveProjectPaths({
+
+  if (options.patch === undefined) {
+    return {
+      ok: false,
+      error: memoryError("MemoryPatchRequired", "Structured memory patch is required."),
+      warnings: [],
+      meta: await buildBestEffortMeta(options)
+    };
+  }
+
+  const paths = await resolveWritableProjectPaths({
     cwd: options.cwd,
-    mode: "require-initialized",
     runner: options.runner
   });
 
@@ -2486,21 +2496,17 @@ export async function saveMemoryPatch(
   const meta = await buildMeta(paths.data, options);
 
   if (!meta.ok) {
-    return meta;
-  }
-
-  if (options.patch === undefined) {
     return {
       ok: false,
-      error: aictxError("AICtxPatchRequired", "Structured memory patch is required."),
-      warnings: [],
+      error: meta.error,
+      warnings: [...paths.warnings, ...meta.warnings],
       meta: meta.meta
     };
   }
 
   const saved = await withProjectLock(
     {
-      aictxRoot: paths.data.aictxRoot,
+      memoryRoot: paths.data.memoryRoot,
       operation: "save",
       clock
     },
@@ -2525,7 +2531,7 @@ export async function saveMemoryPatch(
 
       const indexed = await updateIndexAfterCanonicalWrite({
         projectRoot: paths.data.projectRoot,
-        aictxRoot: paths.data.aictxRoot,
+        memoryRoot: paths.data.memoryRoot,
         clock,
         git: meta.meta.git,
         touched: {
@@ -2568,7 +2574,7 @@ export async function saveMemoryPatch(
     return {
       ok: false,
       error: saved.error,
-      warnings: saved.warnings,
+      warnings: [...paths.warnings, ...saved.warnings],
       meta: meta.meta
     };
   }
@@ -2580,6 +2586,7 @@ export async function saveMemoryPatch(
       ok: true,
       data: saved.data,
       warnings: [
+        ...paths.warnings,
         ...saved.warnings,
         ...refreshedMeta.warnings,
         `Git metadata refresh failed after save: ${refreshedMeta.error.message}`
@@ -2591,7 +2598,7 @@ export async function saveMemoryPatch(
   return {
     ok: true,
     data: saved.data,
-    warnings: saved.warnings,
+    warnings: [...paths.warnings, ...saved.warnings],
     meta: refreshedMeta.meta
   };
 }
@@ -2600,9 +2607,19 @@ export async function rememberMemory(
   options: RememberMemoryOptions
 ): Promise<AppResult<RememberMemoryData>> {
   const clock = options.clock ?? systemClock;
-  const paths = await resolveProjectPaths({
+
+  if (options.input === undefined) {
+    return {
+      ok: false,
+      error: memoryError("MemoryPatchRequired", "Remember input is required."),
+      warnings: [],
+      meta: await buildBestEffortMeta(options)
+    };
+  }
+
+  const paths = await resolveWritableProjectPaths({
     cwd: options.cwd,
-    mode: "require-initialized",
+    allowRestore: options.dryRun !== true,
     runner: options.runner
   });
 
@@ -2618,14 +2635,10 @@ export async function rememberMemory(
   const meta = await buildMeta(paths.data, options);
 
   if (!meta.ok) {
-    return meta;
-  }
-
-  if (options.input === undefined) {
     return {
       ok: false,
-      error: aictxError("AICtxPatchRequired", "Remember input is required."),
-      warnings: [],
+      error: meta.error,
+      warnings: [...paths.warnings, ...meta.warnings],
       meta: meta.meta
     };
   }
@@ -2636,7 +2649,7 @@ export async function rememberMemory(
     return {
       ok: false,
       error: storage.error,
-      warnings: storage.warnings,
+      warnings: [...paths.warnings, ...storage.warnings],
       meta: meta.meta
     };
   }
@@ -2650,7 +2663,7 @@ export async function rememberMemory(
     return {
       ok: false,
       error: patch.error,
-      warnings: [...storage.warnings, ...patch.warnings],
+      warnings: [...paths.warnings, ...storage.warnings, ...patch.warnings],
       meta: meta.meta
     };
   }
@@ -2662,7 +2675,7 @@ export async function rememberMemory(
       return {
         ok: false,
         error: secrets.error,
-        warnings: [...storage.warnings, ...secrets.warnings],
+        warnings: [...paths.warnings, ...storage.warnings, ...secrets.warnings],
         meta: meta.meta
       };
     }
@@ -2679,7 +2692,12 @@ export async function rememberMemory(
       return {
         ok: false,
         error: planned.error,
-        warnings: [...storage.warnings, ...secrets.warnings, ...planned.warnings],
+        warnings: [
+          ...paths.warnings,
+          ...storage.warnings,
+          ...secrets.warnings,
+          ...planned.warnings
+        ],
         meta: meta.meta
       };
     }
@@ -2701,7 +2719,12 @@ export async function rememberMemory(
         events_appended: planned.data.events_appended,
         index_updated: false
       },
-      warnings: [...storage.warnings, ...secrets.warnings, ...planned.warnings],
+      warnings: [
+        ...paths.warnings,
+        ...storage.warnings,
+        ...secrets.warnings,
+        ...planned.warnings
+      ],
       meta: meta.meta
     };
   }
@@ -2717,7 +2740,7 @@ export async function rememberMemory(
     return {
       ok: false,
       error: saved.error,
-      warnings: [...storage.warnings, ...saved.warnings],
+      warnings: [...paths.warnings, ...storage.warnings, ...saved.warnings],
       meta: saved.meta
     };
   }
@@ -2729,7 +2752,7 @@ export async function rememberMemory(
       patch: patch.data,
       ...saved.data
     },
-    warnings: [...storage.warnings, ...saved.warnings],
+    warnings: [...paths.warnings, ...storage.warnings, ...saved.warnings],
     meta: saved.meta
   };
 }
@@ -2762,7 +2785,7 @@ export async function wikiIngestMemory(
   if (options.input === undefined) {
     return {
       ok: false,
-      error: aictxError("AICtxPatchRequired", "Wiki ingest input is required."),
+      error: memoryError("MemoryPatchRequired", "Wiki ingest input is required."),
       warnings: [],
       meta: meta.meta
     };
@@ -2855,7 +2878,7 @@ export async function wikiLogMemory(
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 500) {
     return {
       ok: false,
-      error: aictxError("AICtxValidationFailed", "Wiki log limit must be between 1 and 500.", {
+      error: memoryError("MemoryValidationFailed", "Wiki log limit must be between 1 and 500.", {
         field: "limit",
         minimum: 1,
         maximum: 500,
@@ -2886,7 +2909,7 @@ export async function wikiLogMemory(
 
 async function executeRememberPatch(options: {
   paths: ProjectPaths;
-  meta: AictxMeta;
+  meta: MemoryMeta;
   patch: RememberMemoryPatch;
   storageWarnings: readonly string[];
   dryRun: boolean;
@@ -2977,26 +3000,26 @@ function buildWikiIngestRememberInput(
   storage: CanonicalStorageSnapshot
 ): Result<{ input: unknown; sourceId: ObjectId }> {
   if (!isRecord(input)) {
-    return err(aictxError("AICtxValidationFailed", "Wiki ingest input must be an object.", {
+    return err(memoryError("MemoryValidationFailed", "Wiki ingest input must be an object.", {
       field: "<input>"
     }));
   }
 
   const task = typeof input.task === "string" ? input.task.trim() : "";
   if (task === "") {
-    return err(aictxError("AICtxValidationFailed", "Wiki ingest task is required.", {
+    return err(memoryError("MemoryValidationFailed", "Wiki ingest task is required.", {
       field: "task"
     }));
   }
 
   if (!isRecord(input.source)) {
-    return err(aictxError("AICtxValidationFailed", "Wiki ingest source block is required.", {
+    return err(memoryError("MemoryValidationFailed", "Wiki ingest source block is required.", {
       field: "source"
     }));
   }
 
   if (!isRecord(input.source.origin)) {
-    return err(aictxError("AICtxValidationFailed", "Wiki ingest source.origin is required.", {
+    return err(memoryError("MemoryValidationFailed", "Wiki ingest source.origin is required.", {
       field: "source.origin"
     }));
   }
@@ -3009,7 +3032,7 @@ function buildWikiIngestRememberInput(
     requestedSourceId === undefined ? undefined : findStoredObject(storage.objects, requestedSourceId);
 
   if (existingSource !== undefined && existingSource.sidecar.type !== "source") {
-    return err(aictxError("AICtxValidationFailed", "Wiki ingest source id must refer to a source memory.", {
+    return err(memoryError("MemoryValidationFailed", "Wiki ingest source id must refer to a source memory.", {
       field: "source.id",
       id: requestedSourceId ?? ""
     }));
@@ -3170,7 +3193,7 @@ function optionalUnknownArray(value: unknown, field: string): Result<unknown[]> 
   }
 
   if (!Array.isArray(value)) {
-    return err(aictxError("AICtxValidationFailed", "Wiki ingest field must be an array.", {
+    return err(memoryError("MemoryValidationFailed", "Wiki ingest field must be an array.", {
       field
     }));
   }
@@ -3226,7 +3249,7 @@ export async function updateBranchHandoff(
   if (options.input === undefined) {
     return {
       ok: false,
-      error: aictxError("AICtxPatchRequired", "Handoff update input is required."),
+      error: memoryError("MemoryPatchRequired", "Handoff update input is required."),
       warnings: [],
       meta: prepared.meta
     };
@@ -3310,7 +3333,7 @@ export async function closeBranchHandoff(
   if (options.input === undefined) {
     return {
       ok: false,
-      error: aictxError("AICtxPatchRequired", "Handoff close input is required."),
+      error: memoryError("MemoryPatchRequired", "Handoff close input is required."),
       warnings: [],
       meta: prepared.meta
     };
@@ -3406,20 +3429,20 @@ function summarizeRegisteredProject(entry: ProjectRegistryEntry): RegisteredProj
       name: entry.project.name
     },
     project_root: entry.project_root,
-    aictx_root: entry.aictx_root,
+    memory_root: entry.memory_root,
     source: entry.source,
     registered_at: entry.registered_at,
     last_seen_at: entry.last_seen_at
   };
 }
 
-function registeredProjectWithDerivedAictxRoot(entry: ProjectRegistryEntry): ProjectRegistryEntry {
+function registeredProjectWithDerivedMemoryRoot(entry: ProjectRegistryEntry): ProjectRegistryEntry {
   const projectRoot = resolve(entry.project_root);
 
   return {
     ...entry,
     project_root: projectRoot,
-    aictx_root: join(projectRoot, ".aictx")
+    memory_root: join(projectRoot, ".memory")
   };
 }
 
@@ -3520,7 +3543,7 @@ async function resolveViewerProjectCwd(
 
   if (registered.data === null) {
     return err(
-      aictxError("AICtxValidationFailed", "Registered Aictx project was not found.", {
+      memoryError("MemoryValidationFailed", "Registered Memory project was not found.", {
         registry_id: options.registryId
       })
     );
@@ -3554,8 +3577,8 @@ export const applicationOperations = {
   rebuildIndex,
   registerCurrentProject,
   removeRegisteredProject,
-  resetAllAictx,
-  resetAictx,
+  resetAllMemory,
+  resetMemory,
   restoreMemory,
   rewindMemory,
   saveMemoryPatch,
@@ -3581,18 +3604,18 @@ type ResolvedGitOnlyMemoryOperation =
   | {
       ok: true;
       paths: ProjectPaths;
-      meta: AictxMeta;
+      meta: MemoryMeta;
     }
   | {
       ok: false;
-      error: AictxError;
+      error: MemoryError;
       warnings: string[];
-      meta: AictxMeta;
+      meta: MemoryMeta;
     };
 
 interface RestoreResolvedMemoryOptions extends GitWrapperOptions {
   paths: ProjectPaths;
-  meta: AictxMeta;
+  meta: MemoryMeta;
   commit: string;
   operation: "restore" | "rewind";
   clock: Clock;
@@ -3603,27 +3626,27 @@ type ReadOnlyCanonicalStorageResult =
       ok: true;
       storage: CanonicalStorageSnapshot;
       storageWarnings: string[];
-      meta: AictxMeta;
+      meta: MemoryMeta;
     }
   | {
       ok: false;
-      error: AictxError;
+      error: MemoryError;
       warnings: string[];
-      meta: AictxMeta;
+      meta: MemoryMeta;
     };
 
 type ResolvedBranchHandoffOperation =
   | {
       ok: true;
       paths: ProjectPaths;
-      meta: AictxMeta;
+      meta: MemoryMeta;
       branch: string;
     }
   | {
       ok: false;
-      error: AictxError;
+      error: MemoryError;
       warnings: string[];
-      meta: AictxMeta;
+      meta: MemoryMeta;
     };
 
 async function prepareGitOnlyMemoryOperation(
@@ -3653,7 +3676,7 @@ async function prepareGitOnlyMemoryOperation(
   if (!meta.meta.git.available) {
     return {
       ok: false,
-      error: aictxError("AICtxGitRequired", "Git is required for this operation."),
+      error: memoryError("MemoryGitRequired", "Git is required for this operation."),
       warnings: [],
       meta: meta.meta
     };
@@ -3678,8 +3701,8 @@ async function prepareBranchHandoffOperation(
   if (prepared.meta.git.branch === null) {
     return {
       ok: false,
-      error: aictxError(
-        "AICtxGitRequired",
+      error: memoryError(
+        "MemoryGitRequired",
         "A current Git branch is required for branch handoff."
       ),
       warnings: [],
@@ -3700,7 +3723,7 @@ async function restoreResolvedMemory(
 ): Promise<AppResult<RestoreMemoryData>> {
   const restored = await withProjectLock(
     {
-      aictxRoot: options.paths.aictxRoot,
+      memoryRoot: options.paths.memoryRoot,
       operation: options.operation,
       clock: options.clock
     },
@@ -3728,7 +3751,7 @@ async function restoreResolvedMemory(
       );
       const rebuilt = await rebuildGeneratedIndex({
         projectRoot: options.paths.projectRoot,
-        aictxRoot: options.paths.aictxRoot,
+        memoryRoot: options.paths.memoryRoot,
         clock: options.clock,
         git: options.meta.git,
         gitFileChanges: gitFileChanges.ok ? gitFileChanges.data : []
@@ -3786,7 +3809,7 @@ async function rejectDirtyMemoryBeforeRestore(
   paths: ProjectPaths,
   options: GitWrapperOptions
 ): Promise<Result<void>> {
-  const dirtyState = await getAictxDirtyState(paths.projectRoot, options);
+  const dirtyState = await getMemoryDirtyState(paths.projectRoot, options);
 
   if (!dirtyState.ok) {
     return dirtyState;
@@ -3797,7 +3820,7 @@ async function rejectDirtyMemoryBeforeRestore(
   }
 
   return err(
-    aictxError("AICtxDirtyMemory", "Restore requires a clean Aictx working tree.", {
+    memoryError("MemoryDirtyMemory", "Restore requires a clean Memory working tree.", {
       dirty_files: dirtyState.data.files
     })
   );
@@ -3986,8 +4009,8 @@ function compareStoredRelationsById(
   return left.relation.id.localeCompare(right.relation.id);
 }
 
-function objectNotFound(id: ObjectId): AictxError {
-  return aictxError("AICtxObjectNotFound", "Memory object was not found.", {
+function objectNotFound(id: ObjectId): MemoryError {
+  return memoryError("MemoryObjectNotFound", "Memory object was not found.", {
     id
   });
 }
@@ -4001,8 +4024,8 @@ function suggestMode(options: SuggestMemoryOptions): Result<SuggestMode> {
 
   if (selected.length !== 1) {
     return err(
-      aictxError(
-        "AICtxValidationFailed",
+      memoryError(
+        "MemoryValidationFailed",
         "Suggest requires exactly one of --from-diff, --bootstrap, or --after-task."
       )
     );
@@ -4022,13 +4045,13 @@ function suggestMode(options: SuggestMemoryOptions): Result<SuggestMode> {
 type MetaBuildResult =
   | {
       ok: true;
-      meta: AictxMeta;
+      meta: MemoryMeta;
     }
   | {
       ok: false;
-      error: AictxError;
+      error: MemoryError;
       warnings: string[];
-      meta: AictxMeta;
+      meta: MemoryMeta;
     };
 
 async function buildMeta(
@@ -4050,7 +4073,7 @@ async function buildMeta(
     ok: true,
     meta: {
       project_root: paths.projectRoot,
-      aictx_root: paths.aictxRoot,
+      memory_root: paths.memoryRoot,
       git: git.data
     }
   };
@@ -4058,7 +4081,7 @@ async function buildMeta(
 
 async function buildBestEffortMeta(
   options: GitWrapperOptions & { cwd: string }
-): Promise<AictxMeta> {
+): Promise<MemoryMeta> {
   const paths = await resolveProjectPaths({
     cwd: options.cwd,
     mode: "init",
@@ -4068,7 +4091,7 @@ async function buildBestEffortMeta(
   if (!paths.ok) {
     return {
       project_root: options.cwd,
-      aictx_root: `${options.cwd}/.aictx`,
+      memory_root: `${options.cwd}/.memory`,
       git: {
         available: false,
         branch: null,
@@ -4083,9 +4106,136 @@ async function buildBestEffortMeta(
   return meta.meta;
 }
 
+async function resolveWritableProjectPaths(options: {
+  cwd: string;
+  allowRestore?: boolean;
+  runner?: GitWrapperOptions["runner"];
+}): Promise<Result<ProjectPaths>> {
+  const paths = await resolveProjectPaths({
+    cwd: options.cwd,
+    mode: "init",
+    runner: options.runner
+  });
+
+  if (!paths.ok) {
+    return paths;
+  }
+
+  const initialized = await memoryConfigExists(paths.data);
+
+  if (!initialized.ok) {
+    return err(initialized.error, initialized.warnings);
+  }
+
+  if (initialized.data) {
+    return ok(paths.data, initialized.warnings);
+  }
+
+  const recoverableDeletion = await hasOnlyTrackedMemoryDeletions(paths.data, {
+    runner: options.runner
+  });
+
+  if (!recoverableDeletion.ok) {
+    return recoverableDeletion;
+  }
+
+  if (!recoverableDeletion.data || options.allowRestore === false) {
+    return err(
+      memoryError("MemoryNotInitialized", "Memory is not initialized in this project.", {
+        projectRoot: paths.data.projectRoot,
+        memoryRoot: paths.data.memoryRoot
+      }),
+      initialized.warnings
+    );
+  }
+
+  const restored = await restoreCanonicalStorageFromCommit({
+    projectRoot: paths.data.projectRoot,
+    commit: "HEAD",
+    runner: options.runner
+  });
+
+  if (!restored.ok) {
+    return err(restored.error, [...initialized.warnings, ...restored.warnings]);
+  }
+
+  return ok(
+    paths.data,
+    [
+      ...initialized.warnings,
+      ...restored.warnings,
+      "Memory storage was restored from HEAD before writing because tracked .memory files were deleted."
+    ]
+  );
+}
+
+async function memoryConfigExists(paths: ProjectPaths): Promise<Result<boolean>> {
+  try {
+    await lstat(join(paths.memoryRoot, "config.json"));
+    return ok(true);
+  } catch (error) {
+    if (errorCode(error) === "ENOENT") {
+      return ok(false);
+    }
+
+    return err(
+      memoryError("MemoryValidationFailed", "Memory config could not be read.", {
+        path: ".memory/config.json",
+        message: messageFromUnknown(error)
+      })
+    );
+  }
+}
+
+async function hasOnlyTrackedMemoryDeletions(
+  paths: ProjectPaths,
+  options: GitWrapperOptions
+): Promise<Result<boolean>> {
+  if (!paths.git.available) {
+    return ok(false);
+  }
+
+  const dirtyFiles = await getTrackedMemoryDirtyFiles(paths.projectRoot, options);
+
+  if (!dirtyFiles.ok) {
+    return dirtyFiles;
+  }
+
+  if (dirtyFiles.data.files.length === 0) {
+    return ok(false);
+  }
+
+  return allFilesMissing(paths.projectRoot, dirtyFiles.data.files);
+}
+
+async function allFilesMissing(
+  projectRoot: string,
+  files: readonly string[]
+): Promise<Result<boolean>> {
+  for (const file of files) {
+    try {
+      await lstat(join(projectRoot, file));
+      return ok(false);
+    } catch (error) {
+      if (errorCode(error) === "ENOENT") {
+        continue;
+      }
+
+      return err(
+        memoryError("MemoryValidationFailed", "Memory dirty file state could not be checked.", {
+          path: file,
+          message: messageFromUnknown(error)
+        })
+      );
+    }
+  }
+
+  return ok(true);
+}
+
 async function hintedGitFileChanges(
   projectRoot: string,
-  meta: AictxMeta,
+  meta: MemoryMeta,
   options: GitWrapperOptions & { hints?: SearchMemoryInput["hints"] }
 ): Promise<Result<ProjectFileChange[]>> {
   const hints = normalizeRetrievalHints(options.hints);
@@ -4123,7 +4273,7 @@ async function hintedGitFileChanges(
 
 async function recentGitFileChangesForIndex(
   projectRoot: string,
-  meta: AictxMeta,
+  meta: MemoryMeta,
   options: GitWrapperOptions
 ): Promise<Result<ProjectFileChange[]>> {
   if (!meta.git.available) {
@@ -4148,13 +4298,13 @@ async function recentGitFileChangesForIndex(
 
 async function rebuildIndexForResolvedProject(options: {
   paths: ProjectPaths;
-  meta: AictxMeta;
+  meta: MemoryMeta;
   clock: Clock;
   runner?: GitWrapperOptions["runner"];
 }) {
   return withProjectLock(
     {
-      aictxRoot: options.paths.aictxRoot,
+      memoryRoot: options.paths.memoryRoot,
       operation: "rebuild",
       clock: options.clock
     },
@@ -4167,7 +4317,7 @@ async function rebuildIndexForResolvedProject(options: {
 
       const rebuilt = await rebuildGeneratedIndex({
         projectRoot: options.paths.projectRoot,
-        aictxRoot: options.paths.aictxRoot,
+        memoryRoot: options.paths.memoryRoot,
         clock: options.clock,
         git: options.meta.git,
         gitFileChanges: gitFileChanges.ok ? gitFileChanges.data : []
@@ -4180,16 +4330,16 @@ async function rebuildIndexForResolvedProject(options: {
   );
 }
 
-function searchIndexOptions(aictxRoot: string, input: SearchMemoryInput): SearchIndexOptions {
+function searchIndexOptions(memoryRoot: string, input: SearchMemoryInput): SearchIndexOptions {
   return {
-    aictxRoot,
+    memoryRoot,
     query: input.query,
     ...(input.limit === undefined ? {} : { limit: input.limit }),
     ...(input.hints === undefined ? {} : { hints: input.hints })
   };
 }
 
-async function getAictxHistory(
+async function getMemoryHistory(
   projectRoot: string,
   options: GitWrapperOptions & { limit?: number }
 ): Promise<Result<MemoryHistoryCommit[]>> {
@@ -4201,7 +4351,7 @@ async function getAictxHistory(
     `--format=${format}`,
     ...(options.limit === undefined ? [] : [`--max-count=${options.limit}`]),
     "--",
-    AICTX_HISTORY_PATHSPEC
+    MEMORY_HISTORY_PATHSPEC
   ];
   const subprocessOptions =
     options.runner === undefined
@@ -4211,7 +4361,7 @@ async function getAictxHistory(
 
   if (!result.ok) {
     return err(
-      aictxError("AICtxGitOperationFailed", "Git operation failed.", {
+      memoryError("MemoryGitOperationFailed", "Git operation failed.", {
         message: result.error.message
       })
     );
@@ -4221,10 +4371,10 @@ async function getAictxHistory(
     return gitHistoryCommandFailed("Git history failed.", result.data);
   }
 
-  return ok(parseAictxHistory(result.data.stdout));
+  return ok(parseMemoryHistory(result.data.stdout));
 }
 
-function parseAictxHistory(stdout: string): MemoryHistoryCommit[] {
+function parseMemoryHistory(stdout: string): MemoryHistoryCommit[] {
   return stdout
     .split("\n")
     .filter((line) => line.length > 0)
@@ -4246,7 +4396,7 @@ function gitHistoryCommandFailed<T>(
   result: SubprocessResult
 ): Result<T> {
   return err(
-    aictxError("AICtxGitOperationFailed", message, {
+    memoryError("MemoryGitOperationFailed", message, {
       command: result.command,
       args: [...result.args],
       exitCode: result.exitCode,
@@ -4290,7 +4440,7 @@ async function detectChangedIds(
 }
 
 function memorySidecarPathForChangedFile(file: string): string | null {
-  if (!file.startsWith(".aictx/memory/")) {
+  if (!file.startsWith(".memory/memory/")) {
     return null;
   }
 
@@ -4306,7 +4456,7 @@ function memorySidecarPathForChangedFile(file: string): string | null {
 }
 
 function isRelationSidecarPath(file: string): boolean {
-  return file.startsWith(".aictx/relations/") && file.endsWith(".json");
+  return file.startsWith(".memory/relations/") && file.endsWith(".json");
 }
 
 async function readObjectIdFromCurrentOrHead(
@@ -4341,7 +4491,7 @@ async function readIdFromCurrentOrHead<T extends ObjectId | RelationId>(
     }
   }
 
-  const head = await showAictxFileAtCommit(projectRoot, "HEAD", file, options);
+  const head = await showMemoryFileAtCommit(projectRoot, "HEAD", file, options);
 
   if (!head.ok) {
     return null;
@@ -4401,14 +4551,14 @@ function validationWarnings(issues: readonly ValidationIssue[]): string[] {
 
 async function unresolvedGitConflictIssues(
   paths: ProjectPaths,
-  meta: AictxMeta,
+  meta: MemoryMeta,
   options: GitWrapperOptions
 ): Promise<Result<ValidationIssue[]>> {
   if (!meta.git.available) {
     return ok([]);
   }
 
-  const dirtyState = await getAictxDirtyState(paths.projectRoot, options);
+  const dirtyState = await getMemoryDirtyState(paths.projectRoot, options);
 
   if (!dirtyState.ok) {
     return dirtyState;
@@ -4416,8 +4566,8 @@ async function unresolvedGitConflictIssues(
 
   return ok(
     dirtyState.data.unmergedFiles.map((path) => ({
-      code: "AICtxConflictDetected",
-      message: "Unresolved Git conflict detected in an Aictx file.",
+      code: "MemoryConflictDetected",
+      message: "Unresolved Git conflict detected in an Memory file.",
       path,
       field: null
     }))
@@ -4425,7 +4575,7 @@ async function unresolvedGitConflictIssues(
 }
 
 async function generatedIndexWarnings(paths: ProjectPaths): Promise<ValidationIssue[]> {
-  const databasePath = await resolveIndexDatabasePath(paths.aictxRoot);
+  const databasePath = await resolveIndexDatabasePath(paths.memoryRoot);
 
   if (!databasePath.ok) {
     return [generatedIndexWarning(databasePath.error.message)];
@@ -4472,7 +4622,7 @@ function generatedIndexWarning(message: string): ValidationIssue {
   return {
     code: "GeneratedIndexUnavailable",
     message,
-    path: ".aictx/index/aictx.sqlite",
+    path: ".memory/index/memory.sqlite",
     field: null
   };
 }
@@ -4482,8 +4632,8 @@ async function readAutoIndexSetting(paths: ProjectPaths): Promise<Result<boolean
 
   if (!storage.ok) {
     return err(
-      aictxError(
-        "AICtxIndexUnavailable",
+      memoryError(
+        "MemoryIndexUnavailable",
         "SQLite index is unavailable and canonical config could not be read for auto-indexing.",
         {
           cause: errorToJson(storage.error)
@@ -4496,7 +4646,7 @@ async function readAutoIndexSetting(paths: ProjectPaths): Promise<Result<boolean
   return ok(storage.data.config.memory.autoIndex, storage.warnings);
 }
 
-function appError<T>(error: AictxError, warnings: string[], meta: AictxMeta): AppResult<T> {
+function appError<T>(error: MemoryError, warnings: string[], meta: MemoryMeta): AppResult<T> {
   return {
     ok: false,
     error,
@@ -4505,23 +4655,23 @@ function appError<T>(error: AictxError, warnings: string[], meta: AictxMeta): Ap
   };
 }
 
-async function removeAictxRoot(aictxRoot: string): Promise<Result<void>> {
+async function removeMemoryRoot(memoryRoot: string): Promise<Result<void>> {
   try {
-    await rm(aictxRoot, { recursive: true, force: true });
+    await rm(memoryRoot, { recursive: true, force: true });
     return ok(undefined);
   } catch (error) {
     return err(
-      aictxError("AICtxValidationFailed", "Aictx root could not be deleted.", {
-        aictxRoot,
+      memoryError("MemoryValidationFailed", "Memory root could not be deleted.", {
+        memoryRoot,
         message: messageFromUnknown(error)
       })
     );
   }
 }
 
-async function isAictxRootMissing(aictxRoot: string): Promise<Result<boolean>> {
+async function isMemoryRootMissing(memoryRoot: string): Promise<Result<boolean>> {
   try {
-    await lstat(aictxRoot);
+    await lstat(memoryRoot);
     return ok(false);
   } catch (error) {
     if (errorCode(error) === "ENOENT") {
@@ -4529,17 +4679,17 @@ async function isAictxRootMissing(aictxRoot: string): Promise<Result<boolean>> {
     }
 
     return err(
-      aictxError("AICtxValidationFailed", "Aictx root could not be read.", {
-        aictxRoot,
+      memoryError("MemoryValidationFailed", "Memory root could not be read.", {
+        memoryRoot,
         message: messageFromUnknown(error)
       })
     );
   }
 }
 
-async function aictxRootExists(aictxRoot: string): Promise<Result<boolean>> {
+async function memoryRootExists(memoryRoot: string): Promise<Result<boolean>> {
   try {
-    await lstat(aictxRoot);
+    await lstat(memoryRoot);
     return ok(true);
   } catch (error) {
     if (errorCode(error) === "ENOENT") {
@@ -4547,47 +4697,47 @@ async function aictxRootExists(aictxRoot: string): Promise<Result<boolean>> {
     }
 
     return err(
-      aictxError("AICtxValidationFailed", "Aictx root could not be read.", {
-        aictxRoot,
+      memoryError("MemoryValidationFailed", "Memory root could not be read.", {
+        memoryRoot,
         message: messageFromUnknown(error)
       })
     );
   }
 }
 
-async function backupAndClearAictxRoot(
+async function backupAndClearMemoryRoot(
   projectRoot: string,
-  aictxRoot: string,
+  memoryRoot: string,
   options: GitWrapperOptions
 ): Promise<Result<{ backupPath: string; entriesRemoved: string[] }>> {
-  const existingRoot = await ensureRealDirectory(aictxRoot, ".aictx");
+  const existingRoot = await ensureRealDirectory(memoryRoot, ".memory");
 
   if (!existingRoot.ok) {
     return existingRoot;
   }
 
-  const backupRoot = join(aictxRoot, ".backup");
+  const backupRoot = join(memoryRoot, ".backup");
 
   try {
     await mkdir(backupRoot, { recursive: true });
   } catch (error) {
     return err(
-      aictxError("AICtxValidationFailed", "Aictx backup directory could not be created.", {
-        path: ".aictx/.backup",
+      memoryError("MemoryValidationFailed", "Memory backup directory could not be created.", {
+        path: ".memory/.backup",
         message: messageFromUnknown(error)
       })
     );
   }
 
-  const backupDirectory = await ensureRealDirectory(backupRoot, ".aictx/.backup");
+  const backupDirectory = await ensureRealDirectory(backupRoot, ".memory/.backup");
 
   if (!backupDirectory.ok) {
     return backupDirectory;
   }
 
-  const archiveName = `aictx-${timestampForFilename()}-${randomUUID()}.tar.gz`;
+  const archiveName = `memory-${timestampForFilename()}-${randomUUID()}.tar.gz`;
   const archivePath = join(backupRoot, archiveName);
-  const archiveRelativePath = toSlash(join(".aictx", ".backup", archiveName));
+  const archiveRelativePath = toSlash(join(".memory", ".backup", archiveName));
   const archived = await runSubprocess(
     "tar",
     [
@@ -4598,7 +4748,7 @@ async function backupAndClearAictxRoot(
       "--exclude",
       ".backup",
       "-C",
-      aictxRoot,
+      memoryRoot,
       "."
     ],
     {
@@ -4615,7 +4765,7 @@ async function backupAndClearAictxRoot(
   if (archived.data.exitCode !== 0) {
     await rm(archivePath, { force: true });
     return err(
-      aictxError("AICtxInternalError", "Aictx backup archive could not be created.", {
+      memoryError("MemoryInternalError", "Memory backup archive could not be created.", {
         command: "tar",
         exitCode: archived.data.exitCode,
         signal: archived.data.signal,
@@ -4625,21 +4775,21 @@ async function backupAndClearAictxRoot(
   }
 
   try {
-    const entries = await readdir(aictxRoot);
+    const entries = await readdir(memoryRoot);
     const entriesToRemove = entries.filter((entry) => entry !== ".backup");
 
     await Promise.all(
-      entriesToRemove.map((entry) => rm(join(aictxRoot, entry), { recursive: true, force: true }))
+      entriesToRemove.map((entry) => rm(join(memoryRoot, entry), { recursive: true, force: true }))
     );
 
     return ok({
       backupPath: archiveRelativePath,
-      entriesRemoved: entriesToRemove.map((entry) => toSlash(join(".aictx", entry))).sort()
+      entriesRemoved: entriesToRemove.map((entry) => toSlash(join(".memory", entry))).sort()
     });
   } catch (error) {
     return err(
-      aictxError("AICtxValidationFailed", "Aictx root could not be cleared after backup.", {
-        aictxRoot,
+      memoryError("MemoryValidationFailed", "Memory root could not be cleared after backup.", {
+        memoryRoot,
         backupPath: archiveRelativePath,
         message: messageFromUnknown(error)
       })
@@ -4659,7 +4809,7 @@ async function ensureRealDirectory(path: string, label: string): Promise<Result<
       : `${label} directory could not be read.`;
 
     return err(
-      aictxError(code === "ENOENT" ? "AICtxNotInitialized" : "AICtxValidationFailed", message, {
+      memoryError(code === "ENOENT" ? "MemoryNotInitialized" : "MemoryValidationFailed", message, {
         path: label,
         message: messageFromUnknown(error)
       })
@@ -4668,7 +4818,7 @@ async function ensureRealDirectory(path: string, label: string): Promise<Result<
 
   if (stats.isSymbolicLink() || !stats.isDirectory()) {
     return err(
-      aictxError("AICtxValidationFailed", `${label} must be a real directory.`, {
+      memoryError("MemoryValidationFailed", `${label} must be a real directory.`, {
         path: label
       })
     );
@@ -4685,10 +4835,10 @@ function toSlash(path: string): string {
   return path.replace(/\\/gu, "/");
 }
 
-function fallbackMeta(paths: ProjectPaths): AictxMeta {
+function fallbackMeta(paths: ProjectPaths): MemoryMeta {
   return {
     project_root: paths.projectRoot,
-    aictx_root: paths.aictxRoot,
+    memory_root: paths.memoryRoot,
     git: {
       available: paths.git.available,
       branch: null,

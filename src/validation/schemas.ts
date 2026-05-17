@@ -1,6 +1,6 @@
 import { Ajv2020, type AnySchema, type ValidateFunction } from "ajv/dist/2020.js";
 
-import { aictxError, type AictxError, type JsonValue } from "../core/errors.js";
+import { memoryError, type MemoryError, type JsonValue } from "../core/errors.js";
 import { readUtf8FileInsideRoot } from "../core/fs.js";
 import { err, ok, type Result } from "../core/result.js";
 import type { ValidationIssue } from "../core/types.js";
@@ -85,7 +85,7 @@ export async function loadProjectSchemas(projectRoot: string): Promise<Result<Lo
       {
         code: "SchemaValidationFailed",
         message: "One or more schema files were not loaded.",
-        path: ".aictx/schema",
+        path: ".memory/schema",
         field: null
       }
     ]);
@@ -144,7 +144,7 @@ export async function compileProjectSchemas(
       {
         code: "SchemaValidationFailed",
         message: "One or more schema validators were not compiled.",
-        path: ".aictx/schema",
+        path: ".memory/schema",
         field: null
       }
     ]);
@@ -162,7 +162,7 @@ export async function compileProjectSchemas(
 }
 
 function schemaRelativePath(kind: SchemaKind): string {
-  return `.aictx/schema/${SCHEMA_FILES[kind]}`;
+  return `.memory/schema/${SCHEMA_FILES[kind]}`;
 }
 
 function isJsonSchema(value: unknown): value is JsonSchema {
@@ -172,7 +172,7 @@ function isJsonSchema(value: unknown): value is JsonSchema {
   );
 }
 
-function readSchemaIssue(path: string, error: AictxError): ValidationIssue {
+function readSchemaIssue(path: string, error: MemoryError): ValidationIssue {
   const code = errorDetailsFsCode(error);
 
   return {
@@ -205,7 +205,7 @@ function parseSchemaIssue(path: string, error: unknown): ValidationIssue {
 }
 
 function schemaFailure<T>(message: string, issues: readonly ValidationIssue[]): Result<T> {
-  return err(aictxError("AICtxSchemaValidationFailed", message, validationIssuesDetails(issues)));
+  return err(memoryError("MemorySchemaValidationFailed", message, validationIssuesDetails(issues)));
 }
 
 function validationIssuesDetails(issues: readonly ValidationIssue[]): JsonValue {
@@ -219,7 +219,7 @@ function validationIssuesDetails(issues: readonly ValidationIssue[]): JsonValue 
   };
 }
 
-function errorDetailsFsCode(error: AictxError): string | null {
+function errorDetailsFsCode(error: MemoryError): string | null {
   const details = error.details;
 
   if (typeof details !== "object" || details === null || Array.isArray(details)) {

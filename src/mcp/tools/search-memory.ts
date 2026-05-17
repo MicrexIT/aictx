@@ -9,7 +9,7 @@ import type { RetrievalHints } from "../../retrieval/hints.js";
 import {
   PROJECT_ROOT_ARGUMENT_DESCRIPTION,
   resolveMcpProjectCwd,
-  type AictxMcpContext,
+  type MemoryMcpContext,
   type ProjectScopedMcpArgs
 } from "../context.js";
 import {
@@ -48,15 +48,15 @@ type SearchMemoryArgs = z.infer<typeof SEARCH_MEMORY_INPUT_SCHEMA> & ProjectScop
 
 export const searchMemoryTool = {
   name: "search_memory",
-  title: "Search Aictx Memory",
-  description: "Search local Aictx memory using the generated SQLite index.",
+  title: "Search Memory",
+  description: "Search local Memory using the generated SQLite index.",
   inputSchema: SEARCH_MEMORY_INPUT_SCHEMA,
   annotations: READ_ONLY_TOOL_ANNOTATIONS,
   call: callSearchMemoryTool
 };
 
 async function callSearchMemoryTool(
-  context: AictxMcpContext,
+  context: MemoryMcpContext,
   args: SearchMemoryArgs
 ): Promise<CallToolResult> {
   const result = await dataAccessService.search(parseSearchMemoryArgs(context, args));
@@ -65,7 +65,7 @@ async function callSearchMemoryTool(
 }
 
 function parseSearchMemoryArgs(
-  context: AictxMcpContext,
+  context: MemoryMcpContext,
   args: SearchMemoryArgs
 ): DataAccessSearchInput {
   const options: DataAccessSearchInput = {

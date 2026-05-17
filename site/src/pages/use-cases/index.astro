@@ -2,6 +2,7 @@
 import { getCollection } from "astro:content";
 import PostCard from "../../components/PostCard.astro";
 import BaseLayout from "../../layouts/BaseLayout.astro";
+import { keywordLandingPages, keywordPagePath } from "../../seo-pages";
 
 const posts = (await getCollection("blog")).sort(
   (left, right) => right.data.publishedAt.getTime() - left.data.publishedAt.getTime()
@@ -9,8 +10,8 @@ const posts = (await getCollection("blog")).sort(
 ---
 
 <BaseLayout
-  title="Aictx Use Cases - Local memory for AI coding agents"
-  description="Practical use cases for Aictx and durable project memory for AI coding agents."
+  title="AI Coding Agent Memory Use Cases - Memory by Aictx"
+  description="Use cases for persistent project memory, MCP memory, Codex memory, Claude Code memory, and Cursor memory with Memory by Aictx."
 >
   <main>
     <section class="blog-hero use-cases-hero" aria-labelledby="use-cases-title">
@@ -25,6 +26,37 @@ const posts = (await getCollection("blog")).sort(
     </section>
 
     <section class="blog-list-section" aria-label="Use case articles">
+      <div class="section-heading">
+        <h2>Guides by workflow.</h2>
+        <p>
+          Search-focused guides for persistent memory, MCP memory, and
+          project-memory workflows in Codex, Claude Code, and Cursor.
+        </p>
+      </div>
+
+      <div class="blog-list">
+        {
+          keywordLandingPages.map((page) => (
+            <article class="post-card">
+              <a href={keywordPagePath(page)}>
+                <h2>{page.kicker}</h2>
+                <p>{page.description}</p>
+                <div class="post-tags" aria-label={`${page.kicker} keywords`}>
+                  {page.keywords.slice(0, 4).map((keyword) => (
+                    <span>{keyword}</span>
+                  ))}
+                </div>
+              </a>
+            </article>
+          ))
+        }
+      </div>
+
+      <div class="section-heading use-cases-post-heading">
+        <h2>Field notes.</h2>
+        <p>Practical examples from using Memory with real agent workflows.</p>
+      </div>
+
       {
         posts.length > 0 ? (
           <div class="blog-list">

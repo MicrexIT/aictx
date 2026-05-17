@@ -52,7 +52,7 @@ export function registerLoadCommand(
 ): void {
   program
     .command("load")
-    .description("Compile task-specific Aictx memory into a context pack.")
+    .description("Compile task-specific Memory into a context pack.")
     .argument("<task>", "Task description to compile context for.")
     .option("--mode <mode>", "Context compiler mode.")
     .option("--token-budget <number>", "Advisory token target for context packaging.")
@@ -80,8 +80,8 @@ export function registerLoadCommand(
       if (rendered.exitCode !== CLI_EXIT_SUCCESS) {
         throw new CommanderError(
           rendered.exitCode,
-          "aictx.command.failed",
-          "Aictx command failed."
+          "memory.command.failed",
+          "Memory command failed."
         );
       }
     });

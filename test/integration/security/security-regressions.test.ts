@@ -124,9 +124,9 @@ afterEach(async () => {
 });
 
 describe("integration security regression guardrails", () => {
-  it("quarantines tampered body_path traversal without writing outside Aictx storage", async () => {
-    const projectRoot = await createInitializedProject("aictx-security-path-");
-    const sidecarPath = join(projectRoot, ".aictx", "memory", "project.json");
+  it("quarantines tampered body_path traversal without writing outside Memory storage", async () => {
+    const projectRoot = await createInitializedProject("memory-security-path-");
+    const sidecarPath = join(projectRoot, ".memory", "memory", "project.json");
     const sidecar = JSON.parse(await readFile(sidecarPath, "utf8")) as Record<string, unknown>;
     sidecar.body_path = "memory/../../outside.md";
     await writeFile(sidecarPath, `${JSON.stringify(sidecar, null, 2)}\n`, "utf8");
@@ -141,12 +141,12 @@ describe("integration security regression guardrails", () => {
     if (result.ok) {
       expect(result.data.memory_created).toContain("note.traversal-blocked");
       expect(result.data.repairs_applied).toContain(
-        "Quarantined invalid memory object sidecar: .aictx/memory/project.json"
+        "Quarantined invalid memory object sidecar: .memory/memory/project.json"
       );
       expect(result.data.recovery_files).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
-            path: ".aictx/memory/project.json",
+            path: ".memory/memory/project.json",
             reason: "repair_quarantine"
           })
         ])
@@ -156,16 +156,16 @@ describe("integration security regression guardrails", () => {
       code: "ENOENT"
     });
     await expect(
-      readFile(join(projectRoot, ".aictx", "memory", "notes", "traversal-blocked.md"), "utf8")
+      readFile(join(projectRoot, ".memory", "memory", "notes", "traversal-blocked.md"), "utf8")
     ).resolves.toContain("This write must not happen.");
     await expect(readFile(sidecarPath, "utf8")).rejects.toMatchObject({ code: "ENOENT" });
   });
 
   it("redacts detected secret values from CLI and MCP save failures", async () => {
     const secret = syntheticOpenAiKey();
-    const cliProject = await createInitializedProject("aictx-security-cli-secret-");
+    const cliProject = await createInitializedProject("memory-security-cli-secret-");
     const cliOutput = await runCli(
-      ["node", "aictx", "save", "--stdin", "--json"],
+      ["node", "memory", "save", "--stdin", "--json"],
       cliProject,
       Readable.from([JSON.stringify(createNotePatch("CLI secret blocked", `Secret: ${secret}`))])
     );
@@ -175,13 +175,13 @@ describe("integration security regression guardrails", () => {
     expectNoSecret(cliOutput.stdout, secret);
     const cliEnvelope = JSON.parse(cliOutput.stdout) as ErrorEnvelope;
     expect(cliEnvelope.ok).toBe(false);
-    expect(cliEnvelope.error.code).toBe("AICtxSecretDetected");
+    expect(cliEnvelope.error.code).toBe("MemorySecretDetected");
     expectNoSecret(cliEnvelope, secret);
     await expect(
-      readFile(join(cliProject, ".aictx", "memory", "notes", "cli-secret-blocked.md"), "utf8")
+      readFile(join(cliProject, ".memory", "memory", "notes", "cli-secret-blocked.md"), "utf8")
     ).rejects.toMatchObject({ code: "ENOENT" });
 
-    const mcpProject = await createInitializedProject("aictx-security-mcp-secret-");
+    const mcpProject = await createInitializedProject("memory-security-mcp-secret-");
     const started = await startMcpClient(mcpProject);
 
     try {
@@ -194,11 +194,11 @@ describe("integration security regression guardrails", () => {
       const envelope = parseToolEnvelope<ErrorEnvelope>(result);
 
       expect(envelope.ok).toBe(false);
-      expect(envelope.error.code).toBe("AICtxSecretDetected");
+      expect(envelope.error.code).toBe("MemorySecretDetected");
       expectNoSecret(result, secret);
       expectNoSecret(envelope, secret);
       await expect(
-        readFile(join(mcpProject, ".aictx", "memory", "notes", "mcp-secret-blocked.md"), "utf8")
+        readFile(join(mcpProject, ".memory", "memory", "notes", "mcp-secret-blocked.md"), "utf8")
       ).rejects.toMatchObject({ code: "ENOENT" });
     } finally {
       await started.close();
@@ -208,9 +208,9 @@ describe("integration security regression guardrails", () => {
   });
 
   it("quarantines conflict-marked canonical files and still applies independent creates", async () => {
-    const projectRoot = await createInitializedProject("aictx-security-conflict-");
+    const projectRoot = await createInitializedProject("memory-security-conflict-");
     await writeFile(
-      join(projectRoot, ".aictx", "memory", "project.md"),
+      join(projectRoot, ".memory", "memory", "project.md"),
       ["<<<<<<< HEAD", "# Project", "=======", "# Other project", ">>>>>>> branch", ""].join("\n"),
       "utf8"
     );
@@ -226,33 +226,33 @@ describe("integration security regression guardrails", () => {
       expect(result.data.memory_created).toContain("note.conflict-blocked");
       expect(result.data.repairs_applied).toEqual(
         expect.arrayContaining([
-          "Quarantined invalid memory object sidecar: .aictx/memory/project.json",
-          "Quarantined invalid memory object body: .aictx/memory/project.md"
+          "Quarantined invalid memory object sidecar: .memory/memory/project.json",
+          "Quarantined invalid memory object body: .memory/memory/project.md"
         ])
       );
       expect(result.data.recovery_files).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
-            path: ".aictx/memory/project.json",
+            path: ".memory/memory/project.json",
             reason: "repair_quarantine"
           }),
           expect.objectContaining({
-            path: ".aictx/memory/project.md",
+            path: ".memory/memory/project.md",
             reason: "repair_quarantine"
           })
         ])
       );
     }
     await expect(
-      readFile(join(projectRoot, ".aictx", "memory", "notes", "conflict-blocked.md"), "utf8")
+      readFile(join(projectRoot, ".memory", "memory", "notes", "conflict-blocked.md"), "utf8")
     ).resolves.toContain("This write must not happen.");
     await expect(
-      readFile(join(projectRoot, ".aictx", "memory", "project.md"), "utf8")
+      readFile(join(projectRoot, ".memory", "memory", "project.md"), "utf8")
     ).rejects.toMatchObject({ code: "ENOENT" });
   });
 
   it("exposes exactly the normalized MCP tool set and keeps CLI-only tools uncallable", async () => {
-    const projectRoot = await createTempRoot("aictx-security-mcp-tools-");
+    const projectRoot = await createTempRoot("memory-security-mcp-tools-");
     const started = await startMcpClient(projectRoot);
 
     try {
@@ -287,7 +287,7 @@ describe("integration security regression guardrails", () => {
   });
 
   it("keeps stale and superseded memory out of Must know by default", async () => {
-    const projectRoot = await createInitializedProject("aictx-security-load-");
+    const projectRoot = await createInitializedProject("memory-security-load-");
     await writeMemoryObject(projectRoot, {
       id: "decision.security-active",
       type: "decision",
@@ -320,7 +320,7 @@ describe("integration security regression guardrails", () => {
     await rebuildProject(projectRoot);
 
     const output = await runCli(
-      ["node", "aictx", "load", "security regression keyword", "--json"],
+      ["node", "memory", "load", "security regression keyword", "--json"],
       projectRoot
     );
     const envelope = parseSuccessfulCliEnvelope<LoadEnvelope>(output);
@@ -384,7 +384,7 @@ async function startMcpClient(cwd: string): Promise<StartedMcpClient> {
   }
 
   const client = new Client({
-    name: "aictx-security-test-client",
+    name: "memory-security-test-client",
     version: "0.0.0"
   });
 
@@ -441,7 +441,7 @@ function createCapturedOutput(): {
 }
 
 async function rebuildProject(projectRoot: string): Promise<void> {
-  const output = await runCli(["node", "aictx", "rebuild", "--json"], projectRoot);
+  const output = await runCli(["node", "memory", "rebuild", "--json"], projectRoot);
 
   expect(output.exitCode).toBe(0);
   expect(output.stderr).toBe("");
@@ -493,10 +493,10 @@ async function writeMemoryObject(projectRoot: string, fixture: MemoryFixture): P
     content_hash: computeObjectContentHash(sidecarWithoutHash, fixture.body)
   };
 
-  await writeProjectFile(projectRoot, `.aictx/${fixture.bodyPath}`, fixture.body);
+  await writeProjectFile(projectRoot, `.memory/${fixture.bodyPath}`, fixture.body);
   await writeJsonProjectFile(
     projectRoot,
-    `.aictx/${fixture.bodyPath.replace(/\.md$/, ".json")}`,
+    `.memory/${fixture.bodyPath.replace(/\.md$/, ".json")}`,
     sidecar
   );
 }

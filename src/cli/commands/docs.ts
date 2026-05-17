@@ -4,7 +4,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { CommanderError, type Command } from "commander";
 
 import { type AppResult } from "../../app/operations.js";
-import { aictxError, type AictxError } from "../../core/errors.js";
+import { memoryError, type MemoryError } from "../../core/errors.js";
 import { runSubprocess } from "../../core/subprocess.js";
 import { CLI_EXIT_SUCCESS, type CliExitCode } from "../exit.js";
 import { renderAppResult } from "../render.js";
@@ -65,7 +65,7 @@ const DOC_TOPICS = [
   {
     topic: "getting-started",
     title: "Getting started",
-    description: "Install Aictx, initialize memory, and run the first load/save/diff loop.",
+    description: "Install Memory, initialize memory, and run the first load/save/diff loop.",
     file: "getting-started.md",
     path: "/getting-started/",
     aliases: ["quickstart", "install", "start"]
@@ -81,17 +81,17 @@ const DOC_TOPICS = [
   {
     topic: "capabilities",
     title: "Capabilities",
-    description: "See what Aictx can do in v1, grouped by user and agent jobs.",
+    description: "See what Memory can do in v1, grouped by user and agent jobs.",
     file: "capabilities.md",
     path: "/capabilities/",
     aliases: ["features", "capability-map", "what-can-it-do"]
   },
   {
-    topic: "specializing-aictx",
-    title: "Specializing Aictx",
-    description: "Tailor Aictx memory to a project, team, repo, and agent workflow.",
-    file: "specializing-aictx.md",
-    path: "/specializing-aictx/",
+    topic: "specializing-memory",
+    title: "Specializing Memory",
+    description: "Tailor Memory to a project, team, repo, and agent workflow.",
+    file: "specializing-memory.md",
+    path: "/specializing-memory/",
     aliases: ["specialize", "customize", "tailor", "project-memory"]
   },
   {
@@ -121,7 +121,7 @@ const DOC_TOPICS = [
   {
     topic: "mcp",
     title: "MCP guide",
-    description: "Configure Aictx MCP and understand the CLI/MCP capability boundary.",
+    description: "Configure Memory MCP and understand the CLI/MCP capability boundary.",
     file: "mcp.md",
     path: "/mcp/",
     aliases: ["mcp-setup", "tools"]
@@ -129,7 +129,7 @@ const DOC_TOPICS = [
   {
     topic: "agent-integration",
     title: "Agent integration",
-    description: "Teach coding agents to load, use, save, and inspect Aictx memory safely.",
+    description: "Teach coding agents to load, use, save, and inspect Memory safely.",
     file: "agent-integration.md",
     path: "/agent-integration/",
     aliases: ["agents", "agent", "guidance"]
@@ -137,7 +137,7 @@ const DOC_TOPICS = [
   {
     topic: "agent-recipes",
     title: "Agent recipes",
-    description: "Copyable Aictx setup and routine-loop recipes for common coding agents.",
+    description: "Copyable Memory setup and routine-loop recipes for common coding agents.",
     file: "agent-recipes.md",
     path: "/agent-recipes/",
     aliases: [
@@ -151,6 +151,14 @@ const DOC_TOPICS = [
       "opencode",
       "open-code"
     ]
+  },
+  {
+    topic: "plugin-publishing",
+    title: "Publishing Plugins",
+    description: "Publish the generated Memory Codex and Claude Code plugin artifacts.",
+    file: "plugin-publishing.md",
+    path: "/plugin-publishing/",
+    aliases: ["plugins", "publishing", "plugin-marketplace", "marketplace"]
   },
   {
     topic: "viewer",
@@ -184,7 +192,7 @@ export function registerDocsCommand(
 ): void {
   program
     .command("docs")
-    .description("Read bundled public Aictx docs or open the hosted docs site.")
+    .description("Read bundled public Memory docs or open the hosted docs site.")
     .argument("[topic]", "Docs topic to print.")
     .option("--open", "Open the hosted docs page in the default browser.")
     .action(async (topic: string | undefined, flags: DocsCommandFlags, command: Command) => {
@@ -248,7 +256,7 @@ async function docsCommandResult(
   } catch (error) {
     return {
       ok: false,
-      error: aictxError("AICtxInternalError", `Could not read bundled docs topic: ${entry.topic}`, {
+      error: memoryError("MemoryInternalError", `Could not read bundled docs topic: ${entry.topic}`, {
         topic: entry.topic,
         message: messageFromUnknown(error)
       }),
@@ -279,16 +287,16 @@ function renderDocsData(data: DocsData): string {
   }
 
   if (data.open_attempted) {
-    return `Aictx docs: ${data.base_url}`;
+    return `Memory docs: ${data.base_url}`;
   }
 
   return [
-    `Aictx docs: ${data.base_url}`,
+    `Memory docs: ${data.base_url}`,
     "",
     "Topics:",
     ...data.topics.map((topic) => `- ${topic.topic}: ${topic.description}`),
     "",
-    "Run `aictx docs <topic>` to print a topic or `aictx docs --open` to open the docs site."
+    "Run `memory docs <topic>` to print a topic or `memory docs --open` to open the docs site."
   ].join("\n");
 }
 
@@ -367,8 +375,8 @@ function findTopic(value: string): DocsTopic | null {
   );
 }
 
-function unknownTopicError(topic: string): AictxError {
-  return aictxError("AICtxObjectNotFound", `Unknown docs topic: ${topic}`, {
+function unknownTopicError(topic: string): MemoryError {
+  return memoryError("MemoryObjectNotFound", `Unknown docs topic: ${topic}`, {
     topic,
     available_topics: DOC_TOPICS.map((entry) => entry.topic)
   });
@@ -435,7 +443,7 @@ function browserOpenCommand(url: string): { command: string; args: string[] } {
 function docsMeta() {
   return {
     project_root: process.cwd(),
-    aictx_root: `${process.cwd()}/.aictx`,
+    memory_root: `${process.cwd()}/.memory`,
     git: {
       available: false,
       branch: null,
@@ -453,8 +461,8 @@ function isJsonMode(command: Command): boolean {
 function throwCommandFailed(exitCode: CliExitCode): never {
   throw new CommanderError(
     exitCode,
-    "aictx.command.failed",
-    "Aictx command failed."
+    "memory.command.failed",
+    "Memory command failed."
   );
 }
 

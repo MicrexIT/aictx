@@ -1,6 +1,6 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
-  "name": "aictx-demo",
+  "name": "memory-demo",
   "main": "src/viewer/demo-worker.ts",
   "compatibility_date": "2026-05-05",
   "assets": {

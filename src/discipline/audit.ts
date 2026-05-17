@@ -922,7 +922,7 @@ function normalizeProjectFileReference(value: string): string | null {
     normalized.startsWith("../") ||
     normalized.includes("/../") ||
     normalized.includes("://") ||
-    normalized.startsWith(".aictx/")
+    normalized.startsWith(".memory/")
   ) {
     return null;
   }

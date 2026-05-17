@@ -8,8 +8,8 @@ import {
   type DataAccessRememberInput,
   type RememberMemoryData
 } from "../../data-access/index.js";
-import { aictxError, type AictxError } from "../../core/errors.js";
-import type { AictxMeta } from "../../core/types.js";
+import { memoryError, type MemoryError } from "../../core/errors.js";
+import type { MemoryMeta } from "../../core/types.js";
 import { err, ok, type Result } from "../../core/result.js";
 import {
   CLI_EXIT_SUCCESS,
@@ -37,7 +37,7 @@ export function registerRememberCommand(
 ): void {
   program
     .command("remember")
-    .description("Create Aictx memory, including durable workflows/how-tos, from intent-first agent input.")
+    .description("Create Memory, including durable workflows/how-tos, from intent-first agent input.")
     .option("--stdin", "Read the remember input from stdin.")
     .option("--dry-run", "Validate and plan the generated patch without writing memory.")
     .action(async (commandOptions: RememberCommandFlags, command: Command) => {
@@ -94,7 +94,7 @@ async function readRememberInput(stdin: Readable): Promise<Result<string>> {
     }
   } catch (error) {
     return err(
-      aictxError("AICtxValidationFailed", "Remember input could not be read from stdin.", {
+      memoryError("MemoryValidationFailed", "Remember input could not be read from stdin.", {
         message: messageFromUnknown(error)
       })
     );
@@ -108,7 +108,7 @@ function parseRememberJson(contents: string): Result<unknown> {
     return ok(JSON.parse(contents) as unknown);
   } catch (error) {
     return err(
-      aictxError("AICtxInvalidJson", "Remember input contains invalid JSON.", {
+      memoryError("MemoryInvalidJson", "Remember input contains invalid JSON.", {
         source: "stdin",
         message: messageFromUnknown(error)
       })
@@ -134,7 +134,7 @@ function renderAndThrowOnFailure(
   }
 }
 
-function inputErrorResult(error: AictxError, cwd: string): AppResult<RememberMemoryData> {
+function inputErrorResult(error: MemoryError, cwd: string): AppResult<RememberMemoryData> {
   return {
     ok: false,
     error,
@@ -143,10 +143,10 @@ function inputErrorResult(error: AictxError, cwd: string): AppResult<RememberMem
   };
 }
 
-function fallbackMeta(cwd: string): AictxMeta {
+function fallbackMeta(cwd: string): MemoryMeta {
   return {
     project_root: cwd,
-    aictx_root: `${cwd}/.aictx`,
+    memory_root: `${cwd}/.memory`,
     git: {
       available: false,
       branch: null,
@@ -158,7 +158,7 @@ function fallbackMeta(cwd: string): AictxMeta {
 
 function renderRememberData(data: RememberMemoryData): string {
   return [
-    data.dry_run ? "Planned Aictx remember input." : "Saved Aictx remember input.",
+    data.dry_run ? "Planned Memory remember input." : "Saved Memory remember input.",
     ...renderList("Files changed", data.files_changed),
     ...renderList("Memory created", data.memory_created),
     ...renderList("Memory updated", data.memory_updated),
@@ -187,8 +187,8 @@ function isJsonMode(command: Command): boolean {
 function throwCommandFailed(exitCode: CliExitCode): never {
   throw new CommanderError(
     exitCode,
-    "aictx.command.failed",
-    "Aictx command failed."
+    "memory.command.failed",
+    "Memory command failed."
   );
 }
 

@@ -111,7 +111,7 @@ export async function startParityMcpClient(cwd: string): Promise<StartedParityMc
   }
 
   const client = new Client({
-    name: "aictx-mcp-parity-test-client",
+    name: "memory-mcp-parity-test-client",
     version: "0.0.0"
   });
 
@@ -185,7 +185,7 @@ export function parseParityToolEnvelope<T>(result: unknown): T {
 
 export async function createInitializedParityProject(prefix: string): Promise<string> {
   const projectRoot = await createParityTempRoot(prefix);
-  const output = await runParityCli(["node", "aictx", "init", "--json"], projectRoot);
+  const output = await runParityCli(["node", "memory", "init", "--json"], projectRoot);
 
   expect(output.exitCode).toBe(0);
   expect(output.stderr).toBe("");
@@ -195,19 +195,19 @@ export async function createInitializedParityProject(prefix: string): Promise<st
 
 export async function createInitializedParityRepo(prefix: string): Promise<string> {
   const repo = await createParityRepo(prefix);
-  const output = await runParityCli(["node", "aictx", "init", "--json"], repo);
+  const output = await runParityCli(["node", "memory", "init", "--json"], repo);
 
   expect(output.exitCode).toBe(0);
   expect(output.stderr).toBe("");
 
-  await parityGit(repo, ["add", ".gitignore", ".aictx"]);
-  await parityGit(repo, ["commit", "-m", "Initialize aictx"]);
+  await parityGit(repo, ["add", ".gitignore", ".memory"]);
+  await parityGit(repo, ["commit", "-m", "Initialize memory"]);
 
   return repo;
 }
 
 export async function rebuildParityProject(projectRoot: string): Promise<void> {
-  const output = await runParityCli(["node", "aictx", "rebuild", "--json"], projectRoot);
+  const output = await runParityCli(["node", "memory", "rebuild", "--json"], projectRoot);
 
   expect(output.exitCode).toBe(0);
   expect(output.stderr).toBe("");
@@ -270,54 +270,54 @@ export async function writeParityReadFixtures(projectRoot: string): Promise<void
 }
 
 export async function writeParityDiffChanges(projectRoot: string): Promise<string> {
-  const projectId = await readJsonId(join(projectRoot, ".aictx", "memory", "project.json"));
+  const projectId = await readJsonId(join(projectRoot, ".memory", "memory", "project.json"));
 
   await writeFile(
-    join(projectRoot, ".aictx", "memory", "project.md"),
-    "# Updated Project\n\nChanged Aictx memory for shared parity diff.\n",
+    join(projectRoot, ".memory", "memory", "project.md"),
+    "# Updated Project\n\nChanged Memory for shared parity diff.\n",
     "utf8"
   );
-  await mkdir(join(projectRoot, ".aictx", "memory", "notes"), { recursive: true });
+  await mkdir(join(projectRoot, ".memory", "memory", "notes"), { recursive: true });
   await writeFile(
-    join(projectRoot, ".aictx", "memory", "notes", "parity-untracked-note.json"),
+    join(projectRoot, ".memory", "memory", "notes", "parity-untracked-note.json"),
     `${JSON.stringify({ id: "note.parity-untracked-note" }, null, 2)}\n`,
     "utf8"
   );
   await writeFile(
-    join(projectRoot, ".aictx", "memory", "notes", "parity-untracked-note.md"),
-    "# Parity Untracked Note\n\nShared parity diff includes untracked Aictx memory only.\n",
+    join(projectRoot, ".memory", "memory", "notes", "parity-untracked-note.md"),
+    "# Parity Untracked Note\n\nShared parity diff includes untracked Memory only.\n",
     "utf8"
   );
-  await writeFile(join(projectRoot, "src.ts"), "outside aictx dirty change\n", "utf8");
+  await writeFile(join(projectRoot, "src.ts"), "outside memory dirty change\n", "utf8");
 
   return projectId;
 }
 
-export async function backupParityAictxRoot(projectRoot: string): Promise<string> {
-  const snapshotRoot = await createParityTempRoot("aictx-parity-snapshot-");
-  const snapshotPath = join(snapshotRoot, "aictx");
+export async function backupParityMemoryRoot(projectRoot: string): Promise<string> {
+  const snapshotRoot = await createParityTempRoot("memory-parity-snapshot-");
+  const snapshotPath = join(snapshotRoot, "memory");
 
-  await cp(join(projectRoot, ".aictx"), snapshotPath, { recursive: true });
+  await cp(join(projectRoot, ".memory"), snapshotPath, { recursive: true });
 
   return snapshotPath;
 }
 
-export async function restoreParityAictxRoot(
+export async function restoreParityMemoryRoot(
   projectRoot: string,
   snapshotPath: string
 ): Promise<void> {
-  await rm(join(projectRoot, ".aictx"), { recursive: true, force: true });
-  await cp(snapshotPath, join(projectRoot, ".aictx"), { recursive: true });
+  await rm(join(projectRoot, ".memory"), { recursive: true, force: true });
+  await cp(snapshotPath, join(projectRoot, ".memory"), { recursive: true });
 }
 
 export async function readParityCanonicalSnapshot(
   projectRoot: string
 ): Promise<Record<string, unknown>> {
   const paths = (
-    await fg(".aictx/**/*.{json,jsonl,md}", {
+    await fg(".memory/**/*.{json,jsonl,md}", {
       cwd: projectRoot,
       dot: true,
-      ignore: [".aictx/index/**", ".aictx/context/**", ".aictx/exports/**", ".aictx/.lock"],
+      ignore: [".memory/index/**", ".memory/context/**", ".memory/exports/**", ".memory/.lock"],
       onlyFiles: true,
       unique: true
     })
@@ -354,7 +354,7 @@ async function createParityRepo(prefix: string): Promise<string> {
 
   await parityGit(repo, ["init", "--initial-branch=main"]);
   await parityGit(repo, ["config", "user.email", "test@example.com"]);
-  await parityGit(repo, ["config", "user.name", "Aictx Test"]);
+  await parityGit(repo, ["config", "user.name", "Memory Test"]);
   await writeFile(join(repo, "README.md"), "# Test\n", "utf8");
   await writeFile(join(repo, "src.ts"), "initial\n", "utf8");
   await parityGit(repo, ["add", "README.md", "src.ts"]);
@@ -391,10 +391,10 @@ async function writeMemoryObject(projectRoot: string, fixture: MemoryFixture): P
     content_hash: computeObjectContentHash(sidecarWithoutHash, fixture.body)
   };
 
-  await writeProjectFile(projectRoot, `.aictx/${fixture.bodyPath}`, fixture.body);
+  await writeProjectFile(projectRoot, `.memory/${fixture.bodyPath}`, fixture.body);
   await writeJsonProjectFile(
     projectRoot,
-    `.aictx/${fixture.bodyPath.replace(/\.md$/, ".json")}`,
+    `.memory/${fixture.bodyPath.replace(/\.md$/, ".json")}`,
     sidecar
   );
 }
@@ -423,7 +423,7 @@ async function writeRelation(projectRoot: string, fixture: RelationFixture): Pro
 
   await writeJsonProjectFile(
     projectRoot,
-    `.aictx/relations/${fixture.id.replace(/^rel\./, "")}.json`,
+    `.memory/relations/${fixture.id.replace(/^rel\./, "")}.json`,
     relation
   );
 }

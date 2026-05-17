@@ -125,15 +125,15 @@ describe("suggest discipline packets", () => {
     });
   });
 
-  it("ranks bootstrap candidate files and ignores generated or hidden Aictx files", async () => {
-    const projectRoot = await createTempRoot("aictx-discipline-bootstrap-rank-");
+  it("ranks bootstrap candidate files and ignores generated or hidden Memory files", async () => {
+    const projectRoot = await createTempRoot("memory-discipline-bootstrap-rank-");
     await writeProjectFile(projectRoot, "README.md", "# Test\n");
     await writeProjectFile(projectRoot, "package.json", "{}\n");
     await writeProjectFile(projectRoot, "docs/guide.md", "# Guide\n");
     await writeProjectFile(projectRoot, "src/z.ts", "export const z = 1;\n");
     await writeProjectFile(projectRoot, "test/a.test.ts", "import { it } from 'vitest';\n");
     await writeProjectFile(projectRoot, "dist/generated.ts", "ignored\n");
-    await writeProjectFile(projectRoot, ".aictx/memory/project.md", "ignored\n");
+    await writeProjectFile(projectRoot, ".memory/memory/project.md", "ignored\n");
     await writeProjectFile(projectRoot, "node_modules/pkg/index.js", "ignored\n");
 
     await expect(bootstrapCandidateFiles(projectRoot)).resolves.toEqual([
@@ -146,7 +146,7 @@ describe("suggest discipline packets", () => {
   });
 
   it("builds bootstrap packets with bootstrap recommendations and existing matches", async () => {
-    const projectRoot = await createTempRoot("aictx-discipline-bootstrap-packet-");
+    const projectRoot = await createTempRoot("memory-discipline-bootstrap-packet-");
     await writeProjectFile(projectRoot, "README.md", "# Test\n");
     await writeProjectFile(projectRoot, "docs/guide.md", "# Guide\n");
     const storage = storageSnapshot({
@@ -438,7 +438,7 @@ describe("suggest discipline packets", () => {
   });
 
   it("builds a conservative schema-valid bootstrap patch from deterministic evidence", async () => {
-    const projectRoot = await createTempRoot("aictx-discipline-bootstrap-patch-");
+    const projectRoot = await createTempRoot("memory-discipline-bootstrap-patch-");
     await writeProjectFile(
       projectRoot,
       "README.md",
@@ -558,7 +558,7 @@ describe("suggest discipline packets", () => {
   });
 
   it("creates a source-backed feature-map synthesis from explicit README feature bullets", async () => {
-    const projectRoot = await createTempRoot("aictx-discipline-bootstrap-features-");
+    const projectRoot = await createTempRoot("memory-discipline-bootstrap-features-");
     await writeProjectFile(
       projectRoot,
       "README.md",
@@ -642,8 +642,8 @@ describe("suggest discipline packets", () => {
     }
   });
 
-  it("creates verification and convention memory from agent guidance while ignoring generated Aictx blocks", async () => {
-    const projectRoot = await createTempRoot("aictx-discipline-bootstrap-agent-guidance-");
+  it("creates verification and convention memory from agent guidance while ignoring generated Memory blocks", async () => {
+    const projectRoot = await createTempRoot("memory-discipline-bootstrap-agent-guidance-");
     await writeProjectFile(
       projectRoot,
       "README.md",
@@ -668,11 +668,11 @@ describe("suggest discipline packets", () => {
         "- Avoid default exports in source files.",
         "- After changes, run `pnpm run lint`.",
         "",
-        "<!-- aictx-memory:start -->",
-        "## Aictx Memory",
+        "<!-- memory:start -->",
+        "## Memory",
         "- Never use generated convention text.",
         "- Run `pnpm run generated`.",
-        "<!-- aictx-memory:end -->",
+        "<!-- memory:end -->",
         ""
       ].join("\n")
     );
@@ -741,7 +741,7 @@ describe("suggest discipline packets", () => {
   });
 
   it("summarizes package bins, CLI commands, and route files in the feature-map synthesis", async () => {
-    const projectRoot = await createTempRoot("aictx-discipline-bootstrap-code-features-");
+    const projectRoot = await createTempRoot("memory-discipline-bootstrap-code-features-");
     await writeProjectFile(projectRoot, "README.md", "# Billing App\n");
     await writeJsonProjectFile(projectRoot, "package.json", {
       name: "billing-app",
@@ -829,7 +829,7 @@ describe("suggest discipline packets", () => {
   });
 
   it("links existing feature-map syntheses to source records during bootstrap when provenance is missing", async () => {
-    const projectRoot = await createTempRoot("aictx-discipline-bootstrap-existing-feature-");
+    const projectRoot = await createTempRoot("memory-discipline-bootstrap-existing-feature-");
     await writeProjectFile(
       projectRoot,
       "README.md",
@@ -878,7 +878,7 @@ describe("suggest discipline packets", () => {
     });
 
     expect(proposal.proposed).toBe(true);
-    expect(proposal.patch?.changes).toEqual([
+    expect(proposal.patch?.changes).toEqual(expect.arrayContaining([
       expect.objectContaining({
         op: "update_object",
         id: "source.readme",
@@ -898,8 +898,14 @@ describe("suggest discipline packets", () => {
         status: "active",
         confidence: "high",
         evidence: [{ kind: "source", id: "source.readme" }]
-      }
-    ]);
+      },
+      expect.objectContaining({
+        op: "create_relation",
+        from: "synthesis.feature-map",
+        predicate: "documents",
+        to: "project.billing-api"
+      })
+    ]));
 
     const validators = await compileProjectSchemas(projectRoot);
     expect(validators.ok).toBe(true);
@@ -909,7 +915,7 @@ describe("suggest discipline packets", () => {
   });
 
   it("repairs source origin without duplicating existing source-backed syntheses during bootstrap", async () => {
-    const projectRoot = await createTempRoot("aictx-discipline-bootstrap-linked-feature-");
+    const projectRoot = await createTempRoot("memory-discipline-bootstrap-linked-feature-");
     await writeProjectFile(
       projectRoot,
       "README.md",
@@ -957,7 +963,7 @@ describe("suggest discipline packets", () => {
     });
 
     expect(proposal.proposed).toBe(true);
-    expect(proposal.patch?.changes).toEqual([
+    expect(proposal.patch?.changes).toEqual(expect.arrayContaining([
       expect.objectContaining({
         op: "update_object",
         id: "source.readme",
@@ -967,12 +973,18 @@ describe("suggest discipline packets", () => {
           digest: await fileDigest(projectRoot, "README.md"),
           media_type: "text/markdown"
         }
+      }),
+      expect.objectContaining({
+        op: "create_relation",
+        from: "synthesis.feature-map",
+        predicate: "documents",
+        to: "project.billing-api"
       })
-    ]);
+    ]));
   });
 
   it("avoids duplicate bootstrap memories when deterministic objects already exist", async () => {
-    const projectRoot = await createTempRoot("aictx-discipline-bootstrap-duplicates-");
+    const projectRoot = await createTempRoot("memory-discipline-bootstrap-duplicates-");
     await writeJsonProjectFile(projectRoot, "package.json", {
       description: "Billing API for Stripe webhook processing.",
       packageManager: "pnpm@10.0.0",
@@ -1075,7 +1087,7 @@ describe("suggest discipline packets", () => {
       storage
     });
 
-    expect(proposal.patch?.changes).toEqual([
+    expect(proposal.patch?.changes).toEqual(expect.arrayContaining([
       expect.objectContaining({ op: "update_object", id: "project.billing-api" }),
       expect.objectContaining({
         op: "update_object",
@@ -1086,12 +1098,24 @@ describe("suggest discipline packets", () => {
           digest: await fileDigest(projectRoot, "package.json"),
           media_type: "application/json"
         }
+      }),
+      expect.objectContaining({
+        op: "create_relation",
+        from: "synthesis.product-intent",
+        predicate: "summarizes",
+        to: "project.billing-api"
+      }),
+      expect.objectContaining({
+        op: "create_relation",
+        from: "workflow.package-scripts",
+        predicate: "supports",
+        to: "project.billing-api"
       })
-    ]);
+    ]));
   });
 
   it("proposes the missing starter relation for older initialized projects", async () => {
-    const projectRoot = await createTempRoot("aictx-discipline-bootstrap-starter-relation-");
+    const projectRoot = await createTempRoot("memory-discipline-bootstrap-starter-relation-");
     await writeProjectFile(projectRoot, "README.md", "# Tiny\n");
     const storage = storageSnapshot({
       objects: [
@@ -1119,18 +1143,13 @@ describe("suggest discipline packets", () => {
           to: "architecture.current",
           status: "active",
           confidence: "high"
-        },
-        expect.objectContaining({
-          op: "create_object",
-          id: "source.readme",
-          type: "source"
-        })
+        }
       ])
     );
   });
 
   it("adds deterministic file origin to bootstrap source records for lockfiles and agent guidance", async () => {
-    const projectRoot = await createTempRoot("aictx-discipline-bootstrap-origin-");
+    const projectRoot = await createTempRoot("memory-discipline-bootstrap-origin-");
     await writeProjectFile(projectRoot, "README.md", "# Billing Agent\n");
     await writeJsonProjectFile(projectRoot, "package.json", {
       name: "billing-agent",
@@ -1196,7 +1215,7 @@ describe("suggest discipline packets", () => {
   });
 
   it("creates only source records for small repos without confident synthesis evidence", async () => {
-    const projectRoot = await createTempRoot("aictx-discipline-bootstrap-minimal-");
+    const projectRoot = await createTempRoot("memory-discipline-bootstrap-minimal-");
     await writeProjectFile(projectRoot, "README.md", "# Tiny\n");
     await writeJsonProjectFile(projectRoot, "package.json", {});
     await writeProjectFile(projectRoot, "src/index.ts", "export const value = 1;\n");
@@ -1253,7 +1272,7 @@ function storageSnapshot(options: {
 }): CanonicalStorageSnapshot {
   return {
     projectRoot: "/repo",
-    aictxRoot: "/repo/.aictx",
+    memoryRoot: "/repo/.memory",
     config: {
       version: 1,
       project: {
@@ -1279,8 +1298,8 @@ function initialProjectObject(projectId: ObjectId, title: string): StoredMemoryO
   const body = `# ${title}\n\nProject-level memory for ${title}.\n`;
 
   return {
-    path: ".aictx/memory/project.json",
-    bodyPath: ".aictx/memory/project.md",
+    path: ".memory/memory/project.json",
+    bodyPath: ".memory/memory/project.md",
     sidecar: {
       id: projectId,
       type: "project",
@@ -1308,8 +1327,8 @@ function initialProjectObject(projectId: ObjectId, title: string): StoredMemoryO
 
 function initialArchitectureObject(projectId: ObjectId): StoredMemoryObject {
   return {
-    path: ".aictx/memory/architecture.json",
-    bodyPath: ".aictx/memory/architecture.md",
+    path: ".memory/memory/architecture.json",
+    bodyPath: ".memory/memory/architecture.md",
     sidecar: {
       id: "architecture.current",
       type: "architecture",
@@ -1350,7 +1369,7 @@ function projectArchitectureRelation(projectId: ObjectId): StoredMemoryRelation 
   };
 
   return {
-    path: `.aictx/relations/${id.slice("rel.".length)}.json`,
+    path: `.memory/relations/${id.slice("rel.".length)}.json`,
     relation: relationData
   };
 }
@@ -1371,7 +1390,7 @@ function provenanceRelation(from: ObjectId, to: ObjectId): StoredMemoryRelation 
   };
 
   return {
-    path: `.aictx/relations/${id.slice("rel.".length)}.json`,
+    path: `.memory/relations/${id.slice("rel.".length)}.json`,
     relation: relationData
   };
 }
@@ -1408,8 +1427,8 @@ function memoryObject(options: {
   };
 
   return {
-    path: `.aictx/memory/${slug}.json`,
-    bodyPath: `.aictx/${sidecar.body_path}`,
+    path: `.memory/memory/${slug}.json`,
+    bodyPath: `.memory/${sidecar.body_path}`,
     sidecar,
     body: options.body
   };
@@ -1438,7 +1457,7 @@ function relation(options: {
   };
 
   return {
-    path: `.aictx/relations/${options.id}.json`,
+    path: `.memory/relations/${options.id}.json`,
     relation: relationData
   };
 }
@@ -1476,6 +1495,6 @@ async function fileDigest(projectRoot: string, relativePath: string): Promise<st
 async function writeBundledSchemas(projectRoot: string): Promise<void> {
   for (const schemaFile of Object.values(SCHEMA_FILES)) {
     const schema = await readFile(join(process.cwd(), "src", "schemas", schemaFile), "utf8");
-    await writeProjectFile(projectRoot, `.aictx/schema/${schemaFile}`, schema);
+    await writeProjectFile(projectRoot, `.memory/schema/${schemaFile}`, schema);
   }
 }

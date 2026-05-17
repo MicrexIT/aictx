@@ -17,7 +17,7 @@ import {
 import {
   PROJECT_ROOT_ARGUMENT_DESCRIPTION,
   resolveMcpProjectCwd,
-  type AictxMcpContext,
+  type MemoryMcpContext,
   type ProjectScopedMcpArgs
 } from "../context.js";
 import {
@@ -179,7 +179,7 @@ const PATCH_SCHEMA = z
   .strict();
 const SAVE_MEMORY_PATCH_INPUT_SCHEMA = z
   .object({
-    patch: PATCH_SCHEMA.describe("Structured Aictx memory patch to validate and apply."),
+    patch: PATCH_SCHEMA.describe("Structured Memory patch to validate and apply."),
     project_root: z
       .string()
       .optional()
@@ -192,15 +192,15 @@ type SaveMemoryPatchArgs = z.infer<typeof SAVE_MEMORY_PATCH_INPUT_SCHEMA> &
 
 export const saveMemoryPatchTool = {
   name: "save_memory_patch",
-  title: "Save Aictx Memory Patch",
-  description: "Validate and apply a structured Aictx memory patch.",
+  title: "Save Memory Patch",
+  description: "Validate and apply a structured Memory patch.",
   inputSchema: SAVE_MEMORY_PATCH_INPUT_SCHEMA,
   annotations: WRITE_TOOL_ANNOTATIONS,
   call: callSaveMemoryPatchTool
 };
 
 async function callSaveMemoryPatchTool(
-  context: AictxMcpContext,
+  context: MemoryMcpContext,
   args: SaveMemoryPatchArgs
 ): Promise<CallToolResult> {
   const cwd = resolveMcpProjectCwd(context, args);

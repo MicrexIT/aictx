@@ -48,7 +48,7 @@ export default {
 
     if (!isAuthorizedDemoRequest(request, url)) {
       return jsonError(401, {
-        code: "AICtxValidationFailed",
+        code: "MemoryValidationFailed",
         message: "Viewer API token is required."
       });
     }
@@ -67,13 +67,13 @@ export default {
 
     if (isReadOnlyBlockedRoute(url.pathname, request.method)) {
       return jsonError(403, {
-        code: "AICtxValidationFailed",
+        code: "MemoryValidationFailed",
         message: "The public demo viewer is read-only."
       });
     }
 
     return jsonError(404, {
-      code: "AICtxValidationFailed",
+      code: "MemoryValidationFailed",
       message: "Viewer API route is not supported.",
       details: {
         path: url.pathname
@@ -97,7 +97,7 @@ function methodGuard(
 ): Response | Promise<Response> {
   if (request.method !== method) {
     return jsonError(405, {
-      code: "AICtxValidationFailed",
+      code: "MemoryValidationFailed",
       message: "HTTP method is not supported for this demo route.",
       details: {
         allow: method
@@ -122,7 +122,7 @@ async function handleLoadPreview(request: Request): Promise<Response> {
 
   if (task === "") {
     return jsonError(400, {
-      code: "AICtxValidationFailed",
+      code: "MemoryValidationFailed",
       message: "Task is required."
     });
   }
@@ -131,7 +131,7 @@ async function handleLoadPreview(request: Request): Promise<Response> {
 
   if (mode === null) {
     return jsonError(400, {
-      code: "AICtxValidationFailed",
+      code: "MemoryValidationFailed",
       message: "Load mode is not supported.",
       details: {
         mode: typeof body.mode === "string" ? body.mode : null
@@ -164,7 +164,7 @@ async function readLoadPreviewBody(
       return {
         ok: false,
         error: {
-          code: "AICtxValidationFailed",
+          code: "MemoryValidationFailed",
           message: "JSON request body must be an object."
         }
       };
@@ -178,7 +178,7 @@ async function readLoadPreviewBody(
     return {
       ok: false,
       error: {
-        code: "AICtxValidationFailed",
+        code: "MemoryValidationFailed",
         message: "Request body must be valid JSON."
       }
     };
@@ -215,7 +215,7 @@ function normalizeTokenBudget(
     return {
       ok: false,
       error: {
-        code: "AICtxValidationFailed",
+        code: "MemoryValidationFailed",
         message: "Token budget must be an integer greater than 500.",
         details: {
           field: "token_budget",
@@ -295,8 +295,8 @@ function renderDemoContextPack(
     "",
     "## Must know",
     "",
-    "- The demo project is a local-first Todo App, not the Aictx repository itself.",
-    "- Aictx stores this durable project memory as local, reviewable files.",
+    "- The demo project is a local-first Todo App, not the Memory repository itself.",
+    "- Memory stores this durable project memory as local, reviewable files.",
     "- This public demo is read-only and uses sanitized seed data.",
     "",
     ...sections

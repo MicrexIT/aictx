@@ -103,20 +103,20 @@ describe("applyMemoryPatch object operations", () => {
     expect(result.data.memory_updated).toEqual(["decision.billing-retries"]);
     expect(result.data.events_appended).toBe(2);
     expect(result.data.files_changed).toEqual([
-      ".aictx/events.jsonl",
-      ".aictx/memory/decisions/billing-retries.json",
-      ".aictx/memory/decisions/billing-retries.md",
-      ".aictx/memory/notes/billing-retries-follow-up.json",
-      ".aictx/memory/notes/billing-retries-follow-up.md"
+      ".memory/events.jsonl",
+      ".memory/memory/decisions/billing-retries.json",
+      ".memory/memory/decisions/billing-retries.md",
+      ".memory/memory/notes/billing-retries-follow-up.json",
+      ".memory/memory/notes/billing-retries-follow-up.md"
     ]);
 
     const createdSidecar = await readJsonProjectFile(
       projectRoot,
-      ".aictx/memory/notes/billing-retries-follow-up.json"
+      ".memory/memory/notes/billing-retries-follow-up.json"
     );
     const storedCreatedBody = await readProjectFile(
       projectRoot,
-      ".aictx/memory/notes/billing-retries-follow-up.md"
+      ".memory/memory/notes/billing-retries-follow-up.md"
     );
 
     expect(storedCreatedBody).toBe("# Billing retries follow up\n\nCheck retry behavior.\n");
@@ -146,11 +146,11 @@ describe("applyMemoryPatch object operations", () => {
 
     const updatedSidecar = await readJsonProjectFile(
       projectRoot,
-      ".aictx/memory/decisions/billing-retries.json"
+      ".memory/memory/decisions/billing-retries.json"
     );
     const storedUpdatedBody = await readProjectFile(
       projectRoot,
-      ".aictx/memory/decisions/billing-retries.md"
+      ".memory/memory/decisions/billing-retries.md"
     );
 
     expect(storedUpdatedBody).toBe(updatedBody);
@@ -215,12 +215,12 @@ describe("applyMemoryPatch object operations", () => {
 
     const sidecar = await readJsonProjectFile(
       projectRoot,
-      ".aictx/memory/questions/retry-backoff.json"
+      ".memory/memory/questions/retry-backoff.json"
     );
     expect(sidecar.status).toBe("open");
     expectObjectHash(
       sidecar,
-      await readProjectFile(projectRoot, ".aictx/memory/questions/retry-backoff.md")
+      await readProjectFile(projectRoot, ".memory/memory/questions/retry-backoff.md")
     );
   });
 
@@ -263,20 +263,20 @@ describe("applyMemoryPatch object operations", () => {
     ]);
     expect(result.data.files_changed).toEqual(
       expect.arrayContaining([
-        ".aictx/memory/gotchas/webhook-duplicates.json",
-        ".aictx/memory/gotchas/webhook-duplicates.md",
-        ".aictx/memory/workflows/release-checklist.json",
-        ".aictx/memory/workflows/release-checklist.md"
+        ".memory/memory/gotchas/webhook-duplicates.json",
+        ".memory/memory/gotchas/webhook-duplicates.md",
+        ".memory/memory/workflows/release-checklist.json",
+        ".memory/memory/workflows/release-checklist.md"
       ])
     );
 
     const gotchaSidecar = await readJsonProjectFile(
       projectRoot,
-      ".aictx/memory/gotchas/webhook-duplicates.json"
+      ".memory/memory/gotchas/webhook-duplicates.json"
     );
     const workflowSidecar = await readJsonProjectFile(
       projectRoot,
-      ".aictx/memory/workflows/release-checklist.json"
+      ".memory/memory/workflows/release-checklist.json"
     );
 
     expect(gotchaSidecar).toMatchObject({
@@ -293,11 +293,11 @@ describe("applyMemoryPatch object operations", () => {
     });
     expectObjectHash(
       gotchaSidecar,
-      await readProjectFile(projectRoot, ".aictx/memory/gotchas/webhook-duplicates.md")
+      await readProjectFile(projectRoot, ".memory/memory/gotchas/webhook-duplicates.md")
     );
     expectObjectHash(
       workflowSidecar,
-      await readProjectFile(projectRoot, ".aictx/memory/workflows/release-checklist.md")
+      await readProjectFile(projectRoot, ".memory/memory/workflows/release-checklist.md")
     );
   });
 
@@ -322,7 +322,7 @@ describe("applyMemoryPatch object operations", () => {
     }
   ])("rejects non-question $name status before disk mutation", async ({ change }) => {
     const projectRoot = await createObjectPatchProject();
-    const before = await readAictxSnapshot(projectRoot);
+    const before = await readMemorySnapshot(projectRoot);
 
     const result = await applyMemoryPatch({
       projectRoot,
@@ -338,15 +338,15 @@ describe("applyMemoryPatch object operations", () => {
 
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.error.code).toBe("AICtxPatchInvalid");
+      expect(result.error.code).toBe("MemoryPatchInvalid");
       expect(JSON.stringify(result.error.details)).toContain("ObjectStatusInvalid");
     }
-    await expect(readAictxSnapshot(projectRoot)).resolves.toEqual(before);
+    await expect(readMemorySnapshot(projectRoot)).resolves.toEqual(before);
   });
 
   it("marks objects stale while preserving the Markdown body", async () => {
     const projectRoot = await createObjectPatchProject();
-    const beforeBody = await readProjectFile(projectRoot, ".aictx/memory/notes/old.md");
+    const beforeBody = await readProjectFile(projectRoot, ".memory/memory/notes/old.md");
 
     const result = await applyMemoryPatch({
       projectRoot,
@@ -373,9 +373,9 @@ describe("applyMemoryPatch object operations", () => {
 
     expect(result.data.memory_updated).toEqual(["note.old"]);
     expect(result.data.events_appended).toBe(1);
-    expect(await readProjectFile(projectRoot, ".aictx/memory/notes/old.md")).toBe(beforeBody);
+    expect(await readProjectFile(projectRoot, ".memory/memory/notes/old.md")).toBe(beforeBody);
 
-    const sidecar = await readJsonProjectFile(projectRoot, ".aictx/memory/notes/old.json");
+    const sidecar = await readJsonProjectFile(projectRoot, ".memory/memory/notes/old.json");
     expect(sidecar).toEqual(
       expect.objectContaining({
         id: "note.old",
@@ -396,7 +396,7 @@ describe("applyMemoryPatch object operations", () => {
 
   it("supersedes objects and creates a replacement-to-old supersedes relation", async () => {
     const projectRoot = await createObjectPatchProject();
-    const oldBody = await readProjectFile(projectRoot, ".aictx/memory/notes/old.md");
+    const oldBody = await readProjectFile(projectRoot, ".memory/memory/notes/old.md");
 
     const result = await applyMemoryPatch({
       projectRoot,
@@ -426,7 +426,7 @@ describe("applyMemoryPatch object operations", () => {
     expect(result.data.relations_created).toEqual(["rel.note-new-supersedes-note-old"]);
     expect(result.data.events_appended).toBe(1);
 
-    const sidecar = await readJsonProjectFile(projectRoot, ".aictx/memory/notes/old.json");
+    const sidecar = await readJsonProjectFile(projectRoot, ".memory/memory/notes/old.json");
     expect(sidecar).toEqual(
       expect.objectContaining({
         id: "note.old",
@@ -439,7 +439,7 @@ describe("applyMemoryPatch object operations", () => {
 
     const relation = await readJsonProjectFile(
       projectRoot,
-      ".aictx/relations/note-new-supersedes-note-old.json"
+      ".memory/relations/note-new-supersedes-note-old.json"
     );
     expect(relation).toEqual(
       expect.objectContaining({
@@ -467,7 +467,7 @@ describe("applyMemoryPatch object operations", () => {
     const projectRoot = await createObjectPatchProject({ existingSupersedes: true });
     const beforeRelation = await readProjectFile(
       projectRoot,
-      ".aictx/relations/new-supersedes-old.json"
+      ".memory/relations/new-supersedes-old.json"
     );
 
     const result = await applyMemoryPatch({
@@ -495,7 +495,7 @@ describe("applyMemoryPatch object operations", () => {
     }
 
     expect(result.data.relations_created).toEqual([]);
-    expect(await readProjectFile(projectRoot, ".aictx/relations/new-supersedes-old.json")).toBe(
+    expect(await readProjectFile(projectRoot, ".memory/relations/new-supersedes-old.json")).toBe(
       beforeRelation
     );
   });
@@ -527,11 +527,11 @@ describe("applyMemoryPatch object operations", () => {
 
     expect(deleted.data.memory_deleted).toEqual(["note.delete-me"]);
     expect(deleted.data.events_appended).toBe(1);
-    await expectPathMissing(projectRoot, ".aictx/memory/notes/delete-me.md");
-    await expectPathMissing(projectRoot, ".aictx/memory/notes/delete-me.json");
+    await expectPathMissing(projectRoot, ".memory/memory/notes/delete-me.md");
+    await expectPathMissing(projectRoot, ".memory/memory/notes/delete-me.json");
 
     const blockedProjectRoot = await createObjectPatchProject();
-    const before = await readAictxSnapshot(blockedProjectRoot);
+    const before = await readMemorySnapshot(blockedProjectRoot);
     const blocked = await applyMemoryPatch({
       projectRoot: blockedProjectRoot,
       patch: {
@@ -551,15 +551,15 @@ describe("applyMemoryPatch object operations", () => {
 
     expect(blocked.ok).toBe(false);
     if (!blocked.ok) {
-      expect(blocked.error.code).toBe("AICtxInvalidRelation");
+      expect(blocked.error.code).toBe("MemoryInvalidRelation");
       expect(JSON.stringify(blocked.error.details)).toContain("rel.blocked-mentions-decision");
     }
-    await expect(readAictxSnapshot(blockedProjectRoot)).resolves.toEqual(before);
+    await expect(readMemorySnapshot(blockedProjectRoot)).resolves.toEqual(before);
   });
 
   it("treats object updates without mutable fields as no-ops", async () => {
     const projectRoot = await createObjectPatchProject();
-    const before = await readAictxSnapshot(projectRoot);
+    const before = await readMemorySnapshot(projectRoot);
 
     const result = await applyMemoryPatch({
       projectRoot,
@@ -586,25 +586,25 @@ describe("applyMemoryPatch object operations", () => {
     expect(result.data.memory_updated).toEqual([]);
     expect(result.data.events_appended).toBe(0);
     expect(result.data.files_changed).toEqual([]);
-    await expect(readAictxSnapshot(projectRoot)).resolves.toEqual(before);
+    await expect(readMemorySnapshot(projectRoot)).resolves.toEqual(before);
   });
 });
 
 async function createObjectPatchProject(
   options: { existingSupersedes?: boolean } = {}
 ): Promise<string> {
-  const projectRoot = await mkdtemp(join(tmpdir(), "aictx-object-patch-"));
+  const projectRoot = await mkdtemp(join(tmpdir(), "memory-object-patch-"));
   tempRoots.push(projectRoot);
-  await mkdir(join(projectRoot, ".aictx", "schema"), { recursive: true });
+  await mkdir(join(projectRoot, ".memory", "schema"), { recursive: true });
 
   for (const schemaFile of Object.values(SCHEMA_FILES)) {
     await copyFile(
       join(repoRoot, "src", "schemas", schemaFile),
-      join(projectRoot, ".aictx", "schema", schemaFile)
+      join(projectRoot, ".memory", "schema", schemaFile)
     );
   }
 
-  await writeJsonProjectFile(projectRoot, ".aictx/config.json", validConfig);
+  await writeJsonProjectFile(projectRoot, ".memory/config.json", validConfig);
   await writeMemoryObject(projectRoot, {
     id: "decision.billing-retries",
     type: "decision",
@@ -672,7 +672,7 @@ async function createObjectPatchProject(
     });
   }
 
-  await writeProjectFile(projectRoot, ".aictx/events.jsonl", "");
+  await writeProjectFile(projectRoot, ".memory/events.jsonl", "");
 
   return projectRoot;
 }
@@ -723,10 +723,10 @@ async function writeMemoryObject(
 
   await writeJsonProjectFile(
     projectRoot,
-    `.aictx/${fixture.bodyPath.replace(/\.md$/, ".json")}`,
+    `.memory/${fixture.bodyPath.replace(/\.md$/, ".json")}`,
     sidecar
   );
-  await writeProjectFile(projectRoot, `.aictx/${fixture.bodyPath}`, fixture.body);
+  await writeProjectFile(projectRoot, `.memory/${fixture.bodyPath}`, fixture.body);
 }
 
 async function writeRelation(
@@ -755,7 +755,7 @@ async function writeRelation(
 
   await writeJsonProjectFile(
     projectRoot,
-    `.aictx/relations/${fixture.id.slice("rel.".length)}.json`,
+    `.memory/relations/${fixture.id.slice("rel.".length)}.json`,
     relation
   );
 }
@@ -772,7 +772,7 @@ async function readProjectFile(projectRoot: string, path: string): Promise<strin
 }
 
 async function readEvents(projectRoot: string): Promise<Record<string, unknown>[]> {
-  const contents = await readProjectFile(projectRoot, ".aictx/events.jsonl");
+  const contents = await readProjectFile(projectRoot, ".memory/events.jsonl");
 
   return contents
     .split("\n")
@@ -780,9 +780,9 @@ async function readEvents(projectRoot: string): Promise<Record<string, unknown>[
     .map((line) => JSON.parse(line) as Record<string, unknown>);
 }
 
-async function readAictxSnapshot(projectRoot: string): Promise<Record<string, string>> {
+async function readMemorySnapshot(projectRoot: string): Promise<Record<string, string>> {
   const paths = (
-    await fg(".aictx/**", {
+    await fg(".memory/**", {
       cwd: projectRoot,
       dot: true,
       onlyFiles: true,

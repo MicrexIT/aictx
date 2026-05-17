@@ -1,4 +1,4 @@
-import type { AictxError } from "./errors.js";
+import type { MemoryError } from "./errors.js";
 
 export interface SuccessResult<T> {
   ok: true;
@@ -8,7 +8,7 @@ export interface SuccessResult<T> {
 
 export interface ErrorResult {
   ok: false;
-  error: AictxError;
+  error: MemoryError;
   warnings: string[];
 }
 
@@ -18,6 +18,6 @@ export function ok<T>(data: T, warnings: string[] = []): SuccessResult<T> {
   return { ok: true, data, warnings };
 }
 
-export function err(error: AictxError, warnings: string[] = []): ErrorResult {
+export function err(error: MemoryError, warnings: string[] = []): ErrorResult {
   return { ok: false, error, warnings };
 }

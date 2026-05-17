@@ -3,7 +3,7 @@ title: Demand-driven memory
 description: How real agent failure, confusion, and correction improve durable project memory.
 ---
 
-Aictx is most useful when memory improves from real work.
+Memory is most useful when memory improves from real work.
 
 When an agent fails, asks for missing project context, finds stale assumptions,
 or receives a correction from the user, that event is evidence. It may mean the

@@ -1,14 +1,14 @@
 ---
-title: Getting started
-description: Install Aictx, initialize memory, and run the first load/save loop.
+title: Install persistent project memory
+description: Install Memory, initialize local project memory, and run the first load/save loop for AI coding agents.
 ---
 
-Aictx works inside an existing project. This page gets you to a local `.aictx/`
+Memory works inside an existing project. This page gets you to a local `.memory/`
 directory, short repo-level agent guidance, and the first memory loop.
 
 ## What you need
 
-- Node.js `>=22`
+- Homebrew, or Node.js `>=22` when installing with npm
 - A project directory where coding agents should remember durable project
   context
 
@@ -20,13 +20,19 @@ node --version
 
 ## Install
 
-Install globally for the simplest CLI and optional MCP setup:
+Install with Homebrew for the simplest macOS/Linux CLI and optional MCP setup:
+
+```bash
+brew install aictx/tap/memory
+```
+
+Or install globally with npm when Node.js `>=22` is already available:
 
 ```bash
 npm install -g @aictx/memory
 ```
 
-A project-local dependency is useful when a repo needs to pin its own Aictx
+A project-local dependency is useful when a repo needs to pin its own Memory
 version:
 
 ```bash
@@ -34,14 +40,14 @@ pnpm add -D @aictx/memory
 npm install -D @aictx/memory
 ```
 
-When `aictx` is not on `PATH`, run it through the package manager or local
+When `memory` is not on `PATH`, run it through the package manager or local
 binary:
 
 ```bash
-pnpm exec aictx check
-npm exec aictx check
-./node_modules/.bin/aictx check
-npx --package @aictx/memory -- aictx check
+pnpm exec memory check
+npm exec memory check
+./node_modules/.bin/memory check
+npx --package @aictx/memory -- memory check
 ```
 
 ## Initialize a project
@@ -49,19 +55,19 @@ npx --package @aictx/memory -- aictx check
 From the project root, run:
 
 ```bash
-aictx setup
+memory setup
 ```
 
-`setup` creates `.aictx/` if needed, updates the marked Aictx sections in
+`setup` creates `.memory/` if needed, updates the marked Memory sections in
 `AGENTS.md` and `CLAUDE.md`, writes conservative first-run memory from repo
 evidence, runs checks, prints role coverage, and starts the local viewer.
 
 Useful setup variants:
 
 ```bash
-aictx setup --dry-run
-aictx setup --no-view
-aictx setup --open
+memory setup --dry-run
+memory setup --no-view
+memory setup --open
 ```
 
 - `--dry-run` previews setup without writing memory or repo files.
@@ -69,7 +75,7 @@ aictx setup --open
 - `--open` opens the viewer in the default browser after setup.
 
 :::tip
-`aictx init` is the lower-level empty-storage initializer. Use it for tests,
+`memory init` is the lower-level empty-storage initializer. Use it for tests,
 automation, or manual workflows where you do not want guided setup.
 :::
 
@@ -78,14 +84,14 @@ automation, or manual workflows where you do not want guided setup.
 Load memory before non-trivial work:
 
 ```bash
-aictx load "change auth routes"
+memory load "change auth routes"
 ```
 
 After work creates durable knowledge for future agents, save it through the
 intent-first path:
 
 ```bash
-aictx remember --stdin
+memory remember --stdin
 ```
 
 A task that produced no reusable project knowledge does not need a save.
@@ -93,25 +99,25 @@ A task that produced no reusable project knowledge does not need a save.
 Inspect memory later:
 
 ```bash
-aictx view
-aictx diff
+memory view
+memory diff
 ```
 
 After setup, a useful retrieval check is:
 
 ```bash
-aictx load "onboard to this repository"
+memory load "onboard to this repository"
 ```
 
 :::tip
-Use `aictx diff` for memory review in Git projects. Plain `git diff -- .aictx/`
+Use `memory diff` for memory review in Git projects. Plain `git diff -- .memory/`
 can miss untracked memory files before they are staged.
 :::
 
 ## CLI and MCP
 
 Use the CLI for setup and routine work. Add MCP only after your client is
-configured to launch `aictx-mcp`.
+configured to launch `memory-mcp`.
 
 For copyable agent-specific setup prompts, see [Agent recipes](/agent-recipes/).
 For exact MCP tool names, see the [MCP guide](/mcp/).

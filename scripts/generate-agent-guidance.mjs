@@ -7,48 +7,48 @@ const packageJsonUrl = new URL("package.json", repoRootUrl);
 const licenseUrl = new URL("LICENSE", repoRootUrl);
 const templateUrl = new URL("integrations/templates/agent-guidance.md", repoRootUrl);
 const generatedNotice = "<!-- Generated from integrations/templates/agent-guidance.md. Do not edit directly. -->";
-const publicName = "aictx-memory";
-const displayName = "Aictx Memory";
-const skillDescription = "Use this skill when working in a project that uses Aictx project memory. It guides the agent to load relevant memory before non-trivial coding work, save durable memory after meaningful changes, and keep memory inspectable through Aictx and Git when available.";
-const pluginDescription = "Use Aictx local project memory in AI coding agents.";
+const publicName = "memory";
+const displayName = "Memory";
+const skillDescription = "Use this skill when working in a project that uses Memory by Aictx as local project memory. It guides the agent to load relevant memory before non-trivial coding work, save durable memory after meaningful changes, and keep memory inspectable through Memory and Git when available.";
+const pluginDescription = "Use Memory by Aictx as local project memory in AI coding agents.";
 const skillPrefix = `---\nname: ${publicName}\ndescription: ${skillDescription}\n---\n\n${generatedNotice}\n\n`;
-const cursorPrefix = `---\ndescription: Use Aictx project memory when working in this repository.\nalwaysApply: true\n---\n\n${generatedNotice}\n\n`;
+const cursorPrefix = `---\ndescription: Use Memory as project memory when working in this repository.\nalwaysApply: true\n---\n\n${generatedNotice}\n\n`;
 
 const guidanceTargets = [
   {
-    path: "integrations/codex/aictx/SKILL.md",
+    path: "integrations/codex/memory/SKILL.md",
     prefix: skillPrefix
   },
   {
-    path: "integrations/codex/skills/aictx-memory/SKILL.md",
+    path: "integrations/codex/skills/memory/SKILL.md",
     prefix: skillPrefix
   },
   {
-    path: "integrations/codex/plugins/aictx-memory/skills/aictx-memory/SKILL.md",
+    path: "integrations/codex/plugins/memory/skills/memory/SKILL.md",
     prefix: skillPrefix
   },
   {
-    path: "integrations/claude/aictx/SKILL.md",
+    path: "integrations/claude/memory/SKILL.md",
     prefix: skillPrefix
   },
   {
-    path: "integrations/claude/plugins/aictx-memory/skills/aictx-memory/SKILL.md",
+    path: "integrations/claude/plugins/memory/skills/memory/SKILL.md",
     prefix: skillPrefix
   },
   {
-    path: "integrations/claude/aictx.md",
+    path: "integrations/claude/memory.md",
     prefix: `${generatedNotice}\n\n`
   },
   {
-    path: "integrations/cursor/aictx.mdc",
+    path: "integrations/cursor/memory.mdc",
     prefix: cursorPrefix
   },
   {
-    path: "integrations/cline/aictx.md",
+    path: "integrations/cline/memory.md",
     prefix: `${generatedNotice}\n\n`
   },
   {
-    path: "integrations/generic/aictx-agent-instructions.md",
+    path: "integrations/generic/memory-agent-instructions.md",
     prefix: `${generatedNotice}\n\n`
   }
 ];
@@ -61,7 +61,7 @@ const [template, packageJsonRaw, licenseText] = await Promise.all([
 const normalizedTemplate = template.trimEnd();
 const packageJson = JSON.parse(packageJsonRaw);
 const repositoryUrl = normalizeRepositoryUrl(packageJson.repository);
-const authorName = typeof packageJson.author === "string" ? packageJson.author : "Aictx";
+const authorName = typeof packageJson.author === "string" ? packageJson.author : "Memory";
 
 const codexPluginManifest = {
   name: publicName,
@@ -74,20 +74,20 @@ const codexPluginManifest = {
   homepage: packageJson.homepage,
   repository: repositoryUrl,
   license: packageJson.license,
-  keywords: ["aictx", "project-memory", "coding-agents", "local-first"],
+  keywords: ["memory", "project-memory", "coding-agents", "local-first"],
   skills: "./skills/",
   interface: {
     displayName,
-    shortDescription: "Load and save local project memory with Aictx.",
+    shortDescription: "Load and save local project memory with Memory.",
     longDescription:
-      "Packages the Aictx memory workflow as a Codex skill. Agents stay CLI-first, load task-relevant project memory before substantial work, and save only durable knowledge after meaningful changes.",
+      "Packages the Memory by Aictx workflow as a Codex skill. Agents stay CLI-first, load task-relevant project memory before substantial work, and save only durable knowledge after meaningful changes.",
     developerName: authorName,
     category: "Productivity",
     websiteURL: packageJson.homepage,
     defaultPrompt: [
-      "Set up Aictx memory for this repo.",
-      "Load Aictx memory before this task.",
-      "Decide whether this task changed Aictx memory."
+      "Set up Memory for this repo.",
+      "Load Memory before this task.",
+      "Decide whether this task changed Memory."
     ]
   }
 };
@@ -110,13 +110,13 @@ for (const target of guidanceTargets) {
 }
 
 await Promise.all([
-  writeGeneratedJson("integrations/codex/plugins/aictx-memory/.codex-plugin/plugin.json", codexPluginManifest),
-  writeGeneratedJson("integrations/claude/plugins/aictx-memory/.claude-plugin/plugin.json", claudePluginManifest),
-  writeGeneratedText("integrations/codex/skills/aictx-memory/LICENSE.txt", licenseText),
-  writeGeneratedText("integrations/codex/plugins/aictx-memory/LICENSE", licenseText),
-  writeGeneratedText("integrations/claude/plugins/aictx-memory/LICENSE", licenseText),
-  writeGeneratedText("integrations/codex/plugins/aictx-memory/README.md", buildCodexPluginReadme()),
-  writeGeneratedText("integrations/claude/plugins/aictx-memory/README.md", buildClaudePluginReadme())
+  writeGeneratedJson("integrations/codex/plugins/memory/.codex-plugin/plugin.json", codexPluginManifest),
+  writeGeneratedJson("integrations/claude/plugins/memory/.claude-plugin/plugin.json", claudePluginManifest),
+  writeGeneratedText("integrations/codex/skills/memory/LICENSE.txt", licenseText),
+  writeGeneratedText("integrations/codex/plugins/memory/LICENSE", licenseText),
+  writeGeneratedText("integrations/claude/plugins/memory/LICENSE", licenseText),
+  writeGeneratedText("integrations/codex/plugins/memory/README.md", buildCodexPluginReadme()),
+  writeGeneratedText("integrations/claude/plugins/memory/README.md", buildClaudePluginReadme())
 ]);
 
 async function writeGeneratedText(path, contents) {
@@ -147,16 +147,16 @@ function buildCodexPluginReadme() {
 
 This plugin packages the \`${publicName}\` skill for Codex.
 
-It keeps Aictx usage CLI-first: load relevant memory with \`aictx load\` before substantial work, save durable knowledge with \`aictx remember --stdin\`, and use MCP equivalents only when the current Codex session already exposes Aictx MCP tools.
+It keeps Memory usage CLI-first: load relevant memory with \`memory load\` before substantial work, save durable knowledge with \`memory remember --stdin\`, and use MCP equivalents only when the current Codex session already exposes Memory MCP tools.
 
 ## Contents
 
 - \`.codex-plugin/plugin.json\`
-- \`skills/aictx-memory/SKILL.md\`
+- \`skills/memory/SKILL.md\`
 
 ## Distribution
 
-This directory follows the Codex plugin format. It intentionally does not include MCP server configuration; Aictx MCP setup remains an optional client-level configuration.
+This directory follows the Codex plugin format. It intentionally does not include MCP server configuration; Memory MCP setup remains an optional client-level configuration.
 
 Codex adds plugins through marketplace sources, not by adding this plugin directory directly. This repo exposes the plugin through its root marketplace catalog:
 
@@ -164,7 +164,7 @@ Codex adds plugins through marketplace sources, not by adding this plugin direct
 codex plugin marketplace add aictx/memory
 \`\`\`
 
-Then open Codex Plugins, choose the Aictx marketplace, and install Aictx Memory.
+Then open Codex Plugins, choose the Memory marketplace, and install Memory.
 `;
 }
 
@@ -175,12 +175,12 @@ function buildClaudePluginReadme() {
 
 This plugin packages the \`${publicName}\` skill for Claude Code.
 
-It keeps Aictx usage CLI-first: load relevant memory with \`aictx load\` before substantial work, save durable knowledge with \`aictx remember --stdin\`, and use MCP equivalents only when the current Claude Code session already exposes Aictx MCP tools.
+It keeps Memory usage CLI-first: load relevant memory with \`memory load\` before substantial work, save durable knowledge with \`memory remember --stdin\`, and use MCP equivalents only when the current Claude Code session already exposes Memory MCP tools.
 
 ## Contents
 
 - \`.claude-plugin/plugin.json\`
-- \`skills/aictx-memory/SKILL.md\`
+- \`skills/memory/SKILL.md\`
 
 ## Distribution
 
@@ -190,9 +190,9 @@ Claude Code adds plugins through marketplace sources, not by adding this plugin 
 
 \`\`\`text
 /plugin marketplace add aictx/memory
-/plugin install aictx-memory@aictx
+/plugin install memory@aictx
 \`\`\`
 
-For official Claude listing, validate this directory with \`claude plugin validate integrations/claude/plugins/aictx-memory\` and use Anthropic's plugin submission flow.
+For official Claude listing, validate this directory with \`claude plugin validate integrations/claude/plugins/memory\` and use Anthropic's plugin submission flow.
 `;
 }

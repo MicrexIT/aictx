@@ -1,0 +1,17 @@
+{
+  "confidence": "high",
+  "content_hash": "sha256:4aba61eb18917e8bac063dcbf7510c9bc392906282fbc9e818336034ed7fe8ed",
+  "created_at": "2026-05-16T18:52:44+02:00",
+  "evidence": [
+    {
+      "id": "source.package-json",
+      "kind": "source"
+    }
+  ],
+  "from": "synthesis.repository-map",
+  "id": "rel.synthesis-repository-map-derived-from-source-package-json",
+  "predicate": "derived_from",
+  "status": "active",
+  "to": "source.package-json",
+  "updated_at": "2026-05-16T18:52:44+02:00"
+}

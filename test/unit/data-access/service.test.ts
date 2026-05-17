@@ -33,8 +33,8 @@ describe("data-access service", () => {
   });
 
   it("targets explicit project roots independently", async () => {
-    const alphaRoot = await createInitializedProject("aictx-data-access-alpha-");
-    const betaRoot = await createInitializedProject("aictx-data-access-beta-");
+    const alphaRoot = await createInitializedProject("memory-data-access-alpha-");
+    const betaRoot = await createInitializedProject("memory-data-access-beta-");
 
     const alphaSaved = await dataAccessService.applyPatch({
       target: {
@@ -84,9 +84,9 @@ describe("data-access service", () => {
     }
 
     expect(alphaSearch.meta.project_root).toBe(alphaRoot);
-    expect(alphaSearch.meta.aictx_root).toBe(join(alphaRoot, ".aictx"));
+    expect(alphaSearch.meta.memory_root).toBe(join(alphaRoot, ".memory"));
     expect(betaSearch.meta.project_root).toBe(betaRoot);
-    expect(betaSearch.meta.aictx_root).toBe(join(betaRoot, ".aictx"));
+    expect(betaSearch.meta.memory_root).toBe(join(betaRoot, ".memory"));
 
     expect(alphaSearch.data.matches.map((match) => match.title)).toContain(
       "Alpha-only deployment fact"
@@ -117,13 +117,13 @@ describe("data-access service", () => {
     }
 
     expect(alphaLoad.meta.project_root).toBe(alphaRoot);
-    expect(alphaLoad.meta.aictx_root).toBe(join(alphaRoot, ".aictx"));
+    expect(alphaLoad.meta.memory_root).toBe(join(alphaRoot, ".memory"));
     expect(alphaLoad.data.context_pack).toContain("Alpha-only deployment fact");
     expect(alphaLoad.data.context_pack).not.toContain("Beta-only deployment fact");
   });
 
   it("resolves nested cwd targets to the initialized project boundary", async () => {
-    const projectRoot = await createInitializedProject("aictx-data-access-nested-");
+    const projectRoot = await createInitializedProject("memory-data-access-nested-");
     const nestedCwd = join(projectRoot, "packages", "app", "src");
     await mkdir(nestedCwd, { recursive: true });
 
@@ -148,7 +148,7 @@ describe("data-access service", () => {
 
     expect(inspected.ok).toBe(true);
     expect(inspected.meta.project_root).toBe(projectRoot);
-    expect(inspected.meta.aictx_root).toBe(join(projectRoot, ".aictx"));
+    expect(inspected.meta.memory_root).toBe(join(projectRoot, ".memory"));
 
     if (!inspected.ok) {
       return;
@@ -161,7 +161,7 @@ describe("data-access service", () => {
   });
 
   it("preserves current app result envelopes for inspect success and errors", async () => {
-    const projectRoot = await createInitializedProject("aictx-data-access-envelope-");
+    const projectRoot = await createInitializedProject("memory-data-access-envelope-");
     const id = "note.envelope-preserved";
 
     const saved = await dataAccessService.applyPatch({
@@ -209,7 +209,7 @@ describe("data-access service", () => {
     }
 
     expect(serviceMissing.error).toMatchObject({
-      code: "AICtxObjectNotFound",
+      code: "MemoryObjectNotFound",
       details: {
         id: "decision.missing"
       }
@@ -217,7 +217,7 @@ describe("data-access service", () => {
   });
 
   it("preserves the no-Git diff error envelope", async () => {
-    const projectRoot = await createInitializedProject("aictx-data-access-diff-");
+    const projectRoot = await createInitializedProject("memory-data-access-diff-");
 
     const serviceDiff = await dataAccessService.diff({
       target: {
@@ -236,10 +236,10 @@ describe("data-access service", () => {
       return;
     }
 
-    expect(serviceDiff.error.code).toBe("AICtxGitRequired");
+    expect(serviceDiff.error.code).toBe("MemoryGitRequired");
     expect(serviceDiff.meta).toMatchObject({
       project_root: projectRoot,
-      aictx_root: join(projectRoot, ".aictx"),
+      memory_root: join(projectRoot, ".memory"),
       git: {
         available: false
       }

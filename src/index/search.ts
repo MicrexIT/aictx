@@ -1,6 +1,6 @@
 import { lstat } from "node:fs/promises";
 
-import { aictxError, type JsonValue } from "../core/errors.js";
+import { memoryError, type JsonValue } from "../core/errors.js";
 import { err, ok, type Result } from "../core/result.js";
 import {
   OBJECT_STATUSES,
@@ -88,7 +88,7 @@ export interface SearchMemoryInput {
 }
 
 export interface SearchIndexOptions extends SearchMemoryInput {
-  aictxRoot: string;
+  memoryRoot: string;
 }
 
 export interface SearchMemoryData {
@@ -164,14 +164,14 @@ export async function searchIndex(options: SearchIndexOptions): Promise<Result<S
     return normalized;
   }
 
-  const databaseAvailable = await requireExistingIndexDatabase(options.aictxRoot);
+  const databaseAvailable = await requireExistingIndexDatabase(options.memoryRoot);
 
   if (!databaseAvailable.ok) {
     return databaseAvailable;
   }
 
   const connection = await openIndexDatabase({
-    aictxRoot: options.aictxRoot,
+    memoryRoot: options.memoryRoot,
     migrate: false
   });
 
@@ -236,8 +236,8 @@ function normalizeSearchInput(input: SearchMemoryInput): Result<NormalizedSearch
   });
 }
 
-async function requireExistingIndexDatabase(aictxRoot: string): Promise<Result<void>> {
-  const databasePath = await resolveIndexDatabasePath(aictxRoot);
+async function requireExistingIndexDatabase(memoryRoot: string): Promise<Result<void>> {
+  const databasePath = await resolveIndexDatabasePath(memoryRoot);
 
   if (!databasePath.ok) {
     return indexUnavailable("SQLite index database path could not be resolved.", {
@@ -784,11 +784,11 @@ function escapeLike(value: string): string {
 }
 
 function invalidInput<T>(message: string, details: JsonValue): Result<T> {
-  return err(aictxError("AICtxValidationFailed", message, details));
+  return err(memoryError("MemoryValidationFailed", message, details));
 }
 
 function indexUnavailable<T>(message: string, details: JsonValue): Result<T> {
-  return err(aictxError("AICtxIndexUnavailable", message, details));
+  return err(memoryError("MemoryIndexUnavailable", message, details));
 }
 
 function errorToJson(error: { code: string; message: string; details?: JsonValue }): JsonValue {

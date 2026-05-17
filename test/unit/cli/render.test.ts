@@ -2,12 +2,12 @@ import { describe, expect, it } from "vitest";
 
 import { renderAppResult } from "../../../src/cli/render.js";
 import type { AppResult } from "../../../src/app/operations.js";
-import { aictxError } from "../../../src/core/errors.js";
-import type { AictxMeta } from "../../../src/core/types.js";
+import { memoryError } from "../../../src/core/errors.js";
+import type { MemoryMeta } from "../../../src/core/types.js";
 
-const meta: AictxMeta = {
+const meta: MemoryMeta = {
   project_root: "/repo",
-  aictx_root: "/repo/.aictx",
+  memory_root: "/repo/.memory",
   git: {
     available: true,
     branch: "main",
@@ -36,7 +36,7 @@ describe("CLI rendering", () => {
   it("renders error envelopes as JSON stdout only", () => {
     const result: AppResult<never> = {
       ok: false,
-      error: aictxError("AICtxNotInitialized", "Aictx is not initialized."),
+      error: memoryError("MemoryNotInitialized", "Memory is not initialized."),
       warnings: ["looked upward for config"],
       meta
     };
@@ -51,7 +51,7 @@ describe("CLI rendering", () => {
   it("renders human-readable errors and warnings to stderr", () => {
     const result: AppResult<never> = {
       ok: false,
-      error: aictxError("AICtxPatchInvalid", "Patch is invalid."),
+      error: memoryError("MemoryPatchInvalid", "Patch is invalid."),
       warnings: ["deprecated field ignored"],
       meta
     };
@@ -60,7 +60,7 @@ describe("CLI rendering", () => {
 
     expect(rendered).toEqual({
       stdout: "",
-      stderr: "warning: deprecated field ignored\nerror: AICtxPatchInvalid: Patch is invalid.\n",
+      stderr: "warning: deprecated field ignored\nerror: MemoryPatchInvalid: Patch is invalid.\n",
       exitCode: 1
     });
   });

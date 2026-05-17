@@ -2,7 +2,7 @@ import { readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 
 import type { Clock } from "../core/clock.js";
-import { aictxError, type JsonValue } from "../core/errors.js";
+import { memoryError, type JsonValue } from "../core/errors.js";
 import { stableJsonStringify, writeJsonAtomic, writeTextAtomic } from "../core/fs.js";
 import { err, ok, type Result } from "../core/result.js";
 import type {
@@ -15,7 +15,7 @@ import type {
   SourceOrigin
 } from "../core/types.js";
 import { computeObjectContentHash } from "./hashes.js";
-import type { AictxConfig, MemoryObjectSidecar, StoredMemoryObject } from "./objects.js";
+import type { MemoryConfig, MemoryObjectSidecar, StoredMemoryObject } from "./objects.js";
 import type { StoredMemoryRelation } from "./relations.js";
 import { readCanonicalStorage } from "./read.js";
 import { fileSourceOrigin } from "./source-origin.js";
@@ -65,18 +65,18 @@ export async function upgradeStorageToV4(
     const config = {
       ...storage.data.config,
       version: 4
-    } satisfies AictxConfig;
+    } satisfies MemoryConfig;
 
     const configWrite = await writeJsonAtomic(
       options.projectRoot,
-      ".aictx/config.json",
+      ".memory/config.json",
       configToJson(config)
     );
 
     if (!configWrite.ok) {
       return configWrite;
     }
-    filesChanged.push(".aictx/config.json");
+    filesChanged.push(".memory/config.json");
   }
 
   const schemas = await writeBundledSchemas(options.projectRoot);
@@ -91,7 +91,7 @@ export async function upgradeStorageToV4(
   if (events.changed) {
     const written = await writeTextAtomic(
       options.projectRoot,
-      ".aictx/events.jsonl",
+      ".memory/events.jsonl",
       events.contents
     );
 
@@ -99,7 +99,7 @@ export async function upgradeStorageToV4(
       return written;
     }
 
-    filesChanged.push(".aictx/events.jsonl");
+    filesChanged.push(".memory/events.jsonl");
   }
 
   const rejectedObjectIds = new Set(
@@ -205,7 +205,7 @@ async function deleteCanonicalFile(projectRoot: string, path: string): Promise<R
     return ok(undefined);
   } catch (error) {
     return err(
-      aictxError("AICtxValidationFailed", "Canonical file could not be deleted during upgrade.", {
+      memoryError("MemoryValidationFailed", "Canonical file could not be deleted during upgrade.", {
         path,
         message: error instanceof Error ? error.message : String(error)
       })
@@ -434,14 +434,14 @@ async function writeBundledSchemas(projectRoot: string): Promise<Result<string[]
 
   for (const schemaFile of Object.values(SCHEMA_FILES)) {
     const source = new URL(`../schemas/${schemaFile}`, import.meta.url);
-    const target = `.aictx/schema/${schemaFile}`;
+    const target = `.memory/schema/${schemaFile}`;
 
     try {
       const schema = JSON.parse(await readFile(source, "utf8")) as unknown;
 
       if (!isJsonValue(schema)) {
         return err(
-          aictxError("AICtxValidationFailed", "Bundled schema is not a JSON value.", {
+          memoryError("MemoryValidationFailed", "Bundled schema is not a JSON value.", {
             schema: schemaFile
           })
         );
@@ -462,7 +462,7 @@ async function writeBundledSchemas(projectRoot: string): Promise<Result<string[]
       written.push(target);
     } catch (error) {
       return err(
-        aictxError("AICtxValidationFailed", "Bundled schema could not be copied.", {
+        memoryError("MemoryValidationFailed", "Bundled schema could not be copied.", {
           schema: schemaFile,
           message: error instanceof Error ? error.message : String(error)
         })
@@ -479,7 +479,7 @@ async function readExistingJson(projectRoot: string, target: string): Promise<Re
 
     if (!isJsonValue(parsed)) {
       return err(
-        aictxError("AICtxValidationFailed", "Existing schema is not a JSON value.", {
+        memoryError("MemoryValidationFailed", "Existing schema is not a JSON value.", {
           path: target
         })
       );
@@ -488,14 +488,14 @@ async function readExistingJson(projectRoot: string, target: string): Promise<Re
     return ok(parsed);
   } catch {
     return err(
-      aictxError("AICtxValidationFailed", "Existing schema could not be read.", {
+      memoryError("MemoryValidationFailed", "Existing schema could not be read.", {
         path: target
       })
     );
   }
 }
 
-function configToJson(config: AictxConfig): JsonValue {
+function configToJson(config: MemoryConfig): JsonValue {
   return {
     version: config.version,
     project: config.project,

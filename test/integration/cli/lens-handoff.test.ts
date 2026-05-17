@@ -86,14 +86,14 @@ afterEach(async () => {
   );
 });
 
-describe("aictx lens and handoff CLI", () => {
+describe("memory lens and handoff CLI", () => {
   it("renders built-in lenses with role coverage and generated gaps", async () => {
-    const repo = await createSetupRepo("aictx-cli-lens-");
-    const setup = await runCli(["node", "aictx", "setup", "--json"], repo);
+    const repo = await createSetupRepo("memory-cli-lens-");
+    const setup = await runCli(["node", "memory", "setup", "--json"], repo);
 
     expect(setup.exitCode).toBe(0);
 
-    const output = await runCli(["node", "aictx", "lens", "project-map", "--json"], repo);
+    const output = await runCli(["node", "memory", "lens", "project-map", "--json"], repo);
     const envelope = JSON.parse(output.stdout) as SuccessEnvelope<LensData>;
 
     expect(output.exitCode).toBe(0);
@@ -116,7 +116,7 @@ describe("aictx lens and handoff CLI", () => {
   });
 
   it("creates, scopes, shows, and closes branch handoff memory", async () => {
-    const repo = await createInitializedRepo("aictx-cli-handoff-");
+    const repo = await createInitializedRepo("memory-cli-handoff-");
     const updateInput = {
       goal: "Implement a scoped handoff test",
       current_state: ["The CLI command exists"],
@@ -128,7 +128,7 @@ describe("aictx lens and handoff CLI", () => {
     };
 
     const update = await runCli(
-      ["node", "aictx", "handoff", "update", "--stdin", "--json"],
+      ["node", "memory", "handoff", "update", "--stdin", "--json"],
       repo,
       JSON.stringify(updateInput)
     );
@@ -139,7 +139,7 @@ describe("aictx lens and handoff CLI", () => {
     expect(updateEnvelope.data.id).toBe("synthesis.branch-handoff-main");
     expect(updateEnvelope.data.save.memory_created).toContain("synthesis.branch-handoff-main");
 
-    const show = await runCli(["node", "aictx", "handoff", "show", "--json"], repo);
+    const show = await runCli(["node", "memory", "handoff", "show", "--json"], repo);
     const showEnvelope = JSON.parse(show.stdout) as SuccessEnvelope<HandoffShowData>;
 
     expect(show.exitCode).toBe(0);
@@ -151,13 +151,13 @@ describe("aictx lens and handoff CLI", () => {
     );
     expect(showEnvelope.data.handoff?.body).toContain("Implement a scoped handoff test");
 
-    const mainLoad = await runCli(["node", "aictx", "load", "Run focused handoff tests", "--json"], repo);
+    const mainLoad = await runCli(["node", "memory", "load", "Run focused handoff tests", "--json"], repo);
     const mainLoadEnvelope = JSON.parse(mainLoad.stdout) as SuccessEnvelope<LoadData>;
 
     expect(mainLoad.exitCode).toBe(0);
     expect(mainLoadEnvelope.data.included_ids).toContain("synthesis.branch-handoff-main");
 
-    const currentWork = await runCli(["node", "aictx", "lens", "current-work", "--json"], repo);
+    const currentWork = await runCli(["node", "memory", "lens", "current-work", "--json"], repo);
     const currentWorkEnvelope = JSON.parse(currentWork.stdout) as SuccessEnvelope<LensData>;
 
     expect(currentWork.exitCode).toBe(0);
@@ -167,13 +167,13 @@ describe("aictx lens and handoff CLI", () => {
     );
 
     await git(repo, ["checkout", "-b", "other"]);
-    const otherShow = await runCli(["node", "aictx", "handoff", "show", "--json"], repo);
+    const otherShow = await runCli(["node", "memory", "handoff", "show", "--json"], repo);
     const otherShowEnvelope = JSON.parse(otherShow.stdout) as SuccessEnvelope<HandoffShowData>;
 
     expect(otherShow.exitCode).toBe(0);
     expect(otherShowEnvelope.data.handoff).toBeNull();
 
-    const otherLoad = await runCli(["node", "aictx", "load", "Run focused handoff tests", "--json"], repo);
+    const otherLoad = await runCli(["node", "memory", "load", "Run focused handoff tests", "--json"], repo);
     const otherLoadEnvelope = JSON.parse(otherLoad.stdout) as SuccessEnvelope<LoadData>;
 
     expect(otherLoad.exitCode).toBe(0);
@@ -181,7 +181,7 @@ describe("aictx lens and handoff CLI", () => {
 
     await git(repo, ["checkout", "main"]);
     const close = await runCli(
-      ["node", "aictx", "handoff", "close", "--stdin", "--json"],
+      ["node", "memory", "handoff", "close", "--stdin", "--json"],
       repo,
       JSON.stringify({
         reason: "Branch work is complete",
@@ -213,14 +213,14 @@ describe("aictx lens and handoff CLI", () => {
       ).toBe("stale");
     }
 
-    const closedShow = await runCli(["node", "aictx", "handoff", "show", "--json"], repo);
+    const closedShow = await runCli(["node", "memory", "handoff", "show", "--json"], repo);
     const closedShowEnvelope = JSON.parse(closedShow.stdout) as SuccessEnvelope<HandoffShowData>;
 
     expect(closedShow.exitCode).toBe(0);
     expect(closedShowEnvelope.data.handoff).toBeNull();
 
     const inspect = await runCli(
-      ["node", "aictx", "inspect", "synthesis.branch-handoff-main", "--json"],
+      ["node", "memory", "inspect", "synthesis.branch-handoff-main", "--json"],
       repo
     );
     const inspectEnvelope = JSON.parse(inspect.stdout) as SuccessEnvelope<InspectData>;
@@ -228,7 +228,7 @@ describe("aictx lens and handoff CLI", () => {
     expect(inspect.exitCode).toBe(0);
     expect(inspectEnvelope.data.object.status).toBe("stale");
 
-    const closedLoad = await runCli(["node", "aictx", "load", "Run focused handoff tests", "--json"], repo);
+    const closedLoad = await runCli(["node", "memory", "load", "Run focused handoff tests", "--json"], repo);
     const closedLoadEnvelope = JSON.parse(closedLoad.stdout) as SuccessEnvelope<LoadData>;
 
     expect(closedLoad.exitCode).toBe(0);
@@ -241,11 +241,11 @@ async function createSetupRepo(prefix: string): Promise<string> {
   await writeProjectFile(
     repo,
     "README.md",
-    "# Lens App\n\nAictx lens test repository for durable project memory.\n\n## Features\n\n- Project map: Shows important memory roles.\n"
+    "# Lens App\n\nMemory lens test repository for durable project memory.\n\n## Features\n\n- Project map: Shows important memory roles.\n"
   );
   await writeJsonProjectFile(repo, "package.json", {
     name: "lens-app",
-    description: "Aictx lens test repository.",
+    description: "Memory lens test repository.",
     type: "module",
     packageManager: "pnpm@10.0.0",
     scripts: {
@@ -262,11 +262,11 @@ async function createInitializedRepo(prefix: string): Promise<string> {
   const repo = await createTempRoot(prefix);
   await git(repo, ["init", "--initial-branch=main"]);
   await git(repo, ["config", "user.email", "test@example.com"]);
-  await git(repo, ["config", "user.name", "Aictx Test"]);
+  await git(repo, ["config", "user.name", "Memory Test"]);
   await writeProjectFile(repo, "README.md", "# Initial project\n");
   await git(repo, ["add", "README.md"]);
   await git(repo, ["commit", "-m", "Initial project"]);
-  const output = await runCli(["node", "aictx", "init", "--json"], repo);
+  const output = await runCli(["node", "memory", "init", "--json"], repo);
 
   expect(output.exitCode).toBe(0);
   expect(output.stderr).toBe("");

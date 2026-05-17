@@ -18,11 +18,11 @@ afterEach(async () => {
 
 describe("project lock integration", () => {
   it("allows exactly one concurrent acquisition for a project", async () => {
-    const aictxRoot = await createAictxRoot();
+    const memoryRoot = await createMemoryRoot();
 
     const results = await Promise.all([
-      acquireProjectLock({ aictxRoot, operation: "save", clock: fixedClock, pid: 1111 }),
-      acquireProjectLock({ aictxRoot, operation: "save", clock: fixedClock, pid: 2222 })
+      acquireProjectLock({ memoryRoot, operation: "save", clock: fixedClock, pid: 1111 }),
+      acquireProjectLock({ memoryRoot, operation: "save", clock: fixedClock, pid: 2222 })
     ]);
 
     const successes = results.filter((result) => result.ok);
@@ -32,7 +32,7 @@ describe("project lock integration", () => {
     expect(failures).toHaveLength(1);
     expect(failures[0]?.ok).toBe(false);
     if (failures[0]?.ok === false) {
-      expect(failures[0].error.code).toBe("AICtxLockBusy");
+      expect(failures[0].error.code).toBe("MemoryLockBusy");
     }
 
     if (successes[0]?.ok === true) {
@@ -41,11 +41,11 @@ describe("project lock integration", () => {
   });
 
   it("removes the lock file after successful completion", async () => {
-    const aictxRoot = await createAictxRoot();
+    const memoryRoot = await createMemoryRoot();
 
     const result = await withProjectLock(
       {
-        aictxRoot,
+        memoryRoot,
         operation: "rebuild",
         clock: fixedClock
       },
@@ -53,20 +53,20 @@ describe("project lock integration", () => {
     );
 
     expect(result.ok).toBe(true);
-    await expect(readFile(join(aictxRoot, ".lock"), "utf8")).rejects.toMatchObject({
+    await expect(readFile(join(memoryRoot, ".lock"), "utf8")).rejects.toMatchObject({
       code: "ENOENT"
     });
   });
 
   it("does not automatically remove a manually-created existing lock", async () => {
-    const aictxRoot = await createAictxRoot();
-    const lockPath = join(aictxRoot, ".lock");
+    const memoryRoot = await createMemoryRoot();
+    const lockPath = join(memoryRoot, ".lock");
     const contents = "manual lock\n";
     await writeFile(lockPath, contents);
 
     const result = await withProjectLock(
       {
-        aictxRoot,
+        memoryRoot,
         operation: "restore",
         clock: fixedClock
       },
@@ -75,16 +75,16 @@ describe("project lock integration", () => {
 
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.error.code).toBe("AICtxLockBusy");
+      expect(result.error.code).toBe("MemoryLockBusy");
     }
     expect(await readFile(lockPath, "utf8")).toBe(contents);
   });
 });
 
-async function createAictxRoot(): Promise<string> {
-  const root = await mkdtemp(join(tmpdir(), "aictx-lock-integration-"));
+async function createMemoryRoot(): Promise<string> {
+  const root = await mkdtemp(join(tmpdir(), "memory-lock-integration-"));
   tempRoots.push(root);
-  const aictxRoot = join(root, ".aictx");
-  await mkdir(aictxRoot);
-  return aictxRoot;
+  const memoryRoot = join(root, ".memory");
+  await mkdir(memoryRoot);
+  return memoryRoot;
 }

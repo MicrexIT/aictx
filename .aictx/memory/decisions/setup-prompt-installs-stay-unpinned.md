@@ -1,3 +1,0 @@
-# Setup prompt installs stay unpinned
-
-Setup prompts in README and public docs should use `npm install -g @aictx/memory` without an explicit package version. Do not add release logic that rewrites setup prompt install commands to the current package version; `version:patch` should bump the package version and then run the normal build and docs build. This avoids brittle prompt-text syncing while global installs still resolve the current published package.

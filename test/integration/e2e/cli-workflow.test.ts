@@ -19,7 +19,7 @@ interface CliRunResult {
 
 interface ResponseMeta {
   project_root: string;
-  aictx_root: string;
+  memory_root: string;
   git: {
     available: boolean;
     branch: string | null;
@@ -150,10 +150,10 @@ afterEach(async () => {
   );
 });
 
-describe("aictx full CLI workflow", () => {
-  it("runs the Git-backed workflow end to end and restores only .aictx", async () => {
-    const repo = await createRepo("aictx-e2e-cli-git-");
-    const initOutput = await runCli(["node", "aictx", "init", "--json"], repo);
+describe("memory full CLI workflow", () => {
+  it("runs the Git-backed workflow end to end and restores only .memory", async () => {
+    const repo = await createRepo("memory-e2e-cli-git-");
+    const initOutput = await runCli(["node", "memory", "init", "--json"], repo);
 
     expect(initOutput.exitCode).toBe(0);
     expect(initOutput.stderr).toBe("");
@@ -165,14 +165,14 @@ describe("aictx full CLI workflow", () => {
     });
     expect(initEnvelope.meta.git.available).toBe(true);
 
-    await commit(repo, "Initialize aictx", "2026-04-25T14:00:00+02:00", [
+    await commit(repo, "Initialize memory", "2026-04-25T14:00:00+02:00", [
       ".gitignore",
-      ".aictx"
+      ".memory"
     ]);
     const initCommit = (await git(repo, ["rev-parse", "HEAD"])).trim();
-    const projectId = await readJsonString(join(repo, ".aictx", "memory", "project.json"), "id");
+    const projectId = await readJsonString(join(repo, ".memory", "memory", "project.json"), "id");
     const saveOutput = await runCli(
-      ["node", "aictx", "save", "--stdin", "--json"],
+      ["node", "memory", "save", "--stdin", "--json"],
       repo,
       JSON.stringify(createGitWorkflowPatch(projectId))
     );
@@ -190,7 +190,7 @@ describe("aictx full CLI workflow", () => {
       (
         await expectSuccessfulCli([
           "node",
-          "aictx",
+          "memory",
           "load",
           "workflow retry queue",
           "--json"
@@ -214,7 +214,7 @@ describe("aictx full CLI workflow", () => {
       (
         await expectSuccessfulCli([
           "node",
-          "aictx",
+          "memory",
           "load",
           "workflow retry queue",
           "--token-budget",
@@ -241,7 +241,7 @@ describe("aictx full CLI workflow", () => {
       (
         await expectSuccessfulCli([
           "node",
-          "aictx",
+          "memory",
           "search",
           "workflow retry queue",
           "--json"
@@ -252,28 +252,28 @@ describe("aictx full CLI workflow", () => {
 
     const outsideDirtyContent = "outside dirty change must survive restore\n";
     await writeFile(join(repo, "src.ts"), outsideDirtyContent, "utf8");
-    const diffOutput = await expectSuccessfulCli(["node", "aictx", "diff"], repo);
-    expect(diffOutput.stdout).toContain(".aictx/memory/project.md");
+    const diffOutput = await expectSuccessfulCli(["node", "memory", "diff"], repo);
+    expect(diffOutput.stdout).toContain(".memory/memory/project.md");
     expect(diffOutput.stdout).toContain("Workflow retry queue requires local deterministic CLI coverage");
     expect(diffOutput.stdout).not.toContain("src.ts");
     expect(() => JSON.parse(diffOutput.stdout) as unknown).toThrow();
 
     await commit(repo, "Save workflow memory", "2026-04-25T14:01:00+02:00", [
-      ".aictx"
+      ".memory"
     ]);
     const history = parseSuccessEnvelope<HistoryData>(
       (
-        await expectSuccessfulCli(["node", "aictx", "history", "--json"], repo)
+        await expectSuccessfulCli(["node", "memory", "history", "--json"], repo)
       ).stdout
     );
     expect(history.data.commits.map((entry) => entry.subject)).toEqual([
       "Save workflow memory",
-      "Initialize aictx"
+      "Initialize memory"
     ]);
 
     const headBeforeRestore = (await git(repo, ["rev-parse", "HEAD"])).trim();
     const restoreOutput = await expectSuccessfulCli(
-      ["node", "aictx", "restore", initCommit, "--json"],
+      ["node", "memory", "restore", initCommit, "--json"],
       repo
     );
     const restoreEnvelope = parseSuccessEnvelope<RestoreData>(restoreOutput.stdout);
@@ -281,19 +281,19 @@ describe("aictx full CLI workflow", () => {
     expect(restoreEnvelope.data.index_rebuilt).toBe(true);
     expect(restoreEnvelope.data.files_changed.length).toBeGreaterThan(0);
     expect(
-      restoreEnvelope.data.files_changed.every((file) => file.startsWith(".aictx/"))
+      restoreEnvelope.data.files_changed.every((file) => file.startsWith(".memory/"))
     ).toBe(true);
     expect((await git(repo, ["rev-parse", "HEAD"])).trim()).toBe(headBeforeRestore);
     expect(await readFile(join(repo, "src.ts"), "utf8")).toBe(outsideDirtyContent);
     await expect(
-      access(join(repo, ".aictx", "memory", "decisions", "workflow-retry-queue.json"))
+      access(join(repo, ".memory", "memory", "decisions", "workflow-retry-queue.json"))
     ).rejects.toMatchObject({ code: "ENOENT" });
 
     const searchAfterRestore = parseSuccessEnvelope<SearchData>(
       (
         await expectSuccessfulCli([
           "node",
-          "aictx",
+          "memory",
           "search",
           "workflow retry queue",
           "--json"
@@ -305,14 +305,14 @@ describe("aictx full CLI workflow", () => {
   });
 
   it("runs the core workflow outside Git and rejects Git-only commands", async () => {
-    const projectRoot = await createTempRoot("aictx-e2e-cli-nongit-");
+    const projectRoot = await createTempRoot("memory-e2e-cli-nongit-");
     const init = parseSuccessEnvelope<InitData>(
-      (await expectSuccessfulCli(["node", "aictx", "init", "--json"], projectRoot)).stdout
+      (await expectSuccessfulCli(["node", "memory", "init", "--json"], projectRoot)).stdout
     );
 
     expect(init.meta).toEqual({
       project_root: projectRoot,
-      aictx_root: join(projectRoot, ".aictx"),
+      memory_root: join(projectRoot, ".memory"),
       git: {
         available: false,
         branch: null,
@@ -326,7 +326,7 @@ describe("aictx full CLI workflow", () => {
       (
         await expectSuccessfulCli([
           "node",
-          "aictx",
+          "memory",
           "suggest",
           "--bootstrap",
           "--json"
@@ -344,7 +344,7 @@ describe("aictx full CLI workflow", () => {
     const save = parseSuccessEnvelope<SaveData>(
       (
         await expectSuccessfulCli(
-          ["node", "aictx", "save", "--stdin", "--json"],
+          ["node", "memory", "save", "--stdin", "--json"],
           projectRoot,
           JSON.stringify(createNonGitWorkflowPatch())
         )
@@ -358,7 +358,7 @@ describe("aictx full CLI workflow", () => {
       (
         await expectSuccessfulCli([
           "node",
-          "aictx",
+          "memory",
           "load",
           "non git workflow search",
           "--json"
@@ -372,7 +372,7 @@ describe("aictx full CLI workflow", () => {
       (
         await expectSuccessfulCli([
           "node",
-          "aictx",
+          "memory",
           "search",
           "non git workflow search",
           "--json"
@@ -382,7 +382,7 @@ describe("aictx full CLI workflow", () => {
     expect(searchIds(searched)).toContain("decision.nongit-cli-workflow");
 
     const checked = parseSuccessEnvelope<CheckData>(
-      (await expectSuccessfulCli(["node", "aictx", "check", "--json"], projectRoot)).stdout
+      (await expectSuccessfulCli(["node", "memory", "check", "--json"], projectRoot)).stdout
     );
     expect(checked.data).toMatchObject({
       valid: true,
@@ -390,14 +390,14 @@ describe("aictx full CLI workflow", () => {
     });
 
     const rebuilt = parseSuccessEnvelope<RebuildData>(
-      (await expectSuccessfulCli(["node", "aictx", "rebuild", "--json"], projectRoot)).stdout
+      (await expectSuccessfulCli(["node", "memory", "rebuild", "--json"], projectRoot)).stdout
     );
     expect(rebuilt.data.index_rebuilt).toBe(true);
     expect(rebuilt.data.objects_indexed).toBeGreaterThan(0);
     expect(rebuilt.data.event_appended).toBe(false);
 
     const audit = parseSuccessEnvelope<AuditData>(
-      (await expectSuccessfulCli(["node", "aictx", "audit", "--json"], projectRoot)).stdout
+      (await expectSuccessfulCli(["node", "memory", "audit", "--json"], projectRoot)).stdout
     );
     expect(Array.isArray(audit.data.findings)).toBe(true);
     expect(audit.meta.git.available).toBe(false);
@@ -408,7 +408,7 @@ describe("aictx full CLI workflow", () => {
       expect(output.exitCode).toBe(3);
       expect(output.stderr).toBe("");
       const envelope = parseErrorEnvelope(output.stdout);
-      expect(envelope.error.code).toBe("AICtxGitRequired");
+      expect(envelope.error.code).toBe("MemoryGitRequired");
       expect(envelope.meta.git.available).toBe(false);
     }
 
@@ -416,7 +416,7 @@ describe("aictx full CLI workflow", () => {
       (
         await expectSuccessfulCli([
           "node",
-          "aictx",
+          "memory",
           "search",
           "non git workflow search",
           "--json"
@@ -448,7 +448,7 @@ function createGitWorkflowPatch(projectId: string) {
         type: "constraint",
         title: "Workflow stays local",
         body:
-          "# Workflow stays local\n\nFull CLI workflow tests must pass without network access and restore must stay scoped to .aictx/ only.\n",
+          "# Workflow stays local\n\nFull CLI workflow tests must pass without network access and restore must stay scoped to .memory/ only.\n",
         tags: ["workflow", "local", "restore"]
       },
       {
@@ -495,11 +495,11 @@ function createNonGitWorkflowPatch() {
 
 function gitOnlyCommands(): string[][] {
   return [
-    ["node", "aictx", "suggest", "--from-diff", "--json"],
-    ["node", "aictx", "diff", "--json"],
-    ["node", "aictx", "history", "--json"],
-    ["node", "aictx", "restore", "HEAD", "--json"],
-    ["node", "aictx", "rewind", "--json"]
+    ["node", "memory", "suggest", "--from-diff", "--json"],
+    ["node", "memory", "diff", "--json"],
+    ["node", "memory", "history", "--json"],
+    ["node", "memory", "restore", "HEAD", "--json"],
+    ["node", "memory", "rewind", "--json"]
   ];
 }
 
@@ -550,10 +550,10 @@ function searchIds(envelope: SuccessEnvelope<SearchData>): string[] {
 async function readCanonicalSnapshot(projectRoot: string): Promise<Record<string, string>> {
   const paths = await fg(
     [
-      ".aictx/config.json",
-      ".aictx/events.jsonl",
-      ".aictx/memory/**",
-      ".aictx/relations/**"
+      ".memory/config.json",
+      ".memory/events.jsonl",
+      ".memory/memory/**",
+      ".memory/relations/**"
     ],
     {
       cwd: projectRoot,
@@ -597,7 +597,7 @@ async function createRepo(prefix: string): Promise<string> {
   const repo = await createTempRoot(prefix);
   await git(repo, ["init", "--initial-branch=main"]);
   await git(repo, ["config", "user.email", "test@example.com"]);
-  await git(repo, ["config", "user.name", "Aictx Test"]);
+  await git(repo, ["config", "user.name", "Memory Test"]);
   await writeFile(join(repo, "README.md"), "# Test\n", "utf8");
   await writeFile(join(repo, "src.ts"), "initial source\n", "utf8");
   await commit(repo, "Initial commit", "2026-04-25T13:59:00+02:00", [

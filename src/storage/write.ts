@@ -3,7 +3,7 @@ import { dirname, resolve } from "node:path";
 
 import fg from "fast-glob";
 
-import { aictxError, type JsonValue } from "../core/errors.js";
+import { memoryError, type JsonValue } from "../core/errors.js";
 import {
   readUtf8FileInsideRoot,
   resolveInsideRoot,
@@ -12,8 +12,8 @@ import {
   writeTextAtomic
 } from "../core/fs.js";
 import {
-  getAictxDirtyState,
-  restoreAictxFromCommit,
+  getMemoryDirtyState,
+  restoreMemoryFromCommit,
   type GitWrapperOptions
 } from "../core/git.js";
 import { err, ok, type Result } from "../core/result.js";
@@ -250,13 +250,13 @@ export async function restoreCanonicalStorageFromCommit(
   options: RestoreCanonicalStorageFromCommitOptions
 ): Promise<Result<RestoreCanonicalStorageFromCommitData>> {
   const projectRoot = resolve(options.projectRoot);
-  const restored = await restoreAictxFromCommit(projectRoot, options.commit, options);
+  const restored = await restoreMemoryFromCommit(projectRoot, options.commit, options);
 
   if (!restored.ok) {
     return restored;
   }
 
-  const changed = await getAictxDirtyState(projectRoot, options);
+  const changed = await getMemoryDirtyState(projectRoot, options);
 
   if (!changed.ok) {
     return changed;
@@ -277,7 +277,7 @@ async function repairInvalidCanonicalStorageForSave(
   const repairsApplied: string[] = [];
   const warnings: string[] = [];
 
-  const objectPaths = await discoverCanonicalJson(projectRoot, ".aictx/memory/**/*.json");
+  const objectPaths = await discoverCanonicalJson(projectRoot, ".memory/memory/**/*.json");
 
   for (const path of objectPaths) {
     const result = await inspectObjectForSave(projectRoot, validators, path);
@@ -305,7 +305,7 @@ async function repairInvalidCanonicalStorageForSave(
     }
   }
 
-  const relationPaths = await discoverCanonicalJson(projectRoot, ".aictx/relations/**/*.json");
+  const relationPaths = await discoverCanonicalJson(projectRoot, ".memory/relations/**/*.json");
 
   for (const path of relationPaths) {
     const result = await inspectRelationForSave(projectRoot, validators, path);
@@ -414,7 +414,7 @@ async function repairEventsForSave(
   validators: CompiledSchemaValidators,
   timestamp: IsoDateTime
 ): Promise<Result<RepairCanonicalStorageForSaveData>> {
-  const path = ".aictx/events.jsonl";
+  const path = ".memory/events.jsonl";
   const contents = await readUtf8FileInsideRoot(projectRoot, path);
 
   if (!contents.ok) {
@@ -523,7 +523,7 @@ async function quarantineCanonicalFile(
     return ok(recoveryFile, backedUp.warnings);
   } catch (error) {
     return err(
-      aictxError("AICtxValidationFailed", "Invalid canonical file could not be quarantined.", {
+      memoryError("MemoryValidationFailed", "Invalid canonical file could not be quarantined.", {
         path,
         message: error instanceof Error ? error.message : String(error)
       }),
@@ -537,7 +537,7 @@ async function discoverCanonicalJson(projectRoot: string, pattern: string): Prom
     await fg(pattern, {
       cwd: projectRoot,
       dot: true,
-      ignore: [".aictx/index/**", ".aictx/context/**", ".aictx/recovery/**"],
+      ignore: [".memory/index/**", ".memory/context/**", ".memory/recovery/**"],
       onlyFiles: true,
       unique: true
     })
@@ -548,7 +548,7 @@ function parseJson(contents: string): Result<unknown> {
   try {
     return ok(JSON.parse(contents) as unknown);
   } catch {
-    return err(aictxError("AICtxInvalidJson", "Invalid JSON."));
+    return err(memoryError("MemoryInvalidJson", "Invalid JSON."));
   }
 }
 
@@ -559,7 +559,7 @@ function bodyPathFromSidecar(value: unknown): string | null {
 
   const bodyPath = (value as { body_path?: unknown }).body_path;
 
-  return typeof bodyPath === "string" ? `.aictx/${bodyPath}` : null;
+  return typeof bodyPath === "string" ? `.memory/${bodyPath}` : null;
 }
 
 function hasConflictMarkers(contents: string, path: string): boolean {
@@ -646,7 +646,7 @@ function buildCreateObjectActions(
     return timestamp;
   }
 
-  const bodyPath = toAictxRelativePath(change.bodyPath);
+  const bodyPath = toMemoryRelativePath(change.bodyPath);
 
   if (!bodyPath.ok) {
     return bodyPath;
@@ -1328,7 +1328,7 @@ async function applyWriteAction(
     return ok(undefined);
   } catch (error) {
     return err(
-      aictxError("AICtxValidationFailed", "Canonical file could not be deleted.", {
+      memoryError("MemoryValidationFailed", "Canonical file could not be deleted.", {
         path: action.path,
         message: error instanceof Error ? error.message : String(error)
       })
@@ -1436,11 +1436,11 @@ function relationEventTimestamp(
   return ok(event.timestamp);
 }
 
-function toAictxRelativePath(path: string): Result<string> {
-  const prefix = ".aictx/";
+function toMemoryRelativePath(path: string): Result<string> {
+  const prefix = ".memory/";
 
   if (!path.startsWith(prefix)) {
-    return internalError(`Planned object body path is not under .aictx/: ${path}.`);
+    return internalError(`Planned object body path is not under .memory/: ${path}.`);
   }
 
   return ok(path.slice(prefix.length));
@@ -1517,5 +1517,5 @@ function isMemoryOperation(operation: PatchOperation): operation is MemoryPatchO
 }
 
 function internalError<T>(message: string): Result<T> {
-  return err(aictxError("AICtxInternalError", message));
+  return err(memoryError("MemoryInternalError", message));
 }

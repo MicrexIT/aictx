@@ -22,7 +22,7 @@ export function registerRebuildCommand(
 ): void {
   program
     .command("rebuild")
-    .description("Rebuild generated Aictx indexes from canonical storage.")
+    .description("Rebuild generated Memory indexes from canonical storage.")
     .action(async (_commandOptions: unknown, command: Command) => {
       const result = await rebuildIndex(rebuildIndexOptions(options));
       const rendered = renderAppResult(result, {
@@ -36,8 +36,8 @@ export function registerRebuildCommand(
       if (rendered.exitCode !== CLI_EXIT_SUCCESS) {
         throw new CommanderError(
           rendered.exitCode,
-          "aictx.command.failed",
-          "Aictx command failed."
+          "memory.command.failed",
+          "Memory command failed."
         );
       }
     });
@@ -56,7 +56,7 @@ function isJsonMode(command: Command): boolean {
 
 function renderRebuildData(data: RebuildIndexData): string {
   return [
-    "Rebuilt Aictx index.",
+    "Rebuilt Memory index.",
     `Objects indexed: ${data.objects_indexed}`,
     `Relations indexed: ${data.relations_indexed}`,
     `Events indexed: ${data.events_indexed}`,

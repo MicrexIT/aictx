@@ -11,32 +11,32 @@ The CLI is the default interface for routine memory work.
 
 | Area | Commands |
 | --- | --- |
-| Setup | `aictx init`, `aictx setup` |
-| Maintenance | `aictx check`, `aictx rebuild`, `aictx reset`, `aictx upgrade` |
-| Routine memory | `aictx load`, `aictx search`, `aictx suggest`, `aictx audit`, `aictx remember`, `aictx save` |
-| Wiki workflow | `aictx wiki ingest`, `aictx wiki file`, `aictx wiki lint`, `aictx wiki log` |
-| Inspection | `aictx inspect`, `aictx stale`, `aictx graph`, `aictx lens` |
-| Branch continuity | `aictx handoff show`, `aictx handoff update --stdin`, `aictx handoff close --stdin` |
-| Inspection and recovery | `aictx diff`, `aictx history`, `aictx restore`, `aictx rewind` |
-| Export | `aictx export obsidian` |
-| Viewer | `aictx projects`, `aictx view` |
-| Docs | `aictx docs` |
+| Setup | `memory init`, `memory setup` |
+| Maintenance | `memory check`, `memory rebuild`, `memory reset`, `memory upgrade` |
+| Routine memory | `memory load`, `memory search`, `memory suggest`, `memory audit`, `memory remember`, `memory save` |
+| Wiki workflow | `memory wiki ingest`, `memory wiki file`, `memory wiki lint`, `memory wiki log` |
+| Inspection | `memory inspect`, `memory stale`, `memory graph`, `memory lens` |
+| Branch continuity | `memory handoff show`, `memory handoff update --stdin`, `memory handoff close --stdin` |
+| Inspection and recovery | `memory diff`, `memory history`, `memory restore`, `memory rewind` |
+| Export | `memory export obsidian` |
+| Viewer | `memory projects`, `memory view` |
+| Docs | `memory docs` |
 
 Commands that support structured output accept `--json`:
 
 ```bash
-aictx check --json
-aictx docs --json
+memory check --json
+memory docs --json
 ```
 
-`aictx setup --dry-run` is read-only and does not initialize storage or write
-repo files. `aictx audit` includes role coverage gaps, but missing roles are not
-`aictx check` failures. `aictx handoff show` returns only an active handoff for
+`memory setup --dry-run` is read-only and does not initialize storage or write
+repo files. `memory audit` includes role coverage gaps, but missing roles are not
+`memory check` failures. `memory handoff show` returns only an active handoff for
 the current Git branch; closed handoffs remain historical memory.
 
 ## MCP tools
 
-MCP is available when the agent client already exposes Aictx MCP tools. Local
+MCP is available when the agent client already exposes Memory MCP tools. Local
 MCP exposes exactly:
 
 - `load_memory`
@@ -50,23 +50,23 @@ CLI-only workflows in v1 include setup, lenses, handoff, maintenance, recovery,
 export, registry, viewer, docs, suggest, audit, wiki, stale inspection, and
 graph inspection.
 
-Future host adapters may expose generic `search` and `fetch` names over Aictx
-search and inspect behavior. The local MCP server exposes the six Aictx-specific
+Future host adapters may expose generic `search` and `fetch` names over Memory
+search and inspect behavior. The local MCP server exposes the six Memory-specific
 tools above.
 
 ## Docs command
 
 ```bash
-aictx docs
-aictx docs getting-started
-aictx docs capabilities
-aictx docs specializing-aictx
-aictx docs agent-recipes
-aictx docs agent-integration --open
-aictx docs --json
+memory docs
+memory docs getting-started
+memory docs capabilities
+memory docs specializing-memory
+memory docs agent-recipes
+memory docs agent-integration --open
+memory docs --json
 ```
 
-`aictx docs` lists bundled public docs topics. `aictx docs <topic>` prints the
+`memory docs` lists bundled public docs topics. `memory docs <topic>` prints the
 bundled Markdown for that topic. `--open` opens the hosted page at
 `https://docs.aictx.dev`.
 
@@ -121,7 +121,7 @@ Workflow/how-to memory uses the same intent-first input:
     {
       "kind": "workflow",
       "title": "Release smoke test",
-      "body": "Before tagging a release, run package verification and inspect the Aictx memory diff.",
+      "body": "Before tagging a release, run package verification and inspect the Memory diff.",
       "category": "workflow",
       "applies_to": ["package.json"]
     }

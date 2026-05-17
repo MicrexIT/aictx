@@ -27,7 +27,7 @@ export function registerHistoryCommand(
 ): void {
   program
     .command("history")
-    .description("Show Git history scoped to Aictx memory files.")
+    .description("Show Git history scoped to Memory files.")
     .option("--limit <number>", "Maximum number of commits to return.")
     .action(async (commandOptions: HistoryCommandFlags, command: Command) => {
       const result = await listMemoryHistory(
@@ -44,8 +44,8 @@ export function registerHistoryCommand(
       if (rendered.exitCode !== CLI_EXIT_SUCCESS) {
         throw new CommanderError(
           rendered.exitCode,
-          "aictx.command.failed",
-          "Aictx command failed."
+          "memory.command.failed",
+          "Memory command failed."
         );
       }
     });
@@ -68,7 +68,7 @@ function isJsonMode(command: Command): boolean {
 
 function renderHistoryData(data: MemoryHistoryData): string {
   if (data.commits.length === 0) {
-    return "No Aictx history found.";
+    return "No Memory history found.";
   }
 
   return data.commits.map(renderHistoryCommit).join("\n");

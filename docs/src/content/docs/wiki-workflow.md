@@ -5,20 +5,20 @@ description: Source-backed wiki-style memory with ingest, file, lint, and log co
 
 The wiki workflow is for source-backed synthesis. Use it when a project,
 research thread, or team knowledge base benefits from keeping source records and
-maintained summaries together in Aictx memory.
+maintained summaries together in Memory.
 
 The agent reads the source, discusses or synthesizes it with the human, and
-supplies structured input through stdin. Aictx stores the source record,
+supplies structured input through stdin. Memory stores the source record,
 syntheses, relations, and events locally.
 
 ## Layers
 
 - Raw sources are the files, URLs, transcripts, articles, docs, or human notes
-  the agent read. Aictx records where they came from; it does not mutate them.
-- Source records are Aictx `source` memories that summarize a raw source and
+  the agent read. Memory records where they came from; it does not mutate them.
+- Source records are Memory `source` memories that summarize a raw source and
   carry an `origin` block such as a local file path, URL, capture timestamp,
   digest, and media type.
-- Maintained syntheses are durable Aictx memories such as `synthesis`,
+- Maintained syntheses are durable Memory memories such as `synthesis`,
   `decision`, `constraint`, `fact`, `gotcha`, `workflow`, `question`,
   `concept`, or `note` records linked back to source records.
 
@@ -28,8 +28,8 @@ means who wrote the memory change.
 ## Ingest
 
 ```bash
-aictx wiki ingest --stdin
-aictx wiki ingest --stdin --dry-run --json
+memory wiki ingest --stdin
+memory wiki ingest --stdin --dry-run --json
 ```
 
 `wiki ingest` accepts one structured input with `task`, a required `source`
@@ -72,8 +72,8 @@ Example:
 ## File
 
 ```bash
-aictx wiki file --stdin
-aictx wiki file --stdin --dry-run --json
+memory wiki file --stdin
+memory wiki file --stdin --dry-run --json
 ```
 
 `wiki file` files a useful query result, comparison, synthesis, or discovered
@@ -84,8 +84,8 @@ chat history.
 ## Lint
 
 ```bash
-aictx wiki lint
-aictx wiki lint --json
+memory wiki lint
+memory wiki lint --json
 ```
 
 `wiki lint` is a wiki-language alias over audit semantics. It reports stale or
@@ -96,11 +96,11 @@ deterministic memory hygiene findings. It does not mutate canonical files.
 ## Log
 
 ```bash
-aictx wiki log
-aictx wiki log --limit 50 --json
+memory wiki log
+memory wiki log --limit 50 --json
 ```
 
-`wiki log` renders a chronological log from `.aictx/events.jsonl`. It is
+`wiki log` renders a chronological log from `.memory/events.jsonl`. It is
 generated from canonical events and does not write `log.md` or any other
 canonical memory file.
 

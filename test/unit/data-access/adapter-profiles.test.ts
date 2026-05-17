@@ -9,7 +9,7 @@ import {
 } from "../../../src/data-access/index.js";
 
 describe("data-access adapter profiles", () => {
-  it("maps the local MCP profile to the Aictx-specific data-access operations", () => {
+  it("maps the local MCP profile to the Memory-specific data-access operations", () => {
     const profile = selectHostAdapterProfile("local-mcp");
 
     expect(profile).toMatchObject({
@@ -65,7 +65,7 @@ describe("data-access adapter profiles", () => {
     expect(isHostAdapterProfileId("future-generic")).toBe(true);
     expect(isHostAdapterProfileId("remote-cloud")).toBe(false);
     expect(() => selectHostAdapterProfile("remote-cloud")).toThrow(
-      'Unsupported Aictx host adapter profile "remote-cloud".'
+      'Unsupported Memory host adapter profile "remote-cloud".'
     );
   });
 });

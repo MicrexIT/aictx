@@ -830,7 +830,7 @@ function extractFilePaths(text: string): string[] {
   for (const match of matches) {
     const path = trimPathPunctuation(match);
 
-    if (path === "" || isAictxGeneratedPath(path)) {
+    if (path === "" || isMemoryGeneratedPath(path)) {
       continue;
     }
 
@@ -843,7 +843,7 @@ function extractFilePaths(text: string): string[] {
 function isFileLikePath(value: string): boolean {
   const normalized = trimPathPunctuation(value.trim());
 
-  if (normalized === "" || isAictxGeneratedPath(normalized)) {
+  if (normalized === "" || isMemoryGeneratedPath(normalized)) {
     return false;
   }
 
@@ -854,11 +854,11 @@ function isFileLikePath(value: string): boolean {
   return /^(?:\.{1,2}\/)?(?:[A-Za-z0-9_@.-]+\/)+[A-Za-z0-9_@.-]+$/u.test(normalized);
 }
 
-function isAictxGeneratedPath(path: string): boolean {
+function isMemoryGeneratedPath(path: string): boolean {
   return (
-    path.startsWith(".aictx/") ||
-    path.startsWith("./.aictx/") ||
-    path.includes("/.aictx/")
+    path.startsWith(".memory/") ||
+    path.startsWith("./.memory/") ||
+    path.includes("/.memory/")
   );
 }
 

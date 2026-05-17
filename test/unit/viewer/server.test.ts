@@ -22,8 +22,8 @@ afterEach(async () => {
 
 describe("viewer local server", () => {
   it("binds to loopback on random and explicit ports and serves static assets", async () => {
-    const projectRoot = await createInitializedProject("aictx-viewer-static-project-");
-    const assetsDir = await createViewerAssets("aictx-viewer-static-assets-");
+    const projectRoot = await createInitializedProject("memory-viewer-static-project-");
+    const assetsDir = await createViewerAssets("memory-viewer-static-assets-");
     const random = await startViewerServer({
       cwd: projectRoot,
       assetsDir,
@@ -77,8 +77,8 @@ describe("viewer local server", () => {
   });
 
   it("fails clearly for an unavailable explicit port", async () => {
-    const projectRoot = await createInitializedProject("aictx-viewer-busy-project-");
-    const assetsDir = await createViewerAssets("aictx-viewer-busy-assets-");
+    const projectRoot = await createInitializedProject("memory-viewer-busy-project-");
+    const assetsDir = await createViewerAssets("memory-viewer-busy-assets-");
     const busy = createServer();
 
     await listenOnLoopback(busy, 0);
@@ -99,7 +99,7 @@ describe("viewer local server", () => {
         throw new Error("Expected busy port to fail.");
       }
 
-      expect(result.error.code).toBe("AICtxValidationFailed");
+      expect(result.error.code).toBe("MemoryValidationFailed");
       expect(result.error.message).toContain("could not bind");
       expect(result.error.details).toMatchObject({
         host: VIEWER_LOOPBACK_HOST,
@@ -111,7 +111,7 @@ describe("viewer local server", () => {
   });
 
   it("requires the per-run token for API requests", async () => {
-    const started = await startProjectViewer("aictx-viewer-token-");
+    const started = await startProjectViewer("memory-viewer-token-");
 
     try {
       const base = `http://${started.host}:${started.port}`;
@@ -158,13 +158,13 @@ describe("viewer local server", () => {
   });
 
   it("serves an empty project dashboard outside initialized projects", async () => {
-    const cwd = await createTempRoot("aictx-viewer-empty-cwd-");
-    const aictxHome = await createTempRoot("aictx-viewer-empty-home-");
-    const assetsDir = await createViewerAssets("aictx-viewer-empty-assets-");
+    const cwd = await createTempRoot("memory-viewer-empty-cwd-");
+    const memoryHome = await createTempRoot("memory-viewer-empty-home-");
+    const assetsDir = await createViewerAssets("memory-viewer-empty-assets-");
     const started = await startViewerServer({
       cwd,
       assetsDir,
-      aictxHome,
+      memoryHome,
       token: "empty-token"
     });
 
@@ -192,13 +192,13 @@ describe("viewer local server", () => {
   });
 
   it("returns project-scoped bootstrap data and export responses", async () => {
-    const projectRoot = await createInitializedProject("aictx-viewer-project-route-");
-    const aictxHome = await createTempRoot("aictx-viewer-project-route-home-");
-    const assetsDir = await createViewerAssets("aictx-viewer-project-route-assets-");
+    const projectRoot = await createInitializedProject("memory-viewer-project-route-");
+    const memoryHome = await createTempRoot("memory-viewer-project-route-home-");
+    const assetsDir = await createViewerAssets("memory-viewer-project-route-assets-");
     const started = await startViewerServer({
       cwd: projectRoot,
       assetsDir,
-      aictxHome,
+      memoryHome,
       token: "project-route-token"
     });
 
@@ -248,24 +248,24 @@ describe("viewer local server", () => {
 
       expect(exportResponse.status).toBe(200);
       expect(exportEnvelope.ok).toBe(true);
-      expect(exportEnvelope.data.manifest_path).toBe("project-route-export/.aictx-obsidian-export.json");
+      expect(exportEnvelope.data.manifest_path).toBe("project-route-export/.memory-obsidian-export.json");
     } finally {
       await started.data.close();
     }
   });
 
-  it("deletes a viewer project by removing .aictx and unregistering it", async () => {
-    const projectRoot = await createInitializedProject("aictx-viewer-delete-project-");
-    const aictxHome = await createTempRoot("aictx-viewer-delete-home-");
-    const assetsDir = await createViewerAssets("aictx-viewer-delete-assets-");
+  it("deletes a viewer project by removing .memory and unregistering it", async () => {
+    const projectRoot = await createInitializedProject("memory-viewer-delete-project-");
+    const memoryHome = await createTempRoot("memory-viewer-delete-home-");
+    const assetsDir = await createViewerAssets("memory-viewer-delete-assets-");
 
     await writeProjectFile(projectRoot, "src/app.ts", "export const kept = true;\n");
-    await registerProject(projectRoot, aictxHome);
+    await registerProject(projectRoot, memoryHome);
 
     const started = await startViewerServer({
       cwd: projectRoot,
       assetsDir,
-      aictxHome,
+      memoryHome,
       token: "delete-token"
     });
 
@@ -315,9 +315,9 @@ describe("viewer local server", () => {
           registry_id: registryId
         },
         destroyed: true,
-        entries_removed: [".aictx"]
+        entries_removed: [".memory"]
       });
-      await expect(pathExists(join(projectRoot, ".aictx"))).resolves.toBe(false);
+      await expect(pathExists(join(projectRoot, ".memory"))).resolves.toBe(false);
       await expect(readFile(join(projectRoot, "src/app.ts"), "utf8"))
         .resolves.toBe("export const kept = true;\n");
 
@@ -336,19 +336,19 @@ describe("viewer local server", () => {
     }
   });
 
-  it("unregisters stale viewer projects whose .aictx directory is already missing", async () => {
-    const projectRoot = await createInitializedProject("aictx-viewer-delete-stale-project-");
-    const aictxHome = await createTempRoot("aictx-viewer-delete-stale-home-");
-    const assetsDir = await createViewerAssets("aictx-viewer-delete-stale-assets-");
+  it("unregisters stale viewer projects whose .memory directory is already missing", async () => {
+    const projectRoot = await createInitializedProject("memory-viewer-delete-stale-project-");
+    const memoryHome = await createTempRoot("memory-viewer-delete-stale-home-");
+    const assetsDir = await createViewerAssets("memory-viewer-delete-stale-assets-");
 
     await writeProjectFile(projectRoot, "src/kept.ts", "export const kept = true;\n");
-    await registerProject(projectRoot, aictxHome);
-    await rm(join(projectRoot, ".aictx"), { recursive: true, force: true });
+    await registerProject(projectRoot, memoryHome);
+    await rm(join(projectRoot, ".memory"), { recursive: true, force: true });
 
     const started = await startViewerServer({
       cwd: projectRoot,
       assetsDir,
-      aictxHome,
+      memoryHome,
       token: "delete-stale-token"
     });
 
@@ -401,8 +401,8 @@ describe("viewer local server", () => {
   });
 
   it("returns bootstrap data without mutating canonical storage or indexes", async () => {
-    const projectRoot = await createInitializedProject("aictx-viewer-bootstrap-project-");
-    const assetsDir = await createViewerAssets("aictx-viewer-bootstrap-assets-");
+    const projectRoot = await createInitializedProject("memory-viewer-bootstrap-project-");
+    const assetsDir = await createViewerAssets("memory-viewer-bootstrap-assets-");
     const started = await startViewerServer({
       cwd: projectRoot,
       assetsDir,
@@ -456,8 +456,8 @@ describe("viewer local server", () => {
   });
 
   it("exports Obsidian projection files without mutating canonical storage or indexes", async () => {
-    const projectRoot = await createInitializedProject("aictx-viewer-export-project-");
-    const assetsDir = await createViewerAssets("aictx-viewer-export-assets-");
+    const projectRoot = await createInitializedProject("memory-viewer-export-project-");
+    const assetsDir = await createViewerAssets("memory-viewer-export-assets-");
     const started = await startViewerServer({
       cwd: projectRoot,
       assetsDir,
@@ -497,11 +497,11 @@ describe("viewer local server", () => {
       expect(envelope.data).toMatchObject({
         format: "obsidian",
         output_dir: "viewer-export",
-        manifest_path: "viewer-export/.aictx-obsidian-export.json"
+        manifest_path: "viewer-export/.memory-obsidian-export.json"
       });
       expect(envelope.data.files_written).toContain("viewer-export/index.md");
       await expect(readFile(join(projectRoot, "viewer-export/index.md"), "utf8"))
-        .resolves.toContain("# Aictx Memory");
+        .resolves.toContain("# Memory");
       await expect(readCanonicalAndIndexFiles(projectRoot)).resolves.toEqual(before);
     } finally {
       await started.data.close();
@@ -509,7 +509,7 @@ describe("viewer local server", () => {
   });
 
   it("rejects unsupported methods and local API routes", async () => {
-    const started = await startProjectViewer("aictx-viewer-reject-");
+    const started = await startProjectViewer("memory-viewer-reject-");
 
     try {
       const base = `http://${started.host}:${started.port}`;
@@ -543,11 +543,11 @@ describe("viewer local server", () => {
 async function startProjectViewer(prefix: string): Promise<StartedViewerServer> {
   const projectRoot = await createInitializedProject(`${prefix}project-`);
   const assetsDir = await createViewerAssets(`${prefix}assets-`);
-  const aictxHome = await createTempRoot(`${prefix}home-`);
+  const memoryHome = await createTempRoot(`${prefix}home-`);
   const started = await startViewerServer({
     cwd: projectRoot,
     assetsDir,
-    aictxHome,
+    memoryHome,
     token: "api-token"
   });
 
@@ -579,7 +579,7 @@ async function createViewerAssets(prefix: string): Promise<string> {
 async function createInitializedProject(prefix: string): Promise<string> {
   const projectRoot = await createTempRoot(prefix);
   const output = createCapturedOutput();
-  const exitCode = await main(["node", "aictx", "init", "--json"], {
+  const exitCode = await main(["node", "memory", "init", "--json"], {
     ...output.writers,
     cwd: projectRoot
   });
@@ -590,13 +590,13 @@ async function createInitializedProject(prefix: string): Promise<string> {
   return projectRoot;
 }
 
-async function registerProject(projectRoot: string, aictxHome: string): Promise<void> {
+async function registerProject(projectRoot: string, memoryHome: string): Promise<void> {
   const output = createCapturedOutput();
-  const exitCode = await main(["node", "aictx", "projects", "add", "--json"], {
+  const exitCode = await main(["node", "memory", "projects", "add", "--json"], {
     ...output.writers,
     cwd: projectRoot,
     registry: {
-      aictxHome
+      memoryHome
     }
   });
 
@@ -617,12 +617,12 @@ async function readCanonicalAndIndexFiles(projectRoot: string): Promise<Record<s
   const files: Record<string, string> = {};
 
   for (const root of [
-    ".aictx/config.json",
-    ".aictx/events.jsonl",
-    ".aictx/memory",
-    ".aictx/relations",
-    ".aictx/schema",
-    ".aictx/index"
+    ".memory/config.json",
+    ".memory/events.jsonl",
+    ".memory/memory",
+    ".memory/relations",
+    ".memory/schema",
+    ".memory/index"
   ]) {
     Object.assign(files, await readFilesRecursivelyIfExists(projectRoot, join(projectRoot, root)));
   }

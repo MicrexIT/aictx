@@ -22,7 +22,7 @@ export function registerRewindCommand(
 ): void {
   program
     .command("rewind")
-    .description("Restore Aictx memory files to the previous committed state.")
+    .description("Restore Memory files to the previous committed state.")
     .action(async (_commandOptions: unknown, command: Command) => {
       const result = await rewindMemory(rewindMemoryOptions(options));
       const rendered = renderAppResult(result, {
@@ -36,8 +36,8 @@ export function registerRewindCommand(
       if (rendered.exitCode !== CLI_EXIT_SUCCESS) {
         throw new CommanderError(
           rendered.exitCode,
-          "aictx.command.failed",
-          "Aictx command failed."
+          "memory.command.failed",
+          "Memory command failed."
         );
       }
     });
@@ -56,7 +56,7 @@ function isJsonMode(command: Command): boolean {
 
 function renderRewindData(data: RestoreMemoryData): string {
   return [
-    "Rewound Aictx memory.",
+    "Rewound Memory.",
     `Restored from: ${data.restored_from}`,
     ...renderList("Files changed", data.files_changed),
     data.index_rebuilt ? "Index rebuilt." : "Index not rebuilt."

@@ -41,7 +41,7 @@ describe("context token budget normalization", () => {
 
       expect(result.ok).toBe(false);
       if (!result.ok) {
-        expect(result.error.code).toBe("AICtxValidationFailed");
+        expect(result.error.code).toBe("MemoryValidationFailed");
         expect(result.error.details).toMatchObject({
           field: "token_budget",
           minimumExclusive: 500,

@@ -79,14 +79,14 @@ afterEach(async () => {
   );
 });
 
-describe("aictx load and search CLI", () => {
+describe("memory load and search CLI", () => {
   it("prints a Markdown context pack by default", async () => {
-    const projectRoot = await createInitializedProject("aictx-cli-load-markdown-");
+    const projectRoot = await createInitializedProject("memory-cli-load-markdown-");
     await writeLoadSearchFixtures(projectRoot);
     await rebuildProject(projectRoot);
 
     const output = await runCli(
-      ["node", "aictx", "load", "Stripe webhook idempotency"],
+      ["node", "memory", "load", "Stripe webhook idempotency"],
       projectRoot
     );
 
@@ -101,12 +101,12 @@ describe("aictx load and search CLI", () => {
   });
 
   it("prints a JSON envelope with public token metadata fields", async () => {
-    const projectRoot = await createInitializedProject("aictx-cli-load-json-");
+    const projectRoot = await createInitializedProject("memory-cli-load-json-");
     await writeLoadSearchFixtures(projectRoot);
     await rebuildProject(projectRoot);
 
     const output = await runCli(
-      ["node", "aictx", "load", "Stripe webhook idempotency", "--json"],
+      ["node", "memory", "load", "Stripe webhook idempotency", "--json"],
       projectRoot
     );
 
@@ -133,14 +133,14 @@ describe("aictx load and search CLI", () => {
   });
 
   it("reports explicit token target and omitted IDs when packaging truncates", async () => {
-    const projectRoot = await createInitializedProject("aictx-cli-load-budget-");
+    const projectRoot = await createInitializedProject("memory-cli-load-budget-");
     await writeManyBudgetFixtures(projectRoot, 18);
     await rebuildProject(projectRoot);
 
     const output = await runCli(
       [
         "node",
-        "aictx",
+        "memory",
         "load",
         "budget compiler context",
         "--token-budget",
@@ -163,12 +163,12 @@ describe("aictx load and search CLI", () => {
   });
 
   it("accepts --mode and prints the normalized mode in JSON output", async () => {
-    const projectRoot = await createInitializedProject("aictx-cli-load-mode-");
+    const projectRoot = await createInitializedProject("memory-cli-load-mode-");
     await writeModeFixtures(projectRoot);
     await rebuildProject(projectRoot);
 
     const output = await runCli(
-      ["node", "aictx", "load", "Mode service overview", "--mode", "debugging", "--json"],
+      ["node", "memory", "load", "Mode service overview", "--mode", "debugging", "--json"],
       projectRoot
     );
 
@@ -183,10 +183,10 @@ describe("aictx load and search CLI", () => {
   });
 
   it("returns a validation envelope for invalid --mode values in JSON output", async () => {
-    const projectRoot = await createInitializedProject("aictx-cli-load-invalid-mode-");
+    const projectRoot = await createInitializedProject("memory-cli-load-invalid-mode-");
 
     const output = await runCli(
-      ["node", "aictx", "load", "Architecture", "--mode", "triage", "--json"],
+      ["node", "memory", "load", "Architecture", "--mode", "triage", "--json"],
       projectRoot
     );
 
@@ -198,7 +198,7 @@ describe("aictx load and search CLI", () => {
     };
 
     expect(envelope.ok).toBe(false);
-    expect(envelope.error.code).toBe("AICtxValidationFailed");
+    expect(envelope.error.code).toBe("MemoryValidationFailed");
     expect(envelope.error.details).toMatchObject({
       field: "mode",
       actual: "triage"
@@ -206,14 +206,14 @@ describe("aictx load and search CLI", () => {
   });
 
   it("returns SQLite FTS search results in JSON mode", async () => {
-    const projectRoot = await createInitializedProject("aictx-cli-search-json-");
+    const projectRoot = await createInitializedProject("memory-cli-search-json-");
     await writeLoadSearchFixtures(projectRoot);
     await rebuildProject(projectRoot);
 
     const output = await runCli(
       [
         "node",
-        "aictx",
+        "memory",
         "search",
         "Stripe webhook idempotency",
         "--limit",
@@ -240,14 +240,14 @@ describe("aictx load and search CLI", () => {
       type: "constraint",
       status: "active",
       title: "Webhook idempotency",
-      body_path: ".aictx/memory/constraints/webhook-idempotency.md"
+      body_path: ".memory/memory/constraints/webhook-idempotency.md"
     });
     expect(webhook?.snippet).toContain("Stripe may deliver duplicate webhook events");
     expect(typeof webhook?.score).toBe("number");
   });
 
   it("accepts retrieval hint flags for load and search", async () => {
-    const projectRoot = await createInitializedProject("aictx-cli-load-search-hints-");
+    const projectRoot = await createInitializedProject("memory-cli-load-search-hints-");
     await writeMemoryObject(projectRoot, {
       id: "decision.hinted-ranking",
       type: "decision",
@@ -268,7 +268,7 @@ describe("aictx load and search CLI", () => {
     const loadOutput = await runCli(
       [
         "node",
-        "aictx",
+        "memory",
         "load",
         "Opaque task",
         "--file",
@@ -282,7 +282,7 @@ describe("aictx load and search CLI", () => {
     const searchOutput = await runCli(
       [
         "node",
-        "aictx",
+        "memory",
         "search",
         "opaque",
         "--file",
@@ -311,12 +311,12 @@ describe("aictx load and search CLI", () => {
   });
 
   it("prints compact human search results", async () => {
-    const projectRoot = await createInitializedProject("aictx-cli-search-human-");
+    const projectRoot = await createInitializedProject("memory-cli-search-human-");
     await writeLoadSearchFixtures(projectRoot);
     await rebuildProject(projectRoot);
 
     const output = await runCli(
-      ["node", "aictx", "search", "Stripe webhook idempotency"],
+      ["node", "memory", "search", "Stripe webhook idempotency"],
       projectRoot
     );
 
@@ -324,7 +324,7 @@ describe("aictx load and search CLI", () => {
     expect(output.stderr).toBe("");
     expect(output.stdout).toContain("constraint.webhook-idempotency");
     expect(output.stdout).toContain("Title: Webhook idempotency");
-    expect(output.stdout).toContain("Path: .aictx/memory/constraints/webhook-idempotency.md");
+    expect(output.stdout).toContain("Path: .memory/memory/constraints/webhook-idempotency.md");
     expect(output.stdout).toContain("Snippet:");
     expect(() => JSON.parse(output.stdout) as unknown).toThrow();
   });
@@ -332,7 +332,7 @@ describe("aictx load and search CLI", () => {
 
 async function createInitializedProject(prefix: string): Promise<string> {
   const projectRoot = await createTempRoot(prefix);
-  const output = await runCli(["node", "aictx", "init", "--json"], projectRoot);
+  const output = await runCli(["node", "memory", "init", "--json"], projectRoot);
 
   expect(output.exitCode).toBe(0);
   expect(output.stderr).toBe("");
@@ -341,7 +341,7 @@ async function createInitializedProject(prefix: string): Promise<string> {
 }
 
 async function rebuildProject(projectRoot: string): Promise<void> {
-  const output = await runCli(["node", "aictx", "rebuild", "--json"], projectRoot);
+  const output = await runCli(["node", "memory", "rebuild", "--json"], projectRoot);
 
   expect(output.exitCode).toBe(0);
   expect(output.stderr).toBe("");
@@ -509,10 +509,10 @@ async function writeMemoryObject(projectRoot: string, fixture: MemoryFixture): P
     content_hash: computeObjectContentHash(sidecarWithoutHash, fixture.body)
   };
 
-  await writeProjectFile(projectRoot, `.aictx/${fixture.bodyPath}`, fixture.body);
+  await writeProjectFile(projectRoot, `.memory/${fixture.bodyPath}`, fixture.body);
   await writeJsonProjectFile(
     projectRoot,
-    `.aictx/${fixture.bodyPath.replace(/\.md$/, ".json")}`,
+    `.memory/${fixture.bodyPath.replace(/\.md$/, ".json")}`,
     sidecar
   );
 }

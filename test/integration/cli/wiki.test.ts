@@ -54,11 +54,11 @@ afterEach(async () => {
   );
 });
 
-describe("aictx wiki CLI", () => {
+describe("memory wiki CLI", () => {
   it("ingests a source and auto-links new semantic memory in one atomic patch", async () => {
-    const projectRoot = await createInitializedProject("aictx-cli-wiki-ingest-");
+    const projectRoot = await createInitializedProject("memory-cli-wiki-ingest-");
     const output = await runCli(
-      ["node", "aictx", "wiki", "ingest", "--stdin", "--json"],
+      ["node", "memory", "wiki", "ingest", "--stdin", "--json"],
       projectRoot,
       wikiIngestInput()
     );
@@ -105,11 +105,11 @@ describe("aictx wiki CLI", () => {
   });
 
   it("dry-runs wiki ingest without changing canonical files", async () => {
-    const projectRoot = await createInitializedProject("aictx-cli-wiki-dry-run-");
-    const eventsBefore = await readFile(join(projectRoot, ".aictx", "events.jsonl"), "utf8");
+    const projectRoot = await createInitializedProject("memory-cli-wiki-dry-run-");
+    const eventsBefore = await readFile(join(projectRoot, ".memory", "events.jsonl"), "utf8");
 
     const output = await runCli(
-      ["node", "aictx", "wiki", "ingest", "--stdin", "--dry-run", "--json"],
+      ["node", "memory", "wiki", "ingest", "--stdin", "--dry-run", "--json"],
       projectRoot,
       wikiIngestInput()
     );
@@ -124,15 +124,15 @@ describe("aictx wiki CLI", () => {
       "synthesis.persistent-wiki-pattern"
     ]);
     expect(envelope.data.index_updated).toBe(false);
-    await expect(readFile(join(projectRoot, ".aictx", "events.jsonl"), "utf8")).resolves.toBe(
+    await expect(readFile(join(projectRoot, ".memory", "events.jsonl"), "utf8")).resolves.toBe(
       eventsBefore
     );
   });
 
   it("files useful query results through the intent-first remember path", async () => {
-    const projectRoot = await createInitializedProject("aictx-cli-wiki-file-");
+    const projectRoot = await createInitializedProject("memory-cli-wiki-file-");
     const output = await runCli(
-      ["node", "aictx", "wiki", "file", "--stdin", "--json"],
+      ["node", "memory", "wiki", "file", "--stdin", "--json"],
       projectRoot,
       {
         task: "File useful query result",
@@ -158,9 +158,9 @@ describe("aictx wiki CLI", () => {
   });
 
   it("lints with audit semantics and does not mutate storage", async () => {
-    const projectRoot = await createInitializedProject("aictx-cli-wiki-lint-");
+    const projectRoot = await createInitializedProject("memory-cli-wiki-lint-");
     await runCli(
-      ["node", "aictx", "remember", "--stdin", "--json"],
+      ["node", "memory", "remember", "--stdin", "--json"],
       projectRoot,
       {
         task: "Create source without origin",
@@ -176,10 +176,10 @@ describe("aictx wiki CLI", () => {
         ]
       }
     );
-    const eventsBefore = await readFile(join(projectRoot, ".aictx", "events.jsonl"), "utf8");
+    const eventsBefore = await readFile(join(projectRoot, ".memory", "events.jsonl"), "utf8");
 
     const output = await runCli(
-      ["node", "aictx", "wiki", "lint", "--json"],
+      ["node", "memory", "wiki", "lint", "--json"],
       projectRoot
     );
 
@@ -194,15 +194,15 @@ describe("aictx wiki CLI", () => {
         memory_id: "source.no-origin"
       })
     );
-    await expect(readFile(join(projectRoot, ".aictx", "events.jsonl"), "utf8")).resolves.toBe(
+    await expect(readFile(join(projectRoot, ".memory", "events.jsonl"), "utf8")).resolves.toBe(
       eventsBefore
     );
   });
 
   it("renders deterministic event history without mutating storage", async () => {
-    const projectRoot = await createInitializedProject("aictx-cli-wiki-log-");
+    const projectRoot = await createInitializedProject("memory-cli-wiki-log-");
     await runCli(
-      ["node", "aictx", "wiki", "file", "--stdin", "--json"],
+      ["node", "memory", "wiki", "file", "--stdin", "--json"],
       projectRoot,
       {
         task: "Record one loggable event",
@@ -215,10 +215,10 @@ describe("aictx wiki CLI", () => {
         ]
       }
     );
-    const eventsBefore = await readFile(join(projectRoot, ".aictx", "events.jsonl"), "utf8");
+    const eventsBefore = await readFile(join(projectRoot, ".memory", "events.jsonl"), "utf8");
 
     const output = await runCli(
-      ["node", "aictx", "wiki", "log", "--limit", "1", "--json"],
+      ["node", "memory", "wiki", "log", "--limit", "1", "--json"],
       projectRoot
     );
 
@@ -236,7 +236,7 @@ describe("aictx wiki CLI", () => {
         reason: null
       })
     ]);
-    await expect(readFile(join(projectRoot, ".aictx", "events.jsonl"), "utf8")).resolves.toBe(
+    await expect(readFile(join(projectRoot, ".memory", "events.jsonl"), "utf8")).resolves.toBe(
       eventsBefore
     );
   });
@@ -274,7 +274,7 @@ function wikiIngestInput(): Record<string, unknown> {
 
 async function createInitializedProject(prefix: string): Promise<string> {
   const projectRoot = await createTempRoot(prefix);
-  const output = await runCli(["node", "aictx", "init", "--json"], projectRoot);
+  const output = await runCli(["node", "memory", "init", "--json"], projectRoot);
 
   expect(output.exitCode).toBe(0);
   expect(output.stderr).toBe("");

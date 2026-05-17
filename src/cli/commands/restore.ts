@@ -22,7 +22,7 @@ export function registerRestoreCommand(
 ): void {
   program
     .command("restore <commit>")
-    .description("Restore Aictx memory files from a Git commit.")
+    .description("Restore Memory files from a Git commit.")
     .action(async (commit: string, _commandOptions: unknown, command: Command) => {
       const result = await restoreMemory(restoreMemoryOptions(options, commit));
       const rendered = renderAppResult(result, {
@@ -36,8 +36,8 @@ export function registerRestoreCommand(
       if (rendered.exitCode !== CLI_EXIT_SUCCESS) {
         throw new CommanderError(
           rendered.exitCode,
-          "aictx.command.failed",
-          "Aictx command failed."
+          "memory.command.failed",
+          "Memory command failed."
         );
       }
     });
@@ -60,7 +60,7 @@ function isJsonMode(command: Command): boolean {
 
 function renderRestoreData(data: RestoreMemoryData): string {
   return [
-    "Restored Aictx memory.",
+    "Restored Memory.",
     `Restored from: ${data.restored_from}`,
     ...renderList("Files changed", data.files_changed),
     data.index_rebuilt ? "Index rebuilt." : "Index not rebuilt."

@@ -1,8 +1,8 @@
 import type { AppResult } from "../app/operations.js";
-import type { AictxError } from "../core/errors.js";
+import type { MemoryError } from "../core/errors.js";
 import {
   CLI_EXIT_SUCCESS,
-  exitCodeForAictxError,
+  exitCodeForMemoryError,
   type CliExitCode
 } from "./exit.js";
 
@@ -25,7 +25,7 @@ export function renderAppResult<T>(
     return {
       stdout: `${JSON.stringify(result)}\n`,
       stderr: "",
-      exitCode: result.ok ? CLI_EXIT_SUCCESS : exitCodeForAictxError(result.error)
+      exitCode: result.ok ? CLI_EXIT_SUCCESS : exitCodeForMemoryError(result.error)
     };
   }
 
@@ -35,7 +35,7 @@ export function renderAppResult<T>(
     return {
       stdout: "",
       stderr: `${warnings}${renderError(result.error)}`,
-      exitCode: exitCodeForAictxError(result.error)
+      exitCode: exitCodeForMemoryError(result.error)
     };
   }
 
@@ -56,6 +56,6 @@ function renderWarnings(warnings: readonly string[]): string {
   return `${warnings.map((warning) => `warning: ${warning}`).join("\n")}\n`;
 }
 
-function renderError(error: AictxError): string {
+function renderError(error: MemoryError): string {
   return `error: ${error.code}: ${error.message}\n`;
 }

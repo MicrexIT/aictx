@@ -5,15 +5,15 @@ import { describe, expect, it } from "vitest";
 
 const root = process.cwd();
 const generatedNotice = "<!-- Generated from integrations/templates/agent-guidance.md. Do not edit directly. -->";
-const skillPrefix = `---\nname: aictx-memory\ndescription: Use this skill when working in a project that uses Aictx project memory. It guides the agent to load relevant memory before non-trivial coding work, save durable memory after meaningful changes, and keep memory inspectable through Aictx and Git when available.\n---\n\n${generatedNotice}\n\n`;
-const cursorPrefix = `---\ndescription: Use Aictx project memory when working in this repository.\nalwaysApply: true\n---\n\n${generatedNotice}\n\n`;
+const skillPrefix = `---\nname: memory\ndescription: Use this skill when working in a project that uses Memory by Aictx as local project memory. It guides the agent to load relevant memory before non-trivial coding work, save durable memory after meaningful changes, and keep memory inspectable through Memory and Git when available.\n---\n\n${generatedNotice}\n\n`;
+const cursorPrefix = `---\ndescription: Use Memory as project memory when working in this repository.\nalwaysApply: true\n---\n\n${generatedNotice}\n\n`;
 
 const skillGuidancePaths = [
-  "integrations/codex/aictx/SKILL.md",
-  "integrations/codex/skills/aictx-memory/SKILL.md",
-  "integrations/codex/plugins/aictx-memory/skills/aictx-memory/SKILL.md",
-  "integrations/claude/aictx/SKILL.md",
-  "integrations/claude/plugins/aictx-memory/skills/aictx-memory/SKILL.md"
+  "integrations/codex/memory/SKILL.md",
+  "integrations/codex/skills/memory/SKILL.md",
+  "integrations/codex/plugins/memory/skills/memory/SKILL.md",
+  "integrations/claude/memory/SKILL.md",
+  "integrations/claude/plugins/memory/skills/memory/SKILL.md"
 ] as const;
 
 async function readProjectFile(path: string): Promise<string> {
@@ -37,18 +37,18 @@ describe("generated agent guidance files", () => {
     const template = (await readProjectFile("integrations/templates/agent-guidance.md")).trimEnd();
     const expected = `${generatedNotice}\n\n${template}\n`;
 
-    await expect(readProjectFile("integrations/claude/aictx.md")).resolves.toBe(expected);
-    await expect(readProjectFile("integrations/generic/aictx-agent-instructions.md")).resolves.toBe(expected);
+    await expect(readProjectFile("integrations/claude/memory.md")).resolves.toBe(expected);
+    await expect(readProjectFile("integrations/generic/memory-agent-instructions.md")).resolves.toBe(expected);
   });
 
   it("keeps Cursor and Cline guidance generated from the shared template", async () => {
     const template = (await readProjectFile("integrations/templates/agent-guidance.md")).trimEnd();
     const clineExpected = `${generatedNotice}\n\n${template}\n`;
 
-    await expect(readProjectFile("integrations/cursor/aictx.mdc")).resolves.toBe(
+    await expect(readProjectFile("integrations/cursor/memory.mdc")).resolves.toBe(
       `${cursorPrefix}${template}\n`
     );
-    await expect(readProjectFile("integrations/cline/aictx.md")).resolves.toBe(clineExpected);
+    await expect(readProjectFile("integrations/cline/memory.md")).resolves.toBe(clineExpected);
   });
 
   it("keeps plugin manifests aligned with package metadata", async () => {
@@ -78,7 +78,7 @@ describe("generated agent guidance files", () => {
         defaultPrompt: string[];
       };
       mcpServers?: string;
-    }>("integrations/codex/plugins/aictx-memory/.codex-plugin/plugin.json");
+    }>("integrations/codex/plugins/memory/.codex-plugin/plugin.json");
     const claude = await readJsonFile<{
       name: string;
       version: string;
@@ -88,10 +88,10 @@ describe("generated agent guidance files", () => {
       repository: string;
       license: string;
       mcpServers?: string;
-    }>("integrations/claude/plugins/aictx-memory/.claude-plugin/plugin.json");
+    }>("integrations/claude/plugins/memory/.claude-plugin/plugin.json");
 
     expect(codex).toMatchObject({
-      name: "aictx-memory",
+      name: "memory",
       version: packageJson.version,
       author: { name: packageJson.author, url: repository },
       homepage: packageJson.homepage,
@@ -99,42 +99,93 @@ describe("generated agent guidance files", () => {
       license: packageJson.license,
       skills: "./skills/",
       interface: {
-        displayName: "Aictx Memory",
+        displayName: "Memory",
         developerName: packageJson.author,
         category: "Productivity",
         websiteURL: packageJson.homepage
       }
     });
-    expect(codex.description).toMatch(/Aictx local project memory/i);
+    expect(codex.description).toMatch(/Memory by Aictx as local project memory/i);
     expect(codex.interface.shortDescription).toMatch(/local project memory/i);
     expect(codex.interface.defaultPrompt).toHaveLength(3);
     expect(codex.mcpServers).toBeUndefined();
 
     expect(claude).toMatchObject({
-      name: "aictx-memory",
+      name: "memory",
       version: packageJson.version,
       author: { name: packageJson.author, url: repository },
       homepage: packageJson.homepage,
       repository,
       license: packageJson.license
     });
-    expect(claude.description).toMatch(/Aictx local project memory/i);
+    expect(claude.description).toMatch(/Memory by Aictx as local project memory/i);
     expect(claude.mcpServers).toBeUndefined();
   });
 
   it("documents concise marketplace install commands in generated plugin readmes", async () => {
-    const codexReadme = await readProjectFile("integrations/codex/plugins/aictx-memory/README.md");
-    const claudeReadme = await readProjectFile("integrations/claude/plugins/aictx-memory/README.md");
+    const codexReadme = await readProjectFile("integrations/codex/plugins/memory/README.md");
+    const claudeReadme = await readProjectFile("integrations/claude/plugins/memory/README.md");
 
     expect(codexReadme).toContain("codex plugin marketplace add aictx/memory");
-    expect(codexReadme).toContain("install Aictx Memory");
+    expect(codexReadme).toContain("install Memory");
     expect(codexReadme).not.toContain("codex plugin marketplace upgrade");
-    expect(codexReadme).toContain("Aictx MCP setup remains an optional client-level configuration");
+    expect(codexReadme).toContain("Memory MCP setup remains an optional client-level configuration");
 
     expect(claudeReadme).toContain("/plugin marketplace add aictx/memory");
-    expect(claudeReadme).toContain("/plugin install aictx-memory@aictx");
-    expect(claudeReadme).toContain("claude plugin validate integrations/claude/plugins/aictx-memory");
+    expect(claudeReadme).toContain("/plugin install memory@aictx");
+    expect(claudeReadme).toContain("claude plugin validate integrations/claude/plugins/memory");
     expect(claudeReadme).not.toContain("claude plugin marketplace list --json");
-    expect(claudeReadme).toContain("MCP equivalents only when the current Claude Code session already exposes Aictx MCP tools");
+    expect(claudeReadme).toContain("MCP equivalents only when the current Claude Code session already exposes Memory MCP tools");
+  });
+
+  it("keeps local Codex and Claude marketplace catalogs reachable", async () => {
+    const codexMarketplace = await readJsonFile<{
+      name: string;
+      interface: { displayName: string };
+      plugins: Array<{
+        name: string;
+        source: { source: string; path: string };
+        category: string;
+      }>;
+    }>(".agents/plugins/marketplace.json");
+    const claudeMarketplace = await readJsonFile<{
+      name: string;
+      metadata: { description: string };
+      owner: { name: string };
+      plugins: Array<{
+        name: string;
+        source: string;
+        description: string;
+      }>;
+    }>(".claude-plugin/marketplace.json");
+
+    expect(codexMarketplace).toMatchObject({
+      name: "memory",
+      interface: { displayName: "Memory" },
+      plugins: [
+        {
+          name: "memory",
+          source: {
+            source: "local",
+            path: "./integrations/codex/plugins/memory"
+          },
+          category: "Productivity"
+        }
+      ]
+    });
+    expect(claudeMarketplace).toMatchObject({
+      name: "memory",
+      metadata: {
+        description: "Memory by Aictx local project memory plugins for AI coding agents."
+      },
+      owner: { name: "Aictx" },
+      plugins: [
+        {
+          name: "memory",
+          source: "./integrations/claude/plugins/memory",
+          description: "Use Memory by Aictx as local project memory in AI coding agents."
+        }
+      ]
+    });
   });
 });

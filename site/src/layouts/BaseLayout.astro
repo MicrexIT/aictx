@@ -1,16 +1,32 @@
 ---
 import GitHubIcon from "../components/GitHubIcon.astro";
+import { buildStructuredData, siteName, socialImageUrl } from "../seo";
 import "../styles/global.css";
 
 interface Props {
   title?: string;
   description?: string;
+  ogType?: "website" | "article";
+  robots?: string;
+  structuredData?: object | object[];
 }
 
 const {
-  title = "Aictx - Local memory for AI coding tools",
-  description = "Aictx gives AI coding tools local, reviewable project memory so every session stops starting from scratch."
+  title = "Memory by Aictx - Persistent Memory for AI Coding Agents",
+  description = "Memory by Aictx gives AI coding agents local, reviewable, auto-maintained project memory so every session stops starting from scratch.",
+  ogType = "website",
+  robots,
+  structuredData
 } = Astro.props;
+
+const siteUrl = Astro.site ?? new URL("https://memory.aictx.dev");
+const canonicalUrl = new URL(Astro.url.pathname, siteUrl).toString();
+const socialImage = socialImageUrl(siteUrl);
+const websiteJsonLd = buildStructuredData(siteUrl);
+const structuredDataItems = [
+  websiteJsonLd,
+  ...(Array.isArray(structuredData) ? structuredData : structuredData ? [structuredData] : [])
+];
 ---
 
 <!doctype html>
@@ -20,14 +36,33 @@ const {
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{title}</title>
     <meta name="description" content={description} />
-    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    {robots && <meta name="robots" content={robots} />}
+    <link rel="canonical" href={canonicalUrl} />
+    <meta property="og:type" content={ogType} />
+    <meta property="og:site_name" content={siteName} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonicalUrl} />
+    <meta property="og:image" content={socialImage} />
+    <meta property="og:image:alt" content="Memory by Aictx project memory overview" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={socialImage} />
+    <meta name="twitter:image:alt" content="Memory by Aictx project memory overview" />
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    {
+      structuredDataItems.map((item) => (
+        <script type="application/ld+json" set:html={JSON.stringify(item)}></script>
+      ))
+    }
     <script src="/stars.js" defer></script>
   </head>
   <body>
     <header class="site-header">
-      <a class="brand" href="/" aria-label="Aictx home">
-        <span class="brand-mark" aria-hidden="true">A</span>
-        <span>Aictx</span>
+      <a class="brand" href="/" aria-label="Memory home">
+        <img class="brand-mark" src="/favicon.ico" width="34" height="34" alt="" aria-hidden="true" />
+        <span>Memory</span>
       </a>
 
       <nav aria-label="Primary navigation">
@@ -61,14 +96,15 @@ const {
 
     <footer class="site-footer">
       <div>
-        <strong>Aictx</strong>
-        <p>Local, reviewable project memory for AI coding tools.</p>
+        <strong>Memory by Aictx</strong>
+        <p>Local, reviewable, auto-maintained project memory for AI coding agents.</p>
       </div>
       <nav class="footer-links" aria-label="Footer navigation">
         <a href="https://docs.aictx.dev" rel="noreferrer">Docs</a>
         <a href="/#demo">Demo Viewer</a>
         <a href="/use-cases/">Use Cases</a>
         <a href="https://github.com/aictx/memory" rel="noreferrer">GitHub</a>
+        <a href="mailto:michele@remics.tech">Contact us</a>
       </nav>
     </footer>
   </body>

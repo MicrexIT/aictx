@@ -3,15 +3,15 @@ title: CLI guide
 description: Setup, routine work, inspection, recovery, export, docs, and viewer commands.
 ---
 
-The CLI is the default way to use Aictx. It handles setup, routine memory work,
+The CLI is the default way to use Memory. It handles setup, routine memory work,
 inspection, recovery, exports, bundled docs, and the local viewer.
 
 Most days, an agent only needs:
 
 ```bash
-aictx load "task summary"
-aictx remember --stdin
-aictx diff
+memory load "task summary"
+memory remember --stdin
+memory diff
 ```
 
 The rest of the CLI is there for setup, review, recovery, and maintenance.
@@ -19,9 +19,9 @@ The rest of the CLI is there for setup, review, recovery, and maintenance.
 ## Quick checks
 
 ```bash
-aictx check
-aictx diff
-aictx view --open
+memory check
+memory diff
+memory view --open
 ```
 
 - `check` validates canonical memory and generated index health.
@@ -31,12 +31,12 @@ aictx view --open
 ## Setup and bootstrap
 
 ```bash
-aictx init
-aictx setup
-aictx setup --dry-run
-aictx setup --no-view
-aictx setup --open
-aictx patch review bootstrap-memory.json
+memory init
+memory setup
+memory setup --dry-run
+memory setup --no-view
+memory setup --open
+memory patch review bootstrap-memory.json
 ```
 
 - `setup` is the normal onboarding command. It initializes storage if needed,
@@ -51,19 +51,19 @@ aictx patch review bootstrap-memory.json
 - `patch review` reviews a structured memory patch without writing it.
 
 :::tip
-If memory is empty after `init`, use `aictx setup` before hand-writing memory.
+If memory is empty after `init`, use `memory setup` before hand-writing memory.
 The bootstrap flow is designed for that first-run gap.
 :::
 
 ## Routine memory work
 
 ```bash
-aictx load "change auth routes"
-aictx search "auth route conventions"
-aictx inspect decision.auth-route-conventions
-aictx suggest --after-task "change auth routes" --json
-aictx audit --json
-aictx remember --stdin
+memory load "change auth routes"
+memory search "auth route conventions"
+memory inspect decision.auth-route-conventions
+memory suggest --after-task "change auth routes" --json
+memory audit --json
+memory remember --stdin
 ```
 
 The routine loop is narrow: load context, do the work, and save durable
@@ -78,11 +78,11 @@ still writes the meaningful title, body, and reason from current evidence.
 ## Wiki-style source workflows
 
 ```bash
-aictx wiki ingest --stdin
-aictx wiki ingest --stdin --dry-run --json
-aictx wiki file --stdin
-aictx wiki lint --json
-aictx wiki log --limit 20
+memory wiki ingest --stdin
+memory wiki ingest --stdin --dry-run --json
+memory wiki file --stdin
+memory wiki lint --json
+memory wiki log --limit 20
 ```
 
 `wiki ingest` creates or updates a source record with `origin` and files
@@ -94,17 +94,17 @@ view from canonical events.
 Commands that support structured output accept `--json`:
 
 ```bash
-aictx check --json
+memory check --json
 ```
 
 ## Inspection and debugging
 
 ```bash
-aictx stale
-aictx graph <id>
-aictx lens project-map
-aictx lens current-work
-aictx handoff show
+memory stale
+memory graph <id>
+memory lens project-map
+memory lens current-work
+memory handoff show
 ```
 
 `audit` includes role coverage gaps, but missing roles are not `check`
@@ -115,41 +115,41 @@ preserves unfinished current-branch state without making it project truth.
 ## Maintenance
 
 ```bash
-aictx check
-aictx rebuild
-aictx upgrade
-aictx reset
-aictx reset --all
+memory check
+memory rebuild
+memory upgrade
+memory reset
+memory reset --all
 ```
 
 `rebuild` regenerates indexes from canonical memory. `reset` backs up and clears
-local `.aictx/` storage. `reset --all` resets every project in the user-level
+local `.memory/` storage. `reset --all` resets every project in the user-level
 registry; add `--destroy` only when you intend to delete each registered
-`.aictx/` without backup.
+`.memory/` without backup.
 
 ## Git inspection and recovery
 
 ```bash
-aictx diff
-aictx history
-aictx restore <commit>
-aictx rewind
+memory diff
+memory history
+memory restore <commit>
+memory rewind
 ```
 
-Aictx writes local files and never commits automatically. Git remains the source
+Memory writes local files and never commits automatically. Git remains the source
 of truth for history and rollback when the project is inside a Git worktree.
 
 ## Export, viewer, and docs
 
 ```bash
-aictx export obsidian
-aictx projects list
-aictx view --open
-aictx docs
-aictx docs getting-started
-aictx docs demand-driven-memory
-aictx docs agent-recipes
-aictx docs agent-integration --open
+memory export obsidian
+memory projects list
+memory view --open
+memory docs
+memory docs getting-started
+memory docs demand-driven-memory
+memory docs agent-recipes
+memory docs agent-integration --open
 ```
 
 `view` starts a local memory viewer. `docs` lists bundled public docs topics.
@@ -159,5 +159,5 @@ hosted docs site.
 ## MCP
 
 MCP is available when the agent client has launched and connected to
-`aictx-mcp`. Use the [MCP guide](/mcp/) for configuration and exact tool
+`memory-mcp`. Use the [MCP guide](/mcp/) for configuration and exact tool
 boundaries.

@@ -11,7 +11,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { initProject } from "../../../src/app/operations.js";
 import {
-  createAictxMcpServer,
+  createMemoryMcpServer,
   main as mcpMain,
   startMcpServer
 } from "../../../src/mcp/server.js";
@@ -35,23 +35,23 @@ afterEach(async () => {
   );
 });
 
-describe("aictx MCP server bootstrap", () => {
+describe("memory MCP server bootstrap", () => {
   it("creates a project-scoped server context before connecting", async () => {
-    const projectRoot = await createTempRoot("aictx-mcp-context-");
-    const mcp = createAictxMcpServer({ cwd: projectRoot });
+    const projectRoot = await createTempRoot("memory-mcp-context-");
+    const mcp = createMemoryMcpServer({ cwd: projectRoot });
 
     expect(mcp.context.cwd).toBe(projectRoot);
     expect(mcp.server.isConnected()).toBe(false);
   });
 
   it("starts over stdio without non-protocol stdout or filesystem writes", async () => {
-    const projectRoot = await createTempRoot("aictx-mcp-stdio-");
+    const projectRoot = await createTempRoot("memory-mcp-stdio-");
     const started = await startMcpClient(projectRoot);
 
     try {
       await expect(started.client.ping()).resolves.toEqual({});
       expect(started.client.getServerVersion()).toEqual({
-        name: "aictx-mcp",
+        name: "memory-mcp",
         version
       });
       expect(started.client.getServerCapabilities()).toEqual({
@@ -68,7 +68,7 @@ describe("aictx MCP server bootstrap", () => {
   });
 
   it("direct startup does not write non-protocol stdout", async () => {
-    const projectRoot = await createTempRoot("aictx-mcp-direct-");
+    const projectRoot = await createTempRoot("memory-mcp-direct-");
     const stdin = new PassThrough();
     const stdout = createWritableCapture();
     const mcp = await startMcpServer({
@@ -90,7 +90,7 @@ describe("aictx MCP server bootstrap", () => {
   });
 
   it("reports startup failures to stderr without writing stdout", async () => {
-    const projectRoot = await createTempRoot("aictx-mcp-failure-");
+    const projectRoot = await createTempRoot("memory-mcp-failure-");
     const stdout = createWritableCapture();
     const stderr = createWritableCapture();
     const failure = new Error("simulated startup failure");
@@ -108,13 +108,13 @@ describe("aictx MCP server bootstrap", () => {
     ).rejects.toThrow(failure);
 
     expect(stdout.text()).toBe("");
-    expect(stderr.text()).toContain("Aictx MCP server failed to start.");
+    expect(stderr.text()).toContain("Memory MCP server failed to start.");
     expect(stderr.text()).toContain(`cwd: ${projectRoot}`);
     expect(stderr.text()).toContain("error: StartupTestError: simulated startup failure");
   });
 
-  it("exposes only normalized Aictx tools and no CLI-only, shell, or filesystem tools", async () => {
-    const projectRoot = await createTempRoot("aictx-mcp-tools-");
+  it("exposes only normalized Memory tools and no CLI-only, shell, or filesystem tools", async () => {
+    const projectRoot = await createTempRoot("memory-mcp-tools-");
     const started = await startMcpClient(projectRoot);
 
     try {
@@ -173,7 +173,7 @@ describe("aictx MCP server bootstrap", () => {
   });
 
   it("documents project_root as project selection in every MCP tool schema", async () => {
-    const projectRoot = await createTempRoot("aictx-mcp-schema-");
+    const projectRoot = await createTempRoot("memory-mcp-schema-");
     const started = await startMcpClient(projectRoot);
 
     try {
@@ -185,7 +185,7 @@ describe("aictx MCP server bootstrap", () => {
       for (const description of descriptions) {
         expect(description).toContain("select");
         expect(description).toContain("not arbitrary filesystem access");
-        expect(description).toContain(".aictx");
+        expect(description).toContain(".memory");
       }
     } finally {
       await started.close();
@@ -201,19 +201,19 @@ describe("aictx MCP server bootstrap", () => {
 
     expect(docs).toContain("Configure your MCP client to launch the");
     expect(docs).toContain("global binary");
-    expect(docs).toContain("aictx-mcp");
-    expect(docs).toContain("pnpm exec aictx-mcp");
-    expect(docs).toContain("npm exec aictx-mcp");
-    expect(docs).toContain("npx --package @aictx/memory -- aictx-mcp");
-    expect(docs).toContain("./node_modules/.bin/aictx-mcp");
+    expect(docs).toContain("memory-mcp");
+    expect(docs).toContain("pnpm exec memory-mcp");
+    expect(docs).toContain("npm exec memory-mcp");
+    expect(docs).toContain("npx --package @aictx/memory -- memory-mcp");
+    expect(docs).toContain("./node_modules/.bin/memory-mcp");
     expect(docs).toContain("Startup diagnostics and failures are written");
     expect(docs).toContain("not arbitrary filesystem access");
   });
 
   it("serves multiple isolated projects from one globally launched process", async () => {
-    const serverRoot = await createTempRoot("aictx-mcp-global-");
-    const alphaRoot = await createInitializedProject("aictx-mcp-alpha-");
-    const betaRoot = await createInitializedProject("aictx-mcp-beta-");
+    const serverRoot = await createTempRoot("memory-mcp-global-");
+    const alphaRoot = await createInitializedProject("memory-mcp-alpha-");
+    const betaRoot = await createInitializedProject("memory-mcp-beta-");
     const started = await startMcpClient(serverRoot);
 
     try {
@@ -304,7 +304,7 @@ async function startMcpClient(cwd: string): Promise<StartedMcpClient> {
   }
 
   const client = new Client({
-    name: "aictx-mcp-test-client",
+    name: "memory-mcp-test-client",
     version: "0.0.0"
   });
 
@@ -351,7 +351,7 @@ function createProjectNotePatch(title: string): Record<string, unknown> {
         op: "create_object",
         type: "note",
         title,
-        body: `${title} belongs only to its initialized Aictx project.`,
+        body: `${title} belongs only to its initialized Memory project.`,
         tags: ["mcp", "global-server"]
       }
     ]

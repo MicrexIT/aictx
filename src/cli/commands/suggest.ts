@@ -34,7 +34,7 @@ export function registerSuggestCommand(
 ): void {
   program
     .command("suggest")
-    .description("Build a read-only Aictx memory suggestion packet.")
+    .description("Build a read-only Memory suggestion packet.")
     .option("--from-diff", "Build a packet from current Git project changes.")
     .option("--bootstrap", "Build a first-run project memory packet.")
     .option("--after-task <task>", "Build an end-of-task save/no-save decision packet.")
@@ -80,7 +80,7 @@ function renderSuggestData(data: SuggestMemoryData): string {
   const packet = isBootstrapPatchProposal(data) ? data.packet : data;
 
   return [
-    `Aictx suggest packet (${packet.mode}):`,
+    `Memory suggest packet (${packet.mode}):`,
     ...renderRecommendedActionSections(packet.recommended_actions),
     renderList("Changed files", packet.changed_files),
     renderList("Related memory", packet.related_memory_ids),
@@ -200,7 +200,7 @@ function renderList(label: string, values: readonly string[]): string {
 function throwCommandFailed(exitCode: CliExitCode): never {
   throw new CommanderError(
     exitCode,
-    "aictx.command.failed",
-    "Aictx command failed."
+    "memory.command.failed",
+    "Memory command failed."
   );
 }

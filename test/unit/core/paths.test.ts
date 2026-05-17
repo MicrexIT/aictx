@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { access, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -25,13 +25,13 @@ afterEach(async () => {
 
 describe("project path resolution", () => {
   it("prefers a Git worktree root over nearby non-Git config files", async () => {
-    const sandbox = await createTempRoot("aictx-paths-git-prefers-");
+    const sandbox = await createTempRoot("memory-paths-git-prefers-");
     const gitRoot = join(sandbox, "repo");
     const cwd = join(gitRoot, "packages", "app");
     await mkdir(cwd, { recursive: true });
-    await mkdir(join(cwd, ".aictx"), { recursive: true });
-    await writeFile(join(cwd, ".aictx", "config.json"), "{}\n");
-    await mkdir(join(gitRoot, ".aictx"), { recursive: true });
+    await mkdir(join(cwd, ".memory"), { recursive: true });
+    await writeFile(join(cwd, ".memory", "config.json"), "{}\n");
+    await mkdir(join(gitRoot, ".memory"), { recursive: true });
 
     const { calls, runner } = createRunner({
       "rev-parse --show-toplevel": result(["rev-parse", "--show-toplevel"], {
@@ -49,7 +49,7 @@ describe("project path resolution", () => {
       ok: true,
       data: {
         projectRoot: gitRoot,
-        aictxRoot: join(gitRoot, ".aictx"),
+        memoryRoot: join(gitRoot, ".memory"),
         git: {
           available: true,
           root: gitRoot
@@ -60,8 +60,8 @@ describe("project path resolution", () => {
     expect(calls.map((call) => call.args)).toEqual([["rev-parse", "--show-toplevel"]]);
   });
 
-  it("resolves non-Git init to cwd without requiring .aictx", async () => {
-    const cwd = await createTempRoot("aictx-paths-init-");
+  it("resolves non-Git init to cwd without requiring .memory", async () => {
+    const cwd = await createTempRoot("memory-paths-init-");
     const { runner } = createRunner({
       "rev-parse --show-toplevel": result(["rev-parse", "--show-toplevel"], {
         exitCode: 128,
@@ -79,7 +79,7 @@ describe("project path resolution", () => {
       ok: true,
       data: {
         projectRoot: cwd,
-        aictxRoot: join(cwd, ".aictx"),
+        memoryRoot: join(cwd, ".memory"),
         git: {
           available: false,
           root: null
@@ -89,13 +89,13 @@ describe("project path resolution", () => {
     });
   });
 
-  it("walks upward outside Git to the nearest .aictx/config.json", async () => {
-    const sandbox = await createTempRoot("aictx-paths-walk-");
+  it("walks upward outside Git to the nearest .memory/config.json", async () => {
+    const sandbox = await createTempRoot("memory-paths-walk-");
     const projectRoot = join(sandbox, "project");
     const nested = join(projectRoot, "src", "feature");
-    await mkdir(join(projectRoot, ".aictx"), { recursive: true });
+    await mkdir(join(projectRoot, ".memory"), { recursive: true });
     await mkdir(nested, { recursive: true });
-    await writeFile(join(projectRoot, ".aictx", "config.json"), "{}\n");
+    await writeFile(join(projectRoot, ".memory", "config.json"), "{}\n");
 
     const { runner } = createRunner({
       "rev-parse --show-toplevel": result(["rev-parse", "--show-toplevel"], {
@@ -114,7 +114,7 @@ describe("project path resolution", () => {
       ok: true,
       data: {
         projectRoot,
-        aictxRoot: join(projectRoot, ".aictx"),
+        memoryRoot: join(projectRoot, ".memory"),
         git: {
           available: false,
           root: null
@@ -124,8 +124,95 @@ describe("project path resolution", () => {
     });
   });
 
-  it("returns not initialized for non-init resolution when .aictx is missing", async () => {
-    const cwd = await createTempRoot("aictx-paths-missing-");
+  it("migrates legacy .aictx storage to .memory while walking outside Git", async () => {
+    const sandbox = await createTempRoot("memory-paths-legacy-");
+    const projectRoot = join(sandbox, "project");
+    const nested = join(projectRoot, "src", "feature");
+    await mkdir(join(projectRoot, ".aictx"), { recursive: true });
+    await mkdir(nested, { recursive: true });
+    await writeFile(join(projectRoot, ".aictx", "config.json"), "{}\n");
+    await writeFile(
+      join(projectRoot, ".gitignore"),
+      [".aictx/index/", ".aictx/context/", ".aictx/exports/", ".aictx/recovery/", ".aictx/.backup/", ".aictx/.lock", ""].join("\n")
+    );
+
+    const { runner } = createRunner({
+      "rev-parse --show-toplevel": result(["rev-parse", "--show-toplevel"], {
+        exitCode: 128,
+        stderr: "fatal: not a git repository"
+      })
+    });
+
+    const resolved = await resolveProjectPaths({
+      cwd: nested,
+      mode: "require-initialized",
+      runner
+    });
+
+    expect(resolved.ok).toBe(true);
+    if (resolved.ok) {
+      expect(resolved.data.memoryRoot).toBe(join(projectRoot, ".memory"));
+    }
+    await expect(access(join(projectRoot, ".memory", "config.json"))).resolves.toBeUndefined();
+    await expect(access(join(projectRoot, ".aictx"))).rejects.toMatchObject({ code: "ENOENT" });
+    await expect(readFile(join(projectRoot, ".gitignore"), "utf8")).resolves.toBe(
+      [".memory/index/", ".memory/context/", ".memory/exports/", ".memory/recovery/", ".memory/.backup/", ".memory/.lock", ""].join("\n")
+    );
+  });
+
+  it("refuses to resolve when legacy and current storage both exist", async () => {
+    const projectRoot = await createTempRoot("memory-paths-conflict-");
+    await mkdir(join(projectRoot, ".memory"), { recursive: true });
+    await mkdir(join(projectRoot, ".aictx"), { recursive: true });
+    await writeFile(join(projectRoot, ".memory", "config.json"), "{}\n");
+    await writeFile(join(projectRoot, ".aictx", "config.json"), "{}\n");
+    const { runner } = createRunner({
+      "rev-parse --show-toplevel": result(["rev-parse", "--show-toplevel"], {
+        exitCode: 128,
+        stderr: "fatal: not a git repository"
+      })
+    });
+
+    const resolved = await resolveProjectPaths({
+      cwd: projectRoot,
+      mode: "require-initialized",
+      runner
+    });
+
+    expect(resolved.ok).toBe(false);
+    if (!resolved.ok) {
+      expect(resolved.error.code).toBe("MemoryValidationFailed");
+      expect(resolved.error.message).toContain("Both .aictx and .memory storage exist");
+    }
+  });
+
+  it("refuses to migrate locked legacy storage", async () => {
+    const projectRoot = await createTempRoot("memory-paths-locked-");
+    await mkdir(join(projectRoot, ".aictx"), { recursive: true });
+    await writeFile(join(projectRoot, ".aictx", "config.json"), "{}\n");
+    await writeFile(join(projectRoot, ".aictx", ".lock"), "");
+    const { runner } = createRunner({
+      "rev-parse --show-toplevel": result(["rev-parse", "--show-toplevel"], {
+        exitCode: 128,
+        stderr: "fatal: not a git repository"
+      })
+    });
+
+    const resolved = await resolveProjectPaths({
+      cwd: projectRoot,
+      mode: "require-initialized",
+      runner
+    });
+
+    expect(resolved.ok).toBe(false);
+    if (!resolved.ok) {
+      expect(resolved.error.code).toBe("MemoryLockBusy");
+      expect(resolved.error.message).toContain("Legacy .aictx storage appears locked");
+    }
+  });
+
+  it("returns not initialized for non-init resolution when .memory is missing", async () => {
+    const cwd = await createTempRoot("memory-paths-missing-");
     const { runner } = createRunner({
       "rev-parse --show-toplevel": result(["rev-parse", "--show-toplevel"], {
         exitCode: 128,
@@ -141,12 +228,12 @@ describe("project path resolution", () => {
 
     expect(resolved.ok).toBe(false);
     if (!resolved.ok) {
-      expect(resolved.error.code).toBe("AICtxNotInitialized");
+      expect(resolved.error.code).toBe("MemoryNotInitialized");
     }
   });
 
   it("propagates Git operation failures from the Git wrapper", async () => {
-    const cwd = await createTempRoot("aictx-paths-git-failure-");
+    const cwd = await createTempRoot("memory-paths-git-failure-");
 
     const resolved = await resolveProjectPaths({
       cwd,
@@ -158,7 +245,7 @@ describe("project path resolution", () => {
 
     expect(resolved.ok).toBe(false);
     if (!resolved.ok) {
-      expect(resolved.error.code).toBe("AICtxGitOperationFailed");
+      expect(resolved.error.code).toBe("MemoryGitOperationFailed");
     }
   });
 });

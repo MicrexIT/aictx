@@ -1,0 +1,5 @@
+- main "Memory Viewer" [ref=e3]:
+  - generic [ref=e4]:
+    - paragraph [ref=e5]: Memory local viewer
+    - heading "Memory Viewer" [level=1] [ref=e6]
+    - paragraph [ref=e7]: Loading memory from the local viewer API.

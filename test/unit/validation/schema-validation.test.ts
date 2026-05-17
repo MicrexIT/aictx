@@ -205,7 +205,7 @@ describe("project schema loading", () => {
     }
   });
 
-  it("reports missing schema files through AICtxSchemaValidationFailed", async () => {
+  it("reports missing schema files through MemorySchemaValidationFailed", async () => {
     const projectRoot = await createProjectWithSchemas();
     await rm(schemaPath(projectRoot, "patch.schema.json"));
 
@@ -213,12 +213,12 @@ describe("project schema loading", () => {
 
     expect(loaded.ok).toBe(false);
     if (!loaded.ok) {
-      expect(loaded.error.code).toBe("AICtxSchemaValidationFailed");
+      expect(loaded.error.code).toBe("MemorySchemaValidationFailed");
       expect(JSON.stringify(loaded.error.details)).toContain("SchemaFileMissing");
     }
   });
 
-  it("reports malformed schema JSON through AICtxSchemaValidationFailed", async () => {
+  it("reports malformed schema JSON through MemorySchemaValidationFailed", async () => {
     const projectRoot = await createProjectWithSchemas();
     await writeFile(schemaPath(projectRoot, "object.schema.json"), "{bad json", "utf8");
 
@@ -226,7 +226,7 @@ describe("project schema loading", () => {
 
     expect(loaded.ok).toBe(false);
     if (!loaded.ok) {
-      expect(loaded.error.code).toBe("AICtxSchemaValidationFailed");
+      expect(loaded.error.code).toBe("MemorySchemaValidationFailed");
       expect(JSON.stringify(loaded.error.details)).toContain("SchemaInvalidJson");
     }
   });
@@ -243,7 +243,7 @@ describe("project schema loading", () => {
 
     expect(loaded.ok).toBe(false);
     if (!loaded.ok) {
-      expect(loaded.error.code).toBe("AICtxSchemaValidationFailed");
+      expect(loaded.error.code).toBe("MemorySchemaValidationFailed");
       expect(JSON.stringify(loaded.error.details)).toContain("SchemaFileUnreadable");
     }
   });
@@ -264,7 +264,7 @@ describe("project schema loading", () => {
 
     expect(compiled.ok).toBe(false);
     if (!compiled.ok) {
-      expect(compiled.error.code).toBe("AICtxSchemaValidationFailed");
+      expect(compiled.error.code).toBe("MemorySchemaValidationFailed");
       expect(JSON.stringify(compiled.error.details)).toContain("SchemaCompileFailed");
     }
   });
@@ -275,10 +275,10 @@ describe("schema validators", () => {
     const validators = await compileFixtureProject();
 
     expect(validateConfig(validators, validConfig).valid).toBe(true);
-    expect(validateObject(validators, validObject, ".aictx/memory/decisions/billing-retries.json").valid).toBe(true);
-    expect(validateRelation(validators, validRelation, ".aictx/relations/billing-retries-requires-idempotency.json").valid).toBe(true);
-    expect(validateEvent(validators, validMemoryEvent, ".aictx/events.jsonl", 1).valid).toBe(true);
-    expect(validateEvent(validators, validRelationEvent, ".aictx/events.jsonl", 2).valid).toBe(true);
+    expect(validateObject(validators, validObject, ".memory/memory/decisions/billing-retries.json").valid).toBe(true);
+    expect(validateRelation(validators, validRelation, ".memory/relations/billing-retries-requires-idempotency.json").valid).toBe(true);
+    expect(validateEvent(validators, validMemoryEvent, ".memory/events.jsonl", 1).valid).toBe(true);
+    expect(validateEvent(validators, validRelationEvent, ".memory/events.jsonl", 2).valid).toBe(true);
     expect(validatePatch(validators, minimalPatch).valid).toBe(true);
     expect(validatePatch(validators, createObjectPatch).valid).toBe(true);
   });
@@ -299,7 +299,7 @@ describe("schema validators", () => {
           },
           evidence: [{ kind: "task", id: "Tried worker-local cache" }]
         },
-        ".aictx/memory/decisions/billing-retries.json"
+        ".memory/memory/decisions/billing-retries.json"
       ).valid
     ).toBe(true);
   });
@@ -311,14 +311,14 @@ describe("schema validators", () => {
       validateRelation(
         validators,
         { ...validRelation, predicate: "supports" },
-        ".aictx/relations/supports.json"
+        ".memory/relations/supports.json"
       ).valid
     ).toBe(true);
     expect(
       validateRelation(
         validators,
         { ...validRelation, predicate: "challenges" },
-        ".aictx/relations/challenges.json"
+        ".memory/relations/challenges.json"
       ).valid
     ).toBe(true);
     expect(
@@ -332,7 +332,7 @@ describe("schema validators", () => {
               digest: "not-a-digest"
             }
           },
-          ".aictx/memory/decisions/billing-retries.json"
+          ".memory/memory/decisions/billing-retries.json"
         )
       )
     ).toContain("SchemaRequired");
@@ -351,7 +351,7 @@ describe("schema validators", () => {
               category: "random-category"
             }
           },
-          ".aictx/memory/decisions/billing-retries.json"
+          ".memory/memory/decisions/billing-retries.json"
         )
       )
     ).toContain("SchemaEnum");
@@ -412,8 +412,8 @@ describe("schema validators", () => {
       ]
     };
 
-    expect(validateObject(validators, gotchaObject, ".aictx/memory/gotchas/webhook-duplicates.json").valid).toBe(true);
-    expect(validateObject(validators, workflowObject, ".aictx/memory/workflows/release-checklist.json").valid).toBe(true);
+    expect(validateObject(validators, gotchaObject, ".memory/memory/gotchas/webhook-duplicates.json").valid).toBe(true);
+    expect(validateObject(validators, workflowObject, ".memory/memory/workflows/release-checklist.json").valid).toBe(true);
     expect(validatePatch(validators, patch).valid).toBe(true);
   });
 
@@ -458,7 +458,7 @@ describe("schema validators", () => {
       validateObject(
         validators,
         productFeatureObject,
-        ".aictx/memory/concepts/customer-dashboard.json"
+        ".memory/memory/concepts/customer-dashboard.json"
       ).valid
     ).toBe(true);
     expect(validatePatch(validators, patch).valid).toBe(true);
@@ -488,7 +488,7 @@ describe("schema validators", () => {
               category
             }
           },
-          `.aictx/memory/questions/${category}.json`
+          `.memory/memory/questions/${category}.json`
         ).valid
       ).toBe(true);
     }
@@ -524,7 +524,7 @@ describe("schema validators", () => {
               type: invalidType,
               body_path: `memory/notes/${invalidType}.md`
             },
-            `.aictx/memory/notes/${invalidType}.json`
+            `.memory/memory/notes/${invalidType}.json`
           )
         )
       ).toContain("SchemaEnum");
@@ -556,7 +556,7 @@ describe("schema validators", () => {
         validateObject(
           validators,
           { ...validObject, status: "closed" },
-          ".aictx/memory/decisions/billing-retries.json"
+          ".memory/memory/decisions/billing-retries.json"
         )
       )
     ).toContain("SchemaEnum");
@@ -565,7 +565,7 @@ describe("schema validators", () => {
         validateObject(
           validators,
           { ...validObject, extra: true },
-          ".aictx/memory/decisions/billing-retries.json"
+          ".memory/memory/decisions/billing-retries.json"
         )
       )
     ).toContain("SchemaAdditionalProperty");
@@ -574,12 +574,12 @@ describe("schema validators", () => {
         validateRelation(
           validators,
           { ...validRelation, predicate: "unknown" },
-          ".aictx/relations/billing-retries-requires-idempotency.json"
+          ".memory/relations/billing-retries-requires-idempotency.json"
         )
       )
     ).toContain("SchemaEnum");
     expect(
-      issueCodes(validateEvent(validators, withoutProperty(validMemoryEvent, "id"), ".aictx/events.jsonl", 7))
+      issueCodes(validateEvent(validators, withoutProperty(validMemoryEvent, "id"), ".memory/events.jsonl", 7))
     ).toContain("SchemaRequired");
     expect(issueCodes(validatePatch(validators, { source: { kind: "agent" }, changes: [] }))).toContain(
       "SchemaMinItems"
@@ -600,7 +600,7 @@ describe("schema validators", () => {
     const result = validateEvent(
       validators,
       withoutProperty(validMemoryEvent, "id"),
-      ".aictx/events.jsonl",
+      ".memory/events.jsonl",
       12
     );
 
@@ -608,19 +608,19 @@ describe("schema validators", () => {
     expect(result.errors).toContainEqual(
       expect.objectContaining({
         code: "SchemaRequired",
-        path: ".aictx/events.jsonl:12",
+        path: ".memory/events.jsonl:12",
         field: "/id"
       })
     );
   });
 
-  it("wraps validation issues in AICtxSchemaValidationFailed errors", async () => {
+  it("wraps validation issues in MemorySchemaValidationFailed errors", async () => {
     const validators = await compileFixtureProject();
     const result = validateConfig(validators, withoutProperty(validConfig, "git"));
 
     const error = schemaValidationError(result.errors);
 
-    expect(error.code).toBe("AICtxSchemaValidationFailed");
+    expect(error.code).toBe("MemorySchemaValidationFailed");
     expect(JSON.stringify(error.details)).toContain("SchemaRequired");
   });
 
@@ -636,8 +636,8 @@ describe("schema validators", () => {
     }
 
     validateConfig(compiled.data, validConfig);
-    validateObject(compiled.data, validObject, ".aictx/memory/decisions/billing-retries.json");
-    validateRelation(compiled.data, validRelation, ".aictx/relations/billing-retries-requires-idempotency.json");
+    validateObject(compiled.data, validObject, ".memory/memory/decisions/billing-retries.json");
+    validateRelation(compiled.data, validRelation, ".memory/relations/billing-retries-requires-idempotency.json");
     validateEvent(compiled.data, validMemoryEvent);
     validatePatch(compiled.data, minimalPatch);
 
@@ -651,7 +651,7 @@ describe("schema validators", () => {
 
 async function createProjectWithSchemas(): Promise<string> {
   const projectRoot = await mkdirTempRoot();
-  await mkdir(join(projectRoot, ".aictx", "schema"), { recursive: true });
+  await mkdir(join(projectRoot, ".memory", "schema"), { recursive: true });
 
   for (const file of Object.values(SCHEMA_FILES)) {
     await copyFile(join(root, "src", "schemas", file), schemaPath(projectRoot, file));
@@ -672,13 +672,13 @@ async function compileFixtureProject(): Promise<CompiledSchemaValidators> {
 }
 
 async function mkdirTempRoot(): Promise<string> {
-  const projectRoot = await mkdtemp(join(tmpdir(), "aictx-validation-"));
+  const projectRoot = await mkdtemp(join(tmpdir(), "memory-validation-"));
   tempRoots.push(projectRoot);
   return projectRoot;
 }
 
 function schemaPath(projectRoot: string, file: string): string {
-  return join(projectRoot, ".aictx", "schema", file);
+  return join(projectRoot, ".memory", "schema", file);
 }
 
 async function readSchemaSnapshots(projectRoot: string): Promise<Record<string, string>> {

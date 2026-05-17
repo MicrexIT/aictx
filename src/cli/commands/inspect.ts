@@ -23,7 +23,7 @@ export function registerInspectCommand(
 ): void {
   program
     .command("inspect")
-    .description("Show one Aictx memory object and its direct relations.")
+    .description("Show one Memory object and its direct relations.")
     .argument("<id>", "Memory object ID to inspect.")
     .action(async (id: string, _commandOptions: unknown, command: Command) => {
       const result = await dataAccessService.inspect(inspectMemoryOptions(options, id));
@@ -99,7 +99,7 @@ function renderRelation(relation: MemoryRelationSummary): string {
 function throwCommandFailed(exitCode: CliExitCode): never {
   throw new CommanderError(
     exitCode,
-    "aictx.command.failed",
-    "Aictx command failed."
+    "memory.command.failed",
+    "Memory command failed."
   );
 }

@@ -8,11 +8,13 @@ are called out in the release notes.
 ## Unreleased
 
 - Added storage v4 source `origin` metadata, `supports`/`challenges` relation
-  predicates, and the CLI-only `aictx wiki` workflow for source-backed ingest,
+  predicates, and the CLI-only `memory wiki` workflow for source-backed ingest,
   filing, linting, and event logs.
 - Added open source community health files and issue/PR templates.
 - Added CI, CodeQL, OpenSSF Scorecard, Dependabot, and npm provenance release
   workflow configuration.
+- Added Homebrew formula publishing through the release workflow and documented
+  `brew install aictx/tap/memory`.
 - Narrowed npm package files so bundled docs no longer include Astro build
   output or tool caches.
 - Added package metadata for repository, homepage, issues, and npm discovery.

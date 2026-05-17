@@ -1,4 +1,4 @@
-import { aictxError } from "../core/errors.js";
+import { memoryError } from "../core/errors.js";
 import { err, ok, type Result } from "../core/result.js";
 import type { SqliteDatabase } from "./sqlite-driver.js";
 
@@ -39,8 +39,8 @@ export function migrateIndexDatabase(db: SqliteDatabase): Result<void> {
   } catch (error) {
     if (error instanceof UnsupportedSchemaVersionError) {
       return err(
-        aictxError(
-          "AICtxIndexUnavailable",
+        memoryError(
+          "MemoryIndexUnavailable",
           "SQLite index schema version is not supported.",
           {
             expected: CURRENT_INDEX_SCHEMA_VERSION,
@@ -51,7 +51,7 @@ export function migrateIndexDatabase(db: SqliteDatabase): Result<void> {
     }
 
     return err(
-      aictxError("AICtxIndexUnavailable", "SQLite index migration failed.", {
+      memoryError("MemoryIndexUnavailable", "SQLite index migration failed.", {
         message: messageFromUnknown(error)
       })
     );
@@ -63,7 +63,7 @@ export function getIndexSchemaVersion(db: SqliteDatabase): Result<number | null>
     return ok(getIndexSchemaVersionUnchecked(db));
   } catch (error) {
     return err(
-      aictxError("AICtxIndexUnavailable", "SQLite index schema version could not be read.", {
+      memoryError("MemoryIndexUnavailable", "SQLite index schema version could not be read.", {
         message: messageFromUnknown(error)
       })
     );
