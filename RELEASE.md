@@ -39,14 +39,130 @@ raw viewer source, docs build output, and tool caches.
 
 ## Publishing
 
-Releases should be published through the GitHub Actions release workflow with
-npm provenance. The workflow checks that the pushed tag matches
-`package.json#version`, publishes npm, then renders `Formula/memory.rb` from the
-published npm tarball and pushes it to `aictx/homebrew-tap`.
+There are two GitHub repos involved:
 
-The `npm` environment must expose `HOMEBREW_TAP_TOKEN` with write access to the
-tap repository before tagging a release. The workflow verifies the token and tap
-checkout before publishing npm, so a release does not silently skip Homebrew.
+- `aictx/memory`: this normal source repo. Run normal release commands here.
+- `aictx/homebrew-tap`: the Homebrew package index repo. Create it once; after
+  that, the release workflow updates it automatically.
+
+The publish trigger is still one tag push from `aictx/memory`:
+
+```text
+push vX.Y.Z tag from aictx/memory
+  -> GitHub Actions publishes npm
+  -> GitHub Actions writes Formula/memory.rb to aictx/homebrew-tap
+```
+
+Do not run normal releases from the tap repo.
+
+### One-time Homebrew setup
+
+Homebrew needs a tap repo because `brew install aictx/tap/memory` resolves to:
+
+```text
+github.com/aictx/homebrew-tap
+Formula/memory.rb
+```
+
+Create `github.com/aictx/homebrew-tap` once in the GitHub web UI as an empty
+repo. Then create and push the tap scaffold:
+
+```bash
+brew tap-new aictx/tap
+cd "$(brew --repository aictx/tap)"
+git remote add origin git@github.com:aictx/homebrew-tap.git
+git branch -M main
+git push -u origin main
+```
+
+Create the Homebrew tap token:
+
+1. Open GitHub user settings.
+2. Go to Developer settings -> Personal access tokens -> Fine-grained tokens.
+3. Generate a new token named `HOMEBREW_TAP_TOKEN`.
+4. Resource owner: `aictx`.
+5. Repository access: only `aictx/homebrew-tap`.
+6. Repository permissions: Contents -> Read and write.
+7. Generate the token and copy it.
+
+Save that token in the `aictx/memory` repo, not the tap repo:
+
+1. Open `github.com/aictx/memory`.
+2. Go to Settings -> Environments.
+3. Create an environment named `npm` if it does not already exist.
+4. Open the `npm` environment.
+5. Under Environment secrets, add `HOMEBREW_TAP_TOKEN`.
+
+Use an environment secret because the release workflow runs with
+`environment: npm`.
+
+This token lets the `aictx/memory` release workflow commit the generated formula
+to `aictx/homebrew-tap`. It is separate from npm provenance.
+
+### Normal release
+
+Run this from the `aictx/memory` repo. This is the normal source repo, not
+`aictx/homebrew-tap`.
+
+If your prompt is inside `/opt/homebrew/Library/Taps/aictx/homebrew-tap`, stop.
+That is the tap checkout, not the source repo. Go back to the source repo first:
+
+```bash
+cd /Users/micrex/Dev/remics/projects/aictx
+git remote -v
+```
+
+`git remote -v` should show `aictx/memory.git`, not `aictx/homebrew-tap.git`.
+
+The release has two separate steps:
+
+1. Commit the version bump to `main`.
+2. Push the matching `vX.Y.Z` tag.
+
+The normal branch push stores the release commit. The tag push is what publishes.
+The workflow is intentionally tag-triggered so an ordinary commit to `main`
+cannot accidentally publish a package.
+
+```bash
+pnpm version:patch
+git add .
+git commit -m "Release v$(node -p 'require(\"./package.json\").version')"
+git push origin main
+git tag "v$(node -p 'require(\"./package.json\").version')"
+git push origin "v$(node -p 'require(\"./package.json\").version')"
+```
+
+`pnpm version:patch` runs this package script:
+
+```bash
+npm version patch --no-git-tag-version && pnpm build && pnpm build:docs
+```
+
+That command only updates local release files. It does not publish. The
+`--no-git-tag-version` flag is deliberate: it prevents `npm version` from making
+its own commit and tag so the release commit stays explicit and reviewable.
+
+The release workflow then checks that the pushed tag equals `package.json`
+version. If `package.json` is `0.1.42`, the tag must be `v0.1.42`.
+
+One tag push publishes both install channels:
+
+```text
+vX.Y.Z tag pushed from aictx/memory
+  -> publish @aictx/memory to npm
+  -> render Homebrew formula from that npm tarball
+  -> push Formula/memory.rb to aictx/homebrew-tap
+```
+
+For a pre-1.0 minor release, use this instead of `pnpm version:patch`:
+
+```bash
+npm version minor --no-git-tag-version
+pnpm build
+pnpm build:docs
+```
+
+Then commit, push `main`, tag, and push the tag the same way.
 
 Manual publishing should be reserved for recovery situations and documented in
 the release notes.
