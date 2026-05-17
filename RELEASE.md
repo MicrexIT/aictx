@@ -55,6 +55,25 @@ push vX.Y.Z tag from aictx/memory
 
 Do not run normal releases from the tap repo.
 
+### One-time npm setup
+
+The release workflow publishes npm through npm Trusted Publishing, not an
+`NPM_TOKEN` secret.
+
+Configure this once on npmjs.com:
+
+1. Open the npm package settings for `@aictx/memory`.
+2. Find Trusted Publishing / Trusted Publisher.
+3. Add a GitHub Actions trusted publisher:
+   - Organization or user: `aictx`
+   - Repository: `memory`
+   - Workflow filename: `release.yml`
+   - Environment name: `npm`
+
+This must match `.github/workflows/release.yml`, which runs with
+`environment: npm`. If this is missing, the workflow fails at
+`Publish with provenance` and Homebrew is skipped.
+
 ### One-time Homebrew setup
 
 Homebrew needs a tap repo because `brew install aictx/tap/memory` resolves to:
