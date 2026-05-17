@@ -85,15 +85,16 @@ jobs:
         env:
           PACKAGE_VERSION: ${{ steps.package.outputs.version }}
         run: |
-          tarball_url="https://registry.npmjs.org/@aictx/memory/-/memory-${PACKAGE_VERSION}.tgz"
+          for attempt in {1..20}; do
+            tarball_url="$(npm view "@aictx/memory@${PACKAGE_VERSION}" dist.tarball 2>/dev/null || true)"
 
-          for attempt in {1..12}; do
-            if curl -fsSL "$tarball_url" -o package.tgz; then
+            if [ -n "$tarball_url" ] && curl -fsSL "$tarball_url" -o package.tgz; then
+              echo "Resolved npm tarball: $tarball_url"
               break
             fi
 
-            if [ "$attempt" -eq 12 ]; then
-              echo "::error::npm tarball did not become available: $tarball_url"
+            if [ "$attempt" -eq 20 ]; then
+              echo "::error::npm tarball did not become available for @aictx/memory@${PACKAGE_VERSION}"
               exit 1
             fi
 

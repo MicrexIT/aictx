@@ -21,6 +21,9 @@ Homebrew tap checkout.
 Do not run `npm publish` manually. The tag workflow publishes npm and then
 updates Homebrew.
 
+`pnpm version:patch` only edits the version in the source repo. It does not
+publish npm, update the tap, or create the Git tag.
+
 ```bash
 pnpm version:patch
 VERSION="$(node -p 'require("./package.json").version')"
