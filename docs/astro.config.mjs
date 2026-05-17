@@ -10,6 +10,17 @@ export default defineConfig({
       description:
         "Local-first persistent project memory for AI coding agents and assistants.",
       customCss: ["./src/styles/memory.css"],
+      head: [
+        {
+          tag: "link",
+          attrs: {
+            rel: "icon",
+            href: "/favicon.ico",
+            sizes: "any",
+            type: "image/x-icon"
+          }
+        }
+      ],
       editLink: {
         baseUrl: "https://github.com/aictx/memory/edit/main/docs/"
       },

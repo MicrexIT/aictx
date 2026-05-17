@@ -197,6 +197,9 @@ describe("site landing page", () => {
     await expect(stat(resolve(repoRoot, "site/public/favicon.ico"))).resolves.toMatchObject({
       size: expect.any(Number)
     });
+    await expect(stat(resolve(repoRoot, "docs/public/favicon.ico"))).resolves.toMatchObject({
+      size: expect.any(Number)
+    });
   });
 
   it("publishes parseable structured data for the product entity", () => {

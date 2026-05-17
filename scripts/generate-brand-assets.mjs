@@ -16,7 +16,7 @@ const faviconTargets = [
   "viewer/public/favicon.svg",
 ];
 
-const icoTargets = ["site/public/favicon.ico", "viewer/public/favicon.ico"];
+const icoTargets = ["site/public/favicon.ico", "docs/public/favicon.ico", "viewer/public/favicon.ico"];
 
 for (const target of faviconTargets) {
   await writeProjectFile(target, faviconSvg);
