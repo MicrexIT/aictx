@@ -5,7 +5,8 @@ import { chromium } from "playwright";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, "..");
-const output = path.join(root, "site/public/assets/readme-value-header.png");
+const output = path.join(root, ".github/social-preview.png");
+const hdOutput = path.join(root, ".github/social-preview-hd.png");
 const paintingPath = path.join(root, "site/public/assets/monet-water-lilies.jpg");
 const logoPath = path.join(root, "site/public/assets/logo/memory-constellation-logo.svg");
 const painting = `data:image/jpeg;base64,${(await readFile(paintingPath)).toString("base64")}`;
@@ -297,16 +298,28 @@ await mkdir(path.dirname(output), { recursive: true });
 
 const browser = await chromium.launch();
 try {
-  const page = await browser.newPage({
-    viewport: { width, height },
-    deviceScaleFactor: 2,
-  });
-  await page.setContent(html, { waitUntil: "load" });
-  await page.screenshot({ path: output, fullPage: false });
-  await page.close();
+  for (const target of [
+    { path: output, scale: 1 },
+    { path: hdOutput, scale: 2 },
+  ]) {
+    const page = await browser.newPage({
+      viewport: { width, height },
+      deviceScaleFactor: target.scale,
+    });
+    await page.setContent(html, { waitUntil: "load" });
+    await page.screenshot({ path: target.path, fullPage: false });
+    await page.close();
+  }
 } finally {
   await browser.close();
 }
 
-const { size } = await stat(output);
-console.log(`Wrote ${path.relative(root, output)} (${width * 2}x${height * 2}, ${Math.round(size / 1024)} KB)`);
+for (const target of [
+  { path: output, width, height },
+  { path: hdOutput, width: width * 2, height: height * 2 },
+]) {
+  const { size } = await stat(target.path);
+  console.log(
+    `Wrote ${path.relative(root, target.path)} (${target.width}x${target.height}, ${Math.round(size / 1024)} KB)`,
+  );
+}
