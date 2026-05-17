@@ -4,6 +4,8 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
+import { runSubprocess } from "../../../src/core/subprocess.js";
+
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
 
 interface PackageJson {
@@ -32,5 +34,31 @@ describe("repo maintenance scripts", () => {
       expect(content).toMatch(/^npm install -g @aictx\/memory$/m);
       expect(content).not.toMatch(/^npm install -g @aictx\/memory@/m);
     }
+  });
+
+  it("renders the Homebrew formula from package metadata", async () => {
+    const sha256 = "a".repeat(64);
+    const result = await runSubprocess(
+      "node",
+      ["scripts/render-homebrew-formula.mjs", "--version", "1.2.3", "--sha256", sha256],
+      { cwd: repoRoot }
+    );
+
+    expect(result.ok).toBe(true);
+
+    if (!result.ok) {
+      return;
+    }
+
+    expect(result.data.exitCode).toBe(0);
+    expect(result.data.stderr).toBe("");
+    expect(result.data.stdout).toContain("class Memory < Formula");
+    expect(result.data.stdout).toContain("url \"https://registry.npmjs.org/@aictx/memory/-/memory-1.2.3.tgz\"");
+    expect(result.data.stdout).toContain(`sha256 "${sha256}"`);
+    expect(result.data.stdout).toContain("depends_on \"node\"");
+    expect(result.data.stdout).toContain(
+      "(bin/\"memory\").write_env_script libexec/\"bin/memory\", PATH: \"#{node_path}:$PATH\""
+    );
+    expect(result.data.stdout).toContain("assert_match version.to_s");
   });
 });

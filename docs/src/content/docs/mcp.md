@@ -17,7 +17,11 @@ session. Configure the client to launch `memory-mcp`, then start a new session.
 
 ## Install
 
-A global install gives the simplest setup:
+A Homebrew or global npm install gives the simplest setup:
+
+```bash
+brew install aictx/tap/memory
+```
 
 ```bash
 npm install -g @aictx/memory

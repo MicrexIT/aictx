@@ -107,11 +107,18 @@ knowledge that should survive future sessions, branches, and reviews.
 
 ## Get Started Quickly
 
-Memory requires Node.js `>=22`. Core commands run locally; no cloud account,
-model API, embeddings, or hosted sync are required.
+Memory requires Node.js `>=22`. The Homebrew formula installs Node through
+Homebrew; npm installs require a compatible Node already on `PATH`. Core
+commands run locally; no cloud account, model API, embeddings, or hosted sync
+are required.
 
 ```bash
+# macOS/Linux with Homebrew
+brew install aictx/tap/memory
+
+# or npm
 npm install -g @aictx/memory
+
 cd path/to/your/repo
 memory setup
 memory load "onboard to this repository"
@@ -134,8 +141,11 @@ CLI-capable coding agent from the project root:
 ```text
 Set up Memory for this repository.
 
-Run:
+Install Memory with one of:
+brew install aictx/tap/memory
 npm install -g @aictx/memory
+
+Then run:
 memory setup
 memory check
 memory load "onboard to this repository"

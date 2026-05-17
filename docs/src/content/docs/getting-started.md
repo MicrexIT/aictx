@@ -8,7 +8,7 @@ directory, short repo-level agent guidance, and the first memory loop.
 
 ## What you need
 
-- Node.js `>=22`
+- Homebrew, or Node.js `>=22` when installing with npm
 - A project directory where coding agents should remember durable project
   context
 
@@ -20,7 +20,13 @@ node --version
 
 ## Install
 
-Install globally for the simplest CLI and optional MCP setup:
+Install with Homebrew for the simplest macOS/Linux CLI and optional MCP setup:
+
+```bash
+brew install aictx/tap/memory
+```
+
+Or install globally with npm when Node.js `>=22` is already available:
 
 ```bash
 npm install -g @aictx/memory

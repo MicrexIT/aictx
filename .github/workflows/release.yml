@@ -11,13 +11,22 @@ permissions:
 
 jobs:
   publish:
-    name: Publish npm package
+    name: Publish package
     runs-on: ubuntu-latest
     environment: npm
 
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+
+      - name: Verify Homebrew tap token
+        env:
+          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          if [ -z "$HOMEBREW_TAP_TOKEN" ]; then
+            echo "::error::Set HOMEBREW_TAP_TOKEN to a token with write access to aictx/homebrew-tap."
+            exit 1
+          fi
 
       - name: Set up pnpm
         uses: pnpm/action-setup@v6
@@ -34,6 +43,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Read package version
+        id: package
+        run: |
+          node -e 'const pkg = require("./package.json"); console.log(`version=${pkg.version}`);' >> "$GITHUB_OUTPUT"
+
       - name: Verify tag matches package version
         run: |
           node -e 'const pkg = require("./package.json"); const tag = process.env.GITHUB_REF_NAME; const expected = `v${pkg.version}`; if (tag !== expected) { throw new Error(`Tag ${tag} does not match ${expected}`); }'
@@ -48,3 +62,52 @@ jobs:
 
       - name: Publish with provenance
         run: pnpm publish --access public --provenance --no-git-checks
+
+      - name: Render Homebrew formula
+        env:
+          PACKAGE_VERSION: ${{ steps.package.outputs.version }}
+        run: |
+          tarball_url="https://registry.npmjs.org/@aictx/memory/-/memory-${PACKAGE_VERSION}.tgz"
+
+          for attempt in {1..12}; do
+            if curl -fsSL "$tarball_url" -o package.tgz; then
+              break
+            fi
+
+            if [ "$attempt" -eq 12 ]; then
+              echo "::error::npm tarball did not become available: $tarball_url"
+              exit 1
+            fi
+
+            sleep 10
+          done
+
+          sha256="$(sha256sum package.tgz | awk '{print $1}')"
+          pnpm run homebrew:formula -- --version "$PACKAGE_VERSION" --sha256 "$sha256" > memory.rb
+
+      - name: Checkout Homebrew tap
+        uses: actions/checkout@v6
+        with:
+          repository: aictx/homebrew-tap
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          path: homebrew-tap
+
+      - name: Publish Homebrew formula
+        env:
+          PACKAGE_VERSION: ${{ steps.package.outputs.version }}
+        run: |
+          mkdir -p homebrew-tap/Formula
+          cp memory.rb homebrew-tap/Formula/memory.rb
+
+          cd homebrew-tap
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          if git diff --quiet -- Formula/memory.rb; then
+            echo "Homebrew formula already points at ${PACKAGE_VERSION}."
+            exit 0
+          fi
+
+          git add Formula/memory.rb
+          git commit -m "Update memory to ${PACKAGE_VERSION}"
+          git push
