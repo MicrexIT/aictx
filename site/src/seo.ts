@@ -5,6 +5,7 @@ export const socialImagePath = "/assets/readme-value-header.png";
 export const staticSitePaths = ["/", "/blog/", "/use-cases/"] as const;
 
 export const robotsTxt = `User-agent: *
+Content-Signal: search=yes, ai-input=yes, ai-train=yes
 Allow: /
 
 Sitemap: ${mainSiteUrl}/sitemap.xml
@@ -12,9 +13,9 @@ Sitemap: ${mainSiteUrl}/sitemap.xml
 
 export const llmsTxt = `# Memory by Aictx
 
-Memory by Aictx is the open source npm package @aictx/memory.
-
-It provides local, reviewable project memory for AI coding agents. It runs through the memory CLI and optional memory-mcp server.
+Memory by Aictx provides local, reviewable, auto-maintained project memory for AI coding agents.
+It is the open source npm package @aictx/memory and runs through the memory CLI and optional memory-mcp server.
+Use it as persistent memory and long-term project context for AI coding assistants including Codex, Claude Code, Cursor, Cline, OpenCode, and MCP-capable agents.
 
 Canonical public surfaces:
 - Website: ${mainSiteUrl}
@@ -23,16 +24,22 @@ Canonical public surfaces:
 - Package: https://www.npmjs.com/package/@aictx/memory
 - CLI: memory
 - MCP server: memory-mcp
+- Persistent memory guide: ${mainSiteUrl}/persistent-memory-ai-coding-agents/
+- MCP memory server guide: ${mainSiteUrl}/mcp-memory-server/
+- Claude Code memory guide: ${mainSiteUrl}/claude-code-memory/
+- Codex memory guide: ${mainSiteUrl}/codex-memory/
+- Cursor memory guide: ${mainSiteUrl}/cursor-memory/
 
 Positioning:
 - local-first project memory for AI coding agents
+- local, reviewable, auto-maintained project memory for AI coding agents
+- persistent memory for AI coding assistants
+- MCP memory server for project context
 - reviewable files under .memory/
+- agent-maintained memory updates after meaningful work
 - task-focused memory loading before work
 - durable save discipline after meaningful work
 - visual local viewer for memory objects, schema, relations, provenance, and graph context
-
-Project identity:
-Memory by Aictx is an independent open source project. It is not affiliated with, sponsored by, or endorsed by similarly named packages, projects, organizations, or products.
 `;
 
 export function socialImageUrl(siteUrl: URL): string {
@@ -68,10 +75,12 @@ export function buildStructuredData(siteUrl: URL): object {
         "@id": softwareId,
         name: siteName,
         alternateName: ["Memory", "@aictx/memory"],
+        keywords:
+          "persistent memory for AI coding agents, auto-maintained project memory, project memory, MCP memory server, Codex memory, Claude Code memory, Cursor memory, local-first developer tools",
         applicationCategory: "DeveloperApplication",
         operatingSystem: "macOS, Linux, Windows",
         description:
-          "Memory by Aictx is local-first, reviewable project memory for AI coding agents.",
+          "Memory by Aictx is local-first, reviewable, auto-maintained project memory for AI coding agents.",
         url: new URL("/", siteUrl).toString(),
         codeRepository: "https://github.com/aictx/memory",
         downloadUrl: "https://www.npmjs.com/package/@aictx/memory",

@@ -18,9 +18,9 @@ import {
   computeObjectContentHash,
   computeRelationContentHash
 } from "../../../src/storage/hashes.js";
-import type { MemoryObjectSidecar } from "../../../src/storage/objects.js";
+import type { MemoryObjectSidecar, StoredMemoryObject } from "../../../src/storage/objects.js";
 import { readCanonicalStorage } from "../../../src/storage/read.js";
-import type { MemoryRelation } from "../../../src/storage/relations.js";
+import type { MemoryRelation, StoredMemoryRelation } from "../../../src/storage/relations.js";
 import { FIXED_TIMESTAMP } from "../../fixtures/time.js";
 
 const tempRoots: string[] = [];
@@ -482,6 +482,45 @@ describe("memory suggest CLI", () => {
     });
     expect(packageSource?.sidecar.origin?.digest).toMatch(/^sha256:[a-f0-9]{64}$/u);
     expect(packageSource?.sidecar.origin?.captured_at).toBeUndefined();
+    expect(
+      storage.data.objects
+        .filter((object) => object.sidecar.type === "source")
+        .map((object) => object.sidecar.id)
+        .sort()
+    ).toEqual(["source.package-json", "source.readme"]);
+    expectStoredRelation(storage.data.relations, {
+      from: "synthesis.product-intent",
+      predicate: "summarizes",
+      to: storage.data.config.project.id
+    });
+    expectStoredRelation(storage.data.relations, {
+      from: "synthesis.repository-map",
+      predicate: "documents",
+      to: storage.data.config.project.id
+    });
+    expectStoredRelation(storage.data.relations, {
+      from: "workflow.package-scripts",
+      predicate: "supports",
+      to: storage.data.config.project.id
+    });
+    expectStoredRelation(storage.data.relations, {
+      from: "constraint.node-engine",
+      predicate: "affects",
+      to: storage.data.config.project.id
+    });
+    expectStoredRelation(storage.data.relations, {
+      from: "workflow.package-scripts",
+      predicate: "derived_from",
+      to: "source.package-json"
+    });
+    expectStoredRelation(storage.data.relations, {
+      from: "constraint.node-engine",
+      predicate: "derived_from",
+      to: "source.package-json"
+    });
+    expect(activeComponentSizes(storage.data.objects, storage.data.relations)).toEqual([
+      storage.data.objects.length
+    ]);
 
     const lintOutput = await runCli(["node", "memory", "wiki", "lint", "--json"], repo);
     expect(lintOutput.exitCode).toBe(0);
@@ -683,6 +722,7 @@ describe("memory suggest CLI", () => {
       applies_to: ["AGENTS.md"],
       load_modes: ["coding", "review"]
     });
+    expect(conventions?.sidecar.evidence).toEqual([{ kind: "file", id: "AGENTS.md" }]);
     expect(conventions?.body).toContain("Prefer small TypeScript modules.");
     expect(conventions?.body).not.toContain("generated convention");
 
@@ -693,6 +733,13 @@ describe("memory suggest CLI", () => {
     expect(verification?.body).toContain("pnpm run typecheck");
     expect(verification?.body).toContain("pnpm run lint");
     expect(verification?.body).not.toContain("pnpm run generated");
+    const agentGuidance = storage.data.objects.find(
+      (object) => object.sidecar.id === "synthesis.agent-guidance"
+    );
+    expect(agentGuidance?.body).toContain("Project-specific operating rules");
+    expect(agentGuidance?.body).toContain("AGENTS.md");
+    expect(agentGuidance?.body).not.toContain("Prefer small TypeScript modules.");
+    expect(agentGuidance?.body).not.toContain("pnpm run lint");
     const featureMap = storage.data.objects.find(
       (object) => object.sidecar.id === "synthesis.feature-map"
     );
@@ -729,7 +776,60 @@ describe("memory suggest CLI", () => {
     expect(envelope.data.save?.relations_created).toEqual(
       expect.arrayContaining(relationIds)
     );
+    expectStoredRelation(storage.data.relations, {
+      from: "synthesis.agent-guidance",
+      predicate: "documents",
+      to: storage.data.config.project.id
+    });
+    expectStoredRelation(storage.data.relations, {
+      from: "constraint.code-conventions",
+      predicate: "affects",
+      to: storage.data.config.project.id
+    });
+    expectStoredRelation(storage.data.relations, {
+      from: "constraint.code-conventions",
+      predicate: "derived_from",
+      to: "source.agents"
+    });
+    expectStoredRelation(storage.data.relations, {
+      from: "workflow.post-task-verification",
+      predicate: "derived_from",
+      to: "source.agents"
+    });
+    expect(activeComponentSizes(storage.data.objects, storage.data.relations)).toEqual([
+      storage.data.objects.length
+    ]);
     expect(envelope.data.check?.valid).toBe(true);
+  });
+
+  it("does not duplicate semantic bootstrap relations on repeated setup", async () => {
+    const repo = await createBootstrapPatchGitProject("memory-cli-setup-repeat-relations-");
+
+    const first = await runCli(["node", "memory", "setup", "--json"], repo);
+    expect(first.exitCode).toBe(0);
+
+    const afterFirst = await readCanonicalStorage(repo);
+    expect(afterFirst.ok).toBe(true);
+    if (!afterFirst.ok) {
+      return;
+    }
+    const relationCount = afterFirst.data.relations.length;
+    const relationTriples = activeRelationTriples(afterFirst.data.relations);
+
+    const second = await runCli(["node", "memory", "setup", "--json"], repo);
+    expect(second.exitCode).toBe(0);
+    expect(second.stderr).toBe("");
+    const envelope = JSON.parse(second.stdout) as SetupSuccessEnvelope;
+    expect(envelope.ok).toBe(true);
+    expect(envelope.data.bootstrap_patch_applied).toBe(false);
+
+    const afterSecond = await readCanonicalStorage(repo);
+    expect(afterSecond.ok).toBe(true);
+    if (!afterSecond.ok) {
+      return;
+    }
+    expect(afterSecond.data.relations).toHaveLength(relationCount);
+    expect(activeRelationTriples(afterSecond.data.relations)).toEqual(relationTriples);
   });
 
   it("previews setup without applying the bootstrap patch", async () => {
@@ -1166,6 +1266,88 @@ async function createRepo(prefix: string): Promise<string> {
   await git(repo, ["add", "README.md", "src/billing/webhook.ts"]);
   await git(repo, ["commit", "-m", "Initial commit"]);
   return repo;
+}
+
+function expectStoredRelation(
+  relations: readonly StoredMemoryRelation[],
+  expected: { from: string; predicate: Predicate; to: string }
+): void {
+  expect(relations.map((stored) => stored.relation)).toEqual(
+    expect.arrayContaining([expect.objectContaining(expected)])
+  );
+}
+
+function activeComponentSizes(
+  objects: readonly StoredMemoryObject[],
+  relations: readonly StoredMemoryRelation[]
+): number[] {
+  const activeIds = new Set(
+    objects
+      .filter((object) => object.sidecar.status === "active" || object.sidecar.status === "open")
+      .map((object) => object.sidecar.id)
+  );
+  const adjacency = new Map<string, Set<string>>(
+    [...activeIds].map((id) => [id, new Set<string>()])
+  );
+
+  for (const stored of relations) {
+    const relation = stored.relation;
+
+    if (
+      relation.status !== "active" ||
+      !activeIds.has(relation.from) ||
+      !activeIds.has(relation.to)
+    ) {
+      continue;
+    }
+
+    adjacency.get(relation.from)?.add(relation.to);
+    adjacency.get(relation.to)?.add(relation.from);
+  }
+
+  const seen = new Set<string>();
+  const sizes: number[] = [];
+
+  for (const id of activeIds) {
+    if (seen.has(id)) {
+      continue;
+    }
+
+    const stack = [id];
+    let size = 0;
+    seen.add(id);
+
+    while (stack.length > 0) {
+      const current = stack.pop();
+
+      if (current === undefined) {
+        continue;
+      }
+
+      size += 1;
+
+      for (const next of adjacency.get(current) ?? []) {
+        if (!seen.has(next)) {
+          seen.add(next);
+          stack.push(next);
+        }
+      }
+    }
+
+    sizes.push(size);
+  }
+
+  return sizes.sort((left, right) => right - left);
+}
+
+function activeRelationTriples(relations: readonly StoredMemoryRelation[]): string[] {
+  return relations
+    .filter((stored) => stored.relation.status === "active")
+    .map(
+      (stored) =>
+        `${stored.relation.from} ${stored.relation.predicate} ${stored.relation.to}`
+    )
+    .sort();
 }
 
 async function runCli(

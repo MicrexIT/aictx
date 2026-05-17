@@ -24,3 +24,6 @@
 {"actor":"agent","event":"memory.created","id":"decision.product-command-surface-is-memory","timestamp":"2026-05-17T00:17:58+02:00"}
 {"actor":"agent","event":"memory.created","id":"decision.routine-writes-restore-tracked-deleted-memory-storage","timestamp":"2026-05-17T09:18:52+02:00"}
 {"actor":"agent","event":"memory.updated","id":"decision.product-command-surface-is-memory","timestamp":"2026-05-17T09:31:53+02:00"}
+{"actor":"agent","event":"memory.updated","id":"decision.product-command-surface-is-memory","timestamp":"2026-05-17T09:50:54+02:00"}
+{"actor":"agent","event":"memory.updated","id":"synthesis.product-intent","timestamp":"2026-05-17T10:06:20+02:00"}
+{"actor":"agent","event":"memory.updated","id":"decision.product-command-surface-is-memory","timestamp":"2026-05-17T10:06:20+02:00"}

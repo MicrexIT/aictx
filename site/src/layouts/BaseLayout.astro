@@ -6,17 +6,27 @@ import "../styles/global.css";
 interface Props {
   title?: string;
   description?: string;
+  ogType?: "website" | "article";
+  robots?: string;
+  structuredData?: object | object[];
 }
 
 const {
-  title = "Memory by Aictx - local-first project memory for AI coding agents",
-  description = "Memory by Aictx gives AI coding agents local, reviewable project memory so every session stops starting from scratch."
+  title = "Memory by Aictx - Persistent Memory for AI Coding Agents",
+  description = "Memory by Aictx gives AI coding agents local, reviewable, auto-maintained project memory so every session stops starting from scratch.",
+  ogType = "website",
+  robots,
+  structuredData
 } = Astro.props;
 
 const siteUrl = Astro.site ?? new URL("https://memory.aictx.dev");
 const canonicalUrl = new URL(Astro.url.pathname, siteUrl).toString();
 const socialImage = socialImageUrl(siteUrl);
 const websiteJsonLd = buildStructuredData(siteUrl);
+const structuredDataItems = [
+  websiteJsonLd,
+  ...(Array.isArray(structuredData) ? structuredData : structuredData ? [structuredData] : [])
+];
 ---
 
 <!doctype html>
@@ -26,8 +36,9 @@ const websiteJsonLd = buildStructuredData(siteUrl);
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{title}</title>
     <meta name="description" content={description} />
+    {robots && <meta name="robots" content={robots} />}
     <link rel="canonical" href={canonicalUrl} />
-    <meta property="og:type" content="website" />
+    <meta property="og:type" content={ogType} />
     <meta property="og:site_name" content={siteName} />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
@@ -40,7 +51,11 @@ const websiteJsonLd = buildStructuredData(siteUrl);
     <meta name="twitter:image" content={socialImage} />
     <meta name="twitter:image:alt" content="Memory by Aictx project memory overview" />
     <link rel="icon" href="/favicon.ico" sizes="any" />
-    <script type="application/ld+json" set:html={JSON.stringify(websiteJsonLd)}></script>
+    {
+      structuredDataItems.map((item) => (
+        <script type="application/ld+json" set:html={JSON.stringify(item)}></script>
+      ))
+    }
     <script src="/stars.js" defer></script>
   </head>
   <body>
@@ -82,7 +97,7 @@ const websiteJsonLd = buildStructuredData(siteUrl);
     <footer class="site-footer">
       <div>
         <strong>Memory by Aictx</strong>
-        <p>Local, reviewable project memory for AI coding tools.</p>
+        <p>Local, reviewable, auto-maintained project memory for AI coding agents.</p>
       </div>
       <nav class="footer-links" aria-label="Footer navigation">
         <a href="https://docs.aictx.dev" rel="noreferrer">Docs</a>

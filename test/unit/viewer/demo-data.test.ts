@@ -34,6 +34,30 @@ const expectedMemoryIds = [
   "workflow.local-development",
   "workflow.post-task-verification"
 ];
+const expectedHubRelations = [
+  ["synthesis.product-intent", "summarizes", "project.todo-app"],
+  ["synthesis.feature-map", "documents", "project.todo-app"],
+  ["synthesis.repository-map", "documents", "project.todo-app"],
+  ["architecture.local-first-todo-app", "documents", "project.todo-app"],
+  ["synthesis.stack-and-tooling", "documents", "project.todo-app"],
+  ["synthesis.conventions-quality", "documents", "project.todo-app"],
+  ["synthesis.agent-guidance", "documents", "project.todo-app"],
+  ["workflow.local-development", "supports", "project.todo-app"],
+  ["workflow.post-task-verification", "supports", "project.todo-app"],
+  ["constraint.offline-first", "affects", "project.todo-app"]
+] as const;
+const expectedProvenanceRelations = [
+  ["synthesis.product-intent", "derived_from", "source.product-brief"],
+  ["synthesis.feature-map", "derived_from", "source.product-brief"],
+  ["synthesis.repository-map", "derived_from", "source.readme"],
+  ["architecture.local-first-todo-app", "derived_from", "source.readme"],
+  ["synthesis.stack-and-tooling", "derived_from", "source.package-json"],
+  ["synthesis.conventions-quality", "derived_from", "source.product-brief"],
+  ["workflow.local-development", "derived_from", "source.package-json"],
+  ["workflow.post-task-verification", "derived_from", "source.package-json"],
+  ["constraint.offline-first", "derived_from", "source.product-brief"],
+  ["synthesis.agent-guidance", "derived_from", "source.agent-guidance"]
+] as const;
 
 afterEach(async () => {
   await Promise.all(tempRoots.splice(0).map((path) => rm(path, { recursive: true, force: true })));
@@ -75,7 +99,7 @@ describe("viewer demo data seed", () => {
             media_type?: string;
           } | null;
         }>;
-        relations: Array<{ from: string; predicate: string; to: string }>;
+        relations: Array<{ id: string; from: string; predicate: string; to: string }>;
         role_coverage: { roles: unknown[]; counts: { populated: number } };
         lenses: Array<{ name: string; included_memory_ids: string[] }>;
       };
@@ -88,6 +112,7 @@ describe("viewer demo data seed", () => {
     const sourceObjects = data.bootstrap.objects.filter((object) => object.type === "source");
     const packageJsonSource = data.bootstrap.objects.find((object) => object.id === "source.package-json");
     const predicates = new Set(data.bootstrap.relations.map((relation) => relation.predicate));
+    const relationTriples = new Set(data.bootstrap.relations.map(relationTripleKey));
 
     expect(second).toBe(first);
     expect(second).toBe(committed);
@@ -105,6 +130,7 @@ describe("viewer demo data seed", () => {
     expect(data.bootstrap.objects.some((object) => object.id === "project.memory")).toBe(false);
     expect(sourceObjects.length).toBeGreaterThan(0);
     for (const source of sourceObjects) {
+      expect(relationEndpointIds.has(source.id)).toBe(true);
       expect(source.origin).toMatchObject({
         kind: "file",
         locator: expect.any(String)
@@ -115,8 +141,15 @@ describe("viewer demo data seed", () => {
       locator: "package.json",
       media_type: "application/json"
     });
+    for (const relation of expectedHubRelations) {
+      expect(relationTriples).toContain(relation.join("\0"));
+    }
+    for (const relation of expectedProvenanceRelations) {
+      expect(relationTriples).toContain(relation.join("\0"));
+    }
     expect(predicates).toContain("supports");
     expect(predicates).toContain("challenges");
+    expect(predicates).not.toContain("related_to");
     expect(data.meta.project_root).toBe("demo://todo-app");
     expect(data.meta.memory_root).toBe("demo://todo-app/.memory");
     expect(data.projects.projects).toHaveLength(1);
@@ -140,6 +173,7 @@ describe("viewer demo data seed", () => {
     for (const id of relationEndpointIds) {
       expect(objectIds).toContain(id);
     }
+    expect(componentSizes(objectIds, data.bootstrap.relations)).toEqual([expectedMemoryIds.length]);
 
     expect(serialized).not.toContain(repoRoot);
     expect(serialized).not.toMatch(/\/Users\//);
@@ -152,3 +186,49 @@ describe("viewer demo data seed", () => {
     );
   });
 });
+
+function relationTripleKey(relation: { from: string; predicate: string; to: string }): string {
+  return [relation.from, relation.predicate, relation.to].join("\0");
+}
+
+function componentSizes(objectIds: readonly string[], relations: ReadonlyArray<{ from: string; to: string }>): number[] {
+  const graph = new Map(objectIds.map((id) => [id, new Set<string>()]));
+
+  for (const relation of relations) {
+    graph.get(relation.from)?.add(relation.to);
+    graph.get(relation.to)?.add(relation.from);
+  }
+
+  const seen = new Set<string>();
+  const sizes: number[] = [];
+
+  for (const id of objectIds) {
+    if (seen.has(id)) {
+      continue;
+    }
+
+    const stack = [id];
+    let size = 0;
+
+    while (stack.length > 0) {
+      const current = stack.pop();
+
+      if (current === undefined || seen.has(current)) {
+        continue;
+      }
+
+      seen.add(current);
+      size += 1;
+
+      for (const next of graph.get(current) ?? []) {
+        if (!seen.has(next)) {
+          stack.push(next);
+        }
+      }
+    }
+
+    sizes.push(size);
+  }
+
+  return sizes.sort((left, right) => right - left);
+}

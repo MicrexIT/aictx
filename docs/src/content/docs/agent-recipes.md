@@ -1,6 +1,6 @@
 ---
-title: Agent recipes
-description: Copyable Memory setup and routine-loop recipes for common coding agents.
+title: AI coding agent memory recipes
+description: Memory setup recipes for Codex, Claude Code, Cursor, Cline, OpenCode, and MCP-capable coding assistants.
 ---
 
 Use these recipes when you want an AI coding agent to set up and use Memory from

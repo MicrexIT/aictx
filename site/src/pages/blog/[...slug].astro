@@ -2,6 +2,7 @@
 import { getCollection, render } from "astro:content";
 import Prose from "../../components/Prose.astro";
 import BaseLayout from "../../layouts/BaseLayout.astro";
+import { socialImageUrl } from "../../seo";
 
 export async function getStaticPaths() {
   const posts = await getCollection("blog");
@@ -14,16 +15,44 @@ export async function getStaticPaths() {
 
 const { post } = Astro.props;
 const { Content } = await render(post);
+const siteUrl = Astro.site ?? new URL("https://memory.aictx.dev");
+const canonicalUrl = new URL(`/blog/${post.id}/`, siteUrl).toString();
+const socialImage = socialImageUrl(siteUrl);
 const publishedLabel = new Intl.DateTimeFormat("en", {
   month: "long",
   day: "numeric",
   year: "numeric",
 }).format(post.data.publishedAt);
+const blogPostingJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  headline: post.data.title,
+  description: post.data.description,
+  datePublished: post.data.publishedAt.toISOString(),
+  dateModified: (post.data.updatedAt ?? post.data.publishedAt).toISOString(),
+  image: socialImage,
+  keywords: post.data.tags ?? [],
+  mainEntityOfPage: canonicalUrl,
+  author: {
+    "@type": "Organization",
+    name: "Aictx"
+  },
+  publisher: {
+    "@type": "Organization",
+    name: "Aictx",
+    logo: {
+      "@type": "ImageObject",
+      url: new URL("/favicon.ico", siteUrl).toString()
+    }
+  }
+};
 ---
 
 <BaseLayout
   title={`${post.data.title} - Memory by Aictx`}
   description={post.data.description}
+  ogType="article"
+  structuredData={blogPostingJsonLd}
 >
   <main>
     <article class="post-shell">

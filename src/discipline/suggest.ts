@@ -306,6 +306,79 @@ const PACKAGE_MANAGERS = new Set(["npm", "pnpm", "yarn", "bun"]);
 const CURRENT_ARCHITECTURE_ID: ObjectId = "architecture.current";
 const PROJECT_ARCHITECTURE_PREDICATE: Predicate = "related_to";
 const PROJECT_FEATURE_PREDICATE: Predicate = "implements";
+const BOOTSTRAP_HUB_RELATIONS = [
+  {
+    id: "synthesis.product-intent",
+    type: "synthesis",
+    title: "Product intent",
+    predicate: "summarizes"
+  },
+  {
+    id: "synthesis.feature-map",
+    type: "synthesis",
+    title: "Feature map",
+    predicate: "documents"
+  },
+  {
+    id: "synthesis.repository-map",
+    type: "synthesis",
+    title: "Repository map",
+    predicate: "documents"
+  },
+  {
+    id: "synthesis.stack-and-tooling",
+    type: "synthesis",
+    title: "Stack and tooling",
+    predicate: "documents"
+  },
+  {
+    id: "synthesis.conventions-quality",
+    type: "synthesis",
+    title: "Conventions and quality bar",
+    predicate: "documents"
+  },
+  {
+    id: "synthesis.agent-guidance",
+    type: "synthesis",
+    title: "Agent guidance",
+    predicate: "documents"
+  },
+  {
+    id: "workflow.package-scripts",
+    type: "workflow",
+    title: "Package scripts",
+    predicate: "supports"
+  },
+  {
+    id: "workflow.post-task-verification",
+    type: "workflow",
+    title: "Post-task verification",
+    predicate: "supports"
+  },
+  {
+    id: "constraint.node-engine",
+    type: "constraint",
+    title: "Node engine requirement",
+    predicate: "affects"
+  },
+  {
+    id: "constraint.package-manager",
+    type: "constraint",
+    title: "Package manager",
+    predicate: "affects"
+  },
+  {
+    id: "constraint.code-conventions",
+    type: "constraint",
+    title: "Code conventions",
+    predicate: "affects"
+  }
+] satisfies Array<{
+  id: ObjectId;
+  type: ObjectType;
+  title: string;
+  predicate: Predicate;
+}>;
 
 export function buildSuggestFromDiffPacket(
   options: BuildSuggestFromDiffPacketOptions
@@ -527,6 +600,13 @@ async function buildBootstrapPatchChanges(
   const changes: BootstrapPatchChange[] = [];
   const projectObject = objectById(storage, storage.config.project.id);
   const architectureObject = objectById(storage, "architecture.current");
+  const standaloneObjects = bootstrapStandaloneObjectChanges(storage, analysis);
+  const preliminarySourcesByPath = sourceIdsByPathForPaths(
+    storage,
+    bootstrapPotentialSourcePaths(analysis)
+  );
+  const syntheses = bootstrapSyntheses(analysis, preliminarySourcesByPath);
+  const referencedSourcePaths = referencedBootstrapSourcePaths(syntheses, standaloneObjects);
 
   if (projectObject !== null && isInitialProjectPlaceholder(projectObject)) {
     const body = projectBootstrapBody(projectObject, analysis);
@@ -562,39 +642,19 @@ async function buildBootstrapPatchChanges(
     changes.push(projectArchitectureRelation);
   }
 
-  const bootstrapSources = await sourceRecordChanges(projectRoot, storage, analysis);
+  const bootstrapSources = await sourceRecordChanges(
+    projectRoot,
+    storage,
+    analysis,
+    referencedSourcePaths
+  );
   changes.push(...bootstrapSources.changes);
-  changes.push(...synthesisRecordChanges(storage, analysis, bootstrapSources.byPath));
-
-  const workflow = packageScriptsWorkflow(storage, analysis);
-
-  if (workflow !== null) {
-    changes.push(workflow);
-  }
-
-  const verificationWorkflow = postTaskVerificationWorkflow(storage, analysis);
-
-  if (verificationWorkflow !== null) {
-    changes.push(verificationWorkflow);
-  }
-
-  const conventions = codeConventionsConstraint(storage, analysis);
-
-  if (conventions !== null) {
-    changes.push(conventions);
-  }
-
-  const nodeConstraint = nodeEngineConstraint(storage, analysis);
-
-  if (nodeConstraint !== null) {
-    changes.push(nodeConstraint);
-  }
-
-  const packageManagerChange = packageManagerConstraint(storage, analysis);
-
-  if (packageManagerChange !== null) {
-    changes.push(packageManagerChange);
-  }
+  changes.push(...synthesisRecordChanges(storage, bootstrapSyntheses(analysis, bootstrapSources.byPath)));
+  changes.push(...standaloneObjects);
+  changes.push(
+    ...standaloneSourceRelationChanges(storage, standaloneObjects, bootstrapSources.byPath)
+  );
+  changes.push(...bootstrapHubRelationChanges(storage, changes));
 
   return changes;
 }
@@ -603,6 +663,19 @@ function recommendedBootstrapMemory(hasProductFeatures: boolean): ObjectType[] {
   return hasProductFeatures
     ? uniqueObjectTypes([...BOOTSTRAP_RECOMMENDED_MEMORY, "synthesis"])
     : [...BOOTSTRAP_RECOMMENDED_MEMORY];
+}
+
+function bootstrapStandaloneObjectChanges(
+  storage: CanonicalStorageSnapshot,
+  analysis: BootstrapAnalysis
+): BootstrapPatchChange[] {
+  return [
+    packageScriptsWorkflow(storage, analysis),
+    postTaskVerificationWorkflow(storage, analysis),
+    codeConventionsConstraint(storage, analysis),
+    nodeEngineConstraint(storage, analysis),
+    packageManagerConstraint(storage, analysis)
+  ].filter((change): change is BootstrapPatchChange => change !== null);
 }
 
 function recommendedMemoryForTask(task: string, changedFiles: readonly string[]): ObjectType[] {
@@ -1381,15 +1454,31 @@ interface BootstrapSourceRecords {
   byPath: Map<string, ObjectId>;
 }
 
+function sourceIdsByPathForPaths(
+  storage: CanonicalStorageSnapshot,
+  paths: readonly string[]
+): Map<string, ObjectId> {
+  const byPath = new Map<string, ObjectId>();
+
+  for (const path of paths) {
+    const title = `Source: ${path}`;
+    const existing = similarObject(storage, "source", sourceIdForPath(path), title);
+    byPath.set(path, existing?.sidecar.id ?? sourceIdForPath(path));
+  }
+
+  return byPath;
+}
+
 async function sourceRecordChanges(
   projectRoot: string,
   storage: CanonicalStorageSnapshot,
-  analysis: BootstrapAnalysis
+  analysis: BootstrapAnalysis,
+  paths: readonly string[]
 ): Promise<BootstrapSourceRecords> {
   const changes: BootstrapPatchChange[] = [];
   const byPath = new Map<string, ObjectId>();
 
-  for (const path of bootstrapSourcePaths(analysis)) {
+  for (const path of paths) {
     const title = `Source: ${path}`;
     const id = sourceIdForPath(path);
     const existing = similarObject(storage, "source", id, title);
@@ -1431,13 +1520,12 @@ async function sourceRecordChanges(
 
 function synthesisRecordChanges(
   storage: CanonicalStorageSnapshot,
-  analysis: BootstrapAnalysis,
-  sourcesByPath: ReadonlyMap<string, ObjectId>
+  syntheses: readonly BootstrapSynthesis[]
 ): BootstrapPatchChange[] {
   const changes: BootstrapPatchChange[] = [];
   const existingRelationIds = new Set(storage.relations.map((relation) => relation.relation.id));
 
-  for (const synthesis of bootstrapSyntheses(analysis, sourcesByPath)) {
+  for (const synthesis of syntheses) {
     const existing = similarObject(storage, "synthesis", synthesis.id, synthesis.title);
     const synthesisId = existing?.sidecar.id ?? synthesis.id;
 
@@ -1491,6 +1579,156 @@ function synthesisRecordChanges(
   return changes;
 }
 
+function standaloneSourceRelationChanges(
+  storage: CanonicalStorageSnapshot,
+  objectChanges: readonly BootstrapPatchChange[],
+  sourcesByPath: ReadonlyMap<string, ObjectId>
+): BootstrapPatchChange[] {
+  const changes: BootstrapPatchChange[] = [];
+  const existingRelationIds = relationIdsFromStorageAndChanges(storage, objectChanges);
+
+  for (const change of objectChanges) {
+    if (change.op === "create_relation") {
+      continue;
+    }
+
+    const sourceIds = sourceIdsForEvidence(sourcesByPath, change.evidence ?? []);
+
+    for (const sourceId of sourceIds) {
+      if (
+        relationExistsInStorageOrChanges(
+          storage,
+          [...objectChanges, ...changes],
+          change.id,
+          "derived_from",
+          sourceId
+        )
+      ) {
+        continue;
+      }
+
+      const relationId = generateRelationId({
+        from: change.id,
+        predicate: "derived_from",
+        to: sourceId,
+        existingIds: existingRelationIds
+      });
+      existingRelationIds.add(relationId);
+      changes.push({
+        op: "create_relation",
+        id: relationId,
+        from: change.id,
+        predicate: "derived_from",
+        to: sourceId,
+        status: "active",
+        confidence: "high",
+        evidence: [{ kind: "source", id: sourceId }]
+      });
+    }
+  }
+
+  return changes;
+}
+
+function bootstrapHubRelationChanges(
+  storage: CanonicalStorageSnapshot,
+  existingChanges: readonly BootstrapPatchChange[]
+): BootstrapPatchChange[] {
+  const projectObject = objectById(storage, storage.config.project.id);
+
+  if (projectObject === null) {
+    return [];
+  }
+
+  const changes: BootstrapPatchChange[] = [];
+  const existingRelationIds = relationIdsFromStorageAndChanges(storage, existingChanges);
+
+  for (const spec of BOOTSTRAP_HUB_RELATIONS) {
+    const from = bootstrapHubObjectId(storage, existingChanges, spec);
+
+    if (
+      from === null ||
+      relationExistsInStorageOrChanges(
+        storage,
+        [...existingChanges, ...changes],
+        from,
+        spec.predicate,
+        projectObject.sidecar.id
+      )
+    ) {
+      continue;
+    }
+
+    const relationId = generateRelationId({
+      from,
+      predicate: spec.predicate,
+      to: projectObject.sidecar.id,
+      existingIds: existingRelationIds
+    });
+    existingRelationIds.add(relationId);
+    changes.push({
+      op: "create_relation",
+      id: relationId,
+      from,
+      predicate: spec.predicate,
+      to: projectObject.sidecar.id,
+      status: "active",
+      confidence: "high",
+      evidence: [
+        { kind: "memory", id: from },
+        { kind: "memory", id: projectObject.sidecar.id }
+      ]
+    });
+  }
+
+  return changes;
+}
+
+function bootstrapHubObjectId(
+  storage: CanonicalStorageSnapshot,
+  changes: readonly BootstrapPatchChange[],
+  spec: (typeof BOOTSTRAP_HUB_RELATIONS)[number]
+): ObjectId | null {
+  if (
+    changes.some((change) => change.op !== "create_relation" && change.id === spec.id)
+  ) {
+    return spec.id;
+  }
+
+  return similarObject(storage, spec.type, spec.id, spec.title)?.sidecar.id ?? null;
+}
+
+function relationExistsInStorageOrChanges(
+  storage: CanonicalStorageSnapshot,
+  changes: readonly BootstrapPatchChange[],
+  from: ObjectId,
+  predicate: Predicate,
+  to: ObjectId
+): boolean {
+  return (
+    hasEquivalentRelation(storage, from, predicate, to) ||
+    changes.some(
+      (change) =>
+        change.op === "create_relation" &&
+        change.from === from &&
+        change.predicate === predicate &&
+        change.to === to
+    )
+  );
+}
+
+function relationIdsFromStorageAndChanges(
+  storage: CanonicalStorageSnapshot,
+  changes: readonly BootstrapPatchChange[]
+): Set<RelationId> {
+  return new Set([
+    ...storage.relations.map((relation) => relation.relation.id),
+    ...changes.flatMap((change) =>
+      change.op === "create_relation" && change.id !== undefined ? [change.id] : []
+    )
+  ]);
+}
+
 function shouldRepairBootstrapSynthesis(
   existing: StoredMemoryObject,
   synthesis: BootstrapSynthesis
@@ -1527,6 +1765,7 @@ interface BootstrapSynthesis {
   tags: string[];
   facets: ObjectFacets;
   evidence: Evidence[];
+  sourcePaths: string[];
   sourceIds: ObjectId[];
 }
 
@@ -1555,6 +1794,7 @@ function productIntentSynthesis(
   }
 
   const sourceIds = sourceIdsForPaths(sourcesByPath, ["README.md", "package.json"]);
+  const sourcePaths = sourcePathsForIds(sourcesByPath, ["README.md", "package.json"]);
 
   return {
     id: "synthesis.product-intent",
@@ -1573,6 +1813,7 @@ function productIntentSynthesis(
       load_modes: ["coding", "architecture", "onboarding"]
     },
     evidence: sourceEvidence(sourceIds),
+    sourcePaths,
     sourceIds
   };
 }
@@ -1587,7 +1828,9 @@ function featureMapSynthesis(
     return null;
   }
 
-  const sourceIds = sourceIdsForEvidence(sourcesByPath, features.flatMap((feature) => feature.evidence));
+  const featureEvidence = features.flatMap((feature) => feature.evidence);
+  const sourceIds = sourceIdsForEvidence(sourcesByPath, featureEvidence);
+  const sourcePaths = sourcePathsForEvidence(sourcesByPath, featureEvidence);
 
   return {
     id: "synthesis.feature-map",
@@ -1608,6 +1851,7 @@ function featureMapSynthesis(
       load_modes: ["coding", "onboarding"]
     },
     evidence: sourceEvidence(sourceIds),
+    sourcePaths,
     sourceIds
   };
 }
@@ -1624,6 +1868,7 @@ function repositoryMapSynthesis(
 
   const appliesTo = uniqueSorted(entries.flatMap((entry) => entry.paths));
   const sourceIds = sourceIdsForPaths(sourcesByPath, ["README.md", "package.json"]);
+  const sourcePaths = sourcePathsForIds(sourcesByPath, ["README.md", "package.json"]);
 
   return {
     id: "synthesis.repository-map",
@@ -1644,6 +1889,7 @@ function repositoryMapSynthesis(
       load_modes: ["coding", "architecture", "onboarding"]
     },
     evidence: [...sourceEvidence(sourceIds), ...appliesTo.slice(0, 12).map((path) => ({ kind: "file" as const, id: path }))],
+    sourcePaths,
     sourceIds
   };
 }
@@ -1687,6 +1933,7 @@ function stackToolingSynthesis(
       load_modes: ["coding", "debugging", "review", "architecture", "onboarding"]
     },
     evidence: [...sourceEvidence(sourceIds), ...appliesTo.slice(0, 12).map((path) => ({ kind: "file" as const, id: path }))],
+    sourcePaths,
     sourceIds
   };
 }
@@ -1732,6 +1979,7 @@ function conventionsQualitySynthesis(
       load_modes: ["coding", "review", "onboarding"]
     },
     evidence: [...sourceEvidence(sourceIds), ...paths.map((path) => ({ kind: "file" as const, id: path }))],
+    sourcePaths: paths,
     sourceIds
   };
 }
@@ -1740,12 +1988,7 @@ function agentGuidanceSynthesis(
   analysis: BootstrapAnalysis,
   sourcesByPath: ReadonlyMap<string, ObjectId>
 ): BootstrapSynthesis | null {
-  const statements = uniqueSorted(
-    analysis.agentGuidance.flatMap((guidance) => guidance.conventionStatements)
-  ).slice(0, 8);
-  const commands = postTaskVerificationCommands(analysis).slice(0, 6);
-
-  if (statements.length === 0 && commands.length === 0) {
+  if (analysis.agentGuidance.length === 0) {
     return null;
   }
 
@@ -1758,16 +2001,12 @@ function agentGuidanceSynthesis(
     body: [
       "# Agent guidance",
       "",
-      ...statements.map((statement) => `- ${statement}`),
-      ...(commands.length === 0
-        ? []
-        : [
-            "",
-            "Verification workflows:",
-            ...commands.map((command) => `- ${command.command}: ${command.description}`)
-          ]),
+      "Project-specific operating rules for AI coding agents are maintained in:",
+      ...paths.map((path) => `- \`${path}\``),
       "",
-      "Update this synthesis when agent instructions, conventions, or verification workflows change.",
+      "Keep this synthesis focused on where agent instructions live and when they should be consulted. Coding conventions and verification commands from those files are represented in separate convention and workflow memory.",
+      "",
+      "Update this synthesis when agent instruction files are added, removed, renamed, or replaced.",
       ""
     ].join("\n"),
     tags: ["synthesis", "agents", "guidance"],
@@ -1777,22 +2016,41 @@ function agentGuidanceSynthesis(
       load_modes: ["coding", "review", "onboarding"]
     },
     evidence: sourceEvidence(sourceIds),
+    sourcePaths: paths,
     sourceIds
   };
 }
 
-function bootstrapSourcePaths(analysis: BootstrapAnalysis): string[] {
+function bootstrapPotentialSourcePaths(analysis: BootstrapAnalysis): string[] {
   return uniqueSorted([
     ...(analysis.readme === null ? [] : ["README.md"]),
     ...(analysis.packageJson === null ? [] : ["package.json"]),
     ...(analysis.packageManager === null ? [] : [analysis.packageManager.source]),
     ...analysis.agentGuidance.map((guidance) => guidance.path),
-    ...[
-      "specs/prd.md",
-      "docs/src/content/docs/agent-integration.md",
-      "integrations/templates/agent-guidance.md"
-    ].filter((path) => analysis.files.has(path))
+    ...analysis.productFeatures.flatMap((feature) =>
+      feature.evidence.filter((item) => item.kind === "file").map((item) => item.id)
+    )
   ]).slice(0, 10);
+}
+
+function referencedBootstrapSourcePaths(
+  syntheses: readonly BootstrapSynthesis[],
+  objectChanges: readonly BootstrapPatchChange[]
+): string[] {
+  return uniqueSorted([
+    ...syntheses.flatMap((synthesis) => synthesis.sourcePaths),
+    ...objectChanges.flatMap(fileEvidencePathsFromChange)
+  ]);
+}
+
+function fileEvidencePathsFromChange(change: BootstrapPatchChange): string[] {
+  if (change.op === "create_relation") {
+    return [];
+  }
+
+  return (change.evidence ?? [])
+    .filter((item) => item.kind === "file")
+    .map((item) => item.id);
 }
 
 function sourceBody(path: string, analysis: BootstrapAnalysis): string {
@@ -1854,6 +2112,13 @@ function sourceIdsForPaths(
   return uniqueSorted(paths.map((path) => sourcesByPath.get(path)).filter(isString));
 }
 
+function sourcePathsForIds(
+  sourcesByPath: ReadonlyMap<string, ObjectId>,
+  paths: readonly string[]
+): string[] {
+  return uniqueSorted(paths.filter((path) => sourcesByPath.has(path)));
+}
+
 function sourceIdsForEvidence(
   sourcesByPath: ReadonlyMap<string, ObjectId>,
   evidence: readonly Evidence[]
@@ -1864,6 +2129,18 @@ function sourceIdsForEvidence(
     .filter((path) => sourcesByPath.has(path));
 
   return sourceIdsForPaths(sourcesByPath, paths);
+}
+
+function sourcePathsForEvidence(
+  sourcesByPath: ReadonlyMap<string, ObjectId>,
+  evidence: readonly Evidence[]
+): string[] {
+  return uniqueSorted(
+    evidence
+      .filter((item) => item.kind === "file")
+      .map((item) => item.id)
+      .filter((path) => sourcesByPath.has(path))
+  );
 }
 
 function sourceEvidence(sourceIds: readonly ObjectId[]): Evidence[] {
@@ -1899,7 +2176,13 @@ function packageScriptsWorkflow(
       ...entries.map(([name, value]) => `- \`${name}\`: \`${value}\``),
       ""
     ].join("\n"),
-    tags: ["package", "workflow"]
+    tags: ["package", "workflow"],
+    facets: {
+      category: "workflow",
+      applies_to: ["package.json"],
+      load_modes: ["coding", "debugging", "onboarding"]
+    },
+    evidence: [{ kind: "file", id: "package.json" }]
   };
 }
 
@@ -2117,7 +2400,13 @@ function nodeEngineConstraint(
       `The package declares Node.js \`${nodeEngine}\` in \`package.json\` engines.`,
       ""
     ].join("\n"),
-    tags: ["node", "runtime"]
+    tags: ["node", "runtime"],
+    facets: {
+      category: "stack",
+      applies_to: ["package.json"],
+      load_modes: ["coding", "debugging", "onboarding"]
+    },
+    evidence: [{ kind: "file", id: "package.json" }]
   };
 }
 
@@ -2147,7 +2436,13 @@ function packageManagerConstraint(
         : `Use \`${packageManager.spec}\` for dependency workflows; this is declared in \`${packageManager.source}\`.`,
       ""
     ].join("\n"),
-    tags: [packageManager.manager, "dependencies"]
+    tags: [packageManager.manager, "dependencies"],
+    facets: {
+      category: "stack",
+      applies_to: [packageManager.source],
+      load_modes: ["coding", "debugging", "onboarding"]
+    },
+    evidence: [{ kind: "file", id: packageManager.source }]
   };
 }
 

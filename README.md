@@ -15,7 +15,8 @@
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-yellow.svg"></a>
 </p>
 
-Memory is local-first project memory for AI coding agents, inspired by
+Memory is local-first persistent project memory for AI coding agents and AI
+coding assistants, inspired by
 [Andrej Karpathy's LLM Wiki pattern](https://gist.githubusercontent.com/karpathy/442a6bf555914893e9891c11519de94f/raw/ac46de1ad27f92b28ac95459c782c07f6b8c964a/llm-wiki.md):
 durable, human-editable project knowledge that models can read before work.
 
@@ -34,6 +35,10 @@ Use it when you want:
   another prompt you have to manually keep current.
 
 This repository publishes the npm package `@aictx/memory`.
+
+Memory works with Codex, Claude Code, Cursor, Cline, OpenCode, and
+MCP-capable clients. Use the `memory` CLI by default, then add the local
+`memory-mcp` server when you want routine Memory tools inside an MCP client.
 
 ## Why Memory?
 
@@ -218,10 +223,6 @@ agent recipes, and pull requests are welcome.
 
 ## Project identity
 
-Memory by Aictx is the open source npm package `@aictx/memory`.
-It provides local, reviewable project memory for AI coding agents and runs
+Memory by Aictx provides local, reviewable, auto-maintained project memory for
+AI coding agents. It is the open source npm package `@aictx/memory` and runs
 through the `memory` CLI and optional `memory-mcp` server.
-
-The Aictx organization and Memory project are independent open source efforts.
-They are not affiliated with, sponsored by, or endorsed by similarly named
-projects, organizations, products, or packages.

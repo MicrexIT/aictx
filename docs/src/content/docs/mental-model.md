@@ -1,6 +1,6 @@
 ---
 title: Mental model
-description: How Memory stores, indexes, retrieves, and inspects project memory.
+description: How Memory stores, indexes, retrieves, and inspects persistent local project memory.
 ---
 
 Memory helps future agents start from durable project context instead of a blank

@@ -1,6 +1,6 @@
 ---
-title: Getting started
-description: Install Memory, initialize memory, and run the first load/save loop.
+title: Install persistent project memory
+description: Install Memory, initialize local project memory, and run the first load/save loop for AI coding agents.
 ---
 
 Memory works inside an existing project. This page gets you to a local `.memory/`

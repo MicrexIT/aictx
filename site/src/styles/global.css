@@ -352,6 +352,13 @@ h1 {
   min-height: 46px;
 }
 
+.keyword-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 24px;
+}
+
 .button {
   display: inline-flex;
   align-items: center;
@@ -1937,6 +1944,10 @@ h3 {
   gap: 14px;
 }
 
+.use-cases-post-heading {
+  margin-top: 42px;
+}
+
 .post-card {
   border-top: 1px solid var(--line);
 }
@@ -1988,6 +1999,20 @@ h3 {
   border-radius: 999px;
   font-size: 12px;
   font-weight: 720;
+}
+
+.keyword-tags a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 0 12px;
+  color: var(--accent);
+  background: var(--white);
+  border: 1px solid rgba(17, 18, 20, 0.12);
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 740;
+  text-decoration: none;
 }
 
 .empty-state {

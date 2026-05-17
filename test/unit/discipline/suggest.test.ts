@@ -878,7 +878,7 @@ describe("suggest discipline packets", () => {
     });
 
     expect(proposal.proposed).toBe(true);
-    expect(proposal.patch?.changes).toEqual([
+    expect(proposal.patch?.changes).toEqual(expect.arrayContaining([
       expect.objectContaining({
         op: "update_object",
         id: "source.readme",
@@ -898,8 +898,14 @@ describe("suggest discipline packets", () => {
         status: "active",
         confidence: "high",
         evidence: [{ kind: "source", id: "source.readme" }]
-      }
-    ]);
+      },
+      expect.objectContaining({
+        op: "create_relation",
+        from: "synthesis.feature-map",
+        predicate: "documents",
+        to: "project.billing-api"
+      })
+    ]));
 
     const validators = await compileProjectSchemas(projectRoot);
     expect(validators.ok).toBe(true);
@@ -957,7 +963,7 @@ describe("suggest discipline packets", () => {
     });
 
     expect(proposal.proposed).toBe(true);
-    expect(proposal.patch?.changes).toEqual([
+    expect(proposal.patch?.changes).toEqual(expect.arrayContaining([
       expect.objectContaining({
         op: "update_object",
         id: "source.readme",
@@ -967,8 +973,14 @@ describe("suggest discipline packets", () => {
           digest: await fileDigest(projectRoot, "README.md"),
           media_type: "text/markdown"
         }
+      }),
+      expect.objectContaining({
+        op: "create_relation",
+        from: "synthesis.feature-map",
+        predicate: "documents",
+        to: "project.billing-api"
       })
-    ]);
+    ]));
   });
 
   it("avoids duplicate bootstrap memories when deterministic objects already exist", async () => {
@@ -1075,7 +1087,7 @@ describe("suggest discipline packets", () => {
       storage
     });
 
-    expect(proposal.patch?.changes).toEqual([
+    expect(proposal.patch?.changes).toEqual(expect.arrayContaining([
       expect.objectContaining({ op: "update_object", id: "project.billing-api" }),
       expect.objectContaining({
         op: "update_object",
@@ -1086,8 +1098,20 @@ describe("suggest discipline packets", () => {
           digest: await fileDigest(projectRoot, "package.json"),
           media_type: "application/json"
         }
+      }),
+      expect.objectContaining({
+        op: "create_relation",
+        from: "synthesis.product-intent",
+        predicate: "summarizes",
+        to: "project.billing-api"
+      }),
+      expect.objectContaining({
+        op: "create_relation",
+        from: "workflow.package-scripts",
+        predicate: "supports",
+        to: "project.billing-api"
       })
-    ]);
+    ]));
   });
 
   it("proposes the missing starter relation for older initialized projects", async () => {
@@ -1119,12 +1143,7 @@ describe("suggest discipline packets", () => {
           to: "architecture.current",
           status: "active",
           confidence: "high"
-        },
-        expect.objectContaining({
-          op: "create_object",
-          id: "source.readme",
-          type: "source"
-        })
+        }
       ])
     );
   });

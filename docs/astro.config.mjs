@@ -6,8 +6,9 @@ export default defineConfig({
   site: "https://docs.aictx.dev",
   integrations: [
     starlight({
-      title: "Memory",
-      description: "Local-first project memory for AI coding agents.",
+      title: "Memory by Aictx",
+      description:
+        "Local-first persistent project memory for AI coding agents and assistants.",
       customCss: ["./src/styles/memory.css"],
       editLink: {
         baseUrl: "https://github.com/aictx/memory/edit/main/docs/"

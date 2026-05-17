@@ -1,6 +1,6 @@
 ---
-title: MCP guide
-description: Configure Memory MCP and understand the CLI/MCP capability boundary.
+title: Memory MCP server
+description: Configure the Memory MCP server for project context, agent memory tools, and the CLI/MCP capability boundary.
 ---
 
 `memory-mcp` is an MCP stdio server. Configure your MCP client to launch the

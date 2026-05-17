@@ -1,6 +1,6 @@
 ---
 title: Agent integration
-description: How Memory fits into a coding-agent workflow.
+description: How persistent project memory fits into an AI coding-agent workflow.
 ---
 
 Memory gives coding agents a local project-memory loop:

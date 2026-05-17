@@ -16,19 +16,27 @@ import {
 
 const repoRoot = resolve(fileURLToPath(new URL("../../..", import.meta.url)));
 
+function normalizeWhitespace(value: string): string {
+  return value.replace(/\s+/g, " ");
+}
+
 describe("site landing page", () => {
   it("states the sharpened value proposition and primary actions", async () => {
     const landing = await readFile(resolve(repoRoot, "site/src/pages/index.astro"), "utf8");
+    const normalizedLanding = normalizeWhitespace(landing);
+    const heroIdentityStart = landing.indexOf('class="hero-identity"');
+    const heroIdentityEnd = landing.indexOf("</p>", heroIdentityStart);
+    const heroIdentity = normalizeWhitespace(landing.slice(heroIdentityStart, heroIdentityEnd));
 
     expect(landing).toContain("Open source by Aictx");
     expect(landing).toContain("Stop re&#8209;explaining your");
     expect(landing).toContain("repo to AI agents.");
-    expect(landing).toContain("Memory by Aictx is the open source npm package");
-    expect(landing).toContain("<code>@aictx/memory</code>");
-    expect(landing).toContain("It provides local, reviewable project memory for AI coding agents");
-    expect(landing).toContain("the <code>memory</code> CLI and optional <code>memory-mcp</code> server");
-    expect(landing).toContain("independent and not affiliated with similarly named packages or projects.");
-    expect(landing).toContain('class="value-section context-section" id="context"');
+    expect(heroIdentity).toContain(
+      "Memory by Aictx provides local, reviewable, and auto-maintained project memory for AI coding agents."
+    );
+    expect(heroIdentity).not.toContain("Memory by Aictx is the open source npm package");
+    expect(heroIdentity).not.toContain("independent and not affiliated");
+    expect(landing).toMatch(/class="value-section context-section"\s+id="context"/);
     expect(landing).not.toContain('class="value-grid"');
     expect(landing).toContain("Why Memory?");
     expect(landing).toContain("Durable project memory for AI agents");
@@ -36,14 +44,16 @@ describe("site landing page", () => {
     expect(landing).toContain("inspect what agents remember.");
     expect(landing).toContain('class="comparison comparison-why" aria-label="Why use Memory"');
     expect(landing).toContain("<strong>Set it up once.</strong>");
-    expect(landing).toContain("Give your repo durable memory for the product intent, decisions");
-    expect(landing).toContain("workflows, conventions, and gotchas agents usually need you to repeat.");
+    expect(normalizedLanding).toContain(
+      "Give your repo durable memory for the product intent, decisions, workflows, conventions, and gotchas agents usually need you to repeat."
+    );
     expect(landing).toContain("<strong>Load what matters.</strong>");
     expect(landing).toContain("Agents pull focused context before work &mdash; no long briefing");
     expect(landing).toContain("giant prompt, vector database, or retrieval stack to maintain.");
     expect(landing).toContain("<strong>See what agents remember.</strong>");
-    expect(landing).toContain("Inspect the same typed memory agents use, including objects, schema");
-    expect(landing).toContain("relations, provenance, and graph context, in a local visual viewer.");
+    expect(normalizedLanding).toContain(
+      "Inspect the same typed memory agents use, including objects, schema, relations, provenance, and graph context, in a local visual viewer."
+    );
     expect(landing).not.toContain("<strong>Review it like code.</strong>");
     expect(landing).toContain("Get started");
     expect(landing).toContain('aria-label="Get started with Memory"');
@@ -78,7 +88,9 @@ describe("site landing page", () => {
     expect(landing).toContain("Remind me: are we still avoiding dashboard-style UI here?");
     expect(landing).toContain("memory load \"improve viewer search UI\"");
     expect(landing).toContain("Loaded 6 relevant memories before editing");
-    expect(landing).toContain("Viewer memory page shows canonical types, facets, scopes, and relations first.");
+    expect(normalizedLanding).toContain(
+      "Viewer memory page shows canonical types, facets, scopes, and relations first."
+    );
     expect(landing).not.toContain("Inspect the memory agents will use.");
     expect(landing).not.toContain("The repo keeps the briefing.");
     expect(landing).not.toContain("become local, reviewable repo memory.");
@@ -130,8 +142,8 @@ describe("site landing page", () => {
     const mobileUseCasesIndex = mobileMenu.indexOf('href="/use-cases/">Use Cases</a>');
 
     expect(layout).toContain("Open navigation menu");
-    expect(layout).toContain("Memory by Aictx - local-first project memory for AI coding agents");
-    expect(layout).toContain("Memory by Aictx gives AI coding agents local, reviewable project memory");
+    expect(layout).toContain("Memory by Aictx - Persistent Memory for AI Coding Agents");
+    expect(layout).toContain("Memory by Aictx gives AI coding agents local, reviewable, auto-maintained project memory");
     expect(siteName).toBe("Memory by Aictx");
     expect(layout).toContain('<link rel="canonical" href={canonicalUrl} />');
     expect(layout).toContain('<meta property="og:site_name" content={siteName} />');
@@ -166,7 +178,9 @@ describe("site landing page", () => {
     expect(layout).toContain('<strong data-star-count="compact"></strong>');
     expect(layout).toContain("Footer navigation");
     expect(layout).toContain("<strong>Memory by Aictx</strong>");
-    expect(layout).toContain("Local, reviewable project memory for AI coding tools.");
+    expect(layout).toContain(
+      "Local, reviewable, auto-maintained project memory for AI coding agents."
+    );
     expect(layout).toContain('<a href="mailto:michele@remics.tech">Contact us</a>');
     await expect(stat(resolve(repoRoot, "site/public/favicon.ico"))).resolves.toMatchObject({
       size: expect.any(Number)
@@ -227,7 +241,13 @@ describe("site landing page", () => {
     expect(llmsTxt).toContain("Package: https://www.npmjs.com/package/@aictx/memory");
     expect(llmsTxt).toContain("CLI: memory");
     expect(llmsTxt).toContain("MCP server: memory-mcp");
-    expect(llmsTxt).toContain("independent open source project");
+    expect(llmsTxt).toContain(
+      "Memory by Aictx provides local, reviewable, auto-maintained project memory for AI coding agents."
+    );
+    expect(llmsTxt).toContain("auto-maintained project memory");
+    expect(llmsTxt).not.toContain("not affiliated");
+    expect(llmsTxt).not.toContain("sponsored by");
+    expect(llmsTxt).not.toContain("endorsed by");
     expect(sitemap).toContain("<loc>https://memory.aictx.dev/</loc>");
     expect(sitemap).toContain("<loc>https://memory.aictx.dev/blog/</loc>");
     expect(sitemap).toContain("<loc>https://memory.aictx.dev/use-cases/</loc>");
@@ -247,7 +267,10 @@ describe("site landing page", () => {
 
     expect(publicCopy).toContain("memory by aictx");
     expect(publicCopy).toContain("@aictx/memory");
-    expect(publicCopy).toContain("independent");
+    expect(publicCopy).toContain("auto-maintained");
+    expect(publicCopy).not.toContain("not affiliated");
+    expect(publicCopy).not.toContain("sponsored by");
+    expect(publicCopy).not.toContain("endorsed by");
     expect(publicCopy).not.toMatch(/\bscam\w*\b/);
     expect(publicCopy).not.toMatch(/\bcopying\b|\bcopied\b/);
     expect(publicCopy).not.toMatch(/\boriginal\b/);

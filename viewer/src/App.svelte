@@ -386,6 +386,21 @@
     { value: "architecture", label: "Architecture" },
     { value: "onboarding", label: "Onboarding" }
   ];
+  const graphTypeLegend: Array<{
+    label: string;
+    color: string;
+    borderColor: string;
+  }> = [
+    { label: "Project", color: "#2f5d62", borderColor: "#fffefa" },
+    { label: "Synthesis", color: "#574b90", borderColor: "#fffefa" },
+    { label: "Workflow", color: "#3f648c", borderColor: "#fffefa" },
+    { label: "Source", color: "#6b6f76", borderColor: "#9a968d" }
+  ];
+  const graphRelationLegend: Array<{ label: string; color: string; lineStyle: "solid" | "dashed" }> = [
+    { label: "Semantic", color: "#4f6f5a", lineStyle: "solid" },
+    { label: "Dependency", color: "#4f6590", lineStyle: "solid" },
+    { label: "Provenance", color: "#766b94", lineStyle: "dashed" }
+  ];
   const graphStyles: cytoscape.StylesheetJson = [
     {
       selector: "node",
@@ -393,7 +408,7 @@
         "background-color": "data(color)",
         "border-color": "data(borderColor)",
         "border-width": 2,
-        color: "#37352f",
+        color: "#2e2d2a",
         "font-size": 9,
         "font-weight": 700,
         height: "data(size)",
@@ -401,7 +416,7 @@
         "min-zoomed-font-size": 8.5,
         "overlay-opacity": 0,
         "text-background-color": "#fffefa",
-        "text-background-opacity": 0.9,
+        "text-background-opacity": 0.94,
         "text-background-padding": "2px",
         "text-halign": "center",
         "text-margin-y": 10,
@@ -409,6 +424,31 @@
         "text-valign": "bottom",
         "text-wrap": "wrap",
         width: "data(size)"
+      }
+    },
+    {
+      selector: "node.graph-node-source",
+      style: {
+        shape: "round-rectangle"
+      }
+    },
+    {
+      selector: "node.graph-node-project",
+      style: {
+        shape: "hexagon"
+      }
+    },
+    {
+      selector: "node.graph-node-workflow",
+      style: {
+        shape: "round-diamond"
+      }
+    },
+    {
+      selector: "node.graph-node-isolated",
+      style: {
+        "border-color": "#c36a43",
+        "border-style": "dashed"
       }
     },
     {
@@ -425,9 +465,15 @@
       }
     },
     {
+      selector: "edge.graph-edge-provenance",
+      style: {
+        "line-style": "dashed"
+      }
+    },
+    {
       selector: "node.graph-selected",
       style: {
-        "border-color": "#111214",
+        "border-color": "#171715",
         "border-width": 4,
         "font-size": 10.5,
         height: "data(size)",
@@ -443,9 +489,9 @@
     {
       selector: "edge.graph-selected",
       style: {
-        "line-color": "#111214",
+        "line-color": "#171715",
         opacity: 1,
-        "target-arrow-color": "#111214",
+        "target-arrow-color": "#171715",
         width: 3.2,
         "z-index": 20
       }
@@ -471,11 +517,11 @@
     {
       selector: "node.graph-faded",
       style: {
-        color: "#5f594f",
+        color: "#6c665e",
         "font-size": 8.8,
         label: "data(peekLabel)",
         "min-zoomed-font-size": 6.8,
-        opacity: 0.52,
+        opacity: 0.44,
         "text-background-opacity": 0.78,
         "text-max-width": "80px",
         "text-opacity": 1,
@@ -485,7 +531,7 @@
     {
       selector: "edge.graph-faded",
       style: {
-        opacity: 0.14
+        opacity: 0.12
       }
     }
   ];
@@ -519,6 +565,16 @@
       graphVisibleObjectIds.has(relation.to)
     )
   );
+  const graphUnlinkedCount = $derived.by(() => {
+    const linkedIds = new Set<string>();
+
+    for (const relation of graphRelations) {
+      linkedIds.add(relation.from);
+      linkedIds.add(relation.to);
+    }
+
+    return graphObjects.filter((object) => !linkedIds.has(object.id)).length;
+  });
   const graphElements = $derived.by(() => buildGraphElements(graphObjects, graphRelations));
   const selectedGraphObject = $derived.by(() =>
     selectedGraphObjectId === null || !graphVisibleObjectIds.has(selectedGraphObjectId)
@@ -1393,22 +1449,28 @@
     }
 
     return [
-      ...memoryObjects.map((object) => ({
-        group: "nodes" as const,
-        data: {
-          id: object.id,
-          label: graphObjectLabel(object),
-          peekLabel: graphObjectPeekLabel(object),
-          fullLabel: graphObjectFullLabel(object),
-          type: object.type,
-          status: object.status,
-          color: graphObjectColor(object),
-          borderColor: graphObjectBorderColor(object),
-          size: 28 + Math.min(degreeById.get(object.id) ?? 0, 8) * 3
-        }
-      })),
+      ...memoryObjects.map((object) => {
+        const degree = degreeById.get(object.id) ?? 0;
+
+        return {
+          group: "nodes" as const,
+          classes: graphNodeClasses(object, degree),
+          data: {
+            id: object.id,
+            label: graphObjectLabel(object),
+            peekLabel: graphObjectPeekLabel(object),
+            fullLabel: graphObjectFullLabel(object),
+            type: object.type,
+            status: object.status,
+            color: graphObjectColor(object),
+            borderColor: graphObjectBorderColor(object, degree),
+            size: (degree === 0 ? 25 : 29) + Math.min(degree, 8) * 3
+          }
+        };
+      }),
       ...relationList.map((relation) => ({
         group: "edges" as const,
+        classes: graphEdgeClasses(relation),
         data: {
           id: relation.id,
           source: relation.from,
@@ -1678,7 +1740,18 @@
     }
   }
 
-  function graphObjectBorderColor(object: MemoryObjectSummary): string {
+  function graphNodeClasses(object: MemoryObjectSummary, degree: number): string {
+    return [
+      `graph-node-${object.type}`,
+      ...(degree === 0 ? ["graph-node-isolated"] : [])
+    ].join(" ");
+  }
+
+  function graphObjectBorderColor(object: MemoryObjectSummary, degree = 1): string {
+    if (degree === 0) {
+      return "#c36a43";
+    }
+
     if (object.type === "source") {
       return "#9a968d";
     }
@@ -1709,6 +1782,10 @@
       default:
         return "#78736b";
     }
+  }
+
+  function graphEdgeClasses(relation: MemoryRelationSummary): string {
+    return relation.predicate === "derived_from" ? "graph-edge-provenance" : "";
   }
 
   function pageFilter(section: string): void {
@@ -2461,6 +2538,7 @@
             <dl class="graph-counts" aria-label="Visible graph counts">
               <div><dt>Nodes</dt><dd data-testid="graph-node-count">{graphObjects.length}</dd></div>
               <div><dt>Links</dt><dd data-testid="graph-relation-count">{graphRelations.length}</dd></div>
+              <div><dt>Unlinked</dt><dd data-testid="graph-unlinked-count">{graphUnlinkedCount}</dd></div>
             </dl>
           </header>
 
@@ -2485,18 +2563,51 @@
                 </button>
               </div>
               <div class="graph-actions">
-                <button type="button" onclick={() => zoomGraph(1.18)} data-testid="graph-zoom-in">Zoom in</button>
-                <button type="button" onclick={() => zoomGraph(0.84)} data-testid="graph-zoom-out">Zoom out</button>
-                <button type="button" onclick={fitGraph} data-testid="graph-fit">Fit</button>
-                <button type="button" onclick={resetGraphLayout} data-testid="graph-reset-layout">Reset layout</button>
+                <button type="button" aria-label="Zoom in" title="Zoom in" onclick={() => zoomGraph(1.18)} data-testid="graph-zoom-in">+</button>
+                <button type="button" aria-label="Zoom out" title="Zoom out" onclick={() => zoomGraph(0.84)} data-testid="graph-zoom-out">-</button>
+                <button type="button" aria-label="Fit graph" title="Fit graph" onclick={fitGraph} data-testid="graph-fit">Fit</button>
+                <button type="button" aria-label="Reset graph layout" title="Reset graph layout" onclick={resetGraphLayout} data-testid="graph-reset-layout">↺</button>
                 <button
                   type="button"
+                  aria-label="Focus selected graph item"
+                  title="Focus selected graph item"
                   disabled={selectedGraphObject === null && selectedGraphRelation === null}
                   onclick={focusGraphSelection}
                   data-testid="graph-focus-selected"
                 >
-                  Focus
+                  ◎
                 </button>
+              </div>
+            </div>
+            <div class="graph-legend" aria-label="Graph legend" data-testid="graph-legend">
+              <div class="graph-legend-group">
+                {#each graphTypeLegend as item (item.label)}
+                  <span class="graph-legend-item">
+                    <span
+                      class="graph-legend-node"
+                      style={`--legend-color: ${item.color}; --legend-border: ${item.borderColor}`}
+                      aria-hidden="true"
+                    ></span>
+                    {item.label}
+                  </span>
+                {/each}
+                <span class="graph-legend-item">
+                  <span class="graph-legend-node unlinked" aria-hidden="true"></span>
+                  Unlinked
+                </span>
+              </div>
+              <div class="graph-legend-group">
+                {#each graphRelationLegend as item (item.label)}
+                  <span class="graph-legend-item">
+                    <span
+                      class:dashed={item.lineStyle === "dashed"}
+                      class="graph-legend-line"
+                      style={`--legend-color: ${item.color}`}
+                      aria-hidden="true"
+                    ></span>
+                    {item.label}
+                  </span>
+                {/each}
               </div>
             </div>
 
@@ -2527,6 +2638,7 @@
                       <div><dt>Status</dt><dd>{selectedGraphObject.status}</dd></div>
                       <div><dt>Facet</dt><dd>{facetCategoryLabel(selectedGraphObject)}</dd></div>
                       <div><dt>Relations</dt><dd>{relationsForObject(selectedGraphObject.id).length}</dd></div>
+                      <div><dt>Graph</dt><dd>{relationsForObject(selectedGraphObject.id).length === 0 ? "Unlinked" : "Linked"}</dd></div>
                     </dl>
                     <p class="graph-body-preview">{bodyPreview(selectedGraphObject)}</p>
                     <div class="graph-inspector-actions">
@@ -2577,7 +2689,7 @@
                   <section class="graph-empty-selection">
                     <p class="eyebrow">Selection</p>
                     <h3>{graphObjects.length} visible objects</h3>
-                    <p>{graphRelations.length} visible relation links.</p>
+                    <p>{graphRelations.length} visible relation links. {graphUnlinkedCount} unlinked {graphUnlinkedCount === 1 ? "node" : "nodes"} use dashed rims.</p>
                   </section>
                 {/if}
               </aside>
@@ -4889,7 +5001,7 @@
   }
 
   .graph-counts div {
-    min-width: 88px;
+    min-width: 86px;
     border: 1px solid #e2ded5;
     border-radius: 8px;
     padding: 10px 12px;
@@ -4913,7 +5025,7 @@
 
   .graph-panel {
     display: grid;
-    gap: 14px;
+    gap: 12px;
   }
 
   .graph-toolbar {
@@ -4924,9 +5036,9 @@
     gap: 12px;
     border: 1px solid #e2ded5;
     border-radius: 8px;
-    padding: 12px;
-    background: #ffffff;
-    box-shadow: 0 10px 28px rgb(16 24 40 / 5%);
+    padding: 10px;
+    background: linear-gradient(180deg, #ffffff 0%, #fbfaf6 100%);
+    box-shadow: 0 8px 22px rgb(16 24 40 / 5%);
   }
 
   .graph-filter-tabs,
@@ -4950,10 +5062,74 @@
     font-weight: 760;
   }
 
+  .graph-actions button {
+    min-width: 38px;
+    padding-right: 10px;
+    padding-left: 10px;
+    color: #36342f;
+    font-size: 0.92rem;
+  }
+
+  .graph-actions button:disabled {
+    color: #b5aea4;
+    background: #f6f4ee;
+  }
+
   .graph-filter-tabs button.active {
     border-color: #2b2925;
     color: #ffffff;
     background: #2b2925;
+  }
+
+  .graph-legend {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 10px 16px;
+    border: 1px solid #e5e0d6;
+    border-radius: 8px;
+    padding: 10px 12px;
+    color: #625d55;
+    background: #fbfaf6;
+    font-size: 0.78rem;
+    font-weight: 760;
+  }
+
+  .graph-legend-group,
+  .graph-legend-item {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .graph-legend-item {
+    gap: 6px;
+    white-space: nowrap;
+  }
+
+  .graph-legend-node {
+    width: 11px;
+    height: 11px;
+    border: 2px solid var(--legend-border, #fffefa);
+    border-radius: 999px;
+    background: var(--legend-color, #6b6f76);
+    box-shadow: 0 0 0 1px rgb(38 37 34 / 14%);
+  }
+
+  .graph-legend-node.unlinked {
+    border-color: #c36a43;
+    border-style: dashed;
+    background: #fff7ef;
+  }
+
+  .graph-legend-line {
+    width: 24px;
+    border-top: 2px solid var(--legend-color, #78736b);
+  }
+
+  .graph-legend-line.dashed {
+    border-top-style: dashed;
   }
 
   .graph-workspace {
@@ -4982,10 +5158,11 @@
     height: 100%;
     min-height: 640px;
     background:
-      linear-gradient(rgb(242 239 232 / 68%) 1px, transparent 1px),
-      linear-gradient(90deg, rgb(242 239 232 / 68%) 1px, transparent 1px),
+      radial-gradient(circle at 18% 18%, rgb(47 93 98 / 7%), transparent 26%),
+      linear-gradient(rgb(238 234 225 / 72%) 1px, transparent 1px),
+      linear-gradient(90deg, rgb(238 234 225 / 72%) 1px, transparent 1px),
       #fffefa;
-    background-size: 28px 28px;
+    background-size: auto, 30px 30px, 30px 30px, auto;
   }
 
   .graph-empty {
@@ -5017,6 +5194,7 @@
     align-self: stretch;
     min-height: 640px;
     padding: 18px;
+    background: linear-gradient(180deg, #ffffff 0%, #fbfaf7 100%);
   }
 
   .graph-inspector section {
@@ -5028,6 +5206,7 @@
     color: #242423;
     font-size: 1.2rem;
     font-weight: 850;
+    line-height: 1.15;
   }
 
   .graph-meta {
@@ -5061,6 +5240,8 @@
 
   .graph-body-preview {
     margin: 0;
+    border-left: 3px solid #e2ded5;
+    padding-left: 10px;
     font-size: 0.92rem;
   }
 
@@ -5606,6 +5787,10 @@
     .graph-filter-tabs,
     .graph-actions {
       width: 100%;
+    }
+
+    .graph-legend {
+      justify-content: flex-start;
     }
 
     .graph-filter-tabs button,
