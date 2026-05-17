@@ -1,6 +1,6 @@
 {
   "body_path": "memory/workflows/release-updates-homebrew-tap-from-npm-tarball.md",
-  "content_hash": "sha256:1c7037c7f698e1863924b180b35eb64beef622231ccfec897599eda250f6ac03",
+  "content_hash": "sha256:6b9645a26ffe3633a409e309f433062bd695b785730555d579201d2d85b72852",
   "created_at": "2026-05-17T10:22:44+02:00",
   "evidence": [
     {
@@ -43,5 +43,5 @@
   ],
   "title": "Release updates Homebrew tap from npm tarball",
   "type": "workflow",
-  "updated_at": "2026-05-17T10:22:44+02:00"
+  "updated_at": "2026-05-17T11:17:58+02:00"
 }
