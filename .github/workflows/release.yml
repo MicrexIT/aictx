@@ -87,12 +87,12 @@ jobs:
         run: |
           tarball_url="https://registry.npmjs.org/@aictx/memory/-/memory-${PACKAGE_VERSION}.tgz"
 
-          for attempt in {1..12}; do
+          for attempt in {1..30}; do
             if curl -fsSL "$tarball_url" -o package.tgz; then
               break
             fi
 
-            if [ "$attempt" -eq 12 ]; then
+            if [ "$attempt" -eq 30 ]; then
               echo "::error::npm tarball did not become available: $tarball_url"
               exit 1
             fi
