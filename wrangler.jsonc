@@ -1,6 +1,6 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
-  "name": "memory",
+  "name": "aictx-demo",
   "compatibility_date": "2026-05-05",
   "assets": {
     "directory": "./site/dist",
