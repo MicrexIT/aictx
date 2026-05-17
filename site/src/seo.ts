@@ -59,7 +59,7 @@ export function buildStructuredData(siteUrl: URL): object {
         "@id": organizationId,
         name: "Aictx",
         url: new URL("/", siteUrl).toString(),
-        logo: new URL("/favicon.ico", siteUrl).toString(),
+        logo: new URL("/assets/logo/memory-constellation-logo.svg", siteUrl).toString(),
         sameAs: [
           "https://github.com/aictx/memory",
           "https://www.npmjs.com/package/@aictx/memory",

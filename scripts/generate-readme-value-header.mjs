@@ -7,7 +7,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, "..");
 const output = path.join(root, "site/public/assets/readme-value-header.png");
 const paintingPath = path.join(root, "site/public/assets/monet-water-lilies.jpg");
+const logoPath = path.join(root, "site/public/assets/logo/memory-constellation-logo.svg");
 const painting = `data:image/jpeg;base64,${(await readFile(paintingPath)).toString("base64")}`;
+const markSvg = (await readFile(logoPath, "utf8")).replace(/<\?xml[^>]*>\s*/u, "");
 
 const width = 2400;
 const height = 1120;
@@ -89,15 +91,15 @@ const html = String.raw`<!doctype html>
       }
 
       .mark {
-        display: grid;
         width: 60px;
         height: 60px;
-        place-items: center;
-        border-radius: 999px;
-        background: #111214;
-        color: white;
-        font-size: 30px;
-        font-weight: 800;
+        flex: 0 0 auto;
+      }
+
+      .mark svg {
+        display: block;
+        width: 100%;
+        height: 100%;
       }
 
       h1 {
@@ -276,7 +278,7 @@ const html = String.raw`<!doctype html>
       <section class="panel">
         <div>
           <div class="eyebrow">
-            <div class="mark">A</div>
+            <div class="mark">${markSvg}</div>
             <div>Local-first and open source</div>
           </div>
 

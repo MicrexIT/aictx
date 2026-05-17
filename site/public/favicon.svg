@@ -1,7 +1,12 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" rx="32" fill="#111214" />
-  <path
-    d="M18.3 48 28.8 16h6.5L45.7 48h-6.2l-2.2-7.3H26.7L24.5 48h-6.2Zm10-12.5h7.4l-3.7-12.4-3.7 12.4Z"
-    fill="#faf9f5"
-  />
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Memory constellation mark">
+  <circle cx="32" cy="32" r="30" fill="#111214" />
+  <path d="M58.88 26.72 43.66 31.57 29.27 28.57 20.02 35.77 5.12 28.36" fill="none" stroke="#faf9f5" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
+  <g fill="#faf9f5" stroke="#111214" stroke-width="0.9">
+    <circle cx="58.88" cy="26.72" r="2.22" />
+    <circle cx="43.66" cy="31.57" r="2.22" />
+    <circle cx="29.27" cy="28.57" r="2.22" />
+    <circle cx="20.02" cy="35.77" r="2.22" />
+    <circle cx="5.12" cy="28.36" r="2.22" />
+  </g>
 </svg>

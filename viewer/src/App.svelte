@@ -2261,7 +2261,7 @@
     <aside id="viewer-sidebar-drawer" class="sidebar" aria-label="Viewer navigation" data-testid="viewer-sidebar-drawer">
       <div class="brand">
         <div class="brand-row">
-          <img class="book-icon" src="/favicon.ico" width="28" height="28" alt="" aria-hidden="true" />
+          <img class="book-icon" src="/favicon.svg" width="28" height="28" alt="" aria-hidden="true" />
           <h1 id="viewer-title">Memory Schema</h1>
         </div>
         <p>{selectedProject?.project.name ?? "No project selected"} · {selectedProject?.project.id ?? "local memory"}</p>
@@ -2761,7 +2761,7 @@
           data-testid="memory-list-view"
         >
           <header class="doc-hero">
-            <img class="doc-icon" src="/favicon.ico" width="46" height="46" alt="" aria-hidden="true" />
+            <img class="doc-icon" src="/favicon.svg" width="46" height="46" alt="" aria-hidden="true" />
             <p class="eyebrow">Canonical Memory storage</p>
             <h2 id="memory-list-title">{bootstrap.project.name} Memory Schema</h2>
             <p>
