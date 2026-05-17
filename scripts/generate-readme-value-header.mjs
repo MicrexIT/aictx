@@ -279,18 +279,18 @@ const html = String.raw`<!doctype html>
         <div>
           <div class="eyebrow">
             <div class="mark">${markSvg}</div>
-            <div>Local-first and open source</div>
+            <div>Local wiki for AI agents</div>
           </div>
 
           <h1>Stop re-explaining your repo to AI agents.</h1>
 
           <div class="subhead">
-            Memory saves durable project knowledge as reviewable repo memory.
+            Agents load repo context, keep it current, and you review changes.
           </div>
 
           <div class="chips">
-            <div class="chip">not chat logs</div>
-            <div class="chip">reviewable memory</div>
+            <div class="chip">repo wiki</div>
+            <div class="chip">reviewable updates</div>
             <div class="chip">task-focused context</div>
           </div>
         </div>

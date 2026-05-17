@@ -12,10 +12,11 @@ const viewerUrl = "https://demo.aictx.dev/?token=demo";
         <a
           class="eyebrow-link"
           href="https://github.com/aictx/memory"
+          aria-label="Open the aictx/memory GitHub repository"
           rel="noreferrer"
         >
           <GitHubIcon />
-          Open source by Aictx
+          aictx/memory
         </a>
         <h1 class="hero-title">
           <span class="hero-title-desktop">Stop re&#8209;explaining your</span>
@@ -25,11 +26,11 @@ const viewerUrl = "https://demo.aictx.dev/?token=demo";
         </h1>
 
         <p class="hero-identity">
-          Memory by Aictx provides local, reviewable, and auto-maintained
-          project memory for AI coding agents.
+          <span class="hero-identity-line">Memory is a local wiki for AI agents.</span>
+          <span class="hero-identity-line">They load repo context, keep it current, and you review the changes.</span>
         </p>
 
-        <div class="hero-install" aria-label="Get started with Memory">
+        <div class="hero-install" aria-label="Install Memory">
           <div class="hero-commands" aria-label="Install commands">
             <div class="hero-command">
               <span>Homebrew</span>
@@ -39,14 +40,6 @@ const viewerUrl = "https://demo.aictx.dev/?token=demo";
               <span>npm</span>
               <code>npm install -g @aictx/memory</code>
             </div>
-          </div>
-
-          <div class="hero-actions">
-            <a
-              class="button primary"
-              href="https://github.com/aictx/memory"
-              rel="noreferrer">Get started</a
-            >
           </div>
         </div>
       </div>
@@ -61,97 +54,37 @@ const viewerUrl = "https://demo.aictx.dev/?token=demo";
         <div class="section-heading">
           <h2 id="context-title">Why Memory?</h2>
           <p>
-            Durable project memory for AI agents: give the repo shared context,
-            load only what matters, and inspect what agents remember.
+            Give the repo a wiki agents can load, maintain, and inspect under
+            review.
           </p>
         </div>
 
         <div class="comparison comparison-why" aria-label="Why use Memory">
           <div>
             <span>01</span>
-            <strong>Set it up once.</strong>
+            <strong>Start the repo wiki.</strong>
             <p>
-              Give your repo durable memory for the product intent, decisions,
-              workflows, conventions, and gotchas agents usually need you to
+              Capture product intent, decisions, workflows, conventions, and
+              gotchas in a local wiki agents can reuse instead of asking you to
               repeat.
             </p>
           </div>
           <div>
             <span>02</span>
-            <strong>Load what matters.</strong>
+            <strong>Load the right page.</strong>
             <p>
-              Agents pull focused context before work &mdash; no long briefing,
-              giant prompt, vector database, or retrieval stack to maintain.
+              Agents pull focused wiki context before work &mdash; no long
+              briefing, giant prompt, vector database, or retrieval stack to
+              maintain.
             </p>
           </div>
           <div>
             <span>03</span>
-            <strong>See what agents remember.</strong>
+            <strong>Review what changed.</strong>
             <p>
-              Inspect the same typed memory agents use, including objects,
+              Inspect the same typed entries agents use, including objects,
               schema, relations, provenance, and graph context, in a local
-              visual viewer.
-            </p>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section
-      class="value-section"
-      id="agent-memory"
-      aria-labelledby="agent-memory-title"
-    >
-      <div class="value-section-inner">
-        <div class="section-heading">
-          <h2 id="agent-memory-title">
-            Persistent memory for the tools agents already use.
-          </h2>
-          <p>
-            Memory works as long-term project context for AI coding assistants
-            including Codex, Claude Code, Cursor, Cline, OpenCode, and
-            MCP-capable clients.
-          </p>
-        </div>
-
-        <div
-          class="comparison comparison-why"
-          aria-label="Memory guides by coding agent"
-        >
-          <div>
-            <span>Persistent memory</span>
-            <strong
-              ><a class="text-link" href="/persistent-memory-ai-coding-agents/"
-                >AI coding agent memory</a
-              ></strong
-            >
-            <p>
-              Keep decisions, conventions, workflows, and gotchas available
-              across sessions and context resets.
-            </p>
-          </div>
-          <div>
-            <span>MCP server</span>
-            <strong
-              ><a class="text-link" href="/mcp-memory-server/"
-                >MCP memory server</a
-              ></strong
-            >
-            <p>
-              Expose local project memory to MCP-capable assistants without
-              moving project knowledge into a hosted service.
-            </p>
-          </div>
-          <div>
-            <span>Agent workflows</span>
-            <strong
-              ><a class="text-link" href="/use-cases/"
-                >Codex, Claude Code, and Cursor</a
-              ></strong
-            >
-            <p>
-              Use short agent guidance files while Memory carries the durable
-              project context those tools need.
+              viewer.
             </p>
           </div>
         </div>

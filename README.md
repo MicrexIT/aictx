@@ -1,6 +1,6 @@
 # Memory
 
-![Stop re-explaining your repo to AI agents. Memory saves durable project knowledge as reviewable repo memory.](site/public/assets/readme-value-header.png)
+![Memory is a local wiki for AI agents. Agents load repo context, keep it current, and you review changes.](site/public/assets/readme-value-header.png)
 
 <p align="center">
   <a href="https://memory.aictx.dev"><img alt="Website" src="https://img.shields.io/badge/website-memory.aictx.dev-111214?style=for-the-badge"></a>
@@ -15,20 +15,21 @@
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-yellow.svg"></a>
 </p>
 
-Memory is local-first persistent project memory for AI coding agents and AI
-coding assistants, inspired by
+Memory is a local wiki for AI coding agents and assistants: repo context they
+can load before work, keep current after meaningful changes, and leave
+reviewable in your project. It is inspired by
 [Andrej Karpathy's LLM Wiki pattern](https://gist.githubusercontent.com/karpathy/442a6bf555914893e9891c11519de94f/raw/ac46de1ad27f92b28ac95459c782c07f6b8c964a/llm-wiki.md):
 durable, human-editable project knowledge that models can read before work.
 
 Stop re-explaining the same product intent, architecture decisions, repo
 conventions, setup steps, and known traps every time a new AI coding session
-starts. Activate Memory once in a repo: it saves durable knowledge as local,
-reviewable memory, wires short agent guidance into the project, and loads only
-the pieces that matter for the current task.
+starts. Activate Memory once in a repo: it gives agents a local wiki of durable
+project knowledge, wires short agent guidance into the project, and loads only
+the pages that matter for the current task.
 
 Use it when you want:
 
-- New agents to understand the repo without a long briefing.
+- New agents to read the repo wiki instead of asking for a long briefing.
 - Durable decisions, workflows, gotchas, and source-backed summaries to survive
   across sessions, branches, and reviews.
 - Local files and Git review instead of hosted memory, a vector database, or
@@ -43,27 +44,29 @@ MCP-capable clients. Use the `memory` CLI by default, then add the local
 
 ## Why Memory?
 
-Memory is for durable project context that should survive between agents,
-sessions, branches, and reviews without making you re-teach the repo each time.
+Memory is for the repo wiki agents actually need: durable project context that
+should survive between agents, sessions, branches, and reviews without making
+you re-teach the repo each time.
 
-- Why not `AGENTS.md` only? Agent instruction files are good operating manuals,
-  but they become too broad and static when they also try to hold product
-  intent, decisions, gotchas, workflows, and source-backed summaries.
+- Why not `AGENTS.md` only? Agent instruction files are good operating manuals.
+  They become too broad and static when they also try to be the whole project
+  wiki.
 - Why not a vector DB or RAG stack? Those are useful for large retrieval
   systems. Memory keeps v1 project memory local, inspectable, Git-aware, and
   usable without embeddings, hosted infrastructure, or a model API.
 - Why not long context? Long context helps inside one session. It does not make
   memory reviewable, current, reusable across future sessions, or easy to clean
   up when facts go stale.
-- Why local files? Plain files are reviewable and portable. Memory builds on that
-  foundation with validation, typed memory, a local index, task-focused loading,
-  relation-aware inspection, and a save/no-save discipline.
+- Why local files? Plain files make the wiki reviewable and portable. Memory
+  builds on that foundation with validation, typed memory, a local index,
+  task-focused loading, relation-aware inspection, and a save/no-save
+  discipline.
 
 ### Inspect the Memory
 
-Memory is not just a hidden context file for agents. The visual memory viewer is
-part of the product: a local review surface where humans can inspect the same
-schema, objects, facets, relations, provenance, and graph context agents load.
+Memory is not just hidden context for agents. The visual memory viewer is the
+wiki review surface: a local place where humans can inspect the same schema,
+objects, facets, relations, provenance, and graph context agents load.
 
 <p align="center">
   <a href="https://demo.aictx.dev/?token=demo">
@@ -96,15 +99,16 @@ immediately after Memory validates and writes it.
 
 ## How It Works
 
-![Memory workflow: load relevant memory, do work, and remember durable knowledge.](site/public/assets/readme-how-it-works.png)
+![Memory workflow: load wiki context, do work, and save durable updates.](site/public/assets/readme-how-it-works.png)
 
 ```text
-set up once -> agents load relevant reminders -> save durable discoveries
+set up once -> agents load wiki context -> save durable updates
 ```
 
 The loop is deliberately small after setup. Agents load memory before
 non-trivial work, use the current repo and tests as evidence, then save only
-knowledge that should survive future sessions, branches, and reviews.
+knowledge that should remain in the repo wiki for future sessions, branches,
+and reviews.
 
 ## Get Started Quickly
 
@@ -166,8 +170,8 @@ memory remember --stdin
 memory diff
 ```
 
-Save only durable project knowledge. Memory is meant to reduce repeated context
-work, not archive every task transcript.
+Save only durable project knowledge. Memory is meant to keep the repo wiki
+current, not archive every task transcript.
 
 ## What You Get
 
@@ -175,8 +179,8 @@ Four surfaces ship today. Each one works locally and fits normal Git review.
 
 | Surface | What it gives agents and humans | Try |
 | --- | --- | --- |
-| One-time setup | Creates local memory and short repo guidance so future agents know when to load and save context. | `memory setup` |
-| Task-focused loading | Pulls relevant project memory before coding, debugging, review, architecture, or onboarding work. | `memory load "change auth routes"` |
+| One-time setup | Creates the local wiki memory and short repo guidance so future agents know when to load and save context. | `memory setup` |
+| Task-focused loading | Pulls relevant wiki context before coding, debugging, review, architecture, or onboarding work. | `memory load "change auth routes"` |
 | Visual memory viewer | Opens a local browser for the memory schema, canonical objects, facets, relation overview, provenance, and graph context. | `memory view` |
 | Save discipline | Saves only durable facts, decisions, workflows, gotchas, source records, and syntheses. | `memory remember --stdin` |
 
@@ -234,7 +238,8 @@ agent recipes, and pull requests are welcome.
 
 ## Project identity
 
-Memory by Aictx provides local, reviewable, auto-maintained project memory for
-AI coding agents. It is distributed through the open source npm package
-`@aictx/memory` and the Homebrew formula `aictx/tap/memory`, then runs through
-the `memory` CLI and optional `memory-mcp` server.
+Memory by Aictx gives AI coding agents a local wiki for repo context. It stores
+durable project memory as reviewable local files agents can load before work
+and update after meaningful changes. It is distributed through the open source
+npm package `@aictx/memory` and the Homebrew formula `aictx/tap/memory`, then
+runs through the `memory` CLI and optional `memory-mcp` server.

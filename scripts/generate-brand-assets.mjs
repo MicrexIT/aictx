@@ -80,14 +80,83 @@ async function createIco(svgBuffer, sizes) {
 
 async function patchReadmeHowItWorks() {
   const file = path.join(root, "site/public/assets/readme-how-it-works.png");
-  const replacements = [
-    { left: 276, top: 180, size: 56, cover: 68 },
-    { left: 300, top: 660, size: 52, cover: 64 },
-    { left: 952, top: 660, size: 52, cover: 64 },
-    { left: 1604, top: 660, size: 52, cover: 64 },
-  ];
+  const paintingPath = path.join(root, "site/public/assets/monet-water-lilies.jpg");
+  const painting = (await readFile(paintingPath)).toString("base64");
+  const logoData = Buffer.from(faviconSvg).toString("base64");
+  const svg = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="2400" height="1040" viewBox="0 0 2400 1040">
+  <defs>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="28" stdDeviation="30" flood-color="#1f2527" flood-opacity="0.13"/>
+    </filter>
+    <style>
+      .sans { font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; }
+      .mono { font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace; }
+      .ink { fill: #111214; }
+      .muted { fill: #525965; }
+      .faint { fill: #6f7680; }
+    </style>
+  </defs>
+  <rect width="2400" height="1040" rx="26" fill="#f5f2ed"/>
+  <image href="data:image/jpeg;base64,${painting}" width="2400" height="1040" preserveAspectRatio="xMidYMid slice" opacity="0.42"/>
+  <rect width="2400" height="1040" rx="26" fill="#fffaf2" opacity="0.36"/>
 
-  await patchIcons(file, replacements);
+  <rect x="140" y="100" width="2120" height="840" fill="#fffefa" opacity="0.94"/>
+  <rect x="140.5" y="100.5" width="2119" height="839" fill="none" stroke="#111214" stroke-opacity="0.06"/>
+
+  <g transform="translate(276 180)">
+    <circle cx="28" cy="28" r="36" fill="#ffffff"/>
+    <image href="data:image/svg+xml;base64,${logoData}" x="0" y="0" width="56" height="56"/>
+    <text class="sans ink" x="80" y="40" font-size="33" font-weight="800">How Memory works</text>
+  </g>
+
+  <text class="sans ink" x="276" y="308" font-size="78" font-weight="850">Load wiki context. Work. Update it.</text>
+  <text class="sans muted" x="276" y="392" font-size="34" font-weight="650">Give each agent the repo context it needs, then save durable updates</text>
+  <text class="sans muted" x="276" y="438" font-size="34" font-weight="650">future sessions can trust.</text>
+
+  <g transform="translate(276 496)">
+    <rect x="0" y="0" width="264" height="68" rx="34" fill="#111214"/>
+    <text class="sans" x="132" y="44" font-size="26" font-weight="820" fill="#ffffff" text-anchor="middle">load wiki</text>
+    <path d="M300 34H382m0 0-18-18m18 18-18 18" fill="none" stroke="#b7b4ad" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+    <rect x="416" y="0" width="250" height="68" rx="34" fill="#f8f7f4" stroke="#dedbd4" stroke-width="2"/>
+    <text class="sans ink" x="541" y="44" font-size="26" font-weight="820" text-anchor="middle">do work</text>
+    <path d="M704 34H786m0 0-18-18m18 18-18 18" fill="none" stroke="#b7b4ad" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+    <rect x="820" y="0" width="320" height="68" rx="34" fill="#f8f7f4" stroke="#dedbd4" stroke-width="2"/>
+    <text class="sans ink" x="980" y="44" font-size="26" font-weight="820" text-anchor="middle">save update</text>
+  </g>
+
+  <g filter="url(#softShadow)">
+    <rect x="276" y="628" width="584" height="248" rx="14" fill="#ffffff" stroke="#dedbd4" stroke-width="2"/>
+    <image href="data:image/svg+xml;base64,${logoData}" x="300" y="660" width="52" height="52"/>
+    <text class="sans ink" x="372" y="684" font-size="34" font-weight="830">Load the right page</text>
+    <rect x="372" y="712" width="384" height="44" rx="8" fill="#eeece7"/>
+    <text class="mono ink" x="392" y="742" font-size="21" font-weight="800">memory load "auth routes"</text>
+    <text class="sans muted" x="324" y="810" font-size="25" font-weight="660">Typed wiki entries are searched locally</text>
+    <text class="sans muted" x="324" y="844" font-size="25" font-weight="660">and returned as a focused pack.</text>
+  </g>
+
+  <g filter="url(#softShadow)">
+    <rect x="928" y="628" width="584" height="248" rx="14" fill="#ffffff" stroke="#dedbd4" stroke-width="2"/>
+    <image href="data:image/svg+xml;base64,${logoData}" x="952" y="660" width="52" height="52"/>
+    <text class="sans ink" x="1024" y="684" font-size="34" font-weight="830">Build with evidence</text>
+    <rect x="1024" y="712" width="384" height="44" rx="8" fill="#eeece7"/>
+    <text class="mono ink" x="1045" y="742" font-size="21" font-weight="800">repo + tests + memory</text>
+    <text class="sans muted" x="976" y="810" font-size="25" font-weight="660">Current code stays authoritative</text>
+    <text class="sans muted" x="976" y="844" font-size="25" font-weight="660">when facts conflict or drift.</text>
+  </g>
+
+  <g filter="url(#softShadow)">
+    <rect x="1580" y="628" width="584" height="248" rx="14" fill="#ffffff" stroke="#dedbd4" stroke-width="2"/>
+    <image href="data:image/svg+xml;base64,${logoData}" x="1604" y="660" width="52" height="52"/>
+    <text class="sans ink" x="1676" y="684" font-size="34" font-weight="830">Save durable updates</text>
+    <rect x="1676" y="712" width="384" height="44" rx="8" fill="#eeece7"/>
+    <text class="mono ink" x="1696" y="742" font-size="21" font-weight="800">memory remember --stdin</text>
+    <text class="sans muted" x="1628" y="810" font-size="25" font-weight="660">Decisions, workflows, gotchas,</text>
+    <text class="sans muted" x="1628" y="844" font-size="25" font-weight="660">and source-backed syntheses stay current.</text>
+  </g>
+</svg>`;
+
+  await sharp(Buffer.from(svg)).png().toFile(file);
 }
 
 async function patchViewerScreenshot(relativePath, positions) {

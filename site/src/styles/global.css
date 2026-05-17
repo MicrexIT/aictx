@@ -66,7 +66,6 @@ code {
 .site-header nav,
 .mobile-menu-panel,
 .github-pill,
-.hero-actions,
 .eyebrow-link,
 .browser-bar,
 .demo-footer,
@@ -234,10 +233,10 @@ main,
   z-index: 1;
   display: grid;
   align-content: center;
-  gap: clamp(16px, 2.2vw, 22px);
+  gap: clamp(14px, 2vw, 20px);
   justify-items: center;
-  width: min(100%, 860px);
-  padding: clamp(40px, 6vw, 64px) clamp(22px, 6vw, 76px);
+  width: min(100%, 840px);
+  padding: clamp(38px, 5.2vw, 58px) clamp(22px, 6vw, 72px);
   text-align: center;
   background: rgba(252, 252, 249, 0.94);
   border: 1px solid rgba(17, 18, 20, 0.1);
@@ -254,10 +253,10 @@ main,
 }
 
 .eyebrow-link {
-  gap: 7px;
-  min-height: 30px;
+  gap: 8px;
+  min-height: 32px;
   margin-bottom: 0;
-  padding: 4px 12px;
+  padding: 4px 13px;
   color: var(--accent);
   background: rgba(241, 241, 237, 0.82);
   border: 1px solid rgba(17, 18, 20, 0.06);
@@ -325,6 +324,10 @@ h1 {
   line-height: 1.52;
 }
 
+.hero-identity-line {
+  display: block;
+}
+
 .hero-identity code {
   color: var(--ink);
   font-size: 0.92em;
@@ -333,24 +336,11 @@ h1 {
 
 .hero-install {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
+  align-items: stretch;
   justify-content: center;
-  gap: 14px;
-  width: min(100%, 740px);
-  max-width: 740px;
-  margin-top: 2px;
-}
-
-.hero-actions {
-  display: flex;
-  width: auto;
-  margin: 0;
-}
-
-.hero-install .button {
-  min-width: 168px;
-  min-height: 46px;
+  width: min(100%, 720px);
+  max-width: 720px;
+  margin-top: 6px;
 }
 
 .keyword-actions {
@@ -401,28 +391,28 @@ h1 {
 }
 
 .hero-commands {
-  display: flex;
-  flex: 1 1 0;
-  flex-direction: column;
-  gap: 7px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
   min-width: 0;
   width: 100%;
-  padding: 11px 18px;
+  padding: 0;
   color: #777b81;
-  background: rgba(255, 255, 252, 0.7);
-  border: 1px solid rgba(17, 18, 20, 0.1);
-  border-radius: 8px;
-  box-shadow:
-    0 16px 34px rgba(37, 39, 36, 0.07),
-    inset 0 1px 0 rgba(255, 255, 255, 0.78);
 }
 
 .hero-command {
   display: grid;
-  grid-template-columns: 78px minmax(0, 1fr);
-  align-items: center;
-  gap: 10px;
-  min-height: 26px;
+  align-content: center;
+  gap: 8px;
+  min-height: 72px;
+  min-width: 0;
+  padding: 14px 17px;
+  background: rgba(255, 255, 252, 0.78);
+  border: 1px solid rgba(17, 18, 20, 0.1);
+  border-radius: 8px;
+  box-shadow:
+    0 18px 38px rgba(37, 39, 36, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.78);
 }
 
 .hero-command span {
@@ -430,7 +420,7 @@ h1 {
   font-size: 10px;
   font-weight: 780;
   line-height: 1.2;
-  text-align: right;
+  text-align: left;
   text-transform: uppercase;
 }
 
@@ -446,8 +436,7 @@ h1 {
 }
 
 .hero-command code {
-  display: flex;
-  align-items: baseline;
+  display: block;
   min-width: 0;
   min-height: 0;
   padding: 0;
@@ -455,13 +444,14 @@ h1 {
   background: transparent;
   border: 0;
   border-radius: 0;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 680;
   line-height: 1.25;
   text-align: left;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow: visible;
+  overflow-wrap: anywhere;
+  text-overflow: clip;
+  white-space: normal;
   box-shadow: none;
 }
 
@@ -845,8 +835,7 @@ h3 {
 
   .hero-install {
     display: grid;
-    grid-template-columns: 1fr;
-    max-width: 390px;
+    max-width: 420px;
     width: 100%;
     padding: 0;
     background: transparent;
@@ -855,32 +844,21 @@ h3 {
     box-shadow: none;
   }
 
-  .hero-command {
-    grid-template-columns: 68px minmax(0, 1fr);
+  .hero-commands {
+    grid-template-columns: 1fr;
+    width: 100%;
+    gap: 8px;
   }
 
-  .hero-commands {
-    width: 100%;
-    gap: 6px;
-    padding: 10px 12px;
-    background: rgba(255, 255, 252, 0.62);
-    border: 1px solid rgba(17, 18, 20, 0.08);
-    border-radius: 8px;
+  .hero-command {
+    min-height: 62px;
+    padding: 12px 14px;
   }
 
   .hero-command code {
     font-size: 12px;
     line-height: 1.3;
     text-align: center;
-  }
-
-  .hero-actions {
-    width: 100%;
-  }
-
-  .hero-install .button {
-    width: 100%;
-    min-width: 0;
   }
 }
 
@@ -918,30 +896,15 @@ h3 {
     max-width: 310px;
   }
 
-  .hero-command {
-    grid-template-columns: 1fr;
-    gap: 4px;
-  }
-
   .hero-command span {
     text-align: center;
   }
 
   .hero-command code {
     font-size: 11px;
-    justify-content: center;
     white-space: normal;
     overflow-wrap: anywhere;
     text-align: center;
-  }
-
-  .hero-actions {
-    width: 100%;
-  }
-
-  .hero-install .button {
-    width: 100%;
-    min-width: 0;
   }
 
   .button {
@@ -2317,9 +2280,9 @@ h3 {
   }
 
   .hero-panel {
-    min-height: 390px;
+    min-height: 370px;
     align-content: center;
-    padding: clamp(42px, 5.6vw, 62px) clamp(48px, 7vw, 92px);
+    padding: clamp(38px, 5vw, 56px) clamp(48px, 7vw, 88px);
   }
 
   h1 {
@@ -2328,12 +2291,6 @@ h3 {
 
   .hero-note {
     font-size: 16px;
-  }
-
-  .hero-actions {
-    display: flex;
-    justify-content: center;
-    max-width: none;
   }
 
   .hero-command {

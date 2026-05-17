@@ -13,7 +13,7 @@ interface Props {
 
 const {
   title = "Memory by Aictx - Persistent Memory for AI Coding Agents",
-  description = "Memory by Aictx gives AI coding agents local, reviewable, auto-maintained project memory so every session stops starting from scratch.",
+  description = "Memory by Aictx gives AI coding agents a local wiki for repo context, so every session stops starting from scratch.",
   ogType = "website",
   robots,
   structuredData
@@ -22,6 +22,7 @@ const {
 const siteUrl = Astro.site ?? new URL("https://memory.aictx.dev");
 const canonicalUrl = new URL(Astro.url.pathname, siteUrl).toString();
 const socialImage = socialImageUrl(siteUrl);
+const demoViewerUrl = "https://demo.aictx.dev/?token=demo";
 const websiteJsonLd = buildStructuredData(siteUrl);
 const structuredDataItems = [
   websiteJsonLd,
@@ -67,7 +68,7 @@ const structuredDataItems = [
       </a>
 
       <nav aria-label="Primary navigation">
-        <a href="/#demo">Demo Viewer</a>
+        <a href={demoViewerUrl} rel="noreferrer">Demo Viewer</a>
         <a href="https://docs.aictx.dev" rel="noreferrer">Docs</a>
         <a href="/use-cases/">Use Cases</a>
       </nav>
@@ -79,7 +80,7 @@ const structuredDataItems = [
           <span></span>
         </summary>
         <div class="mobile-menu-panel">
-          <a href="/#demo">Demo Viewer</a>
+          <a href={demoViewerUrl} rel="noreferrer">Demo Viewer</a>
           <a href="https://docs.aictx.dev" rel="noreferrer">Docs</a>
           <a href="/use-cases/">Use Cases</a>
           <a href="https://github.com/aictx/memory" rel="noreferrer">GitHub</a>
@@ -98,11 +99,11 @@ const structuredDataItems = [
     <footer class="site-footer">
       <div>
         <strong>Memory by Aictx</strong>
-        <p>Local, reviewable, auto-maintained project memory for AI coding agents.</p>
+        <p>A local wiki for AI agents, kept reviewable in your repo.</p>
       </div>
       <nav class="footer-links" aria-label="Footer navigation">
         <a href="https://docs.aictx.dev" rel="noreferrer">Docs</a>
-        <a href="/#demo">Demo Viewer</a>
+        <a href={demoViewerUrl} rel="noreferrer">Demo Viewer</a>
         <a href="/use-cases/">Use Cases</a>
         <a href="https://github.com/aictx/memory" rel="noreferrer">GitHub</a>
         <a href="mailto:michele@remics.tech">Contact us</a>

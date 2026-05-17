@@ -13,7 +13,8 @@ Sitemap: ${mainSiteUrl}/sitemap.xml
 
 export const llmsTxt = `# Memory by Aictx
 
-Memory by Aictx provides local, reviewable, auto-maintained project memory for AI coding agents.
+Memory by Aictx gives AI coding agents a local wiki for repo context.
+It stores durable project memory as reviewable local files agents can load before work and update after meaningful changes.
 It is distributed through the open source npm package @aictx/memory and the Homebrew formula aictx/tap/memory, then runs through the memory CLI and optional memory-mcp server.
 Use it as persistent memory and long-term project context for AI coding assistants including Codex, Claude Code, Cursor, Cline, OpenCode, and MCP-capable agents.
 
@@ -32,6 +33,7 @@ Canonical public surfaces:
 - Cursor memory guide: ${mainSiteUrl}/cursor-memory/
 
 Positioning:
+- local wiki for AI agents
 - local-first project memory for AI coding agents
 - local, reviewable, auto-maintained project memory for AI coding agents
 - persistent memory for AI coding assistants
@@ -81,11 +83,11 @@ export function buildStructuredData(siteUrl: URL): object {
         name: siteName,
         alternateName: ["Memory", "@aictx/memory"],
         keywords:
-          "persistent memory for AI coding agents, auto-maintained project memory, project memory, MCP memory server, Codex memory, Claude Code memory, Cursor memory, local-first developer tools",
+          "local wiki for AI agents, persistent memory for AI coding agents, auto-maintained project memory, project memory, MCP memory server, Codex memory, Claude Code memory, Cursor memory, local-first developer tools",
         applicationCategory: "DeveloperApplication",
         operatingSystem: "macOS, Linux, Windows",
         description:
-          "Memory by Aictx is local-first, reviewable, auto-maintained project memory for AI coding agents.",
+          "Memory by Aictx gives AI coding agents a local, reviewable wiki for repo context.",
         url: new URL("/", siteUrl).toString(),
         codeRepository: "https://github.com/aictx/memory",
         downloadUrl: [
