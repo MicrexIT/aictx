@@ -125,11 +125,12 @@ cannot accidentally publish a package.
 
 ```bash
 pnpm version:patch
+VERSION="$(node -p 'require("./package.json").version')"
 git add .
-git commit -m "Release v$(node -p 'require(\"./package.json\").version')"
+git commit -m "Release v${VERSION}"
 git push origin main
-git tag "v$(node -p 'require(\"./package.json\").version')"
-git push origin "v$(node -p 'require(\"./package.json\").version')"
+git tag "v${VERSION}"
+git push origin "v${VERSION}"
 ```
 
 `pnpm version:patch` runs this package script:
@@ -160,9 +161,21 @@ For a pre-1.0 minor release, use this instead of `pnpm version:patch`:
 npm version minor --no-git-tag-version
 pnpm build
 pnpm build:docs
+VERSION="$(node -p 'require("./package.json").version')"
 ```
 
 Then commit, push `main`, tag, and push the tag the same way.
+
+If you accidentally create a local release commit with the message `Release v`
+before pushing, fix only the commit message:
+
+```bash
+VERSION="$(node -p 'require("./package.json").version')"
+git commit --amend -m "Release v${VERSION}"
+```
+
+If the bad commit was already pushed, do not rewrite history just for the commit
+message. Make sure the tag name is correct; the tag controls publishing.
 
 Manual publishing should be reserved for recovery situations and documented in
 the release notes.
