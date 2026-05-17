@@ -321,6 +321,54 @@ describe("saveMemoryPatch", () => {
       .resolves.toContain("Saved architecture update.");
   });
 
+  it("restores tracked deleted Memory storage before saving new memory", async () => {
+    const repo = await createRepo("memory-save-deleted-storage-");
+    const initialized = await initProject({
+      cwd: repo,
+      clock: createFixedTestClock(FIXED_TIMESTAMP)
+    });
+    expect(initialized.ok).toBe(true);
+    await git(repo, ["add", ".gitignore", ".memory"]);
+    await git(repo, ["commit", "-m", "Initialize memory"]);
+    const storageBeforeDelete = await readCanonicalStorage(repo);
+    expect(storageBeforeDelete.ok).toBe(true);
+    const originalIds = storageBeforeDelete.ok
+      ? storageBeforeDelete.data.objects.map((object) => object.sidecar.id)
+      : [];
+    await rm(join(repo, ".memory"), { recursive: true, force: true });
+
+    const result = await saveMemoryPatch({
+      cwd: repo,
+      clock: createFixedTestClock(FIXED_TIMESTAMP_NEXT_MINUTE),
+      patch: createNotePatch("Deleted storage save", "Save should restore Memory first.")
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+
+    expect(result.warnings).toContain(
+      "Memory storage was restored from HEAD before writing because tracked .memory files were deleted."
+    );
+    expect(result.data.memory_created).toEqual(["note.deleted-storage-save"]);
+    await expect(
+      readFile(join(repo, ".memory", "memory", "notes", "deleted-storage-save.md"), "utf8")
+    ).resolves.toContain("Save should restore Memory first.");
+    const validation = await validateProject(repo);
+    expect(validation.valid).toBe(true);
+    const storage = await readCanonicalStorage(repo);
+    expect(storage.ok).toBe(true);
+    if (storage.ok) {
+      expect(
+        originalIds.every((id) =>
+          storage.data.objects.some((object) => object.sidecar.id === id)
+        )
+      )
+        .toBe(true);
+    }
+  });
+
   it("quarantines unrelated malformed memory and still saves new memory", async () => {
     const projectRoot = await createInitializedProject("memory-save-repair-invalid-");
     await mkdir(join(projectRoot, ".memory", "memory", "notes"), { recursive: true });

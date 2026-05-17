@@ -20,7 +20,11 @@ import {
 } from "../app/operations.js";
 import type { Clock } from "../core/clock.js";
 import { getGitState, type GitWrapperOptions } from "../core/git.js";
-import { resolveProjectPaths, type ProjectPaths } from "../core/paths.js";
+import {
+  resolveProjectPaths,
+  type ProjectPaths,
+  type ProjectRootResolutionMode
+} from "../core/paths.js";
 import type { Result } from "../core/result.js";
 import type { MemoryMeta, ObjectId } from "../core/types.js";
 import type { LoadMemoryData, LoadMemoryInput } from "../context/compile.js";
@@ -89,12 +93,16 @@ export function createDataAccessService(): DataAccessService {
         })
       ),
     applyPatch: async (input) =>
-      withResolvedProject(input, async (paths) =>
-        saveMemoryPatch(toSaveMemoryPatchOptions(input, paths))
+      withResolvedProject(
+        input,
+        async (paths) => saveMemoryPatch(toSaveMemoryPatchOptions(input, paths)),
+        "init"
       ),
     remember: async (input) =>
-      withResolvedProject(input, async (paths) =>
-        rememberMemory(toRememberMemoryOptions(input, paths))
+      withResolvedProject(
+        input,
+        async (paths) => rememberMemory(toRememberMemoryOptions(input, paths)),
+        "init"
       )
   };
 }
@@ -103,9 +111,10 @@ export const dataAccessService = createDataAccessService();
 
 async function withResolvedProject<T>(
   input: DataAccessBaseInput,
-  operation: (paths: ProjectPaths) => Promise<AppResult<T>>
+  operation: (paths: ProjectPaths) => Promise<AppResult<T>>,
+  mode: ProjectRootResolutionMode = "require-initialized"
 ): Promise<AppResult<T>> {
-  const paths = await resolveDataAccessProject(input);
+  const paths = await resolveDataAccessProject(input, mode);
 
   if (!paths.ok) {
     return {
@@ -120,11 +129,12 @@ async function withResolvedProject<T>(
 }
 
 async function resolveDataAccessProject(
-  input: DataAccessBaseInput
+  input: DataAccessBaseInput,
+  mode: ProjectRootResolutionMode
 ): Promise<Result<ProjectPaths>> {
   return resolveProjectPaths({
     cwd: targetCwd(input.target),
-    mode: "require-initialized",
+    mode,
     ...gitWrapperOptions(input)
   });
 }

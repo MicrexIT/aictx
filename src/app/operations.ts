@@ -11,6 +11,7 @@ import {
   getChangedProjectFiles,
   getGitState,
   getRecentProjectFileChanges,
+  getTrackedMemoryDirtyFiles,
   showMemoryFileAtCommit,
   type GitWrapperOptions,
   type ProjectFileChange
@@ -2468,9 +2469,18 @@ export async function saveMemoryPatch(
   options: SaveMemoryPatchOptions
 ): Promise<AppResult<SaveMemoryData>> {
   const clock = options.clock ?? systemClock;
-  const paths = await resolveProjectPaths({
+
+  if (options.patch === undefined) {
+    return {
+      ok: false,
+      error: memoryError("MemoryPatchRequired", "Structured memory patch is required."),
+      warnings: [],
+      meta: await buildBestEffortMeta(options)
+    };
+  }
+
+  const paths = await resolveWritableProjectPaths({
     cwd: options.cwd,
-    mode: "require-initialized",
     runner: options.runner
   });
 
@@ -2486,14 +2496,10 @@ export async function saveMemoryPatch(
   const meta = await buildMeta(paths.data, options);
 
   if (!meta.ok) {
-    return meta;
-  }
-
-  if (options.patch === undefined) {
     return {
       ok: false,
-      error: memoryError("MemoryPatchRequired", "Structured memory patch is required."),
-      warnings: [],
+      error: meta.error,
+      warnings: [...paths.warnings, ...meta.warnings],
       meta: meta.meta
     };
   }
@@ -2568,7 +2574,7 @@ export async function saveMemoryPatch(
     return {
       ok: false,
       error: saved.error,
-      warnings: saved.warnings,
+      warnings: [...paths.warnings, ...saved.warnings],
       meta: meta.meta
     };
   }
@@ -2580,6 +2586,7 @@ export async function saveMemoryPatch(
       ok: true,
       data: saved.data,
       warnings: [
+        ...paths.warnings,
         ...saved.warnings,
         ...refreshedMeta.warnings,
         `Git metadata refresh failed after save: ${refreshedMeta.error.message}`
@@ -2591,7 +2598,7 @@ export async function saveMemoryPatch(
   return {
     ok: true,
     data: saved.data,
-    warnings: saved.warnings,
+    warnings: [...paths.warnings, ...saved.warnings],
     meta: refreshedMeta.meta
   };
 }
@@ -2600,9 +2607,19 @@ export async function rememberMemory(
   options: RememberMemoryOptions
 ): Promise<AppResult<RememberMemoryData>> {
   const clock = options.clock ?? systemClock;
-  const paths = await resolveProjectPaths({
+
+  if (options.input === undefined) {
+    return {
+      ok: false,
+      error: memoryError("MemoryPatchRequired", "Remember input is required."),
+      warnings: [],
+      meta: await buildBestEffortMeta(options)
+    };
+  }
+
+  const paths = await resolveWritableProjectPaths({
     cwd: options.cwd,
-    mode: "require-initialized",
+    allowRestore: options.dryRun !== true,
     runner: options.runner
   });
 
@@ -2618,14 +2635,10 @@ export async function rememberMemory(
   const meta = await buildMeta(paths.data, options);
 
   if (!meta.ok) {
-    return meta;
-  }
-
-  if (options.input === undefined) {
     return {
       ok: false,
-      error: memoryError("MemoryPatchRequired", "Remember input is required."),
-      warnings: [],
+      error: meta.error,
+      warnings: [...paths.warnings, ...meta.warnings],
       meta: meta.meta
     };
   }
@@ -2636,7 +2649,7 @@ export async function rememberMemory(
     return {
       ok: false,
       error: storage.error,
-      warnings: storage.warnings,
+      warnings: [...paths.warnings, ...storage.warnings],
       meta: meta.meta
     };
   }
@@ -2650,7 +2663,7 @@ export async function rememberMemory(
     return {
       ok: false,
       error: patch.error,
-      warnings: [...storage.warnings, ...patch.warnings],
+      warnings: [...paths.warnings, ...storage.warnings, ...patch.warnings],
       meta: meta.meta
     };
   }
@@ -2662,7 +2675,7 @@ export async function rememberMemory(
       return {
         ok: false,
         error: secrets.error,
-        warnings: [...storage.warnings, ...secrets.warnings],
+        warnings: [...paths.warnings, ...storage.warnings, ...secrets.warnings],
         meta: meta.meta
       };
     }
@@ -2679,7 +2692,12 @@ export async function rememberMemory(
       return {
         ok: false,
         error: planned.error,
-        warnings: [...storage.warnings, ...secrets.warnings, ...planned.warnings],
+        warnings: [
+          ...paths.warnings,
+          ...storage.warnings,
+          ...secrets.warnings,
+          ...planned.warnings
+        ],
         meta: meta.meta
       };
     }
@@ -2701,7 +2719,12 @@ export async function rememberMemory(
         events_appended: planned.data.events_appended,
         index_updated: false
       },
-      warnings: [...storage.warnings, ...secrets.warnings, ...planned.warnings],
+      warnings: [
+        ...paths.warnings,
+        ...storage.warnings,
+        ...secrets.warnings,
+        ...planned.warnings
+      ],
       meta: meta.meta
     };
   }
@@ -2717,7 +2740,7 @@ export async function rememberMemory(
     return {
       ok: false,
       error: saved.error,
-      warnings: [...storage.warnings, ...saved.warnings],
+      warnings: [...paths.warnings, ...storage.warnings, ...saved.warnings],
       meta: saved.meta
     };
   }
@@ -2729,7 +2752,7 @@ export async function rememberMemory(
       patch: patch.data,
       ...saved.data
     },
-    warnings: [...storage.warnings, ...saved.warnings],
+    warnings: [...paths.warnings, ...storage.warnings, ...saved.warnings],
     meta: saved.meta
   };
 }
@@ -4081,6 +4104,133 @@ async function buildBestEffortMeta(
   const meta = await buildMeta(paths.data, options);
 
   return meta.meta;
+}
+
+async function resolveWritableProjectPaths(options: {
+  cwd: string;
+  allowRestore?: boolean;
+  runner?: GitWrapperOptions["runner"];
+}): Promise<Result<ProjectPaths>> {
+  const paths = await resolveProjectPaths({
+    cwd: options.cwd,
+    mode: "init",
+    runner: options.runner
+  });
+
+  if (!paths.ok) {
+    return paths;
+  }
+
+  const initialized = await memoryConfigExists(paths.data);
+
+  if (!initialized.ok) {
+    return err(initialized.error, initialized.warnings);
+  }
+
+  if (initialized.data) {
+    return ok(paths.data, initialized.warnings);
+  }
+
+  const recoverableDeletion = await hasOnlyTrackedMemoryDeletions(paths.data, {
+    runner: options.runner
+  });
+
+  if (!recoverableDeletion.ok) {
+    return recoverableDeletion;
+  }
+
+  if (!recoverableDeletion.data || options.allowRestore === false) {
+    return err(
+      memoryError("MemoryNotInitialized", "Memory is not initialized in this project.", {
+        projectRoot: paths.data.projectRoot,
+        memoryRoot: paths.data.memoryRoot
+      }),
+      initialized.warnings
+    );
+  }
+
+  const restored = await restoreCanonicalStorageFromCommit({
+    projectRoot: paths.data.projectRoot,
+    commit: "HEAD",
+    runner: options.runner
+  });
+
+  if (!restored.ok) {
+    return err(restored.error, [...initialized.warnings, ...restored.warnings]);
+  }
+
+  return ok(
+    paths.data,
+    [
+      ...initialized.warnings,
+      ...restored.warnings,
+      "Memory storage was restored from HEAD before writing because tracked .memory files were deleted."
+    ]
+  );
+}
+
+async function memoryConfigExists(paths: ProjectPaths): Promise<Result<boolean>> {
+  try {
+    await lstat(join(paths.memoryRoot, "config.json"));
+    return ok(true);
+  } catch (error) {
+    if (errorCode(error) === "ENOENT") {
+      return ok(false);
+    }
+
+    return err(
+      memoryError("MemoryValidationFailed", "Memory config could not be read.", {
+        path: ".memory/config.json",
+        message: messageFromUnknown(error)
+      })
+    );
+  }
+}
+
+async function hasOnlyTrackedMemoryDeletions(
+  paths: ProjectPaths,
+  options: GitWrapperOptions
+): Promise<Result<boolean>> {
+  if (!paths.git.available) {
+    return ok(false);
+  }
+
+  const dirtyFiles = await getTrackedMemoryDirtyFiles(paths.projectRoot, options);
+
+  if (!dirtyFiles.ok) {
+    return dirtyFiles;
+  }
+
+  if (dirtyFiles.data.files.length === 0) {
+    return ok(false);
+  }
+
+  return allFilesMissing(paths.projectRoot, dirtyFiles.data.files);
+}
+
+async function allFilesMissing(
+  projectRoot: string,
+  files: readonly string[]
+): Promise<Result<boolean>> {
+  for (const file of files) {
+    try {
+      await lstat(join(projectRoot, file));
+      return ok(false);
+    } catch (error) {
+      if (errorCode(error) === "ENOENT") {
+        continue;
+      }
+
+      return err(
+        memoryError("MemoryValidationFailed", "Memory dirty file state could not be checked.", {
+          path: file,
+          message: messageFromUnknown(error)
+        })
+      );
+    }
+  }
+
+  return ok(true);
 }
 
 async function hintedGitFileChanges(

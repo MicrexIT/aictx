@@ -1,16 +1,16 @@
 {
   "name": "memory",
   "metadata": {
-    "description": "Memory local project memory plugins for AI coding agents."
+    "description": "Memory by Aictx local project memory plugins for AI coding agents."
   },
   "owner": {
-    "name": "Memory"
+    "name": "Aictx"
   },
   "plugins": [
     {
       "name": "memory",
       "source": "./integrations/claude/plugins/memory",
-      "description": "Use Memory local project memory in AI coding agents."
+      "description": "Use Memory by Aictx as local project memory in AI coding agents."
     }
   ]
 }

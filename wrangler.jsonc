@@ -6,5 +6,11 @@
     "directory": "./site/dist",
     "not_found_handling": "404-page",
     "html_handling": "auto-trailing-slash"
-  }
+  },
+  "routes": [
+    {
+      "pattern": "memory.aictx.dev",
+      "custom_domain": true
+    }
+  ]
 }

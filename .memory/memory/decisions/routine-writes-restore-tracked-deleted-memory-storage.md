@@ -1,0 +1,1 @@
+saveMemoryPatch and rememberMemory resolve writable projects in init-capable mode and restore Memory storage from HEAD when Git reports tracked .memory files as dirty deletions, so agent writes can continue instead of failing with MemoryNotInitialized. remember --dry-run still does not restore or recreate storage.

@@ -1,12 +1,12 @@
 {
   "name": "memory",
   "version": "0.1.40",
-  "description": "Use Memory local project memory in AI coding agents.",
+  "description": "Use Memory by Aictx as local project memory in AI coding agents.",
   "author": {
-    "name": "Memory",
+    "name": "Aictx",
     "url": "https://github.com/aictx/memory"
   },
-  "homepage": "https://aictx.dev",
+  "homepage": "https://memory.aictx.dev",
   "repository": "https://github.com/aictx/memory",
   "license": "MIT",
   "keywords": [
@@ -19,10 +19,10 @@
   "interface": {
     "displayName": "Memory",
     "shortDescription": "Load and save local project memory with Memory.",
-    "longDescription": "Packages the Memory workflow as a Codex skill. Agents stay CLI-first, load task-relevant project memory before substantial work, and save only durable knowledge after meaningful changes.",
-    "developerName": "Memory",
+    "longDescription": "Packages the Memory by Aictx workflow as a Codex skill. Agents stay CLI-first, load task-relevant project memory before substantial work, and save only durable knowledge after meaningful changes.",
+    "developerName": "Aictx",
     "category": "Productivity",
-    "websiteURL": "https://aictx.dev",
+    "websiteURL": "https://memory.aictx.dev",
     "defaultPrompt": [
       "Set up Memory for this repo.",
       "Load Memory before this task.",

@@ -124,7 +124,7 @@ describe("release package", () => {
       type: "git",
       url: "git+https://github.com/aictx/memory.git"
     });
-    expect(packageJson.homepage).toBe("https://aictx.dev");
+    expect(packageJson.homepage).toBe("https://memory.aictx.dev");
     expect(packageJson.bugs).toEqual({
       url: "https://github.com/aictx/memory/issues"
     });

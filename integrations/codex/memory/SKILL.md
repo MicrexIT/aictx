@@ -1,6 +1,6 @@
 ---
 name: memory
-description: Use this skill when working in a project that uses memory as project memory. It guides the agent to load relevant memory before non-trivial coding work, save durable memory after meaningful changes, and keep memory inspectable through Memory and Git when available.
+description: Use this skill when working in a project that uses Memory by Aictx as local project memory. It guides the agent to load relevant memory before non-trivial coding work, save durable memory after meaningful changes, and keep memory inspectable through Memory and Git when available.
 ---
 
 <!-- Generated from integrations/templates/agent-guidance.md. Do not edit directly. -->

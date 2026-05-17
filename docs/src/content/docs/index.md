@@ -3,6 +3,13 @@ title: Memory documentation
 description: Public documentation for local-first project memory for AI coding agents.
 ---
 
+Memory by Aictx is the open source npm package `@aictx/memory`.
+It provides local, reviewable project memory for AI coding agents. It runs
+through the `memory` CLI and optional `memory-mcp` server.
+
+Memory by Aictx is an independent open source project. It is not affiliated
+with similarly named packages or projects.
+
 Memory gives coding agents a project memory they can return to.
 
 Use it when a new coding session should not need the same briefing again:
@@ -20,8 +27,7 @@ load relevant memory -> do the work -> save what future agents should remember
 Core memory commands run locally. They do not require a cloud account,
 embeddings, hosted sync, external model API, or network access.
 
-This project is distributed as the npm package `@aictx/memory`. It is unrelated
-to similarly named packages in other ecosystems.
+This project is distributed as the npm package `@aictx/memory`.
 
 ## What Memory is for
 

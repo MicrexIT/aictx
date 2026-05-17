@@ -1,0 +1,42 @@
+{
+  "body_path": "memory/decisions/routine-writes-restore-tracked-deleted-memory-storage.md",
+  "content_hash": "sha256:757732832499cbb5dba8da4ccbd72add5c3f215b80f696b1e8a906e86d9708d0",
+  "created_at": "2026-05-17T09:18:52+02:00",
+  "evidence": [
+    {
+      "id": "src/app/operations.ts",
+      "kind": "file"
+    },
+    {
+      "id": "src/data-access/service.ts",
+      "kind": "file"
+    }
+  ],
+  "facets": {
+    "applies_to": [
+      "src/app/operations.ts",
+      "src/data-access/service.ts"
+    ],
+    "category": "decision-rationale"
+  },
+  "id": "decision.routine-writes-restore-tracked-deleted-memory-storage",
+  "scope": {
+    "branch": null,
+    "kind": "project",
+    "project": "project.memory",
+    "task": null
+  },
+  "source": {
+    "kind": "agent",
+    "task": "Allow routine memory writes through tracked deleted storage"
+  },
+  "status": "active",
+  "tags": [
+    "memory",
+    "dirty-state",
+    "write-path"
+  ],
+  "title": "Routine writes restore tracked deleted Memory storage",
+  "type": "decision",
+  "updated_at": "2026-05-17T09:18:52+02:00"
+}

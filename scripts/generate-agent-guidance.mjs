@@ -9,8 +9,8 @@ const templateUrl = new URL("integrations/templates/agent-guidance.md", repoRoot
 const generatedNotice = "<!-- Generated from integrations/templates/agent-guidance.md. Do not edit directly. -->";
 const publicName = "memory";
 const displayName = "Memory";
-const skillDescription = "Use this skill when working in a project that uses memory as project memory. It guides the agent to load relevant memory before non-trivial coding work, save durable memory after meaningful changes, and keep memory inspectable through Memory and Git when available.";
-const pluginDescription = "Use Memory local project memory in AI coding agents.";
+const skillDescription = "Use this skill when working in a project that uses Memory by Aictx as local project memory. It guides the agent to load relevant memory before non-trivial coding work, save durable memory after meaningful changes, and keep memory inspectable through Memory and Git when available.";
+const pluginDescription = "Use Memory by Aictx as local project memory in AI coding agents.";
 const skillPrefix = `---\nname: ${publicName}\ndescription: ${skillDescription}\n---\n\n${generatedNotice}\n\n`;
 const cursorPrefix = `---\ndescription: Use Memory as project memory when working in this repository.\nalwaysApply: true\n---\n\n${generatedNotice}\n\n`;
 
@@ -80,7 +80,7 @@ const codexPluginManifest = {
     displayName,
     shortDescription: "Load and save local project memory with Memory.",
     longDescription:
-      "Packages the Memory workflow as a Codex skill. Agents stay CLI-first, load task-relevant project memory before substantial work, and save only durable knowledge after meaningful changes.",
+      "Packages the Memory by Aictx workflow as a Codex skill. Agents stay CLI-first, load task-relevant project memory before substantial work, and save only durable knowledge after meaningful changes.",
     developerName: authorName,
     category: "Productivity",
     websiteURL: packageJson.homepage,

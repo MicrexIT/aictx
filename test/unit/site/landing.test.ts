@@ -4,15 +4,30 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
+import {
+  buildSitemapXml,
+  buildStructuredData,
+  llmsTxt,
+  mainSiteUrl,
+  robotsTxt,
+  siteName,
+  staticSitePaths
+} from "../../../site/src/seo.js";
+
 const repoRoot = resolve(fileURLToPath(new URL("../../..", import.meta.url)));
 
 describe("site landing page", () => {
   it("states the sharpened value proposition and primary actions", async () => {
     const landing = await readFile(resolve(repoRoot, "site/src/pages/index.astro"), "utf8");
 
-    expect(landing).toContain("Local-first and open source");
+    expect(landing).toContain("Open source by Aictx");
     expect(landing).toContain("Stop re&#8209;explaining your");
     expect(landing).toContain("repo to AI agents.");
+    expect(landing).toContain("Memory by Aictx is the open source npm package");
+    expect(landing).toContain("<code>@aictx/memory</code>");
+    expect(landing).toContain("It provides local, reviewable project memory for AI coding agents");
+    expect(landing).toContain("the <code>memory</code> CLI and optional <code>memory-mcp</code> server");
+    expect(landing).toContain("independent and not affiliated with similarly named packages or projects.");
     expect(landing).toContain('class="value-section context-section" id="context"');
     expect(landing).not.toContain('class="value-grid"');
     expect(landing).toContain("Why Memory?");
@@ -115,6 +130,17 @@ describe("site landing page", () => {
     const mobileUseCasesIndex = mobileMenu.indexOf('href="/use-cases/">Use Cases</a>');
 
     expect(layout).toContain("Open navigation menu");
+    expect(layout).toContain("Memory by Aictx - local-first project memory for AI coding agents");
+    expect(layout).toContain("Memory by Aictx gives AI coding agents local, reviewable project memory");
+    expect(siteName).toBe("Memory by Aictx");
+    expect(layout).toContain('<link rel="canonical" href={canonicalUrl} />');
+    expect(layout).toContain('<meta property="og:site_name" content={siteName} />');
+    expect(layout).toContain('<meta property="og:url" content={canonicalUrl} />');
+    expect(layout).toContain('<meta property="og:image" content={socialImage} />');
+    expect(layout).toContain('<meta property="og:image:alt" content="Memory by Aictx project memory overview" />');
+    expect(layout).toContain('<meta name="twitter:card" content="summary_large_image" />');
+    expect(layout).toContain('<meta name="twitter:image" content={socialImage} />');
+    expect(layout).toContain("const websiteJsonLd = buildStructuredData(siteUrl);");
     expect(layout).toContain('<link rel="icon" href="/favicon.ico" sizes="any" />');
     expect(layout).toContain(
       '<img class="brand-mark" src="/favicon.ico" width="34" height="34" alt="" aria-hidden="true" />'
@@ -139,11 +165,92 @@ describe("site landing page", () => {
     expect(layout).not.toContain("https://github.com/aictx/memory/discussions");
     expect(layout).toContain('<strong data-star-count="compact"></strong>');
     expect(layout).toContain("Footer navigation");
+    expect(layout).toContain("<strong>Memory by Aictx</strong>");
     expect(layout).toContain("Local, reviewable project memory for AI coding tools.");
     expect(layout).toContain('<a href="mailto:michele@remics.tech">Contact us</a>');
     await expect(stat(resolve(repoRoot, "site/public/favicon.ico"))).resolves.toMatchObject({
       size: expect.any(Number)
     });
+  });
+
+  it("publishes parseable structured data for the product entity", () => {
+    const structuredData = buildStructuredData(new URL(mainSiteUrl));
+    const parsed = JSON.parse(JSON.stringify(structuredData)) as {
+      "@context": string;
+      "@graph": Array<Record<string, unknown>>;
+    };
+    const graphTypes = parsed["@graph"].map((item) => item["@type"]);
+
+    expect(parsed["@context"]).toBe("https://schema.org");
+    expect(graphTypes).toEqual(expect.arrayContaining(["Organization", "WebSite", "SoftwareApplication"]));
+    expect(parsed["@graph"]).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          "@type": "SoftwareApplication",
+          name: "Memory by Aictx",
+          alternateName: ["Memory", "@aictx/memory"],
+          codeRepository: "https://github.com/aictx/memory",
+          downloadUrl: "https://www.npmjs.com/package/@aictx/memory"
+        })
+      ])
+    );
+  });
+
+  it("uses memory.aictx.dev as the canonical site host", async () => {
+    const siteConfig = await readFile(resolve(repoRoot, "site/astro.config.mjs"), "utf8");
+    const wranglerConfig = await readFile(resolve(repoRoot, "wrangler.jsonc"), "utf8");
+    const readme = await readFile(resolve(repoRoot, "README.md"), "utf8");
+
+    expect(siteConfig).toContain('site: "https://memory.aictx.dev"');
+    expect(wranglerConfig).toContain('"pattern": "memory.aictx.dev"');
+    expect(wranglerConfig).toContain('"custom_domain": true');
+    expect(readme).toContain('href="https://memory.aictx.dev"');
+    expect(readme).toContain("website-memory.aictx.dev");
+  });
+
+  it("publishes crawler and agent-readable source surfaces", async () => {
+    const robotsEndpoint = await readFile(resolve(repoRoot, "site/src/pages/robots.txt.ts"), "utf8");
+    const sitemapEndpoint = await readFile(resolve(repoRoot, "site/src/pages/sitemap.xml.ts"), "utf8");
+    const llmsEndpoint = await readFile(resolve(repoRoot, "site/src/pages/llms.txt.ts"), "utf8");
+    const docsRobots = await readFile(resolve(repoRoot, "docs/public/robots.txt"), "utf8");
+    const sitemap = buildSitemapXml([...staticSitePaths, "/blog/example-post/"]);
+
+    expect(robotsEndpoint).toContain("robotsTxt");
+    expect(sitemapEndpoint).toContain('getCollection("blog")');
+    expect(sitemapEndpoint).toContain("buildSitemapXml(paths)");
+    expect(llmsEndpoint).toContain("llmsTxt");
+    expect(robotsTxt).toContain("User-agent: *");
+    expect(robotsTxt).toContain("Allow: /");
+    expect(robotsTxt).toContain("Sitemap: https://memory.aictx.dev/sitemap.xml");
+    expect(docsRobots).toContain("Sitemap: https://docs.aictx.dev/sitemap-index.xml");
+    expect(llmsTxt).toContain("# Memory by Aictx");
+    expect(llmsTxt).toContain("Package: https://www.npmjs.com/package/@aictx/memory");
+    expect(llmsTxt).toContain("CLI: memory");
+    expect(llmsTxt).toContain("MCP server: memory-mcp");
+    expect(llmsTxt).toContain("independent open source project");
+    expect(sitemap).toContain("<loc>https://memory.aictx.dev/</loc>");
+    expect(sitemap).toContain("<loc>https://memory.aictx.dev/blog/</loc>");
+    expect(sitemap).toContain("<loc>https://memory.aictx.dev/use-cases/</loc>");
+    expect(sitemap).toContain("<loc>https://memory.aictx.dev/blog/example-post/</loc>");
+  });
+
+  it("keeps public identity copy calm and factual", async () => {
+    const files = await Promise.all(
+      [
+        "README.md",
+        "site/src/pages/index.astro",
+        "site/src/seo.ts",
+        "docs/src/content/docs/index.md"
+      ].map(async (path) => readFile(resolve(repoRoot, path), "utf8"))
+    );
+    const publicCopy = files.join("\n").toLowerCase();
+
+    expect(publicCopy).toContain("memory by aictx");
+    expect(publicCopy).toContain("@aictx/memory");
+    expect(publicCopy).toContain("independent");
+    expect(publicCopy).not.toMatch(/\bscam\w*\b/);
+    expect(publicCopy).not.toMatch(/\bcopying\b|\bcopied\b/);
+    expect(publicCopy).not.toMatch(/\boriginal\b/);
   });
 
   it("frames the demo as a schema and graph inspection surface", async () => {

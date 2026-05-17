@@ -1,5 +1,6 @@
 ---
 import GitHubIcon from "../components/GitHubIcon.astro";
+import { buildStructuredData, siteName, socialImageUrl } from "../seo";
 import "../styles/global.css";
 
 interface Props {
@@ -8,9 +9,14 @@ interface Props {
 }
 
 const {
-  title = "Memory - Local memory for AI coding tools",
-  description = "Memory gives AI coding tools local, reviewable project memory so every session stops starting from scratch."
+  title = "Memory by Aictx - local-first project memory for AI coding agents",
+  description = "Memory by Aictx gives AI coding agents local, reviewable project memory so every session stops starting from scratch."
 } = Astro.props;
+
+const siteUrl = Astro.site ?? new URL("https://memory.aictx.dev");
+const canonicalUrl = new URL(Astro.url.pathname, siteUrl).toString();
+const socialImage = socialImageUrl(siteUrl);
+const websiteJsonLd = buildStructuredData(siteUrl);
 ---
 
 <!doctype html>
@@ -20,7 +26,21 @@ const {
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{title}</title>
     <meta name="description" content={description} />
+    <link rel="canonical" href={canonicalUrl} />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content={siteName} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonicalUrl} />
+    <meta property="og:image" content={socialImage} />
+    <meta property="og:image:alt" content="Memory by Aictx project memory overview" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={socialImage} />
+    <meta name="twitter:image:alt" content="Memory by Aictx project memory overview" />
     <link rel="icon" href="/favicon.ico" sizes="any" />
+    <script type="application/ld+json" set:html={JSON.stringify(websiteJsonLd)}></script>
     <script src="/stars.js" defer></script>
   </head>
   <body>
@@ -61,7 +81,7 @@ const {
 
     <footer class="site-footer">
       <div>
-        <strong>Memory</strong>
+        <strong>Memory by Aictx</strong>
         <p>Local, reviewable project memory for AI coding tools.</p>
       </div>
       <nav class="footer-links" aria-label="Footer navigation">
