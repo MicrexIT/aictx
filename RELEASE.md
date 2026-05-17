@@ -118,6 +118,25 @@ Use an environment secret because the release workflow runs with
 This token lets the `aictx/memory` release workflow commit the generated formula
 to `aictx/homebrew-tap`. It is separate from npm provenance.
 
+### Before pushing a release tag
+
+Do not push a `vX.Y.Z` tag until both one-time publish setups are done:
+
+- npm Trusted Publishing is configured for `@aictx/memory` with workflow
+  `release.yml` and environment `npm`;
+- `github.com/aictx/homebrew-tap` exists;
+- `HOMEBREW_TAP_TOKEN` is saved as an environment secret in the `npm`
+  environment of `aictx/memory`.
+
+There is no separate manual `npm publish` command in the normal flow. The tag
+push runs npm publish inside GitHub Actions. Homebrew runs only after that npm
+publish succeeds, because the formula is generated from the published npm
+tarball.
+
+If the tag workflow fails at `Publish with provenance`, npm publishing is not set
+up correctly. Fix npm Trusted Publishing, then rerun the failed job. Do not push
+a second tag for the same version unless npm already published that version.
+
 ### Normal release
 
 Run this from the `aictx/memory` repo. This is the normal source repo, not
